@@ -101,9 +101,13 @@ export function lastDoneOf(templateId: string): string | null {
   for (const t of tasks.value.values()) if (t.from === templateId && t.status === 'done' && t.doneDay && (!last || t.doneDay > last)) last = t.doneDay;
   return last;
 }
-/** Fixed-time items on a day: commitments and timed steps due that day. */
-export const fixedOn = (k: string): T[] =>
-  [...tasks.value.values()].filter(t => t.at && t.due === k && t.status !== 'dropped' && !t.template).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+/** Fixed-time items on a day: commitments and timed steps due that day, and timed steps on its
+ *  list with no due date (copies of timed standing items saved before they were given one). */
+export const fixedOn = (k: string): T[] => {
+  const plan = new Set(rawPlan(k));
+  return [...tasks.value.values()].filter(t => t.at && (t.due === k || (!t.due && plan.has(t.id))) && t.status !== 'dropped' && !t.template)
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+};
 /** Decisions whose check date has come. */
 export const decisionsToCheck = (k = today.value) => [...decisions.value.values()].filter(d => d.status === 'decided' && d.reviewOn && d.reviewOn <= k);
 export const hereNow = () => here.value;

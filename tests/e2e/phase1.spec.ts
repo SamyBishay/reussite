@@ -228,3 +228,20 @@ for (const width of [320, 375, 430]) {
     }
   });
 }
+
+test('a timed standing item added by hand shows in fixed times and on the calendar', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-projects').click();
+  await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
+  await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await sheet(page).locator('input[name=at]').fill('17:00');
+  await sheet(page).getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
+  await sheet(page).getByRole('button', { name: 'Add to today' }).click();
+  await page.getByTestId('tab-today').click();
+  await expect(page.locator('ul.fixed')).toContainText('17:00');
+  await expect(page.locator('ul.fixed')).toContainText('Walk to the park');
+  await page.getByTestId('tab-calendar').click();
+  await expect(page.getByTestId('wday-' + iso(0))).toContainText('Walk to the park');
+});

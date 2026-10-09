@@ -146,9 +146,11 @@ export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, d
 export async function cloneTemplate(id: string, k = today.value, at?: string) {
   const tk = T(id);
   if (!tk) return null;
+  // A copy with a time is due that day, or it falls out of the day's fixed times and the calendar.
+  const time = at ?? tk.at ?? null;
   const nid = await createTask(newTaskDoc(tk.title, tk.suit, tk.project, {
     est: tk.est ?? null, estBy: tk.estBy ?? null, where: whereOf(tk), from: id, note: tk.note || '', starter: tk.starter ?? null,
-    app: tk.app ?? null, link: tk.link ?? null, at: at ?? tk.at ?? null, dur: tk.dur ?? tk.est ?? null, due: at ? k : null, important: true,
+    app: tk.app ?? null, link: tk.link ?? null, at: time, dur: tk.dur ?? tk.est ?? null, due: time ? k : null, important: true,
   }));
   await addToday(nid, true, k);
   return nid;

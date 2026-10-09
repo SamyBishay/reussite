@@ -287,9 +287,10 @@ export const en = {
   backupSaved: 'Backup saved.',
   restoreConfirm: 'Restore this backup? It merges into what’s on this device; newer edits here win.',
   restored: 'Backup restored.',
+  keepData: 'Keep my list on this device',
   storage: 'Storage',
   storagePersisted: 'This device keeps your list even when space runs low.',
-  storageNotPersisted: 'This device may clear your list if space runs low. Add Réussite to your Home Screen, and save backups.',
+  storageNotPersisted: 'This device may clear your list if space runs low. Ask it to keep your list, add Réussite to your Home Screen, and save backups.',
   about: 'About',
   version: 'Version {v}',
   // import sheet

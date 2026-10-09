@@ -8,7 +8,4 @@ import './styles/tokens.css';
 import './styles/app.css';
 import { App } from './app/App';
 
-// Ask the browser to keep our data even under storage pressure (shown in Settings).
-void navigator.storage?.persist?.().catch(() => undefined);
-
 render(<App />, document.getElementById('root')!);

@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: 'tests/private',
   testMatch: '*.pw.ts',
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:4173' },
-  webServer: { command: 'npm run build && npx vite preview --port 4173 --strictPort', url: 'http://localhost:4173', reuseExistingServer: true },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  use: { baseURL: 'http://localhost:4174' },
+  webServer: { command: 'npm run build && npx vite preview --port 4174 --strictPort', url: 'http://localhost:4174', reuseExistingServer: false },
+  projects: [{ name: 'firefox', use: { ...devices['Desktop Firefox'] } }],
 });

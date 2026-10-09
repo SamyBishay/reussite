@@ -15,3 +15,6 @@ One line each: date, decision, why.
 - 2026-10-09 · WebKit e2e tests run in Playwright's official container (`npm run e2e:webkit`). · WebKit's Linux build needs Ubuntu libraries Fedora doesn't ship. Playwright's WebKit can't test service workers offline, so offline is tested in Chromium and by hand on iPhone.
 - 2026-10-09 · Credit line for the method's author: not shown. · Waiting for Nelly Darmon's answer on the wording (brief §7).
 - 2026-10-09 · The place switcher opens a list of places instead of v1's two-way toggle. · Places are no longer limited to two.
+- 2026-10-09 · Firefox is the main desktop browser for tests (`npm run e2e`); WebKit and iPhone emulation run in the container; Chrome only as Android emulation. · Samy uses Firefox. Firefox on Linux can't install web apps, so on the desktop Réussite is a tab that works offline once loaded.
+- 2026-10-09 · Persistent storage is requested on a tap (Settings → Data) and after an import, never on load. · Firefox shows a permission prompt for it.
+- 2026-10-09 · E2E tests use their own port (4174) and always rebuild. · A preview server left running on 4173 made a test run silently reuse an old build.

@@ -9,7 +9,8 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Re
 | `npm run dev` | dev server |
 | `npm test` | unit tests (Vitest) |
 | `npm run typecheck` | TypeScript, strict |
-| `npm run e2e` | end-to-end tests, Chromium |
+| `npm run e2e` | end-to-end tests, Firefox (the main desktop browser) |
+| `npm run e2e:android` | end-to-end tests, Chrome on Android emulation |
 | `npm run e2e:webkit` | end-to-end tests, WebKit and iPhone emulation, in Playwright's container (podman) |
 | `npm run build` | production build into `dist/` |
 | `npm run check:import`, `npm run check:app` | run the importer and the app on the real export in `private/`; they print counts only |

@@ -192,6 +192,7 @@ function ImportSheet() {
     if (!state) return;
     setBusy(true);
     await writeImport(db, state.data);
+    void navigator.storage?.persist?.().catch(() => undefined);
     closeSheet();
     toast(t('importDone'));
   };
@@ -221,6 +222,8 @@ function ImportSheet() {
 function Data() {
   const [persisted, setPersisted] = useState<boolean | null>(null);
   useEffect(() => { navigator.storage?.persisted?.().then(setPersisted, () => setPersisted(null)); }, []);
+  // Asked on a tap, never on load: Firefox shows a permission prompt for it.
+  const keep = () => navigator.storage.persist().then(setPersisted, () => undefined);
   const exportBackup = async () => {
     const b = await makeBackup(db);
     await saveFile('reussite-backup-' + today() + '.json', JSON.stringify(b));
@@ -246,6 +249,7 @@ function Data() {
         <button class="btn" type="button" onClick={() => openSheet(<ImportSheet key={'imp' + Date.now()} />)} data-testid="open-import">{t('importV1')}</button>
       </div>
       {persisted !== null && <p class="hint" style="margin-top:10px">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
+      {persisted === false && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
     </section>
   );
 }

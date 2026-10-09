@@ -229,7 +229,6 @@ function OtherDay({ k }: { k: string }) {
             <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
           </div>
           <QuickAdd k={k} />
-        <CommandBox scope={{ kind: 'today' }} />
         </>
       )}
     </div>
@@ -301,6 +300,7 @@ export function Today() {
           {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}
         </div>
         <QuickAdd k={k} />
+        <CommandBox scope={{ kind: 'today' }} />
         <button class="btn primary close-day" type="button" onClick={openClose}>{d?.closed ? t('closeAgain') : t('closeTheDay')}</button>
       </div>
     </div>

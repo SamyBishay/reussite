@@ -15,7 +15,8 @@ export async function importSample(page: Page) {
 export async function noSideways(page: Page, where: string) {
   const r = await page.evaluate(() => {
     const doc = document.documentElement;
-    const sheet = document.querySelector('[data-testid=sheet]') as HTMLElement | null;
+    // The topmost sheet: the AI request preview sits above any other.
+    const sheet = (document.querySelector('[data-testid=ai-preview]') ?? document.querySelector('[data-testid=sheet]')) as HTMLElement | null;
     // The page clips sideways overflow, which would hide it from scrollWidth; so also look for
     // any element sticking out past the screen (or the sheet) that isn't inside a scroller.
     const inScroller = (el: Element) => {
@@ -27,7 +28,7 @@ export async function noSideways(page: Page, where: string) {
     };
     const vw = doc.clientWidth;
     const out: string[] = [];
-    for (const el of document.querySelectorAll('.app *, [data-testid=sheet] *')) {
+    for (const el of document.querySelectorAll('.app *, [data-testid=sheet] *, [data-testid=ai-preview] *')) {
       const b = el.getBoundingClientRect();
       if (!b.width || inScroller(el)) continue;
       const right = sheet && sheet.contains(el) ? sheet.getBoundingClientRect().right : vw;

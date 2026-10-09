@@ -4,10 +4,19 @@ import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json' with { type: 'json' };
 
+// Content-Security-Policy, added to the built page only (the dev server needs inline HMR and a
+// websocket). A meta CSP can't follow Settings, so connect-src allows any https: origin for the
+// configurable AI endpoint (DECISIONS.md). No third-party scripts, styles or fonts.
+const CSP = [
+  "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data: blob:", "font-src 'self' data:",
+  "connect-src 'self' https:", "worker-src 'self'", "manifest-src 'self'", "media-src 'self' data: blob:", "object-src 'none'", "base-uri 'self'", "form-action 'none'",
+].join('; ');
+
 export default defineConfig({
   base: './',
   plugins: [
     preact(),
+    { name: 'csp', apply: 'build', transformIndexHtml: (html: string) => html.replace('<meta charset="utf-8" />', `$&\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`) },
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,

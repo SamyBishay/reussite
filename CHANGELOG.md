@@ -1,6 +1,10 @@
 # What's new
 
 ## 2.0 — in progress
+- AI, if you want it: choose OpenRouter (or any OpenAI-compatible service) or Anthropic in Settings → AI and add your key. The key stays on this device.
+- Change the list in plain words: type "drop the games; the photos are due Friday" on Today, the Matrix or Projects, then tick the changes you want. Nothing is written until you confirm.
+- Ask any AI: copy a summary of the method and part of your list, with your question, into any chatbot. Paste its reply back and tick the changes you want.
+- Before Réussite first sends something to an AI, it shows you exactly what will be sent. You can ask to see it every time.
 - Plan the day by hand: a short morning check-in (yesterday, today's shape), then a plan made by the method's rules, which you can swap or cut.
 - Break a step down, or tell Réussite you're stuck: it asks which friction, shows the starter, and helps you restart.
 - Decisions, start to finish: the problem, every option, weighted pros and cons of doing and of not doing, scores, the choice, and the steps. Réussite reminds you to check it on the date you set.

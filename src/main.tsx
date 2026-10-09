@@ -1,3 +1,4 @@
+import './zod-config';
 import { render } from 'preact';
 import '@fontsource/atkinson-hyperlegible-next/400.css';
 import '@fontsource/atkinson-hyperlegible-next/600.css';

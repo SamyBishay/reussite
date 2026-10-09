@@ -358,3 +358,11 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'review help');
   });
 }
+
+test('the built page breaks none of its own Content-Security-Policy', async ({ page }) => {
+  const blocked: string[] = [];
+  page.on('console', m => { if (/Content-Security-Policy/i.test(m.text())) blocked.push(m.text()); });
+  await importSample(page);
+  for (const tab of ['matrix', 'projects', 'calendar', 'settings', 'today']) await page.getByTestId('tab-' + tab).click();
+  expect(blocked).toEqual([]);
+});

@@ -1,0 +1,12 @@
+# Réussite
+
+> A local-first planning app (PWA) built on a CBT method for adult ADHD. No accounts; data stays on the device.
+
+## Docs
+- [BRIEF.md](BRIEF.md): the build brief — what the app does, by phase.
+- [AGENTS.md](AGENTS.md): commands, code layout and invariants for coding agents.
+- [DECISIONS.md](DECISIONS.md): decisions made while building, one line each.
+- [CHANGELOG.md](CHANGELOG.md): what changed, in plain language (shown in the app).
+- [docs/METHOD.en.md](docs/METHOD.en.md): the method, in English (draft, under review).
+- [docs/METHOD.fr.md](docs/METHOD.fr.md): la méthode, en français (brouillon, en relecture).
+- [docs/reussite-v1.html](docs/reussite-v1.html): version 1, kept for reference.

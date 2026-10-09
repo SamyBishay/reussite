@@ -1,6 +1,8 @@
 // The Log, ported from v1: totals, the last seven days, timed sessions, decisions.
-import { sessions, tasks, today, decisions, settings } from '../app/store';
-import { cardsOn, minutesOn, allCards, ratio } from '../app/model';
+import { sessions, tasks, today, settings } from '../app/store';
+import { cardsOn, minutesOn, allCards, ratio, estPoints } from '../app/model';
+import { decisionGroups, openDecisionPage, openDecision } from '../flows/decision';
+import { medianRatio, closeness } from '../domain/estimates';
 import { Title, suitName } from '../app/ui';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -8,6 +10,33 @@ import { SUIT_ORDER } from '../data/settings';
 
 const WHY: Record<string, Key> = { done: 'whyDone', later: 'whyLater', focus: 'whyFocus', blocked: 'whyBlocked', interrupted: 'whyInterrupted', tired: 'whyTired', switched: 'whySwitched', close: 'whyClose' };
 const whyText = (w: string | null | undefined) => (w && WHY[w] ? t(WHY[w]!) : '');
+
+const GROUP_KEY = { check: 'decToCheck', open: 'decOpen', decided: 'decDecided', closed: 'decClosed' } as const;
+
+/** Getting better at estimating is real progress: the median ratio by month and by app, and whose estimates land closer. */
+function Calibration() {
+  const pts = estPoints.value;
+  if (!pts.length) return null;
+  const x = (r: number | null) => (r == null ? '—' : '×' + r.toFixed(1));
+  const byMonth = new Map<string, typeof pts>();
+  for (const p of pts) { const m = p.doneDay.slice(0, 7); byMonth.set(m, [...(byMonth.get(m) ?? []), p]); }
+  const byApp = new Map<string, typeof pts>();
+  for (const p of pts) if (p.app) { const k = p.app.trim(); byApp.set(k, [...(byApp.get(k) ?? []), p]); }
+  const mine = pts.filter(p => p.by !== 'ai'), ai = pts.filter(p => p.by === 'ai');
+  const cm = closeness(mine), ca = closeness(ai);
+  return (
+    <>
+      <h2 class="sec">{t('calibration')} <span class="hint-inline">{t('calibrationHint')}</span></h2>
+      <div class="calib" data-testid="calibration">
+        <table class="sess" style="min-width:0"><thead><tr><th>{t('month')}</th><th class="n">{t('timedN')}</th><th class="n">{t('realOverEst')}</th></tr></thead>
+          <tbody>{[...byMonth].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6).map(([m, xs]) => <tr><td>{fmtDate(m + '-01', { month: 'long', year: 'numeric' })}</td><td class="n">{xs.length}</td><td class="n">{x(medianRatio(xs))}</td></tr>)}</tbody></table>
+        {byApp.size > 0 && <table class="sess" style="min-width:0"><thead><tr><th>{t('appField')}</th><th class="n">{t('timedN')}</th><th class="n">{t('realOverEst')}</th></tr></thead>
+          <tbody>{[...byApp].sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([a, xs]) => <tr><td>{a}</td><td class="n">{xs.length}</td><td class="n">{x(medianRatio(xs))}</td></tr>)}</tbody></table>}
+      </div>
+      {ai.length > 0 && cm != null && ca != null && <p class="hint" style="margin-top:8px">{cm <= ca ? t('yoursCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) }) : t('aiCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) })}</p>}
+    </>
+  );
+}
 
 export function Log() {
   const r = ratio.value;
@@ -25,7 +54,7 @@ export function Log() {
   const friction: Record<string, number> = {};
   sess.forEach(s => { const w = s.why; if (w && w !== 'done' && w !== 'switched' && w !== 'close') friction[w] = (friction[w] ?? 0) + 1; });
   const fk = Object.keys(friction).sort((a, b) => friction[b]! - friction[a]!);
-  const decs = [...decisions.value.values()].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
+  const groups = decisionGroups();
 
   return (
     <div>
@@ -60,16 +89,21 @@ export function Log() {
           </table></div>
         </>
       ) : <p class="hint">{t('nothingTimed')}</p>}
-      <h2 class="sec">{t('decisions')}</h2>
-      {decs.length ? (
-        <ul class="decs">{decs.map(d => (
-          <li>
-            <p><b>{d.title}</b></p>
-            <p class="meta">{typeof d.date === 'string' && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{t('chosen', { what: String(d.chosen ?? '—') })}</p>
-            {typeof d.falsifier === 'string' && d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{typeof d.reviewOn === 'string' && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
-          </li>
-        ))}</ul>
-      ) : <p class="hint">{t('noDecisions')}</p>}
+      <Calibration />
+      <h2 class="sec">{t('decisions')} <button type="button" class="btn small" onClick={() => void openDecision(null)} data-testid="new-decision">{t('newDecision')}</button></h2>
+      {(['check', 'open', 'decided', 'closed'] as const).map(g => groups[g].length > 0 && (
+        <>
+          <h3 class="subsec">{t(GROUP_KEY[g])}</h3>
+          <ul class="decs">{groups[g].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).map(d => (
+            <li>
+              <button type="button" class="linklike" onClick={() => openDecisionPage(d.id, g === 'check')}><b>{d.title || t('untitledDecision')}</b></button>
+              <p class="meta">{d.date && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{d.chosen ? t('chosen', { what: d.chosen }) : t('dst_' + d.status as Key)}</p>
+              {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{d.reviewOn && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
+            </li>
+          ))}</ul>
+        </>
+      ))}
+      {!Object.values(groups).some(g => g.length) && <p class="hint">{t('noDecisions')}</p>}
     </div>
   );
 }

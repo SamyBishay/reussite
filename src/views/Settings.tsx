@@ -1,18 +1,21 @@
 // Settings (brief §7), phase 0: Appearance, Method, Language, Data, About.
 import { useEffect, useState } from 'preact/hooks';
-import { settings, saveSettings, places, db, toast, createDoc, update, readOnly } from '../app/store';
+import { settings, saveSettings, places, stays, db, toast, update, readOnly, today } from '../app/store';
 import { openSheet, closeSheet, suitName } from '../app/ui';
 import { placeIds, placeName } from '../app/sheets';
+import { addPlace, saveStay, removeStay } from '../app/actions';
+import changelog from '../../CHANGELOG.md?raw';
 import { t, lang, type Key } from '../i18n';
 import { PRESETS, contrast, AA } from '../app/theme';
 import { SUIT_ORDER, type Settings as S, type ThemeMode, type Celebrations, type TextSize } from '../data/settings';
 import { makeBackup, parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
-import type { Place, SuitId } from '../data/schema';
+import type { Place, Stay, SuitId } from '../data/schema';
+import { addDays } from '../domain/dates';
 
 const set = (p: Partial<S>) => void saveSettings(p);
 const CARD_LIGHT = '#FFFFFF';
-const today = () => new Date().toISOString().slice(0, 10);
+const isoToday = () => new Date().toISOString().slice(0, 10);
 
 function Seg<V extends string>({ value, options, onChange, label }: { value: V; options: [V, Key][]; onChange: (v: V) => void; label: string }) {
   return (
@@ -86,7 +89,9 @@ function Appearance() {
       <div class="toggles" style="margin-top:14px">
         <label class="tog"><input type="checkbox" checked={s.reduceMotion} onChange={e => set({ reduceMotion: (e.target as HTMLInputElement).checked })} /> {t('reduceMotion')}</label>
         <label class="tog"><input type="checkbox" checked={s.linksInApp} onChange={e => set({ linksInApp: (e.target as HTMLInputElement).checked })} /> {t('linksInApp')}</label>
+        <label class="tog"><input type="checkbox" checked={s.sound} onChange={e => set({ sound: (e.target as HTMLInputElement).checked })} /> {t('soundLabel')}</label>
       </div>
+      {s.sound && <label class="field"><span>{t('volume')}</span><input type="range" min="0" max="1" step="0.1" value={s.volume} onChange={e => set({ volume: Number((e.target as HTMLInputElement).value) })} /></label>}
       <div class="actions">
         <button class="btn small" type="button" onClick={() => saveFile('reussite-theme.json', JSON.stringify({ format: 'reussite-theme', accent: s.accent, suitColors: s.suitColors }, null, 1))}>{t('exportTheme')}</button>
         <label class="btn small">{t('importTheme')}<input type="file" accept="application/json,.json" hidden onChange={importTheme} /></label>
@@ -114,10 +119,12 @@ function PlacesEditor() {
     const name = (f.elements.namedItem('name') as HTMLInputElement).value.trim();
     if (!name) return;
     f.reset();
-    await createDoc<Place>('places', { name, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, order: ps.length });
+    await addPlace(name);
+    toast(t('placeAdded', { name }));
   };
   return (
-    <div class="field"><span>{t('places')}</span>
+    <div class="field" data-testid="places"><span>{t('places')}</span>
+      <p class="hint">{t('placesHint')}</p>
       {ps.map(p => (
         <div class="placerow">
           <input type="text" aria-label={t('placeName')} defaultValue={p.name} onChange={e => update<Place>('places', p.id, { name: (e.target as HTMLInputElement).value.trim() || p.name })} />
@@ -126,12 +133,54 @@ function PlacesEditor() {
           </select>
         </div>
       ))}
-      <form class="placerow" onSubmit={add}><input type="text" name="name" placeholder={t('addPlace')} aria-label={t('addPlace')} autocomplete="off" /><button class="btn small" type="submit">{t('add')}</button></form>
+      <form class="addplace" onSubmit={add}>
+        <input type="text" name="name" placeholder={t('newPlaceName')} aria-label={t('newPlaceName')} autocomplete="off" required />
+        <button class="btn" type="submit" data-testid="add-place">{t('addPlaceBtn')}</button>
+      </form>
       <label class="field"><span>{t('currentPlace')}</span>
         <select value={settings.value.here} onChange={e => set({ here: (e.target as HTMLSelectElement).value })}>
           {[...placeIds(), 'any'].map(id => <option value={id}>{placeName(id)}</option>)}
         </select>
       </label>
+      <p class="hint">{t('currentPlaceHint')}</p>
+    </div>
+  );
+}
+
+/** Stays: a place with a first and last day. On the first day the current place switches by itself. */
+export function StaysEditor() {
+  const list = [...stays.value.values()].sort((a, b) => a.from.localeCompare(b.from)).filter(s => s.to >= addDays(today.value, -60));
+  const ps = placeIds();
+  const add = async (e: Event) => {
+    e.preventDefault();
+    const f = e.currentTarget as HTMLFormElement;
+    const v = (n: string) => (f.elements.namedItem(n) as HTMLInputElement).value;
+    if (!v('placeId') || !v('from') || !v('to')) return;
+    const from = v('from'), to = v('to') < from ? from : v('to');
+    await saveStay(null, { placeId: v('placeId'), from, to, note: v('note').trim() });
+    f.reset();
+    toast(t('stayAdded'));
+  };
+  return (
+    <div class="field" data-testid="stays"><span>{t('stays')}</span>
+      <p class="hint">{t('staysHint')}</p>
+      {list.map(st => (
+        <div class="stayrow">
+          <select aria-label={t('placeName')} value={st.placeId} onChange={e => void saveStay(st.id, { ...st, placeId: (e.target as HTMLSelectElement).value })}>{ps.map(id => <option value={id}>{placeName(id)}</option>)}</select>
+          <input type="date" aria-label={t('stayFrom')} value={st.from} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, from: v }); }} />
+          <input type="date" aria-label={t('stayTo')} value={st.to} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, to: v }); }} />
+          <button class="btn small ghost" type="button" onClick={() => void removeStay(st.id)} aria-label={t('remove', { what: placeName(st.placeId) })}>×</button>
+        </div>
+      ))}
+      {ps.length ? (
+        <form class="stayrow" onSubmit={add}>
+          <select name="placeId" aria-label={t('placeName')}>{ps.map(id => <option value={id}>{placeName(id)}</option>)}</select>
+          <input type="date" name="from" aria-label={t('stayFrom')} required />
+          <input type="date" name="to" aria-label={t('stayTo')} required />
+          <input type="hidden" name="note" value="" />
+          <button class="btn small" type="submit">{t('add')}</button>
+        </form>
+      ) : <p class="hint">{t('addPlaceFirst')}</p>}
     </div>
   );
 }
@@ -171,7 +220,24 @@ function Method() {
           </div>
         ))}
       </div>
+      <div class="row2">
+        <label class="field"><span>{t('obligationAt')}</span><input type="time" value={s.obligationAt} onChange={e => set({ obligationAt: (e.target as HTMLInputElement).value || '18:00' })} /></label>
+        <label class="field"><span>{t('reviewDay')}</span>
+          <select value={String(s.reviewDay)} onChange={e => set({ reviewDay: Number((e.target as HTMLSelectElement).value) })}>
+            {[1, 2, 3, 4, 5, 6, 7].map(d => <option value={d}>{new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', timeZone: 'UTC' })}</option>)}
+          </select>
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>{t('reviewTime')}</span><input type="time" value={s.reviewTime} onChange={e => set({ reviewTime: (e.target as HTMLInputElement).value || '18:00' })} /></label>
+        <label class="field"><span>{t('morningAt')}</span><input type="time" value={s.morningAt} onChange={e => set({ morningAt: (e.target as HTMLInputElement).value || '08:30' })} /></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>{t('eveningAt')}</span><input type="time" value={s.eveningAt} onChange={e => set({ eveningAt: (e.target as HTMLInputElement).value || '21:00' })} /></label>
+      </div>
+      <p class="hint">{t('remindersLater')}</p>
       <PlacesEditor />
+      <StaysEditor />
     </section>
   );
 }
@@ -226,7 +292,7 @@ function Data() {
   const keep = () => navigator.storage.persist().then(setPersisted, () => undefined);
   const exportBackup = async () => {
     const b = await makeBackup(db);
-    await saveFile('reussite-backup-' + today() + '.json', JSON.stringify(b));
+    await saveFile('reussite-backup-' + isoToday() + '.json', JSON.stringify(b));
     toast(t('backupSaved'));
   };
   const restore = async (e: Event) => {
@@ -267,10 +333,12 @@ export function Settings() {
       <Appearance />
       <Method />
       <Data />
-      <section class="set">
+      <section class="set" data-testid="about">
         <h2>{t('about')}</h2>
         <p class="hint">{t('version', { v: __APP_VERSION__ })}</p>
+        {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
         <p class="hint">{t('notTherapy')}</p>
+        <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
       </section>
     </div>
   );

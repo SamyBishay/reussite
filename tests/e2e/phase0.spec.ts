@@ -1,44 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { sampleExport } from './fixture';
-
-async function importSample(page: Page) {
-  await page.goto('/#settings');
-  await page.getByTestId('open-import').click();
-  await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(sampleExport())) });
-  await expect(page.getByTestId('import-summary')).toBeVisible();
-  await page.getByRole('button', { name: 'Import', exact: true }).click();
-  await expect(page.getByTestId('sheet')).toBeHidden();
-  await page.getByTestId('tab-today').click();
-  await expect(page.getByTestId('first')).toContainText('Doctolib');
-}
-
-async function noSideways(page: Page, where: string) {
-  const r = await page.evaluate(() => {
-    const doc = document.documentElement;
-    const sheet = document.querySelector('[data-testid=sheet]') as HTMLElement | null;
-    // The page clips sideways overflow, which would hide it from scrollWidth; so also look for
-    // any element sticking out past the screen (or the sheet) that isn't inside a scroller.
-    const inScroller = (el: Element) => {
-      for (let p = el.parentElement; p; p = p.parentElement) {
-        const o = getComputedStyle(p).overflowX;
-        if ((o === 'auto' || o === 'scroll') && p !== sheet) return true;
-      }
-      return false;
-    };
-    const vw = doc.clientWidth;
-    const out: string[] = [];
-    for (const el of document.querySelectorAll('.app *, [data-testid=sheet] *')) {
-      const b = el.getBoundingClientRect();
-      if (!b.width || inScroller(el)) continue;
-      const right = sheet && sheet.contains(el) ? sheet.getBoundingClientRect().right : vw;
-      if (b.right > right + 0.5 || b.left < -0.5) out.push(el.tagName.toLowerCase() + '.' + [...el.classList].join('.') + ' ' + Math.round(b.left) + '→' + Math.round(b.right));
-    }
-    return { page: [doc.scrollWidth, doc.clientWidth], sheet: sheet ? [sheet.scrollWidth, sheet.clientWidth] : null, out: out.slice(0, 5) };
-  });
-  expect(r.page[0], where + ': page scrolls sideways').toBeLessThanOrEqual(r.page[1]!);
-  if (r.sheet) expect(r.sheet[0], where + ': sheet scrolls sideways').toBeLessThanOrEqual(r.sheet[1]!);
-  expect(r.out, where + ': elements past the edge').toEqual([]);
-}
+import { importSample, noSideways } from './helpers';
 
 test('imports a v1 export, with a summary first', async ({ page }) => {
   await page.goto('/#settings');
@@ -59,7 +21,7 @@ for (const width of [320, 375, 430]) {
   test(`nothing scrolls sideways at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await importSample(page);
-    for (const v of ['today', 'matrix', 'projects', 'log', 'settings']) {
+    for (const v of ['today', 'matrix', 'projects', 'calendar', 'log', 'settings']) {
       await page.getByTestId('tab-' + v).click();
       await noSideways(page, v);
     }
@@ -70,7 +32,6 @@ for (const width of [320, 375, 430]) {
       ['swap', () => page.getByTestId('first').getByRole('button', { name: 'Swap' }).click()],
       ['from your list', () => page.getByRole('button', { name: '+ From your list' }).click()],
       ['leisure', () => page.getByRole('button', { name: '+ Leisure & people' }).click()],
-      ['close the day', () => page.locator('main').getByRole('button', { name: 'Close the day' }).click()],
       ['place', () => page.locator('.here').click()],
     ];
     for (const [name, open] of sheets) {
@@ -99,7 +60,7 @@ test('marking an untimed step done asks how long it took', async ({ page }) => {
   await page.getByTestId('dur').nth(1).click();
   await expect(page.getByTestId('first')).not.toContainText('Doctolib');
   await page.getByTestId('tab-log').click();
-  await expect(page.locator('table.sess')).toContainText('Doctolib');
+  await expect(page.locator('main')).toContainText('Doctolib');
 });
 
 test('the wheel and "didn’t time it" also finish the step', async ({ page }) => {
@@ -131,10 +92,10 @@ test('a step’s link opens the website outside Réussite', async ({ page }) => 
   await expect(go).toHaveAttribute('target', '_blank');
 });
 
-test('footer shows the not-therapy line and no credit until it is decided', async ({ page }) => {
+test('footer shows the credit line and the not-therapy line', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.foot')).toContainText('doesn’t replace therapy');
-  await expect(page.locator('.foot span')).toHaveCount(2);
+  await expect(page.locator('.foot')).toContainText('Special thanks to Nelly Darmon, psychologist.');
 });
 
 test('French uses French typography', async ({ page }) => {

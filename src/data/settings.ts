@@ -37,8 +37,19 @@ export interface Settings {
   here: string;
   /** Open websites inside Réussite instead of the browser. */
   linksInApp: boolean;
-  /** Footer credit for the method's author, per language. Empty = not shown. */
+  /** Footer credit, per language. Empty = not shown. */
   credit: { en: string; fr: string };
+  /** Default time for the day's standing obligation. */
+  obligationAt: string;
+  /** Sunday review: ISO weekday (7 = Sunday) and time. */
+  reviewDay: number;
+  reviewTime: string;
+  /** Morning check-in and evening close reminders (notifications arrive in phase 3). */
+  morningAt: string;
+  eveningAt: string;
+  /** Sound on completed steps and at the close of the day. */
+  sound: boolean;
+  volume: number;
   [extra: string]: unknown;
 }
 
@@ -68,7 +79,17 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   here: 'any',
   linksInApp: false,
-  credit: { en: '', fr: '' },
+  credit: {
+    en: 'Designed by Samy Bishay and built with Claude Code. Special thanks to Nelly Darmon, psychologist.',
+    fr: 'Conçu par Samy Bishay et développé avec Claude Code. Remerciements particuliers à Nelly Darmon, psychologue.',
+  },
+  obligationAt: '18:00',
+  reviewDay: 7,
+  reviewTime: '18:00',
+  morningAt: '08:30',
+  eveningAt: '21:00',
+  sound: true,
+  volume: 0.6,
 };
 
 /** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */

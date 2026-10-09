@@ -5,7 +5,9 @@ import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
 import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
-import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision } from '../data/schema';
+import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay } from '../data/schema';
+import { normDecision } from '../data/normalize';
+import { stayOn } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { dayKey } from '../domain/dates';
@@ -22,6 +24,7 @@ export const projects = signal(new Map<string, WithId<Project>>());
 export const days = signal(new Map<string, WithId<Day>>());
 export const decisions = signal(new Map<string, WithId<Decision>>());
 export const places = signal(new Map<string, WithId<Place>>());
+export const stays = signal(new Map<string, WithId<Stay>>());
 export const settings = signal<Settings>(withDefaults(undefined));
 export const ready = signal(false);
 /** Data written by a newer version: look but don't touch, and ask to reload. */
@@ -31,11 +34,36 @@ export const toastMsg = signal<string | null>(null);
 const now = signal(Date.now());
 setInterval(() => (now.value = Date.now()), 30_000);
 
-export const hereZone = computed(() => places.value.get(settings.value.here)?.timeZone);
-export const today = computed(() => {
+/** Ticks every 30 seconds, so day changes and long timers are noticed. */
+export const clockNow = now;
+
+/**
+ * Today, in the current place's time zone, and the current place: the stay that day belongs
+ * to, else the place chosen by hand (brief §5, Places and stays).
+ */
+const where = computed(() => {
   void now.value;
-  return dayKey(new Date(), settings.value.dayStart, hereZone.value);
+  const s = settings.value, at = new Date();
+  const zone = (id: string) => places.value.get(id)?.timeZone;
+  let k = dayKey(at, s.dayStart, zone(s.here));
+  let stay = stayOn(stays.value.values(), k);
+  if (stay) {
+    k = dayKey(at, s.dayStart, zone(stay.placeId));
+    stay = stayOn(stays.value.values(), k) ?? stay;
+  }
+  return { today: k, here: stay?.placeId ?? s.here, stay: stay ?? null };
 });
+export const today = computed(() => where.value.today);
+/** The place the person is in now: the planner and reminders follow it. */
+export const here = computed(() => where.value.here);
+export const currentStay = computed(() => where.value.stay);
+export const hereZone = computed(() => places.value.get(here.value)?.timeZone);
+
+/** The place page being looked at (brief §5): Today, Matrix, Projects and Calendar follow it. Device-local. */
+const viewed = signal<string | null>(null);
+export const pagePlace = computed(() => (viewed.value && (viewed.value === 'any' || places.value.has(viewed.value)) ? viewed.value : here.value));
+export const viewingElsewhere = computed(() => pagePlace.value !== here.value);
+export function viewPlace(id: string | null) { viewed.value = id && id !== here.value ? id : null; }
 
 let toastTimer = 0;
 export function toast(m: string) {
@@ -46,7 +74,11 @@ export function toast(m: string) {
 
 const live = <T>(c: Collection) => (docs: Stored<Record<string, unknown>>[]) => {
   const m = new Map<string, WithId<T>>();
-  for (const d of docs) if (!d._del) m.set(d.id, { ...(fieldsOf(d) as T), id: d.id });
+  for (const d of docs) {
+    if (d._del) continue;
+    const f = fieldsOf(d);
+    m.set(d.id, { ...((c === 'decisions' ? normDecision(f) : f) as T), id: d.id });
+  }
   return m;
 };
 
@@ -66,6 +98,7 @@ export async function start(): Promise<void> {
     ['days', v => (days.value = v)],
     ['decisions', v => (decisions.value = v)],
     ['places', v => (places.value = v)],
+    ['stays', v => (stays.value = v)],
   ];
   const first: Promise<void>[] = [];
   for (const [c, set] of subs) {

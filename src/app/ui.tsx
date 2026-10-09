@@ -1,47 +1,16 @@
 // Shared view pieces, ported from v1's render helpers.
-import { signal } from '@preact/signals';
-import type { ComponentChildren, VNode } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { settings, projects, today, toast } from './store';
-import { quad, blocked, waitingOn, spentOf, type T } from './model';
+import { quad, blocked, waitingOn, spentOf, personal, estModel, type T } from './model';
+import { openDue } from './due';
+import { OPTS } from '../domain/estimates';
 import { startTask } from './actions';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { daysBetween } from '../domain/dates';
 import { resolveLink, detectPlatform } from '../domain/links';
 import type { SuitId } from '../data/schema';
 
-// ---------- sheets ----------
-export const sheet = signal<VNode | null>(null);
-let lastFocus: Element | null = null;
-export function openSheet(v: VNode) {
-  if (!sheet.value) lastFocus = document.activeElement;
-  sheet.value = v;
-}
-export function closeSheet() {
-  sheet.value = null;
-  if (lastFocus instanceof HTMLElement && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
-}
-
-export function SheetHost() {
-  const ref = useRef<HTMLDivElement>(null);
-  const open = !!sheet.value;
-  useEffect(() => {
-    if (open) ref.current?.focus({ preventScroll: true });
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && sheet.value) closeSheet(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
-  if (!open) return null;
-  return (
-    <>
-      <div class="scrim" onClick={closeSheet} />
-      <div class="sheet" role="dialog" aria-modal="true" aria-label={t('details')} tabIndex={-1} ref={ref} data-testid="sheet">
-        <button class="sheet-x" type="button" onClick={closeSheet} aria-label={t('close')}>×</button>
-        {sheet.value}
-      </div>
-    </>
-  );
-}
+export { sheet, openSheet, closeSheet, SheetHost } from './sheet';
 
 // ---------- text ----------
 /** The step's verb ("Open Mail") in bold, as in v1. */
@@ -69,10 +38,40 @@ export function Due({ k }: { k: string }) {
   return <span class={'due' + (n <= settings.value.urgencyDays ? ' soon' : '')}>{txt}</span>;
 }
 
+/** A step's due date, editable where it appears (brief §5): today, tomorrow, +1 week, clear. */
+export function DueChip({ tk, empty = false }: { tk: T; empty?: boolean }) {
+  if (tk.status !== 'open') return null;
+  if (!tk.due && !empty) return null;
+  return (
+    <button type="button" class="duechip" onClick={e => { e.stopPropagation(); openDue(tk.id); }} aria-label={t('changeDue')}>
+      {tk.due ? <Due k={tk.due} /> : <span class="due muted">{t('addDue')}</span>}
+    </button>
+  );
+}
+
+/** The basis of a personal estimate, in one line. */
+export function basisLine(tk: T): string {
+  const p = personal(tk);
+  if (!p) return learningLine();
+  const f = p.factor.toFixed(1).replace('.', lang.value === 'fr' ? ',' : '.');
+  const b = p.basis;
+  const what = b.kind === 'app' ? t('basisApp', { app: tk.app || b.key }) : b.kind === 'project' ? t('basisProject', { name: projects.value.get(b.key)?.name ?? t('inbox') })
+    : b.kind === 'suit' ? t('basisSuit', { suit: suitName(b.key as SuitId, true) }) : t('basisAll');
+  return t('basisLine', { what, n: b.n, f });
+}
+export const learningLine = () => t('learningPace', { n: Math.min(OPTS.minWeight - 1, Math.floor(estModel.value.weight)), of: OPTS.minWeight });
+
+/** The person's estimate first; the personal estimate only after it (brief §5: no anchoring). */
 export function Est({ tk }: { tk: T }) {
   if (!tk.est) return <span class="est muted">{t('noEstimate')}</span>;
   const guess = tk.estBy === 'ai';
-  return <span class={'est' + (guess ? ' guess' : '')} title={guess ? t('aiGuess') : t('yourEstimate')}>{(guess ? '~' : '') + fmtMin(tk.est)}</span>;
+  const p = tk.status === 'open' ? personal(tk) : null;
+  return (
+    <span class={'est' + (guess ? ' guess' : '')} title={guess ? t('aiGuess') : t('yourEstimate')}>
+      {(guess ? '~' : '') + fmtMin(tk.est)}
+      {p && p.value !== tk.est && <button type="button" class="pest" onClick={e => { e.stopPropagation(); toast(basisLine(tk)); }} aria-label={basisLine(tk)}>{' → ' + t('usually', { t: fmtMin(p.value) })}</button>}
+    </span>
+  );
 }
 
 const QKEY: Record<number, Key> = { 1: 'qNow', 2: 'qProtect', 3: 'qQuick', 4: 'qLater' };
@@ -95,7 +94,9 @@ export function Meta({ tk, withQuad }: { tk: T; withQuad?: boolean }) {
     tk.kind === 'decision' && <span key="k" class="tag">{t('decisionTag')}</span>,
     <Est key="e" tk={tk} />,
     spent > 0 && <span key="sp">{t('timedSoFar', { t: fmtMin(spent) })}</span>,
-    tk.due ? <Due key="due" k={tk.due} /> : tk.urgent && tk.status === 'open' && <span key="u" class="tag urg">{t('urgent')}</span>,
+    tk.at && <span key="at" class="due">{tk.at}</span>,
+    tk.due ? (tk.status === 'open' ? <DueChip key="due" tk={tk} /> : <Due key="due" k={tk.due} />) : tk.urgent && tk.status === 'open' && <span key="u" class="tag urg">{t('urgent')}</span>,
+    tk.repeat && <span key="r" class="tag" title={t('repeats')}>↻</span>,
     blocked(tk) && w && <span key="w" class="tag">{t('waitsFor', { what: w.title.length > 40 ? w.title.slice(0, 38) + '…' : w.title })}</span>,
     (tk.carried || 0) >= 3 && <span key="c" class="tag warn">{t('carriedTag', { n: tk.carried })}</span>,
   ];

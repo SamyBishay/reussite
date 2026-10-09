@@ -4,6 +4,7 @@
 import { create, merge, type Stored } from './doc';
 import { ZERO } from './hlc';
 import { SCHEMA_VERSION, type Collection } from './schema';
+import { migrateData, type Data } from './migrations';
 import type { ReussiteDb } from './db';
 import { COLLECTIONS } from './schema';
 import { dumpAll } from './db';
@@ -69,7 +70,8 @@ export function importV1(file: unknown, deviceZone = Intl.DateTimeFormat().resol
   }
   if (!src.tasks!.length && !src.projects!.length) throw new Error('This file has no tasks or projects. Is it a Réussite export?');
 
-  const mk = (id: string, fields: Doc) => create(id, fields, SCHEMA_VERSION, ZERO);
+  // Built in the first v2 schema, then brought up to date by the same migrations as stored data.
+  const mk = (id: string, fields: Doc) => create(id, fields, 1, ZERO);
   const out: Required<V2Data> = { tasks: [], sessions: [], projects: [], days: [], decisions: [], places: [], stays: [], meta: [] };
   const where = new Set<string>();
   let spentMismatch = 0;
@@ -116,9 +118,10 @@ export function importV1(file: unknown, deviceZone = Intl.DateTimeFormat().resol
   const { id: _drop, ...settings } = v1settings;
   out.meta.push(mk('settings', settings));
 
+  const data = migrateData(out as unknown as Data, 1) as unknown as Required<V2Data>;
   const produced: Record<string, number> = {};
-  for (const [k, v] of Object.entries(out)) produced[k] = v.length;
-  return { data: out, summary: { found, produced, skipped, spentMismatch, places } };
+  for (const [k, v] of Object.entries(data)) produced[k] = v.length;
+  return { data, summary: { found, produced, skipped, spentMismatch, places } };
 }
 
 /**

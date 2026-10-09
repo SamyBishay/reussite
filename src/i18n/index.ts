@@ -8,7 +8,7 @@ export type Lang = 'en' | 'fr';
 export type Key = keyof Strings;
 type Plural = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 
-const DICTS: Record<Lang, Strings> = { en, fr };
+const DICTS: Record<Lang, Partial<Strings>> = { en, fr };
 
 export const lang = signal<Lang>('en');
 const plurals = computed(() => new Intl.PluralRules(lang.value));

@@ -9,9 +9,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test",
+    "e2e": "playwright test --project=chromium",
     "typecheck": "tsc --noEmit",
-    "check:import": "vitest run --config vitest.private.config.ts --reporter=verbose --silent=false"
+    "check:import": "vitest run --config vitest.private.config.ts --reporter=verbose --silent=false",
+    "e2e:webkit": "sh scripts/e2e-webkit.sh"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible-mono": "^5.3.0",

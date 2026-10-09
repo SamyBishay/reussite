@@ -11,7 +11,6 @@ export interface SuitSetting {
   name: { en: string; fr: string };
   short: { en: string; fr: string };
   glyph: string;
-  color: string;
 }
 
 export interface Settings {
@@ -62,10 +61,10 @@ export const DEFAULT_SETTINGS: Settings = {
   planningMin: 15,
   launchDefaults: { start: '09:30', restarts: ['14:00'] },
   suits: {
-    S: { name: { en: 'Work & studies', fr: 'Travail et études' }, short: { en: 'Work', fr: 'Travail' }, glyph: '♠', color: '#1E7568' },
-    D: { name: { en: 'Money & papers', fr: 'Argent et papiers' }, short: { en: 'Papers', fr: 'Papiers' }, glyph: '♦', color: '#7A55B8' },
-    C: { name: { en: 'Family & home', fr: 'Famille et maison' }, short: { en: 'Family', fr: 'Famille' }, glyph: '♣', color: '#1E7568' },
-    H: { name: { en: 'Life: people, leisure, health', fr: 'Vie : proches, loisirs, santé' }, short: { en: 'Life', fr: 'Vie' }, glyph: '♥', color: '#7A55B8' },
+    S: { name: { en: 'Work & studies', fr: 'Travail et études' }, short: { en: 'Work', fr: 'Travail' }, glyph: '♠' },
+    D: { name: { en: 'Money & papers', fr: 'Argent et papiers' }, short: { en: 'Papers', fr: 'Papiers' }, glyph: '♦' },
+    C: { name: { en: 'Family & home', fr: 'Famille et maison' }, short: { en: 'Family', fr: 'Famille' }, glyph: '♣' },
+    H: { name: { en: 'Life: people, leisure, health', fr: 'Vie : proches, loisirs, santé' }, short: { en: 'Life', fr: 'Vie' }, glyph: '♥' },
   },
   here: 'any',
   linksInApp: false,

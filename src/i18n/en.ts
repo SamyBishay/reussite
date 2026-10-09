@@ -248,6 +248,10 @@ export const en = {
   suitColours: 'Suit colours',
   contrastWarn: 'Low contrast ({r}:1). Text in this colour may be hard to read; aim for 4.5:1.',
   contrastOk: 'Contrast {r}:1',
+  sizeS: 'Small',
+  sizeM: 'Medium',
+  sizeL: 'Large',
+  linksInApp: 'Open websites inside Réussite',
   textSize: 'Text size',
   reduceMotion: 'Reduce motion',
   celebrations: 'Celebrations',
@@ -311,11 +315,13 @@ export const en = {
   notTherapy: 'Réussite helps you apply a method. It doesn’t replace therapy or care from a professional.',
   // updates and states
   updateReady: 'A new version is ready.',
+  updateAfterTimer: 'Stop the timer first.',
   reload: 'Reload',
   later_: 'Later',
   newerData: 'This list was saved by a newer version of Réussite. You can look, but not edit, until you reload.',
   loading: 'Dealing your cards…',
   saveFailed: 'That change didn’t save. Try again.',
+  choose: 'Choose',
   cancel: 'Cancel',
 };
 

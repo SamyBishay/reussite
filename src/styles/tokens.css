@@ -1,0 +1,55 @@
+:root{
+  /* Layout: a card table. One focal "Start here" card, a quiet tableau below, suit piles to the side. */
+  --ground:#F2F1F6;
+  --panel:#F8F7FB;
+  --card:#FFFFFF;
+  --ink:#201C2B;
+  --ink-2:#4E4860;
+  --ink-3:#645D75;
+  --line:#D6D1E3;
+  --line-2:#E7E3EF;
+  --accent:#6B4BA6;          /* lilac, deep enough for white text */
+  --accent-ink:#FFFFFF;
+  --accent-soft:#EEE8F8;
+  --accent-deep:#1D1830;     /* night for the close-of-day show */
+  --lilac:#B8A2E6;           /* decorative lilac */
+  --sea:#8ED8C8;             /* light blue-green, decorative */
+  --sea-deep:#1E7568;        /* blue-green for text and ticks */
+  --sea-soft:#E0F4EF;
+  --pearl:#F7F1E6;
+  --suit-a:#7A55B8;          /* hearts and diamonds */
+  --suit-b:#1E7568;          /* spades and clubs */
+  --red:#B22330;             /* urgency only */
+  --warn:#85530C;
+  --warn-soft:#F4E9D2;
+  --pc:#FBF8F1;
+  --pc-ink:#1E7568;
+  --pc-red:#7A55B8;
+  --pc-edge:#D2C8B8;
+  --scrim:rgba(24,12,26,.45);
+  --shadow:0 1px 0 rgba(34,26,38,.05),0 2px 8px rgba(34,26,38,.07);
+  --sans:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:var(--sans);
+  --mono:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14121C;--panel:#1A1724;--card:#211D2D;--ink:#ECE8F4;--ink-2:#B7B0C8;--ink-3:#9C95AE;
+    --line:#383249;--line-2:#29243A;--accent:#C6B3F0;--accent-ink:#1B1530;--accent-soft:#2F2747;--accent-deep:#0F0D18;
+    --lilac:#C6B3F0;--sea:#8EDCCB;--sea-deep:#8EDCCB;--sea-soft:#1A3432;--pearl:#F7F1E6;--suit-a:#C6B3F0;--suit-b:#8EDCCB;
+    --pc:#F4F0F8;--pc-ink:#1E7568;--pc-red:#7A55B8;--pc-edge:#C9C0DA;
+    --red:#EF7373;--warn:#E4AA50;--warn-soft:#382A11;--scrim:rgba(0,0,0,.55);
+    --shadow:0 1px 0 rgba(0,0,0,.35),0 3px 10px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14121C;--panel:#1A1724;--card:#211D2D;--ink:#ECE8F4;--ink-2:#B7B0C8;--ink-3:#9C95AE;
+  --line:#383249;--line-2:#29243A;--accent:#C6B3F0;--accent-ink:#1B1530;--accent-soft:#2F2747;--accent-deep:#0F0D18;
+  --lilac:#C6B3F0;--sea:#8EDCCB;--sea-deep:#8EDCCB;--sea-soft:#1A3432;--pearl:#F7F1E6;--suit-a:#C6B3F0;--suit-b:#8EDCCB;
+  --pc:#F4F0F8;--pc-ink:#1E7568;--pc-red:#7A55B8;--pc-edge:#C9C0DA;
+  --red:#EF7373;--warn:#E4AA50;--warn-soft:#382A11;--scrim:rgba(0,0,0,.55);
+  --shadow:0 1px 0 rgba(0,0,0,.35),0 3px 10px rgba(0,0,0,.35);
+  color-scheme:dark;
+}

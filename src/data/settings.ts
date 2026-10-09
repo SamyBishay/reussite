@@ -36,6 +36,8 @@ export interface Settings {
   suits: Record<SuitId, SuitSetting>;
   /** Current place outside any stay: a place id. */
   here: string;
+  /** Open websites inside Réussite instead of the browser. */
+  linksInApp: boolean;
   /** Footer credit for the method's author, per language. Empty = not shown. */
   credit: { en: string; fr: string };
   [extra: string]: unknown;
@@ -66,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
     H: { name: { en: 'Life: people, leisure, health', fr: 'Vie : proches, loisirs, santé' }, short: { en: 'Life', fr: 'Vie' }, glyph: '♥', color: '#7A55B8' },
   },
   here: 'any',
+  linksInApp: false,
   credit: { en: '', fr: '' },
 };
 

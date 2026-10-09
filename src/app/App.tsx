@@ -22,6 +22,7 @@ import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
+import { PreviewHost } from '../ai/ui';
 
 type View = 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings';
 const VIEWS: View[] = ['today', 'matrix', 'projects', 'calendar', 'log', 'settings'];
@@ -215,6 +216,7 @@ export function App() {
       </div>
       <SheetHost />
       <OverlayHost />
+      <PreviewHost />
       <Moment />
       <Toast />
     </>

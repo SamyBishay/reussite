@@ -13,6 +13,7 @@ import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Task } from '../data/schema';
+import { CommandBox } from '../ai/ui';
 
 type P = Project & { id: string };
 const openProj = new Set<string>();
@@ -189,6 +190,7 @@ export function Projects() {
   return (
     <div>
       <Scope hidden={hidden} />
+      <CommandBox scope={{ kind: 'matrix' }} />
       {SUIT_ORDER.map(s => {
         const ps = vis.filter(p => p.suit === s && p.id !== 'inbox').sort(byOrder);
         if (!ps.length) return null;

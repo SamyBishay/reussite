@@ -268,6 +268,19 @@ table.sess{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
 .chg .what{font-weight:600;overflow-wrap:anywhere}
 .diff{font-size:13.5px;color:var(--ink-2);overflow-wrap:anywhere}
 .picklist.pp li{grid-template-columns:auto minmax(0,1fr) auto}
+.aibar{margin-top:14px}
+.aibar .ai-links{margin-top:10px}
+.chglist li{grid-template-columns:minmax(0,1fr)}
+.chg .diff b{font-weight:600;color:var(--ink)}
+.ai-note{background:var(--card);border-left:3px solid var(--accent);border-radius:8px;padding:8px 12px;margin:10px 0 0;overflow-wrap:anywhere}
+.ai-err{margin-top:4px}
+.scrim.ai-layer{z-index:32}
+.sheet.ai-layer{z-index:33}
+.ai-req{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:12px 0 0;font-size:13.5px}
+.ai-req dt{font-weight:600;color:var(--ink-2)}
+.ai-req dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--mono,monospace)}
+.ai-pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px/1.45 var(--mono,monospace);background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:10px;margin:8px 0 0;max-height:40vh;overflow-y:auto;overflow-x:hidden}
+.field-label{font-size:13px;font-weight:600;color:var(--ink-2);margin:14px 0 0}
 .pp .num{font-family:var(--serif);font-weight:700;font-size:19px;min-width:1.2em;text-align:center}
 .pp .ctrls{display:flex;gap:6px}
 @media (max-width:540px){.picklist.pp li{grid-template-columns:auto minmax(0,1fr)}.pp .ctrls{grid-column:2}}

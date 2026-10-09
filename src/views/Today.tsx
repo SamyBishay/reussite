@@ -17,6 +17,7 @@ import { isoDow } from '../domain/repeat';
 import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
 import type { Launch, Task } from '../data/schema';
+import { CommandBox } from '../ai/ui';
 
 export { openClose };
 
@@ -228,6 +229,7 @@ function OtherDay({ k }: { k: string }) {
             <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
           </div>
           <QuickAdd k={k} />
+        <CommandBox scope={{ kind: 'today' }} />
         </>
       )}
     </div>

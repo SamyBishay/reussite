@@ -12,6 +12,7 @@ import { makeBackup, parseBackup, restoreBackup, saveFile } from '../data/backup
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { AiSettings } from '../ai/AiSettings';
 
 const set = (p: Partial<S>) => void saveSettings(p);
 const CARD_LIGHT = '#FFFFFF';
@@ -332,6 +333,7 @@ export function Settings() {
       </section>
       <Appearance />
       <Method />
+      <AiSettings />
       <Data />
       <section class="set" data-testid="about">
         <h2>{t('about')}</h2>

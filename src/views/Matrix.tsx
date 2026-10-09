@@ -9,6 +9,7 @@ import { Title, Suit, quadName, DueChip, suitName } from '../app/ui';
 import { t, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
+import { CommandBox } from '../ai/ui';
 
 /** "On this page" or "Everything", shared by Matrix and Projects; remembered per device. */
 const initialScope = (() => { try { return localStorage.getItem('reussite.scope') === 'all' ? 'all' : 'here'; } catch { return 'here'; } })();
@@ -82,6 +83,7 @@ export function Matrix() {
   return (
     <div>
       {!f.place && <Scope hidden={hidden} />}
+      <CommandBox scope={{ kind: 'matrix' }} />
       <div class="filters" data-testid="filters">
         <input type="search" value={f.q} placeholder={t('search')} aria-label={t('search')} onInput={e => set({ q: (e.target as HTMLInputElement).value })} />
         <select aria-label={t('project')} value={f.project} onChange={e => set({ project: (e.target as HTMLSelectElement).value })}>

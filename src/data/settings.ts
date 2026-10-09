@@ -6,6 +6,7 @@ export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
 export type TextSize = 'S' | 'M' | 'L';
 export type Lang = 'en' | 'fr';
+export type AiProvider = 'none' | 'openai' | 'anthropic';
 
 export interface SuitSetting {
   name: { en: string; fr: string };
@@ -50,6 +51,14 @@ export interface Settings {
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
+  // AI (brief §10). The key itself is device-local (db.local), never in this synced document.
+  aiProvider: AiProvider;
+  /** Base URL of the OpenAI-compatible adapter. */
+  aiBaseUrl: string;
+  /** Model per slot, per provider: quick (cheap, the command box) and thinking (plans, decisions). */
+  aiModels: Record<Exclude<AiProvider, 'none'>, { quick: string; thinking: string }>;
+  /** Show the exact request before every call, not only the first of each kind. */
+  aiAlwaysShow: boolean;
   [extra: string]: unknown;
 }
 
@@ -90,6 +99,13 @@ export const DEFAULT_SETTINGS: Settings = {
   eveningAt: '21:00',
   sound: true,
   volume: 0.6,
+  aiProvider: 'none',
+  aiBaseUrl: 'https://openrouter.ai/api/v1',
+  aiModels: {
+    openai: { quick: 'anthropic/claude-haiku-5.5', thinking: 'anthropic/claude-sonnet-5.5' },
+    anthropic: { quick: 'claude-haiku-5-5', thinking: 'claude-sonnet-5-5' },
+  },
+  aiAlwaysShow: false,
 };
 
 /** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */

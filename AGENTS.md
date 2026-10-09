@@ -17,11 +17,12 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Re
 
 ## Layout
 
-- `src/domain/` — pure functions with no I/O: dates and the day-start rule, urgency and quadrants, ratio, duration buttons, link resolution. Every rule here has a unit test.
+- `src/domain/` — pure functions with no I/O: dates and the day-start rule, urgency and quadrants, ratio, duration buttons, link resolution, repeats, personal estimates, the planner, decision scores, stays, matrix moves, calendar grids. Every rule here has a unit test.
 - `src/data/` — the data model (`schema.ts`), hybrid logical clock (`hlc.ts`), documents with per-field clocks and tombstones (`doc.ts`), Dexie database (`db.ts`), migrations, v1 importer, backups, settings defaults.
 - `src/app/` — state (`store.ts`: signals mirroring IndexedDB, and the only place that writes), read helpers (`model.ts`), write actions (`actions.ts`), shared UI and sheets, theme.
 - `src/views/` — one file per tab.
-- `src/i18n/` — `en.ts` and `fr.ts`; every UI string lives there.
+- `src/flows/` — guided flows, one question per screen: check-in and planner, break it down, I'm stuck, decisions, weekly review, the close-of-day show.
+- `src/i18n/` — `en.ts` and `fr.ts`; every UI string lives there. `fr.ts` may lag behind: missing keys fall back to English and are translated in one batch at the end of each phase (the i18n test lists them).
 - `tests/e2e/` — Playwright; `tests/private/` — checks against the real export (never committed data).
 
 ## Invariants
@@ -30,7 +31,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Re
 2. **Migrations are mandatory.** Any change to stored shapes bumps `SCHEMA_VERSION` and adds a function to `src/data/migrations/index.ts`, with a test on fixtures of every earlier version. Migrations run before any write, after a local backup.
 3. **Settings are data.** New settings get defaults in `DEFAULT_SETTINGS`; an update never resets a value the person chose.
 4. **Every write goes through `store.ts`** (`createDoc`, `update`, `upsert`, `removeDoc`) so it gets field clocks and respects read-only mode.
-5. **No hard-coded UI text, and nothing personal.** Strings go in both `en.ts` and `fr.ts` (the type check enforces the keys). French typography is applied automatically.
+5. **No hard-coded UI text, and nothing personal.** Strings go in `en.ts`, and in `fr.ts` by the end of the phase. French typography is applied automatically.
 6. **`private/` is never committed, printed or sent anywhere.** Checks that read it print counts only.
 7. **Tests must pass** (`npm test`, `npm run typecheck`, `npm run e2e`) before a commit. Nothing may scroll sideways at 320, 375 or 430 px.
 8. Links open outside the app; only schemes in `ALLOWED_SCHEMES` are accepted.

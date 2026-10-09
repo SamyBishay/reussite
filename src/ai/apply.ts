@@ -30,11 +30,14 @@ export const isRef = (v: unknown): v is string => typeof v === 'string' && v.sta
 export type Op =
   | { t: 'task'; ref?: string; fields: Partial<Task> & { title: string } }
   | { t: 'create'; c: Collection; ref?: string; fields: Record<string, unknown> }
-  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown> }
+  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta }
   | { t: 'finish'; id: string; day: string }
   | { t: 'drop'; id: string }
   | { t: 'day'; k: string; patch: Partial<Day> }
   | { t: 'stay'; id: string | null; ref?: string; fields: Stay };
+
+/** What a decision update adds, so two ticked updates of the same decision both land (see mergeDelta). */
+export interface Delta { problem?: Record<string, string>; options?: Option[] }
 
 export interface Diff { field: string; before: unknown; after: unknown }
 export interface Planned {
@@ -111,7 +114,14 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     if (set.project !== undefined) f.projectId = set.project === null ? null : resolve(set.project, s.projects, 'project') ?? cur?.projectId ?? null;
     if (set.problem) f.problem = { ...(cur?.problem ?? { what: '', should: '', gap: '', constraints: '', deadline: '', control: '' }), ...Object.fromEntries(Object.entries(set.problem).filter(([, v]) => v !== undefined)) };
     let options = cur?.options ?? [];
-    if (set.options?.length) { options = newOptions(options, set.options).options; f.options = options; }
+    const delta: Delta = {};
+    if (set.problem) delta.problem = Object.fromEntries(Object.entries(set.problem).filter(([, v]) => v !== undefined)) as Record<string, string>;
+    if (set.options?.length) {
+      options = newOptions(options, set.options).options;
+      f.options = options;
+      const names = new Set(set.options.map(o => o.name.trim().toLowerCase()));
+      delta.options = options.filter(o => names.has(o.name.trim().toLowerCase()));
+    }
     if (set.chosen !== undefined) {
       const o = set.chosen ? options.find(x => x.name.trim().toLowerCase() === set.chosen!.toLowerCase()) : null;
       f.chosen = set.chosen || null;
@@ -132,7 +142,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       stepIds.push(asRef(r));
     });
     if (stepIds.length) f.taskIds = [...(cur?.taskIds ?? []), ...stepIds];
-    return { f, ops };
+    return { f, ops, delta };
   };
 
   for (const c of cs.changes) {
@@ -278,10 +288,10 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'decision.update': {
         const d = s.decisions.get(c.id);
         if (!d) break;
-        const { f, ops } = decisionFields(c.set, d, null);
+        const { f, ops, delta } = decisionFields(c.set, d, null);
         const diffs = decisionDiffs(d, f);
         if (!diffs.length) break;
-        items.push({ target: 'decision', kind: 'update', title: d.title, diffs, ops: [...ops, { t: 'update', c: 'decisions', id: d.id, patch: f }] });
+        items.push({ target: 'decision', kind: 'update', title: d.title, diffs, ops: [...ops, { t: 'update', c: 'decisions', id: d.id, patch: f, delta }] });
         break;
       }
     }
@@ -355,6 +365,8 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
     }
     return v;
   };
+  // Each update was planned against the same snapshot; later ones build on what earlier ones wrote.
+  const wrote = new Map<string, Record<string, unknown>>();
   let n = 0;
   for (const [i, it] of plan.items.entries()) {
     if (!ticked(i)) continue;
@@ -362,7 +374,14 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
       switch (op.t) {
         case 'task': { const id = await w.createTask(subst(op.fields) as Task); if (op.ref) ids.set(asRef(op.ref), id); break; }
         case 'create': { const id = await w.create(op.c, subst(op.fields) as Record<string, unknown>); if (op.ref) ids.set(asRef(op.ref), id); break; }
-        case 'update': await w.update(op.c, op.id, subst(op.patch) as Record<string, unknown>); break;
+        case 'update': {
+          const key = op.c + '/' + op.id, prev = wrote.get(key);
+          let p = subst(op.patch) as Record<string, unknown>;
+          if (prev && op.delta) p = mergeDelta(prev, p, subst(op.delta) as Delta);
+          await w.update(op.c, op.id, p);
+          wrote.set(key, { ...prev, ...p });
+          break;
+        }
         case 'finish': await w.finish(op.id, op.day); break;
         case 'drop': await w.drop(op.id); break;
         case 'day': {
@@ -383,4 +402,21 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
     n++;
   }
   return n;
+}
+
+/** A decision patch rebuilt on top of what an earlier ticked change already wrote. */
+export function mergeDelta(prev: Record<string, unknown>, p: Record<string, unknown>, d: Delta): Record<string, unknown> {
+  const out = { ...p };
+  if (d.problem && prev.problem) out.problem = { ...(prev.problem as Record<string, string>), ...d.problem };
+  if (d.options && prev.options) {
+    const opts = (prev.options as Option[]).map(o => ({ ...o, ...Object.fromEntries(COLUMNS.map(c => [c, [...o[c]]])) })) as Option[];
+    for (const o of d.options) {
+      const have = opts.find(x => x.id === o.id || x.name.trim().toLowerCase() === o.name.trim().toLowerCase());
+      if (!have) { opts.push(o); continue; }
+      if (o.screened !== undefined) have.screened = o.screened;
+      for (const c of COLUMNS) for (const it of o[c]) if (!have[c].some(x => x.id === it.id || x.text.trim().toLowerCase() === it.text.trim().toLowerCase())) have[c].push(it);
+    }
+    out.options = opts;
+  }
+  return out;
 }

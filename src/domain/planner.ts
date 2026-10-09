@@ -111,16 +111,33 @@ export function plan(input: PlanInput): Plan {
   return { items, launches, total, offerLater };
 }
 
-/** Rules a plan must keep (used to check plans that come from elsewhere, such as an AI in phase 2). */
-export function checkPlan(p: Pick<Plan, 'items'>, input: Pick<PlanInput, 'maxWorkSteps' | 'candidates' | 'carried'>): string[] {
+/** Rules a plan must keep (used to check plans that come from elsewhere, such as an AI). */
+export function checkPlan(p: Pick<Plan, 'items'>, input: Pick<PlanInput, 'maxWorkSteps' | 'candidates' | 'carried'> & { obligations?: Obligation[] }): string[] {
   const errs: string[] = [];
   const work = p.items.filter(i => i.role !== 'obligation' && i.role !== 'optional');
-  const carried = work.filter(i => i.role === 'carried').length;
+  // Carried steps count by id, whatever role they are given, so relabelling can't stretch the limit.
+  const carried = work.filter(i => i.role === 'carried' || input.carried.some(s => s.id === i.id)).length;
   if (work.length > Math.max(input.maxWorkSteps, carried + 1)) errs.push('too many work steps');
   const protect = p.items.filter(i => i.role === 'protect').length;
   const anyProtect = input.candidates.some(s => s.quad === 2) || input.carried.some(s => s.quad === 2);
   if (protect > 1) errs.push('more than one Protect step');
   if (anyProtect && protect === 0 && !input.carried.some(s => s.quad === 2)) errs.push('no Protect step');
-  if (p.items.filter(i => i.role === 'obligation').length > 1) errs.push('more than one obligation');
+  const obl = p.items.filter(i => i.role === 'obligation').length;
+  if (obl > 1) errs.push('more than one obligation');
+  if (input.obligations?.length && obl === 0) errs.push('no obligation');
   return errs;
+}
+
+/** Estimated minutes for a list of plan items (work steps, the obligation, planning time). */
+export function totalOf(items: PlanItem[], input: Pick<PlanInput, 'carried' | 'candidates' | 'optional' | 'laterPool' | 'obligations' | 'planningMin'>): Plan['total'] {
+  const steps = new Map([...input.carried, ...input.candidates, ...input.optional, ...input.laterPool].map(s => [s.id, s]));
+  const t = { est: input.planningMin, lo: input.planningMin, hi: input.planningMin };
+  for (const it of items) {
+    if (it.role === 'optional') continue;
+    if (it.role === 'obligation') { const e = input.obligations.find(o => o.id === it.id)?.est ?? 0; t.est += e; t.lo += e; t.hi += e; continue; }
+    const s = steps.get(it.id);
+    if (!s) continue;
+    t.est += s.est ?? 0; t.lo += s.lo ?? s.est ?? 0; t.hi += s.hi ?? s.est ?? 0;
+  }
+  return t;
 }

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
 import { projects, decisions, toast } from '../app/store';
 import { t } from '../i18n';
-import { pending, aiOn, askChanges, type ErrorKind } from './ask';
+import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, contextPack, type Scope } from './context';
 import { parseChangeSet } from './changeset';
 import { openChangeReview } from './Review';
@@ -167,3 +167,33 @@ function Paste() {
 }
 /** "Paste the reply": find the ```reussite block and open the review screen. */
 export const openPaste = () => openSheet(<Paste key={'paste' + Date.now()} />, true);
+
+/** One AI call from inside a flow: busy, Stop, and the error to show. */
+export function useAi() {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ error: ErrorKind | 'empty'; message: string } | null>(null);
+  const ctl = useRef<AbortController | null>(null);
+  const run = async <T,>(f: (signal: AbortSignal) => Promise<AskResult<T>>): Promise<T | null> => {
+    if (busy) return null;
+    setBusy(true); setErr(null);
+    ctl.current = new AbortController();
+    const r = await f(ctl.current.signal);
+    setBusy(false);
+    if (!r.ok) { if (r.error !== 'cancelled') setErr(r); return null; }
+    return r.data;
+  };
+  return { busy, err, setErr, run, stop: () => ctl.current?.abort() };
+}
+export type Ai = ReturnType<typeof useAi>;
+
+/** An AI entry point inside a flow: hidden without a provider; while busy, a Stop button. */
+export function AiAction({ ai, label, onClick, testid, manual, manualLabel }: { ai: Ai; label: string; onClick: () => void; testid: string; manual?: () => void; manualLabel?: string }) {
+  if (!aiOn.value) return null;
+  return (
+    <div class="ai-action">
+      {ai.busy ? <div class="go"><span class="hint">{t('aiBusy')}</span><button class="btn small" type="button" onClick={ai.stop}>{t('stop')}</button></div>
+        : <button class="btn small ai" type="button" onClick={onClick} data-testid={testid}>✦ {label}</button>}
+      {ai.err && <AiError {...ai.err} manual={manual ?? (() => ai.setErr(null))} manualLabel={manualLabel ?? t('aiManual')} />}
+    </div>
+  );
+}

@@ -59,27 +59,28 @@ function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () =>
   );
 }
 
-function Review({ plan, note, request, onApplied }: { plan: Plan; note: string; request?: string; onApplied?: (n: number) => void }) {
+/** The tick list. In a sheet it closes the sheet; inside a flow (`inline`) it hands back to it. */
+export function ReviewList({ plan, note, request, onApplied, inline }: { plan: Plan; note: string; request?: string; onApplied?: (n: number) => void; inline?: boolean }) {
   const [on, setOn] = useState(() => plan.items.map(() => true));
   const [busy, setBusy] = useState(false);
   const n = on.filter(Boolean).length;
   const go = async () => {
     setBusy(true);
     const done = await applyPlanned(plan, i => !!on[i], appWriter);
-    closeSheet();
+    if (!inline) closeSheet();
     toast(done ? t('chgApplied', { n: done }) : t('chgNothing'));
     onApplied?.(done);
   };
   return (
-    <div data-testid="review">
-      <h3>{t('chgTitle', { n: plan.items.length })}</h3>
+    <div data-testid="review" class={inline ? 'review-inline' : undefined}>
+      {inline ? <p class="field-label">{t('chgTitle', { n: plan.items.length })}</p> : <h3>{t('chgTitle', { n: plan.items.length })}</h3>}
       {request && <p class="hint">“{request}”</p>}
       {note && <p class="ai-note">{note}</p>}
       {plan.skipped > 0 && <p class="hint">{t('chgSkipped', { n: plan.skipped })}</p>}
       <ul class="picklist chglist">{plan.items.map((it, i) => <Row it={it} on={!!on[i]} refs={plan.refTitles} toggle={() => setOn(on.map((x, j) => (j === i ? !x : x)))} />)}</ul>
       <div class="actions">
         <button class="btn primary" type="button" disabled={busy || !n || readOnly.value} onClick={go} data-testid="apply-changes">{t('chgApply', { n })}</button>
-        <button class="btn ghost" type="button" onClick={closeSheet}>{t('cancel')}</button>
+        <button class="btn ghost" type="button" onClick={() => (inline ? onApplied?.(0) : closeSheet())}>{t('cancel')}</button>
       </div>
       <p class="hint" style="margin-top:10px">{t('chgUntick')}</p>
     </div>
@@ -91,8 +92,15 @@ function Review({ plan, note, request, onApplied }: { plan: Plan; note: string; 
  * would change anything. `request` is the person's words, shown as a reminder.
  */
 export function openChangeReview(cs: ChangeSet, o: { request?: string; onApplied?: (n: number) => void } = {}): boolean {
-  const plan = planChanges(cs, snapshot(), gen);
-  if (!plan.items.length) { toast(cs.note || t('chgNoneLeft')); return false; }
-  openSheet(<Review key={'rv' + Date.now()} plan={plan} note={cs.note} request={o.request} onApplied={o.onApplied} />, true);
+  const plan = prepareReview(cs);
+  if (!plan) return false;
+  openSheet(<ReviewList key={'rv' + Date.now()} plan={plan} note={cs.note} request={o.request} onApplied={o.onApplied} />, true);
   return true;
+}
+
+/** Check a change-set against the data now; null (and a toast saying so) when it would change nothing. */
+export function prepareReview(cs: ChangeSet): Plan | null {
+  const plan = planChanges(cs, snapshot(), gen);
+  if (!plan.items.length) { toast(cs.note || t('chgNoneLeft')); return null; }
+  return plan;
 }

@@ -9,6 +9,10 @@ import { openSheet, closeSheet } from '../app/sheet';
 import { Title } from '../app/ui';
 import { openDecision } from './decision';
 import { t, type Key } from '../i18n';
+import { ask as askAi } from '../ai/ask';
+import { StuckReply } from '../ai/features';
+import { stuckPrompt } from '../ai/prompts';
+import { useAi, AiAction } from '../ai/ui';
 
 export function openStuck(id?: string) {
   openSheet(<Stuck key={'stuck' + Date.now()} id={id} />, true);
@@ -27,6 +31,8 @@ function Stuck({ id: given }: { id?: string }) {
   const [smaller, setSmaller] = useState('');
   const [ask, setAsk] = useState(false);
   const [who, setWho] = useState('');
+  const ai = useAi();
+  const [aiNote, setAiNote] = useState<string | null>(null);
   const tk = id ? T(id) : undefined;
 
   if (!tk) return (
@@ -50,6 +56,12 @@ function Stuck({ id: given }: { id?: string }) {
   );
 
   const second = (tk.stalls || 0) >= 2;
+  // The AI only fills the field: the person accepts it by restarting, or edits it first.
+  const suggest = async () => {
+    const { system, user } = stuckPrompt(tk.id, friction);
+    const r = await ai.run(signal => askAi('stuck', 'quick', system, user, StuckReply, { signal }));
+    if (r) { setSmaller(r.starter); setAiNote(r.note); }
+  };
   const restart = async () => {
     if (smaller.trim()) await patchTask(tk.id, { starter: smaller.trim() });
     closeSheet();
@@ -70,7 +82,9 @@ function Stuck({ id: given }: { id?: string }) {
       {friction !== 'start' && tk.resume ? <p class="resume">{t('resume', { text: tk.resume })}</p> : null}
       <p class="starter big">{tk.starter ? t('starterIs', { s: tk.starter }) : t('noStarterYet')}</p>
       <p class="hint">{t(friction === 'drift' ? 'stuckDriftHint' : 'stuckStarterHint')}</p>
-      <label class="field"><span>{t('smallerStarter')}</span><input type="text" value={smaller} onInput={e => setSmaller((e.target as HTMLInputElement).value)} placeholder={t('starterPh')} autocomplete="off" /></label>
+      <label class="field"><span>{t('smallerStarter')}</span><input type="text" value={smaller} onInput={e => { setSmaller((e.target as HTMLInputElement).value); setAiNote(null); }} placeholder={t('starterPh')} autocomplete="off" data-testid="stuck-smaller" /></label>
+      {aiNote != null ? <p class="hint" data-testid="stuck-ai-note">{t('aiStarterProposed')}{aiNote ? ' ' + aiNote : ''}</p>
+        : <AiAction ai={ai} label={t('aiSmallerStarter')} onClick={() => void suggest()} testid="ai-stuck" />}
       <div class="actions"><button class="btn primary" type="button" onClick={() => void restart()} data-testid="stuck-restart">{tk.started ? t('backToIt') : t('restartTimer')}</button></div>
       {second && (
         <div class="notice" data-testid="stuck-second">

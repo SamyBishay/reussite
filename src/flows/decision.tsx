@@ -1,7 +1,7 @@
 // The decision wizard (brief §9, METHOD "Decisions"), one question per screen:
 // problem, options (then close the list), a balance per option, scores, the choice, the steps.
 // Plus the decision page, the check on the review date, and re-weighing with a history.
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { decisions, projects, today, toast, createDoc, update, newId } from '../app/store';
 import { T } from '../app/model';
 import { createTask, newTaskDoc, addToday } from '../app/actions';
@@ -15,6 +15,12 @@ import { addDays } from '../domain/dates';
 import { COLUMNS, score, ranked, tooClose, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
 import type { Decision, Problem, Project } from '../data/schema';
+import { ask, aiOn } from '../ai/ask';
+import { DecisionReply, decisionChangeSet, estByOf, type DecisionAsk } from '../ai/features';
+import { decisionPrompt } from '../ai/prompts';
+import { useAi, AiAction } from '../ai/ui';
+import { prepareReview, ReviewList } from '../ai/Review';
+import type { Plan as ChangePlan } from '../ai/apply';
 
 type D = Decision & { id: string };
 const get = (id: string): D | undefined => decisions.value.get(id) as D | undefined;
@@ -62,7 +68,39 @@ function Wizard({ id, start }: { id: string; start: number }) {
   return <div class="flow" data-testid={'dw-' + screen}>{nav}{body}</div>;
 }
 
+/**
+ * Decision help (brief §9): the AI drafts problem lines, suggests options or column items.
+ * Each proposal is a line to tick; items start at weight 3, marked as suggestions. No weights.
+ */
+function DecisionAi({ d, what, option, label, onApplied }: { d: D; what: Exclude<DecisionAsk, 'steps'>; option?: string; label: string; onApplied?: () => void }) {
+  const ai = useAi();
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  const [rv, setRv] = useState<{ plan: ChangePlan; note: string } | null>(null);
+  if (!aiOn.value) return null;
+  const go = async () => {
+    const { system, user } = decisionPrompt(d, what, what === 'problem' ? descRef.current?.value ?? '' : option);
+    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal }));
+    if (!r) return;
+    const cs = decisionChangeSet(r, d, what, option);
+    if (!cs) { toast(r.note || t('chgNoneLeft')); return; }
+    const plan = prepareReview(cs);
+    if (plan) setRv({ plan, note: cs.note });
+  };
+  if (rv) return <ReviewList plan={rv.plan} note={rv.note} inline onApplied={n => { setRv(null); if (n) onApplied?.(); }} />;
+  return (
+    <div class="ai-help">
+      {what === 'problem' && (
+        <label class="field"><span>{t('aiDescribe')}</span>
+          <textarea rows={3} ref={descRef} placeholder={t('aiDescribePh')} data-testid="ai-dw-describe" />
+        </label>
+      )}
+      <AiAction ai={ai} label={label} onClick={() => void go()} testid={'ai-dw-' + what} />
+    </div>
+  );
+}
+
 function ProblemScreen({ d, next }: { d: D; next: () => void }) {
+  const [v, setV] = useState(0);
   const set = (k: keyof Problem, v: string) => void save(d.id, { problem: { ...d.problem, [k]: v } });
   const split = async () => {
     await createDoc<Decision>('decisions', normDecision({ title: '', projectId: d.projectId, taskId: null, status: 'draft' }));
@@ -71,10 +109,13 @@ function ProblemScreen({ d, next }: { d: D; next: () => void }) {
   return (
     <div>
       <h3>{t('dwProblemQ')}</h3>
+      <DecisionAi d={d} what="problem" label={t('aiDraftProblem')} onApplied={() => setV(v + 1)} />
+      <div key={v}>
       <label class="field"><span>{t('decisionTitle')}</span><input type="text" defaultValue={d.title} placeholder={t('decisionTitlePh')} onChange={e => void save(d.id, { title: (e.target as HTMLInputElement).value.trim() })} data-testid="dw-title" /></label>
       {PROBLEM.map(([k, label, ph]) => (
-        <label class="field"><span>{t(label)}</span><textarea rows={2} defaultValue={d.problem[k]} placeholder={t(ph)} onChange={e => set(k, (e.target as HTMLTextAreaElement).value)} /></label>
+        <label class="field"><span>{t(label)}</span><textarea rows={2} defaultValue={d.problem[k]} placeholder={t(ph)} onChange={e => set(k, (e.target as HTMLTextAreaElement).value)} data-testid={'dw-prob-' + k} /></label>
       ))}
+      </div>
       <div class="actions">
         <button class="btn primary" type="button" onClick={next} data-testid="dw-next">{t('next_')}</button>
         <button class="btn ghost" type="button" onClick={() => void split()}>{t('twoProblems')}</button>
@@ -131,6 +172,7 @@ function OptionsScreen({ d, back, next }: { d: D; back: () => void; next: () => 
           <div class="chips-pick">{MISSING.map(k => <button type="button" disabled={have.has(t(k))} onClick={() => addOpt(t(k))}>+ {t(k)}</button>)}</div>
         </div>
       )}
+      {!closed && <DecisionAi d={d} what="options" label={t('aiSuggestOptions')} />}
       <div class="actions">
         <button class="btn ghost" type="button" onClick={back}>{t('back')}</button>
         {closed ? <button class="btn primary" type="button" onClick={next}>{t('next_')}</button>
@@ -172,8 +214,8 @@ function BalanceScreen({ d, oi, setOi, back, next }: { d: D; oi: number; setOi: 
           {c === 'prosNot' && <p class="hint">{t('prosNotHint')}</p>}
           <ul class="items-w">{o[c].map(i => (
             <li>
-              <span class={i.mirrorOf ? 'muted' : ''}>{i.text}{i.mirrorOf && <small> · {t('mirrorOfShort')}</small>}</span>
-              <Weight w={i.w} label={t('weightOf', { what: i.text })} onChange={w => put(c, o[c].map(x => (x.id === i.id ? { ...x, w } : x)))} />
+              <span class={i.mirrorOf ? 'muted' : ''}>{i.text}{i.mirrorOf && <small> · {t('mirrorOfShort')}</small>}{i.by === 'ai' && <small class="suggested" title={t('aiSuggestedHint')}>{t('aiSuggested')}</small>}</span>
+              <Weight w={i.w} label={t('weightOf', { what: i.text })} onChange={w => put(c, o[c].map(x => (x.id === i.id ? { ...x, w, by: 'me' } : x)))} />
               <select aria-label={t('mirrorOf')} value={i.mirrorOf ?? ''} onChange={e => put(c, o[c].map(x => (x.id === i.id ? { ...x, mirrorOf: (e.target as HTMLSelectElement).value || null } : x)))}>
                 <option value="">{t('notAMirror')}</option>
                 {all.filter(x => x.id !== i.id).map(x => <option value={x.id}>{t('mirrorOfItem', { what: x.text.slice(0, 30), opt: x.opt })}</option>)}
@@ -194,6 +236,7 @@ function BalanceScreen({ d, oi, setOi, back, next }: { d: D; oi: number; setOi: 
           </form>
         </section>
       ))}
+      <DecisionAi key={o.id} d={d} what="items" option={o.name} label={t('aiSuggestItems')} />
       <div class="actions">
         <button class="btn ghost" type="button" onClick={() => (idx > 0 ? setOi(idx - 1) : back())}>{t('back')}</button>
         {idx < live.length - 1 ? <button class="btn primary" type="button" onClick={() => setOi(idx + 1)} data-testid="dw-next-option">{t('nextOption', { name: live[idx + 1]!.name })}</button>
@@ -273,7 +316,10 @@ function ChoiceScreen({ d, back, next }: { d: D; back: () => void; next: () => v
 }
 
 function StepsScreen({ d, back }: { d: D; back: () => void }) {
-  const [steps, setSteps] = useState<{ title: string; starter: string; est: string }[]>([]);
+  const [steps, setSteps] = useState<{ title: string; starter: string; est: string; est0?: number | null }[]>([]);
+  const ai = useAi();
+  const [smartRv, setSmartRv] = useState<{ plan: ChangePlan; note: string } | null>(null);
+  const [sv, setSv] = useState(0);
   const [draft, setDraft] = useState({ title: '', starter: '', est: '' });
   const [when, setWhen] = useState<'today' | 'tomorrow' | 'none'>('today');
   const [pid, setPid] = useState(d.projectId ?? '');
@@ -290,7 +336,7 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
     let prev: string | null = null;
     for (const s of steps) {
       const id: string = await createTask(newTaskDoc(s.title, task?.suit ?? projects.value.get(project)?.suit ?? null, project, {
-        starter: s.starter || null, est: Number(s.est) || null, estBy: Number(s.est) ? 'me' : null, after: prev, important: true, order: Date.now() + ids.length,
+        starter: s.starter || null, est: Number(s.est) || null, estBy: estByOf(s.est, s.est0 ?? null), after: prev, important: true, order: Date.now() + ids.length,
       }));
       ids.push(id);
       prev = id;
@@ -300,6 +346,16 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
     closeSheet();
     if (task && task.status === 'open') openDone(task.id);
     else toast(t('decisionSaved'));
+  };
+  // Decision help: steps join the draft list (to edit or remove); a SMART goal is ticked.
+  const draft_ = async () => {
+    const { system, user } = decisionPrompt(d, 'steps');
+    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal }));
+    if (!r) return;
+    setSteps([...steps, ...(r.steps ?? []).map(x => ({ title: x.title, starter: x.starter ?? '', est: x.est ? String(x.est) : '', est0: x.est ?? null }))]);
+    const cs = decisionChangeSet(r, { ...d, projectId: pid || null }, 'steps');
+    const plan = cs && prepareReview(cs);
+    if (plan) setSmartRv({ plan, note: '' });
   };
   return (
     <div>
@@ -313,14 +369,16 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
           <button class="btn small" type="button" onClick={() => void newProject()}>{t('newProject')}</button>
         </div>
       </label>
-      <ol class="mini">{steps.map((s, i) => <li><span>{s.title}{Number(s.est) ? ' · ' + fmtMin(Number(s.est)) : ''}{s.starter ? ' · ' + s.starter : ''}</span><button type="button" class="chip-x" onClick={() => setSteps(steps.filter((_, j) => j !== i))} aria-label={t('remove', { what: s.title })}>×</button></li>)}</ol>
+      <ol class="mini" data-testid="dw-steps">{steps.map((s, i) => <li><span>{s.title}{Number(s.est) ? ' · ' + fmtMin(Number(s.est)) : ''}{s.starter ? ' · ' + s.starter : ''}{s.est0 != null && <small class="suggested">{t('aiSuggested')}</small>}</span><button type="button" class="chip-x" onClick={() => setSteps(steps.filter((_, j) => j !== i))} aria-label={t('remove', { what: s.title })}>×</button></li>)}</ol>
       <form class="stepform" onSubmit={e => { e.preventDefault(); if (draft.title.trim()) { setSteps([...steps, { ...draft, title: draft.title.trim() }]); setDraft({ title: '', starter: '', est: '' }); } }}>
         <input type="text" value={draft.title} onInput={e => setDraft({ ...draft, title: (e.target as HTMLInputElement).value })} placeholder={t('newStepPlaceholder')} aria-label={t('newStep')} data-testid="dw-step" />
         <input type="text" value={draft.starter} onInput={e => setDraft({ ...draft, starter: (e.target as HTMLInputElement).value })} placeholder={t('starterPh')} aria-label={t('starterField')} />
         <input type="number" min="1" max="600" value={draft.est} onInput={e => setDraft({ ...draft, est: (e.target as HTMLInputElement).value })} placeholder={t('minShort')} aria-label={t('estimateMin')} />
         <button class="btn small" type="submit">{t('add')}</button>
       </form>
-      {pid && <details class="more"><summary>{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</summary><SmartEditor projectId={pid} /></details>}
+      {smartRv ? <ReviewList plan={smartRv.plan} note={smartRv.note} inline onApplied={() => { setSmartRv(null); setSv(sv + 1); }} />
+        : <AiAction ai={ai} label={t('aiDraftSteps')} onClick={() => void draft_()} testid="ai-dw-steps" />}
+      {pid && <details class="more" open={sv > 0}><summary>{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</summary><SmartEditor key={sv} projectId={pid} /></details>}
       <div class="field"><span>{t('firstStepWhen')}</span>
         <div class="seg" role="group" style="flex-wrap:wrap">
           {(['today', 'tomorrow', 'none'] as const).map(w => <button type="button" aria-pressed={when === w} onClick={() => setWhen(w)}>{t(w === 'today' ? 'pickToday' : w === 'tomorrow' ? 'pickTomorrow' : 'notYet')}</button>)}

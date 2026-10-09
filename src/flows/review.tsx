@@ -15,6 +15,12 @@ import { medianRatio } from '../domain/estimates';
 import { settings } from '../app/store';
 import type { Quadrant } from '../domain/tasks';
 import type { Task } from '../data/schema';
+import { ask } from '../ai/ask';
+import { ReviewReply, reviewChangeSet } from '../ai/features';
+import { reviewPrompt } from '../ai/prompts';
+import { useAi, AiAction } from '../ai/ui';
+import { prepareReview, ReviewList } from '../ai/Review';
+import type { Plan as ChangePlan } from '../ai/apply';
 
 export function openReview() {
   openSheet(<Review key={'rv' + Date.now()} />, true);
@@ -105,7 +111,7 @@ function Review() {
             <summary><b>{p.name}</b> · {t('smartN', { n: smartFilled(p.smart) })}</summary>
             {nx ? <label class="field"><span>{t('nextStepField')}</span><input type="text" defaultValue={nx.title} onChange={e => void patchTask(nx.id, { title: (e.target as HTMLInputElement).value.trim() || nx.title })} /></label>
               : <p class="hint">{t('noNextStep')}</p>}
-            <SmartEditor projectId={p.id} />
+            <ProjectAi id={p.id} />
           </details>
         );
       })}</>;
@@ -179,6 +185,30 @@ function Review() {
       {body}
       {nav(i === STEPS.length - 1)}
     </div>
+  );
+}
+
+/** Sunday review help: a goal, SMART lines and next steps, each ticked; goals stay "proposed" until confirmed. */
+function ProjectAi({ id }: { id: string }) {
+  const ai = useAi();
+  const [rv, setRv] = useState<{ plan: ChangePlan; note: string } | null>(null);
+  const [v, setV] = useState(0);
+  const go = async () => {
+    const { system, user } = reviewPrompt(id);
+    const r = await ai.run(signal => ask('review', 'thinking', system, user, ReviewReply, { signal }));
+    if (!r) return;
+    const p = projects.value.get(id);
+    const cs = reviewChangeSet(r, { id, where: p?.where });
+    if (!cs) { ai.setErr({ error: 'empty', message: r.note || t('aiNoChanges') }); return; }
+    const plan = prepareReview(cs);
+    if (plan) setRv({ plan, note: cs.note });
+  };
+  return (
+    <>
+      {rv ? <ReviewList plan={rv.plan} note={rv.note} inline onApplied={() => { setRv(null); setV(v + 1); }} />
+        : <AiAction ai={ai} label={t('aiProposeGoal')} onClick={() => void go()} testid="ai-review" />}
+      <SmartEditor key={v} projectId={id} />
+    </>
   );
 }
 

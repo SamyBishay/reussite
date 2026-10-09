@@ -284,6 +284,14 @@ table.sess{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
 .pp .num{font-family:var(--serif);font-weight:700;font-size:19px;min-width:1.2em;text-align:center}
 .pp .ctrls{display:flex;gap:6px}
 @media (max-width:540px){.picklist.pp li{grid-template-columns:auto minmax(0,1fr)}.pp .ctrls{grid-column:2}}
+.ai-action{margin-top:12px;display:grid;gap:6px}
+.ai-action>.btn{justify-self:start;max-width:100%;white-space:normal;text-align:left}
+.review-inline{margin-top:12px;border-top:1px solid var(--line-2);padding-top:4px}
+.ai-steps li{grid-template-columns:auto minmax(0,1fr)}
+.ai-steps .fields{display:grid;gap:6px;min-width:0}
+.ai-steps .fields input{width:100%;min-width:0}
+.ai-steps .est{max-width:7em}
+.suggested{font-size:11px;color:var(--warn);margin-left:4px}
 .busy{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

@@ -158,3 +158,203 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'paste the reply');
   });
 }
+
+// ---------- features 2–6 ----------
+/** The AI answers whatever `answer.text` holds at the time of the call. */
+async function aiSession(page: Page) {
+  await importSample(page);
+  await setUpAnthropic(page);
+  const answer = { text: '' };
+  const seen = await mockAnthropic(page, () => answer.text);
+  await page.getByTestId('tab-today').click();
+  return { answer, seen };
+}
+const userText = (seen: Record<string, unknown>[], i = -1) => String(((seen.at(i)!.body as { messages: { content: string }[] }).messages[0]!).content);
+async function toPlan(page: Page) {
+  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.getByTestId('ci-next').click();
+  await page.getByTestId('ci-next').click();
+  await expect(page.getByTestId('plan-items')).toBeVisible();
+}
+
+test('Plan my day: a plan with two Protect steps is set aside; a valid one is used, its starters ticked first', async ({ page }) => {
+  const { answer, seen } = await aiSession(page);
+  await toPlan(page);
+  const rulePlan = await page.getByTestId('plan-items').innerText();
+  answer.text = JSON.stringify({ plan: [{ id: 't4', role: 'protect' }, { id: 't3', role: 'protect' }, { id: 't6', role: 'obligation' }], note: 'Two big ones.' });
+  await page.getByTestId('ai-improve').click();
+  await page.getByTestId('ai-send').click();
+  await expect(page.getByTestId('ai-plan-rejected')).toContainText('it had more than one Protect step, so here is the rule-based plan');
+  expect(await page.getByTestId('plan-items').innerText()).toBe(rulePlan);
+  expect(userText(seen)).toContain('The rule-based plan');
+  expect(userText(seen)).toContain('Calibration:');
+
+  answer.text = 'Here you go:\n' + JSON.stringify({
+    plan: [{ id: 't4', role: 'protect' }, { id: 't2', role: 'carried' }, { id: 't1', role: 'carried' }, { id: 't3', role: 'carried' }, { id: 't5', role: 'carried' }, { id: 't6', role: 'obligation', at: '18:30' }],
+    starters: [{ id: 't4', starter: 'Open a new chat and paste the form name' }], note: 'Protect first, while you are fresh.',
+  });
+  await page.getByTestId('ai-improve').click();
+  await expect(page.getByTestId('ai-plan-note')).toContainText('Protect first');
+  await expect(page.getByTestId('ai-plan-rejected')).toHaveCount(0);
+  await expect(page.getByTestId('plan-items').locator('li').nth(1)).toContainText('tax form');
+  await expect(page.getByTestId('plan-items')).toContainText('18:30');
+  // Nothing is written until ticked.
+  await page.getByTestId('ai-plan-review').click();
+  await expect(page.getByTestId('chg')).toHaveCount(1);
+  await expect(page.getByTestId('review')).toContainText('Open a new chat and paste the form name');
+  await page.getByTestId('apply-changes').click();
+  await expect(page.getByTestId('ai-plan-review')).toHaveCount(0);
+  await page.getByTestId('go-with-this').click();
+  await expect(sheet(page)).toBeHidden();
+  await expect(page.getByTestId('first')).toContainText('tax form');
+});
+
+test('Break it down: proposed steps are ticked and edited before saving', async ({ page }) => {
+  const { answer, seen } = await aiSession(page);
+  answer.text = JSON.stringify({ steps: [
+    { title: 'Open Mail and find the agency’s address', starter: 'Tap the Mail icon', est: 3 },
+    { title: 'Attach the signed lease', est: 5 },
+    { title: 'Ask for a receipt', est: 2 },
+  ], note: 'Three small steps.' });
+  await page.locator('.row:not(.done)', { hasText: 'signed lease' }).getByTestId('details').click();
+  await sheet(page).getByRole('button', { name: 'Break it down' }).click();
+  await page.getByTestId('ai-breakdown').click();
+  await page.getByTestId('ai-send').click();
+  await expect(page.getByTestId('ai-step')).toHaveCount(3);
+  expect(userText(seen)).toContain('Calibration:');
+  await expect(page.getByTestId('bd-ai')).toContainText('AI’s estimate');
+  await page.getByTestId('ai-step').nth(2).getByRole('checkbox').uncheck();
+  await page.getByTestId('ai-step').nth(1).getByLabel('title').fill('Attach the signed lease as a PDF');
+  await page.getByTestId('ai-bd-save').click();
+  await expect(page.locator('.toast')).toContainText('Broken down: 2 steps.');
+  await page.getByTestId('tab-matrix').click();
+  await expect(page.locator('.matrix')).toContainText('Open Mail and find the agency’s address');
+  await expect(page.locator('.matrix')).toContainText('Attach the signed lease as a PDF');
+  await expect(page.locator('.matrix')).not.toContainText('Ask for a receipt');
+});
+
+test('Decision help drafts the problem, options and items, and never weights', async ({ page }) => {
+  const { answer } = await aiSession(page);
+  await page.getByTestId('tab-log').click();
+  await page.getByTestId('new-decision').click();
+  answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up 8% in January', should: 'Rent under a third of income', gap: '60 a month short' } });
+  await page.getByTestId('ai-dw-describe').fill('My rent goes up and I’m not sure whether to move.');
+  await page.getByTestId('ai-dw-problem').click();
+  await page.getByTestId('ai-send').click();
+  await expect(page.getByTestId('chg')).toHaveCount(4);
+  await page.getByTestId('chg').nth(3).getByRole('checkbox').uncheck();
+  await page.getByTestId('apply-changes').click();
+  await expect(page.getByTestId('dw-prob-what')).toHaveValue('Rent goes up 8% in January');
+  await expect(page.getByTestId('dw-prob-should')).toHaveValue('Rent under a third of income');
+  await expect(page.getByTestId('dw-prob-gap')).toHaveValue('');
+  await expect(page.getByTestId('dw-title')).toHaveValue('Stay or move?');
+  await page.getByTestId('dw-next').click();
+  for (const o of ['Stay', 'Move']) { await page.getByTestId('dw-option').fill(o); await page.getByTestId('dw-option').press('Enter'); }
+  answer.text = JSON.stringify({ options: [{ name: 'Stay' }, { name: 'Ask the landlord to cap the rise', w: 5 }] });
+  await page.getByTestId('ai-dw-options').click();
+  await expect(page.getByTestId('chg')).toHaveCount(1);
+  await page.getByTestId('apply-changes').click();
+  await expect(sheet(page)).toContainText('Ask the landlord to cap the rise');
+  await page.getByTestId('dw-close-list').click();
+  answer.text = JSON.stringify({ options: [{ name: 'Stay', pros: [{ text: 'No move to organise', w: 5, weight: 5 }], cons: ['Rent keeps rising'], prosNot: [], consNot: [] }], weights: { Stay: 5 } });
+  await page.getByTestId('ai-dw-items').click();
+  await expect(page.getByTestId('chg')).toHaveCount(2);
+  await page.getByTestId('apply-changes').click();
+  const item = sheet(page).locator('.items-w > li').filter({ hasText: /^No move to organise/ });
+  await expect(item).toContainText('suggested');
+  await expect(item.getByRole('group', { name: 'Weight of No move to organise' }).locator('[aria-pressed=true]')).toHaveText('3');
+  await expect(sheet(page).locator('.items-w > li').filter({ hasText: /^Rent keeps rising/ }).locator('[aria-pressed=true]')).toHaveText('3');
+  // Setting the weight makes it the person's.
+  await item.getByRole('button', { name: 'Weight 5' }).click();
+  await expect(item).not.toContainText('suggested');
+});
+
+test('Stuck: the AI proposes a smaller starter, which the person can edit', async ({ page }) => {
+  const { answer } = await aiSession(page);
+  answer.text = JSON.stringify({ starter: 'Open Doctolib and type “dentist”', note: 'Just the search.' });
+  await page.getByTestId('stuck').first().click();
+  await sheet(page).getByRole('button', { name: /Can’t start/ }).click();
+  await page.getByTestId('ai-stuck').click();
+  await page.getByTestId('ai-send').click();
+  await expect(page.getByTestId('stuck-smaller')).toHaveValue('Open Doctolib and type “dentist”');
+  await expect(page.getByTestId('stuck-ai-note')).toContainText('Just the search.');
+  await page.getByTestId('stuck-smaller').fill('Open Doctolib');
+  await page.getByTestId('stuck-restart').click();
+  await expect(page.locator('.toast')).toContainText('Back on it');
+});
+
+async function toProjects(page: Page) {
+  await page.getByTestId('tab-calendar').click();
+  await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Week' }).click();
+  await page.locator('main').getByRole('button', { name: '☀ Weekly review' }).first().click();
+  for (let i = 0; i < 3; i++) await page.getByTestId('rv-next').click();
+  await expect(page.getByTestId('rv-3')).toBeVisible();
+}
+
+test('Sunday review help: a proposed SMART goal and next step, confirmed by the person', async ({ page }) => {
+  const { answer } = await aiSession(page);
+  answer.text = JSON.stringify({ goal: 'Method section drafted by November 15', smart: { specific: 'Draft the method section', dated: 'November 15' }, next: [{ title: 'Open the thesis draft and list the method subsections', est: 10 }], note: 'One goal, one step.' });
+  await toProjects(page);
+  const proj = page.locator('details.proj-rv', { hasText: 'Thesis' });
+  await proj.locator('summary').click();
+  await proj.getByTestId('ai-review').click();
+  await page.getByTestId('ai-send').click();
+  await expect(proj.getByTestId('chg')).toHaveCount(3);
+  await proj.getByTestId('apply-changes').click();
+  await expect(proj.getByTestId('smart')).toContainText('proposed');
+  await expect(proj.getByTestId('smart').locator('input').first()).toHaveValue('Method section drafted by November 15');
+  await proj.getByTestId('smart').getByRole('button', { name: 'Confirm' }).click();
+  await expect(proj.getByTestId('smart')).not.toContainText('proposed');
+  await expect(proj.getByTestId('ai-review')).toBeVisible();
+});
+
+for (const w of [320, 375, 430]) {
+  test(`AI help in the flows doesn't scroll sideways at ${w}px`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    const { answer } = await aiSession(page);
+    await toPlan(page);
+    await noSideways(page, 'plan with the AI button');
+    answer.text = JSON.stringify({ plan: [{ id: 't4', role: 'protect' }, { id: 't1', role: 'carried' }, { id: 't6', role: 'obligation' }], starters: [{ id: 't4', starter: 'Open a new chat and paste the name of the form you need to file' }], note: 'A long note about why the plan changed, long enough to wrap on a narrow screen.' });
+    await page.getByTestId('ai-improve').click();
+    await page.getByTestId('ai-send').click();
+    await expect(page.getByTestId('ai-plan-note')).toBeVisible();
+    await noSideways(page, 'AI plan');
+    await page.getByTestId('ai-plan-review').click();
+    await noSideways(page, 'AI plan changes');
+    await page.keyboard.press('Escape');
+    answer.text = JSON.stringify({ steps: [{ title: 'Open Doctolib and search for a dentist with a long name', starter: 'Tap the icon', est: 3 }, { title: 'Pick a slot', est: 5 }] });
+    await page.locator('.row:not(.done)', { hasText: 'signed lease' }).getByTestId('details').click();
+    await sheet(page).getByRole('button', { name: 'Break it down' }).click();
+    await noSideways(page, 'break it down with the AI button');
+    await page.getByTestId('ai-breakdown').click();
+    await page.getByTestId('ai-send').click();
+    await expect(page.getByTestId('bd-ai')).toBeVisible();
+    await noSideways(page, 'AI steps');
+    await page.keyboard.press('Escape');
+    answer.text = JSON.stringify({ starter: 'Open Doctolib and type the word dentist into the search box' });
+    await page.getByTestId('stuck').first().click();
+    await sheet(page).getByRole('button', { name: /Can’t start/ }).click();
+    await page.getByTestId('ai-stuck').click();
+    await page.getByTestId('ai-send').click();
+    await expect(page.getByTestId('stuck-ai-note')).toBeVisible();
+    await noSideways(page, 'stuck with an AI starter');
+    await page.keyboard.press('Escape');
+    answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up', should: 'Less than a third of income', constraints: 'Lease ends in June' } });
+    await page.getByTestId('tab-log').click();
+    await page.getByTestId('new-decision').click();
+    await page.getByTestId('ai-dw-describe').fill('Rent goes up.');
+    await page.getByTestId('ai-dw-problem').click();
+    await page.getByTestId('ai-send').click();
+    await expect(page.getByTestId('review')).toBeVisible();
+    await noSideways(page, 'decision help');
+    await page.keyboard.press('Escape');
+    answer.text = JSON.stringify({ goal: 'A goal', smart: { specific: 'Something specific' }, next: [{ title: 'Open the draft', est: 10 }] });
+    await toProjects(page);
+    const proj = page.locator('details.proj-rv', { hasText: 'Thesis' });
+    await proj.locator('summary').click();
+    await proj.getByTestId('ai-review').click();
+    await page.getByTestId('ai-send').click();
+    await expect(proj.getByTestId('review')).toBeVisible();
+    await noSideways(page, 'review help');
+  });
+}

@@ -9,14 +9,24 @@ import { Title, Meta, quadName } from '../app/ui';
 import { flows } from '../app/sheets';
 import { t, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
-import { plan as makePlan, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
+import { plan as makePlan, totalOf, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
 import type { Task } from '../data/schema';
+import { ask } from '../ai/ask';
+import { PlanReply, readAiPlan, planChangeSet, type PlanFault } from '../ai/features';
+import { planPrompt } from '../ai/prompts';
+import { useAi, AiAction } from '../ai/ui';
+import { prepareReview, ReviewList } from '../ai/Review';
+import type { Plan as ChangePlan } from '../ai/apply';
 
 export function openCheckin() {
   openSheet(<Checkin key={'ci' + Date.now()} />, true);
 }
 
 const ROLE_KEY: Record<Role, Key> = { carried: 'roleCarried', now: 'qNow', protect: 'qProtect', quick: 'qQuick', obligation: 'roleObligation', optional: 'ifRoom' };
+const FAULT: Record<PlanFault, Key> = {
+  empty: 'aiPlanEmpty', unknown: 'aiPlanUnknown', twice: 'aiPlanTwice', roles: 'aiPlanRoles', tooMany: 'aiPlanTooMany',
+  twoProtect: 'aiPlanTwoProtect', noProtect: 'aiPlanNoProtect', twoObligations: 'aiPlanTwoObligations', noObligation: 'aiPlanNoObligation',
+};
 const PRESETS: [Preset, Key][] = [['normal', 'presetNormal'], ['afternoon', 'presetAfternoon'], ['hour', 'presetHour'], ['rest', 'presetRest']];
 const step = (x: Tk): PStep => {
   const p = personal(x);
@@ -63,6 +73,12 @@ function Checkin() {
   const [forced, setForced] = useState<string[]>([]);
   const [extra, setExtra] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // Plan my day (AI): its plan replaces the rule-based one only if it keeps the rules.
+  const ai = useAi();
+  const [aiPlan, setAiPlan] = useState<{ items: PlanItem[]; note: string } | null>(null);
+  const [fault, setFault] = useState('');
+  const [proposed, setProposed] = useState<ChangePlan | null>(null);
+  const [reviewing, setReviewing] = useState(false);
 
   const yesterdayDone = async () => {
     for (const x of yOpen) if (x.id in ticked) await finishTask(x, ticked[x.id] ?? null, y);
@@ -141,7 +157,21 @@ function Checkin() {
 
   // ---------- the plan ----------
   const inp = planInput(k, shape, skip, forced);
-  const p: Plan = makePlan(inp);
+  const rule: Plan = makePlan(inp);
+  const aiItems = aiPlan?.items.filter(i => !skip.has(i.id));
+  const p: Plan = aiItems ? { ...rule, items: aiItems, total: totalOf(aiItems, inp) } : rule;
+  const improve = async () => {
+    setFault(''); setProposed(null);
+    const { system, user } = planPrompt(inp, rule, fixed);
+    const r = await ai.run(signal => ask('plan', 'thinking', system, user, PlanReply, { signal }));
+    if (!r) return;
+    const v = readAiPlan(r, inp, rule);
+    if (!v.ok) { setAiPlan(null); setFault(t(FAULT[v.why])); return; }
+    setAiPlan({ items: v.items, note: r.note });
+    const known = new Map([...inp.carried, ...inp.candidates, ...inp.optional].map(s => T(s.id)).filter(isOpen).map(x => [x.id, { project: x.project, where: x.where }]));
+    const cs = planChangeSet(r, known);
+    setProposed(cs ? prepareReview(cs) : null);
+  };
   const items: PlanItem[] = [...p.items, ...extra.filter(id => !p.items.some(i => i.id === id)).map(id => ({ id, role: 'optional' as Role }))];
   const swapFor = (id: string) => {
     const it = items.find(i => i.id === id)!;
@@ -154,7 +184,8 @@ function Checkin() {
   const swapIn = (out: string, x: Tk) => {
     const next = new Set([...skip, out]);
     // An obligation is chosen by leaving out the others; a step is placed by hand.
-    if (x.template) {
+    if (aiPlan) setAiPlan({ ...aiPlan, items: aiPlan.items.map(i => (i.id === out ? { ...i, id: x.id } : i)) });
+    else if (x.template) {
       for (const o of inp.obligations) if (o.id !== x.id) next.add(o.id);
     } else setForced([...forced.filter(f => f !== out), x.id]);
     setSkip(next);
@@ -198,7 +229,9 @@ function Checkin() {
       <p class="eyebrow">{t('ciStep', { n: 3, of: 3 })}</p>
       <h3>{t('ciPlan')}</h3>
       <p class="hint">{cutting ? t('ciCutHint') : swapping ? t('ciSwapHint') : t('ciPlanHint')}</p>
-      {swapping ? (
+      {reviewing && proposed ? (
+        <ReviewList plan={proposed} note="" inline onApplied={n => { setReviewing(false); if (n) setProposed(null); }} />
+      ) : swapping ? (
         <>
           <ul class="picklist">{swapFor(swapping).map(x => (
             <li><div><p><Title s={x.title} /></p><p class="meta"><Meta tk={x} withQuad /></p></div>
@@ -208,6 +241,8 @@ function Checkin() {
         </>
       ) : (
         <>
+          {fault && <p class="ai-note" role="status" data-testid="ai-plan-rejected">{t('aiPlanRejected', { why: fault })}</p>}
+          {aiPlan && <p class="ai-note" data-testid="ai-plan-note">{aiPlan.note || t('aiPlanUsed')}</p>}
           <ol class="planlist" data-testid="plan-items">
             <li class="role-plan"><span class="tag">{t('rolePlanning')}</span><span>{t('planTheDay')}</span><span class="due">{fmtMin(settings.value.planningMin)}</span></li>
             {items.map(it => {
@@ -233,6 +268,11 @@ function Checkin() {
             <button class="btn primary" type="button" disabled={busy} onClick={() => void accept()} data-testid="go-with-this">{t('goWithThis')}</button>
             <button class="btn" type="button" onClick={() => setCutting(!cutting)}>{cutting ? t('doneCutting') : t('tooMuch')}</button>
           </div>
+          {proposed && (
+            <div class="banner" style="margin-top:12px"><p>{t('aiPlanChanges', { n: proposed.items.length })}</p><button class="btn small" type="button" onClick={() => setReviewing(true)} data-testid="ai-plan-review">{t('aiReview')}</button></div>
+          )}
+          {aiPlan ? <div class="actions"><button class="btn small ghost" type="button" onClick={() => { setAiPlan(null); setProposed(null); }} data-testid="ai-plan-undo">{t('aiPlanUndo')}</button></div>
+            : <AiAction ai={ai} label={t('aiImprovePlan')} onClick={() => void improve()} testid="ai-improve" />}
           <p class="hint" style="margin-top:8px">{quadName(2)}: {t('protectRule')}</p>
         </>
       )}

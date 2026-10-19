@@ -26,8 +26,10 @@ export interface SyncStore {
   all(): Promise<DocSet>;
   /** The stored documents with these ids (missing ones are left out). */
   getMany(c: Collection, ids: string[]): Promise<StoredDoc[]>;
-  /** Put merged documents. In the app this goes through store.ts (read-only mode, live signals). */
+  /** Put merged documents. In the app this goes through store.ts (read-only mode, live signals). It must throw rather than drop a write. */
   putMany(writes: { c: Collection; d: StoredDoc }[]): Promise<void>;
+  /** Bring received entries written under an older schema up to the current one (see migrations). */
+  upgrade?(entries: ChangeDoc[]): ChangeDoc[];
 }
 
 export interface SyncResult {
@@ -38,6 +40,8 @@ export interface SyncResult {
   snapshot: boolean;
   /** The relay has no space for this key yet: normal for the first device, a sign of a wrong key on a joining one. */
   emptySpace: boolean;
+  /** `stopIfGone` was set and the space this device had synced with is no longer on the relay: nothing was pushed. */
+  gone: boolean;
   state: SyncState;
 }
 
@@ -46,11 +50,16 @@ export interface SyncOptions {
   snapshotEvery?: number;
   /** Documents per pushed batch (default 300; halved if the relay says too large). */
   batchDocs?: number;
+  /** Push every field, whoever wrote it (after restoring a backup or importing). */
+  full?: boolean;
+  /** If the relay has no space but this device had already pulled from it, the space was deleted elsewhere: stop instead of recreating it. */
+  stopIfGone?: boolean;
 }
 
 const EMPTY_PAGE: Pulled = { head: 0, more: false, snapshot: null, batches: [] };
 
-async function fold(store: SyncStore, entries: ChangeDoc[]): Promise<{ newer: boolean }> {
+async function fold(store: SyncStore, received: ChangeDoc[]): Promise<{ newer: boolean }> {
+  const entries = store.upgrade ? store.upgrade(received) : received;
   const byColl = new Map<Collection, Set<string>>();
   for (const e of entries) if (e?.d && typeof e.d.id === 'string') (byColl.get(e.c) ?? byColl.set(e.c, new Set()).get(e.c)!).add(e.d.id);
   const local: LocalDocs = {};
@@ -64,7 +73,7 @@ async function fold(store: SyncStore, entries: ChangeDoc[]): Promise<{ newer: bo
 export async function syncOnce(store: SyncStore, client: RelayClient, opts: SyncOptions = {}): Promise<SyncResult> {
   const node = store.clock.node;
   let state = { ...(await store.loadState()) };
-  const result: SyncResult = { newer: false, pulled: 0, pushed: 0, snapshot: false, emptySpace: false, state };
+  const result: SyncResult = { newer: false, pulled: 0, pushed: 0, snapshot: false, emptySpace: false, gone: false, state };
 
   // Pull until caught up.
   for (;;) {
@@ -72,6 +81,7 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
       if (e instanceof RelayError && e.code === 'unknown_space') { result.emptySpace = true; return EMPTY_PAGE; }
       throw e;
     });
+    if (result.emptySpace && opts.stopIfGone && state.seq > 0) return { ...result, gone: true };
     const entries: ChangeDoc[] = [];
     if (page.snapshot) {
       if (page.snapshot.v > SCHEMA_VERSION) return { ...result, newer: true };
@@ -91,7 +101,13 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   }
 
   // Push what changed here.
-  const out = collectOutgoing(await store.all(), node, state.watermark, { imported: state.watermark === '' });
+  const out = collectOutgoing(await store.all(), node, state.watermark, { imported: state.watermark === '', all: opts.full });
+  // A new space comes into being with its first write, so a first device with nothing yet still makes one.
+  if (result.emptySpace && !out.docs.length) {
+    await client.push({ v: SCHEMA_VERSION, device: node, docs: [] });
+    state = { ...state, watermark: out.watermark };
+    await store.saveState(state);
+  }
   if (out.docs.length) {
     let size = opts.batchDocs ?? 300;
     for (let i = 0; i < out.docs.length;) {

@@ -59,6 +59,9 @@ export interface Settings {
   aiModels: Record<Exclude<AiProvider, 'none'>, { quick: string; thinking: string }>;
   /** Show the exact request before every call, not only the first of each kind. */
   aiAlwaysShow: boolean;
+  // Sync (brief §6). The key itself is device-local (db.local), never in this synced document.
+  /** The relay's address; the build's VITE_RELAY_URL unless changed. Empty = sync can't be switched on. */
+  relayUrl: string;
   [extra: string]: unknown;
 }
 
@@ -106,6 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
     anthropic: { quick: 'claude-haiku-5-5', thinking: 'claude-sonnet-5-5' },
   },
   aiAlwaysShow: false,
+  relayUrl: (import.meta.env?.VITE_RELAY_URL ?? '').trim(),
 };
 
 /** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */

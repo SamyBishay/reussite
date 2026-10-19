@@ -10,6 +10,7 @@ import { OverlayHost } from './sheet';
 import { openPile, openPause, placeIds, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { addPlace, startTask, patchTask } from './actions';
 import { Clock } from './Clock';
+import { startSync } from './sync';
 import { UpdateBanner } from './UpdateBanner';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
@@ -191,7 +192,7 @@ function Toast() {
 }
 
 export function App() {
-  useEffect(() => { void start(); }, []);
+  useEffect(() => { void start().then(startSync); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
     window.addEventListener('hashchange', onHash);

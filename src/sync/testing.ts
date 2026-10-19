@@ -6,6 +6,7 @@ import { SCHEMA_VERSION, type Collection } from '../data/schema';
 import { INITIAL_STATE, type SyncState, type SyncStore } from './run';
 import { SYNCED_COLLECTIONS, type DocSet } from './engine';
 import type { StoredDoc } from './protocol';
+import { hashAuthSecret } from './keys';
 
 export class FakeDevice implements SyncStore {
   clock: Clock;
@@ -46,4 +47,55 @@ export class FakeDevice implements SyncStore {
     this.writes += writes.length;
     for (const { c, d } of writes) this.coll(c).set(d.id, d);
   }
+}
+
+/**
+ * An in-memory relay behind a `fetch`, speaking the real protocol (same URLs, same errors) without
+ * pruning. Paging is not simulated. For tests of the app's sync; the real one is in `relay/`.
+ */
+export function fakeRelay() {
+  interface Space { hash: string; batches: { seq: number; device: string; blob: string; at: number }[]; snapshot: { upto: number; blob: string; at: number } | null; devices: Map<string, { label: string | null; lastSeen: number }> }
+  const spaces = new Map<string, Space>();
+  const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
+  const fetchFn: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    const m = /^\/v1\/spaces\/([^/]+)(?:\/([a-z]+)(?:\/([^/]+))?)?$/.exec(url.pathname);
+    if (!m) return reply(404, { error: 'not_found' });
+    const [, id, route = '', device] = m;
+    const method = init?.method ?? 'GET';
+    const token = /^Bearer (.+)$/.exec(new Headers(init?.headers).get('Authorization') ?? '')?.[1];
+    if (!token) return reply(401, { error: 'unauthorized' });
+    const body = init?.body ? JSON.parse(String(init.body)) : {};
+    let sp = spaces.get(id!);
+    const hash = await hashAuthSecret(token);
+    if (!sp) {
+      if (method === 'POST' && route === 'batches') spaces.set(id!, (sp = { hash, batches: [], snapshot: null, devices: new Map() }));
+      else return reply(404, { error: 'unknown_space' });
+    }
+    if (sp.hash !== hash) return reply(403, { error: 'forbidden' });
+    if (method === 'DELETE' && route === '') { spaces.delete(id!); return reply(200, { ok: true }); }
+    if (route === 'batches') {
+      const seq = (sp.batches.at(-1)?.seq ?? sp.snapshot?.upto ?? 0) + 1;
+      sp.batches.push({ seq, device: body.device, blob: body.blob, at: Date.now() });
+      return reply(201, { seq });
+    }
+    if (route === 'changes') {
+      const after = Number(url.searchParams.get('after') ?? 0);
+      const snap = sp.snapshot && after < sp.snapshot.upto ? sp.snapshot : null;
+      const from = Math.max(after, sp.snapshot?.upto ?? 0);
+      return reply(200, { head: sp.batches.at(-1)?.seq ?? 0, more: false, snapshot: snap, batches: sp.batches.filter(b => b.seq > from) });
+    }
+    if (route === 'snapshot') {
+      sp.snapshot = { upto: body.upto, blob: body.blob, at: Date.now() };
+      const before = sp.batches.length;
+      sp.batches = sp.batches.filter(b => b.seq > body.upto);
+      return reply(200, { upto: body.upto, pruned: before - sp.batches.length });
+    }
+    if (route === 'devices') {
+      if (device) { sp.devices.set(device, { label: body.label ?? sp.devices.get(device)?.label ?? null, lastSeen: Date.now() }); return reply(200, { ok: true }); }
+      return reply(200, { devices: [...sp.devices].map(([d, v]) => ({ device: d, label: v.label, lastSeen: v.lastSeen })) });
+    }
+    return reply(404, { error: 'not_found' });
+  };
+  return { fetch: fetchFn, spaces };
 }

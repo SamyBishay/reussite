@@ -31,17 +31,20 @@ export interface Outgoing {
  * Every field (and deletion) whose clock was written by `ownNode` after `watermark`, as partial
  * documents. Fields written by other nodes are never emitted. With `imported`, fields with the
  * oldest clock (v1 import) go too: they can't be told apart from "already sent" by clock alone,
- * so the first sync, and the sync after an import, ask for them.
+ * so the first sync, and the sync after an import, ask for them. With `all`, every field goes
+ * whoever wrote it (after restoring a backup from another device); pushing twice is harmless.
  */
-export function collectOutgoing(all: DocSet, ownNode: string, watermark: Hlc, opts: { imported?: boolean } = {}): Outgoing {
+export function collectOutgoing(all: DocSet, ownNode: string, watermark: Hlc, opts: { imported?: boolean; all?: boolean } = {}): Outgoing {
   const docs: ChangeDoc[] = [];
   let top = watermark;
   const wanted = (h: Hlc | undefined): h is Hlc => {
     if (h === undefined) return false;
     const node = parse(h).node;
     if (node === ownNode) return h > watermark;
-    return !!opts.imported && node === IMPORTED_NODE;
+    return !!opts.all || (!!opts.imported && node === IMPORTED_NODE);
   };
+  // Only our own clocks move the watermark: foreign ones say nothing about what we've pushed.
+  const raise = (h: Hlc) => { if (h > top && (!opts.all || parse(h).node === ownNode)) top = h; };
   for (const c of SYNCED_COLLECTIONS) {
     for (const doc of all[c] ?? []) {
       const hlc: Record<string, Hlc> = {};
@@ -50,10 +53,10 @@ export function collectOutgoing(all: DocSet, ownNode: string, watermark: Hlc, op
         if (!wanted(h)) continue;
         hlc[k] = h;
         part[k] = doc[k];
-        if (h > top) top = h;
+        raise(h);
       }
       const del = wanted(doc._del) ? doc._del : undefined;
-      if (del !== undefined && del > top) top = del;
+      if (del !== undefined) raise(del);
       if (!Object.keys(hlc).length && del === undefined) continue;
       const d: Record<string, unknown> = { ...part, id: doc.id, _v: doc._v, _hlc: hlc };
       if (del !== undefined) d._del = del;

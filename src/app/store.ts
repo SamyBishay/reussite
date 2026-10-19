@@ -10,6 +10,7 @@ import { normDecision } from '../data/normalize';
 import { stayOn } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
+import { writeMerged, type Write } from '../data/syncstore';
 import { dayKey } from '../domain/dates';
 import { lang, t } from '../i18n';
 
@@ -121,12 +122,19 @@ function guard(): boolean {
   return true;
 }
 
+let afterWrite: (() => void) | undefined;
+/** Called after every local write (not after merged ones): sync uses it to push soon. */
+export const onLocalWrite = (f: () => void) => { afterWrite = f; };
+/** This device's clock, for sync. */
+export const getClock = () => clock;
+
 export const newId = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 /** Create a document; returns its id. Every field gets the same fresh clock. */
 export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
   if (!guard()) return id;
   await db.table_(c).put(create(id, fields, SCHEMA_VERSION, tick(clock)) as never);
+  afterWrite?.();
   return id;
 }
 
@@ -138,6 +146,7 @@ export async function update<T extends object>(c: Collection, id: string, change
       if (!cur) throw new Error('missing ' + c + '/' + id);
       await db.table_(c).put(patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION) as never);
     });
+    afterWrite?.();
   } catch (e) {
     console.error(e);
     toast(t('saveFailed'));
@@ -155,7 +164,17 @@ export async function upsert<T extends object>(c: Collection, id: string, fields
 export async function removeDoc(c: Collection, id: string): Promise<void> {
   if (!guard()) return;
   const cur = await db.table_(c).get(id);
-  if (cur) await db.table_(c).put(remove(cur, clock) as never);
+  if (cur) { await db.table_(c).put(remove(cur, clock) as never); afterWrite?.(); }
+}
+
+/**
+ * Documents received from another device, already merged and carrying their own clocks: put
+ * as they are (sync's only way in, invariant 4). Throws in read-only mode, so a sync round
+ * stops without marking what it pulled as applied.
+ */
+export async function putMerged(writes: Write[]): Promise<void> {
+  if (readOnly.value) throw new Error('read-only');
+  await writeMerged(db, writes);
 }
 
 export const saveSettings = (changes: Partial<Settings>) => upsert('meta', 'settings', changes);

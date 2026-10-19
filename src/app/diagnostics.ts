@@ -18,13 +18,13 @@ export function registerDiagnostics(section: string, provider: Provider) { regis
 
 const FALLBACK: Record<string, string> = { sync: 'off', push: 'not set up' };
 
-function browser(ua: string): string {
+export function browser(ua: string): string {
   const m = /(Edg|OPR|Firefox|FxiOS|CriOS|Chrome|Version)\/([\d.]+)/.exec(ua);
   if (!m) return 'unknown';
   const name = m[1] === 'Edg' ? 'Edge' : m[1] === 'OPR' ? 'Opera' : m[1] === 'FxiOS' ? 'Firefox' : m[1] === 'CriOS' ? 'Chrome' : m[1] === 'Version' ? 'Safari' : m[1]!;
   return name + ' ' + m[2]!.split('.')[0];
 }
-function os(ua: string): string {
+export function os(ua: string): string {
   const pick = (re: RegExp, n: string) => { const m = re.exec(ua); return m ? n + (m[1] ? ' ' + m[1].replace(/_/g, '.') : '') : ''; };
   return pick(/Android ([\d.]+)/, 'Android') || pick(/(?:iPhone|CPU) OS ([\d_]+)/, 'iOS') || pick(/Mac OS X ([\d_]+)/, 'macOS') || pick(/Windows NT ([\d.]+)/, 'Windows')
     || (/CrOS/.test(ua) ? 'ChromeOS' : /Linux/.test(ua) ? 'Linux' : 'unknown');

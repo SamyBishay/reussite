@@ -16,6 +16,7 @@
     "check:app": "playwright test --config playwright.private.config.ts",
     "e2e:android": "playwright test --project=android",
     "relay:dev": "npm --prefix relay run dev",
+    "relay:migrate": "npm --prefix relay run migrate:local",
     "relay:test": "npm --prefix relay test",
     "relay:typecheck": "npm --prefix relay run typecheck"
   },

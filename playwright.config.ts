@@ -5,7 +5,11 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [['list']],
   use: { baseURL: 'http://localhost:4174', trace: 'retain-on-failure' },
-  webServer: { command: 'npm run build && npx vite preview --port 4174 --strictPort', url: 'http://localhost:4174', reuseExistingServer: false, timeout: 120_000 },
+  // The app is built for a relay on this computer; the relay (Worker + local D1, no Cloudflare account) starts beside it.
+  webServer: [
+    { command: 'VITE_RELAY_URL=http://localhost:8787 npm run build && npx vite preview --port 4174 --strictPort', url: 'http://localhost:4174', reuseExistingServer: false, timeout: 120_000 },
+    { command: 'npm run relay:migrate && npm run relay:dev', url: 'http://localhost:8787/health', reuseExistingServer: false, timeout: 120_000, env: { WRANGLER_SEND_METRICS: 'false' } },
+  ],
   projects: [
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },

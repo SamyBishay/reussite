@@ -64,6 +64,14 @@ The space id, a hash of the auth secret, the size, time and device id of every b
 
 `syncOnce(store, client, opts)` in `src/sync/run.ts` does a round: pull until caught up, fold in, push, snapshot when due. Provide a `SyncStore` over Dexie; its `putMany` should write through `store.ts`. `RelayClient` is the fetch wrapper (it encrypts and decrypts). Tests use `FakeDevice` from `src/sync/testing.ts`.
 
+## In the app
+
+- `src/data/syncstore.ts`: the `SyncStore` over Dexie (`writeMerged`, `dexieSyncStore`). State is `local['sync.state']`.
+- `src/app/store.ts`: `putMerged(writes)` is the only way incoming documents are written (it throws in read-only mode); `onLocalWrite(f)` calls `f` after each local write; `getClock()`.
+- `src/app/sync.ts`: keys and flags in `local` (`sync.key`, `sync.keySaved`, `sync.full`, `sync.lastAt`, `sync.lastError`…), `startSync`, `syncNow` (one round at a time, backoff), `requestSync` (2 s debounce), `markFull` (after an import or restore), set-up / join / turn off / delete, backups, and the `sync` diagnostics section.
+- `src/app/SyncSettings.tsx`, `src/app/qr.tsx`: Settings → Sync & devices, the guided flows, the cards on Today, QR drawing and scanning.
+- Old-schema documents are upgraded by `upgradeEntries` (migrations) before merging; `SyncStore.upgrade` is optional. A round with `stopIfGone` stops when the relay has no space for a device that had pulled before (deleted elsewhere); `full` pushes every field.
+
 ## Running the relay
 
 `npm run relay:dev` (local D1, localhost origins allowed), `npm run relay:test` (Workers runtime, in-memory D1). Deploying needs the real Worker name and D1 id in `relay/wrangler.jsonc`, then `wrangler d1 migrations apply`.

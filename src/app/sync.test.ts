@@ -98,6 +98,16 @@ describe('sync in the app', () => {
     await turnOffSync();
   });
 
+  it('data from a newer schema puts the app in read-only mode and writes nothing', async () => {
+    const recovery = generateKey();
+    const other = new RelayClient(relayBase(), await deriveKeys(recovery));
+    await other.push({ v: SCHEMA_VERSION + 1, device: 'future1', docs: [{ c: 'tasks', d: { id: 'tf1', _v: SCHEMA_VERSION + 1, _hlc: { title: '0000099999999:0000:future1' }, title: 'From the future' } }] });
+    await joinSync(recovery);
+    await vi.waitFor(() => expect(readOnly.value).toBe(true));
+    expect(await db.tasks.get('tf1')).toBeUndefined();
+    await turnOffSync();
+  });
+
   it('read-only mode refuses merged writes, so a round never marks them as applied', async () => {
     readOnly.value = true;
     await expect(putMerged([{ c: 'tasks', d: { id: 'x', _v: 2, _hlc: {}, title: 'x' } }])).rejects.toThrow('read-only');

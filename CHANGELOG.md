@@ -1,6 +1,10 @@
 # What's new
 
 ## 2.0 — in progress
+- Sync between your devices, if you want it: Settings → Sync & devices. Réussite makes a recovery key (letters and a QR code); another device joins by scanning it or typing it. Your list is scrambled on your device before it is sent, so only your devices can read it. It catches up when you open the app, and a couple of seconds after you change something.
+- Keep the recovery key somewhere safe. If you lose every device and the key, the list is gone, and nobody can get it back. A card on Today stays until you say you saved it.
+- Sync & devices shows when it last synced, your devices (you can name this one), the recovery key on request, and lets you turn sync off (your list stays) or delete the synced copy.
+- Backups can be encrypted when sync is on. With sync off, Réussite reminds you every two weeks to save a backup file.
 - Copy diagnostics: in Settings → About, and on error screens, Réussite shows a short report (versions, device, errors) that you can copy to a friend when something breaks. It never includes your steps, notes, names, places or keys.
 - AI, if you want it: choose OpenRouter (or any OpenAI-compatible service) or Anthropic in Settings → AI and add your key. The key stays on this device.
 - Change the list in plain words: type "drop the games; the photos are due Friday" on Today, the Matrix or Projects, then tick the changes you want. Nothing is written until you confirm.

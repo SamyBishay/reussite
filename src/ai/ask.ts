@@ -7,6 +7,7 @@ import type { ZodType } from 'zod';
 import { db, settings } from '../app/store';
 import { getLocal, setLocal } from '../data/db';
 import { t, type Key } from '../i18n';
+import { noteAiError } from '../app/errorlog';
 import { buildRequest, masked, send, type AiConfig, type AiRequest, type ErrorKind, type Slot } from './adapters';
 import { extractJson } from './json';
 import { readChangeSet, ChangeSetSchema, type ChangeSet } from './changeset';
@@ -71,11 +72,11 @@ export async function ask<T>(kind: string, slot: Slot, system: string, user: str
   const req = buildRequest(cfg, slot, system, user, o.maxTokens);
   if (!o.noPreview && !(await mayShow(req, kind))) return fail('cancelled');
   const r = await send(req, o.fetchFn ?? fetch, o.signal);
-  if (!r.ok) { if (r.detail) console.warn('AI error', r.status, r.detail); return fail(r.error); }
+  if (!r.ok) { void noteAiError(r.error, r.status); if (r.detail) console.warn('AI error', r.status, r.detail); return fail(r.error); }
   const json = extractJson(r.text);
-  if (json === undefined) return fail('invalid');
+  if (json === undefined) { void noteAiError('invalid'); return fail('invalid'); }
   const v = schema.safeParse(json);
-  if (!v.success) { console.warn('AI output rejected', v.error.issues.slice(0, 3)); return fail('invalid'); }
+  if (!v.success) { console.warn('AI output rejected', v.error.issues.slice(0, 3)); void noteAiError('invalid'); return fail('invalid'); }
   return { ok: true, data: v.data, text: r.text };
 }
 

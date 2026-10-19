@@ -292,6 +292,11 @@ export const en = {
   storagePersisted: 'This device keeps your list even when space runs low.',
   storageNotPersisted: 'This device may clear your list if space runs low. Ask it to keep your list, add Réussite to your Home Screen, and save backups.',
   about: 'About',
+  diagTitle: 'Copy diagnostics',
+  diagHint: 'This is what will be copied, so a friend can help with a bug. It has versions, states and error text only: never your steps, notes, names, places, keys or recovery key.',
+  diagCopy: 'Copy diagnostics',
+  diagCopied: 'Diagnostics copied.',
+  crashed: 'Something went wrong and Réussite stopped. Your list is safe on this device.',
   version: 'Version {v}',
   // import sheet
   importTitle: 'Import from Réussite 1',

@@ -458,6 +458,7 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 .addplace{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}
 .stayrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px;margin-top:6px;align-items:center}
 @media (max-width:560px){.stayrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stayrow select{grid-column:1 / -1}}
+.diag{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:12px/1.5 var(--mono,monospace);background:var(--card);border-radius:10px;padding:10px;margin:8px 0 12px;max-height:46vh;overflow:auto}
 .changelog{white-space:pre-wrap;font:13px/1.5 var(--sans);color:var(--ink-2);margin:8px 0 0;overflow-wrap:anywhere}
 input[type=range]{width:100%;accent-color:var(--accent)}
 

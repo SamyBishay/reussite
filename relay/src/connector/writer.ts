@@ -24,6 +24,9 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
     if (e.get('days', k)) e.update('days', k, p);
     else create('days', { date: k, plan: [], launches: [], first: null, checkin: null, closed: null, summary: null, ...p }, k);
   };
+  /** Steps of the project already done and held only by the cold part (not loaded): enough of them to count as "two or more". */
+  const coldDone = (pid: string): TaskDoc[] =>
+    Array.from({ length: Math.min(view.cold?.x.done[pid] ?? 0, 2) }, () => ({ project: pid, template: false, status: 'done' }) as unknown as TaskDoc);
   const projectsNow = () => new Map([...e.live('projects')].map(p => [p.id, p as unknown as Project & { id: string }]));
 
   const w: Writer & { made: Made[] } = {
@@ -49,7 +52,7 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
           create('tasks', newTaskFields(tk.title, tk.suit, tk.project, next.fields, projects, t.toISOString(), t.getTime()));
         }
       }
-      if (projectCompletes(tk.project, projectsNow(), liveTasks())) e.update('projects', tk.project, { status: 'done', doneAt: t.toISOString() });
+      if (projectCompletes(tk.project, projectsNow(), [...liveTasks(), ...coldDone(tk.project)])) e.update('projects', tk.project, { status: 'done', doneAt: t.toISOString() });
     },
     async drop(id) {
       e.update('tasks', id, { status: 'dropped', started: null });

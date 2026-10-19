@@ -12,6 +12,7 @@ import {
 import type { Env } from './env';
 import { fail, json, readJson } from './http';
 import { clientIp, countIp, spaceLimit } from './limits';
+import { cacheDrop } from './connector/cache';
 import { revokeConnector } from './connector/oauth';
 
 const MINUTE = 60_000;
@@ -116,15 +117,22 @@ async function changes(req: Request, env: Env, space: string): Promise<Response>
   const auth = await authorize(req, env, space);
   if (!auth.ok) return auth.res;
 
-  const snap = await env.DB.prepare('SELECT upto, at, size FROM snapshots WHERE space = ?1 AND part = 0').bind(space).first<{ upto: number; at: number; size: number }>();
+  // A snapshot is whole (kind 'full') or two parts (kind 'hot', 'cold'); what a reader gets of it depends on `after`.
+  const heads = await env.DB.prepare('SELECT kind, upto, at, size FROM snapshots WHERE space = ?1 AND part = 0').bind(space).all<{ kind: Kind; upto: number; at: number; size: number }>();
+  const main = heads.results.find(r => r.kind !== 'cold');
+  const coldRow = heads.results.find(r => r.kind === 'cold');
+  const wantMain = !!main && after < main.upto;
+  const wantCold = !!coldRow && after < coldRow.upto;
   let snapshot: ChangesResponse['snapshot'] = null;
+  let cold: ChangesResponse['cold'] = null;
   let from = after;
   let spent = 0;
-  if (snap && after < snap.upto) {
-    const parts = await env.DB.prepare('SELECT blob FROM snapshots WHERE space = ?1 ORDER BY part').bind(space).all<{ blob: string }>();
-    snapshot = { upto: snap.upto, at: snap.at, blob: parts.results.map(p => p.blob).join('') };
-    from = snap.upto;
-    spent = snap.size;
+  if (wantMain || wantCold) {
+    const kinds = [...(wantMain ? [main!.kind] : []), ...(wantCold ? ['cold'] : [])];
+    const parts = await env.DB.prepare(`SELECT kind, blob FROM snapshots WHERE space = ?1 AND kind IN (${kinds.map(k => `'${k}'`).join(',')}) ORDER BY kind, part`).bind(space).all<{ kind: Kind; blob: string }>();
+    const blobOf = (k: Kind) => parts.results.filter(p => p.kind === k).map(p => p.blob).join('');
+    if (wantMain) { snapshot = { upto: main!.upto, at: main!.at, blob: blobOf(main!.kind) }; from = main!.upto; spent += main!.size; }
+    if (wantCold) { cold = { upto: coldRow!.upto, at: coldRow!.at, blob: blobOf('cold') }; spent += coldRow!.size; }
   }
   // Batches after `from`, stopping once the page holds PAGE_BATCHES or about PAGE_BYTES (always at least one).
   const rows = await env.DB.prepare(
@@ -134,44 +142,81 @@ async function changes(req: Request, env: Env, space: string): Promise<Response>
   ).bind(space, from, Math.max(PAGE_BYTES - spent, 1), PAGE_BATCHES).all<ChangesResponse['batches'][number]>();
   const last = rows.results.at(-1)?.seq ?? from;
   const more = !!(await env.DB.prepare('SELECT 1 AS x FROM batches WHERE space = ?1 AND seq > ?2 LIMIT 1').bind(space, last).first());
-  return json({ head: auth.head, more, snapshot, batches: rows.results } satisfies ChangesResponse);
+  return json({ head: auth.head, more, snapshot, ...(cold ? { cold } : {}), batches: rows.results } satisfies ChangesResponse);
 }
 
 async function putSnapshot(req: Request, env: Env, space: string): Promise<Response> {
   const max = b64uLength(MAX_SNAPSHOT_BYTES);
-  const body = await readJson(req, max + 200);
+  const body = await readJson(req, 2 * max + 400);
   if (body === 'too_large') return fail('too_large', 413);
-  const { upto, blob } = body ?? {};
-  if (typeof upto !== 'number' || !Number.isSafeInteger(upto) || upto < 1 || typeof blob !== 'string' || blob.length < 40 || !isB64u(blob)) return fail('bad_request', 400);
-  if (blob.length > max) return fail('too_large', 413);
+  const { upto, blob, part, cold, coldUpto } = (body ?? {}) as Record<string, any>;
+  const okBlob = (b: unknown): b is string => typeof b === 'string' && b.length >= 40 && isB64u(b);
+  const okUpto = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 1;
+  if (!okUpto(upto) || !okBlob(blob)) return fail('bad_request', 400);
+  if (part !== undefined && part !== 'hot') return fail('bad_request', 400);
+  if (cold !== undefined && (part !== 'hot' || !cold || !okUpto(cold.upto) || cold.upto > upto || !okBlob(cold.blob))) return fail('bad_request', 400);
+  if (part === 'hot' && cold === undefined && !okUpto(coldUpto)) return fail('bad_request', 400);
+  if (part === undefined && (cold !== undefined || coldUpto !== undefined)) return fail('bad_request', 400);
+  if (blob.length > max || (cold && cold.blob.length > max)) return fail('too_large', 413);
 
   const gate = await ipGate(req, env);
   if (gate) return gate;
   const auth = await authorize(req, env, space);
   if (!auth.ok) return auth.res;
   if (upto > auth.head) return fail('bad_upto', 409);
-  const now = Date.now();
-  if ((await spaceSlot(env, space, now, 0)) === null) return limited();
+  if ((await spaceSlot(env, space, Date.now(), 0)) === null) return limited();
 
-  const current = await env.DB.prepare('SELECT upto FROM snapshots WHERE space = ?1 AND part = 0').bind(space).first<{ upto: number }>();
-  if (current && current.upto >= upto) return json({ upto: current.upto, pruned: 0 } satisfies SnapshotResponse); // already have a newer one
-  const size = sizeOf(blob);
-  // Every statement carries the same guard, so two writers racing past the check above can't leave
-  // an older snapshot over a newer one: the batch is atomic, and the guard is evaluated inside it.
-  // Parts go in last-first, so the guard (which looks at part 0) still holds for the others.
-  const guard = 'NOT EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND part = 0 AND upto >= ?2)';
-  const stmts = [env.DB.prepare(`DELETE FROM snapshots WHERE space = ?1 AND ${guard}`).bind(space, upto)];
-  const parts = Math.ceil(blob.length / PART_CHARS);
-  for (let part = parts - 1; part >= 0; part--) {
-    stmts.push(env.DB.prepare(
-      `INSERT INTO snapshots (space, part, upto, blob, size, at) SELECT ?1, ?3, ?2, ?4, ?5, ?6 WHERE ${guard}`,
-    ).bind(space, upto, part, blob.slice(part * PART_CHARS, (part + 1) * PART_CHARS), size, now));
-  }
-  stmts.push(env.DB.prepare('DELETE FROM batches WHERE space = ?1 AND seq <= ?2 AND EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND part = 0 AND upto >= ?2)').bind(space, upto));
-  stmts.push(env.DB.prepare('SELECT upto FROM snapshots WHERE space = ?1 AND part = 0').bind(space));
+  const r = await storeSnapshot(env, space, { upto, blob, part, cold, coldUpto });
+  return r === 'bad_parts' ? fail('bad_parts', 409) : json(r satisfies SnapshotResponse);
+}
+
+type Kind = 'full' | 'hot' | 'cold';
+export interface SnapshotWrite { upto: number; blob: string; part?: 'hot'; cold?: { upto: number; blob: string }; coldUpto?: number }
+
+/**
+ * Store a snapshot (docs/dev/sync.md, "Snapshots and pruning"). Whole (no `part`): replaces
+ * everything. 'hot' with `cold`: replaces both. 'hot' alone: replaces the hot part only, and only if
+ * the stored cold part is at least as new as `coldUpto` (else 'bad_parts'). An `upto` that is not
+ * newer than the stored one changes nothing (the answer carries the stored `upto`). Batches up to
+ * `upto` are pruned. The connector's compaction calls this too, without the HTTP layer.
+ *
+ * Every statement carries the same guard, so two writers racing past the first check can't leave an
+ * older snapshot over a newer one (the batch is atomic and the guard is evaluated inside it). Parts
+ * go in cold first and part 0 last, so the guard, which looks at a stored part 0, holds until the end.
+ */
+export async function storeSnapshot(env: Env, space: string, w: SnapshotWrite): Promise<SnapshotResponse | 'bad_parts'> {
+  const now = Date.now();
+  const rows = await env.DB.prepare('SELECT kind, upto FROM snapshots WHERE space = ?1 AND part = 0').bind(space).all<{ kind: Kind; upto: number }>();
+  const current = rows.results.find(r => r.kind !== 'cold');
+  const storedCold = rows.results.find(r => r.kind === 'cold');
+  if (w.part === 'hot' && !w.cold && !(storedCold && storedCold.upto >= (w.coldUpto ?? Infinity))) return 'bad_parts';
+  if (current && current.upto >= w.upto) return { upto: current.upto, pruned: 0 };
+
+  const hotOnly = w.part === 'hot' && !w.cold;
+  const guard = `NOT EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0 AND upto >= ?2)`;
+  const needCold = `EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND kind = 'cold' AND part = 0 AND upto >= ?9)`;
+  const where = hotOnly ? `${guard} AND ${needCold}` : guard;
+  const insert = (kind: Kind, partNo: number, rowUpto: number, chunk: string, size: number) =>
+    env.DB.prepare(`INSERT INTO snapshots (space, kind, part, upto, blob, size, at) SELECT ?1, ?3, ?4, ?5, ?6, ?7, ?8 WHERE ${where}`)
+      .bind(space, w.upto, kind, partNo, rowUpto, chunk, size, now, ...(hotOnly ? [w.coldUpto] : []));
+  const chunks = (kind: Kind, rowUpto: number, text: string): D1PreparedStatement[] => {
+    const out: D1PreparedStatement[] = [];
+    const size = sizeOf(text);
+    for (let i = Math.ceil(text.length / PART_CHARS) - 1; i >= 0; i--) out.push(insert(kind, i, rowUpto, text.slice(i * PART_CHARS, (i + 1) * PART_CHARS), size));
+    return out;
+  };
+  const stmts = [
+    hotOnly
+      ? env.DB.prepare(`DELETE FROM snapshots WHERE space = ?1 AND kind = 'hot' AND ${where}`).bind(space, w.upto, ...Array(6).fill(null), w.coldUpto)
+      : env.DB.prepare(`DELETE FROM snapshots WHERE space = ?1 AND ${where}`).bind(space, w.upto),
+    ...(w.cold ? chunks('cold', w.cold.upto, w.cold.blob) : []),
+    ...chunks(w.part ?? 'full', w.upto, w.blob),
+    env.DB.prepare(`DELETE FROM batches WHERE space = ?1 AND seq <= ?2 AND EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0 AND upto >= ?2)`).bind(space, w.upto),
+    env.DB.prepare(`SELECT upto FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0`).bind(space),
+  ];
   const res = await env.DB.batch(stmts);
-  const stored = (res.at(-1)!.results as { upto: number }[])[0]?.upto ?? upto;
-  return json({ upto: stored, pruned: res.at(-2)!.meta.changes } satisfies SnapshotResponse);
+  const stored = (res.at(-1)!.results as { upto: number }[])[0]?.upto ?? w.upto;
+  return { upto: stored, pruned: res.at(-2)!.meta.changes };
 }
 
 async function touchDevice(req: Request, env: Env, space: string, device: string): Promise<Response> {
@@ -204,6 +249,7 @@ async function deleteSpace(req: Request, env: Env, space: string): Promise<Respo
   if (gate) return gate;
   const auth = await authorize(req, env, space);
   if (!auth.ok) return auth.res;
+  cacheDrop(space); // the connector's plaintext copy, if this isolate holds one
   await revokeConnector(env, space); // sign-ins live in KV, outside the tables below
   await deleteSpaceData(env.DB, space);
   return json({ ok: true });

@@ -9,13 +9,18 @@ import { whereNow } from '../../../src/domain/places';
 import type { Data } from '../../../src/domain/lists';
 import type { Snapshot } from '../../../src/ai/apply';
 import type { Collection } from '../../../src/data/schema';
+import type { ColdDigest } from '../../../src/sync/protocol';
 import type { Maps } from './space';
 
 type W<T> = T & { id: string };
 
 export class View {
   private cache = new Map<string, Map<string, unknown>>();
-  constructor(readonly maps: Maps, readonly at: Date = new Date()) {}
+  /**
+   * `cold` is set while only the hot part of the snapshot is loaded: what the cold documents add to
+   * answers about the hot ones (estimate points, steps done per project), and the first day held in full.
+   */
+  constructor(readonly maps: Maps, readonly at: Date = new Date(), readonly cold: { x: ColdDigest; from: string } | null = null) {}
 
   private live<T>(c: Collection, map?: (d: Record<string, unknown>) => T): Map<string, W<T>> {
     let m = this.cache.get(c) as Map<string, W<T>> | undefined;
@@ -39,21 +44,33 @@ export class View {
   get stays() { return this.live<Stay>('stays'); }
   get decisions() { return this.live<Decision>('decisions', normDecision); }
 
+  // Each of these is asked for again and again (a step line asks for `data`, which asks for today,
+  // which builds an Intl formatter), so they are worked out once per View.
+  private memo = new Map<string, unknown>();
+  private once<T>(key: string, make: () => T): T {
+    if (!this.memo.has(key)) this.memo.set(key, make());
+    return this.memo.get(key) as T;
+  }
+
   get settings(): Settings {
-    const d = this.maps.meta.get('settings');
-    return withDefaults(d && !d._del ? (fieldsOf(d) as Partial<Settings>) : undefined);
+    return this.once('settings', () => {
+      const d = this.maps.meta.get('settings');
+      return withDefaults(d && !d._del ? (fieldsOf(d) as Partial<Settings>) : undefined);
+    });
   }
 
   /** Today (day-start rule, in the current place's time zone) and the place the person is in. */
   get where() {
-    const s = this.settings;
-    return whereNow(this.at, { here: s.here, dayStart: s.dayStart }, id => this.places.get(id)?.timeZone, this.stays.values());
+    return this.once('where', () => {
+      const s = this.settings;
+      return whereNow(this.at, { here: s.here, dayStart: s.dayStart }, id => this.places.get(id)?.timeZone, this.stays.values());
+    });
   }
   get today() { return this.where.today; }
   get zone(): string { return this.places.get(this.where.here)?.timeZone ?? 'UTC'; }
 
   get data(): Data {
-    return { today: this.today, urgencyDays: this.settings.urgencyDays, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays };
+    return this.once('data', () => ({ today: this.today, urgencyDays: this.settings.urgencyDays, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays }));
   }
 
   /** What the change-set planner checks a change-set against. */

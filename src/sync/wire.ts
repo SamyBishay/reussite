@@ -23,8 +23,6 @@ export type WireDoc = Record<string, unknown>;
 export interface WireBatch { f: typeof WIRE; v: number; device: string; docs: { c: Collection; d: WireDoc }[] }
 export type WireSnapshot = Omit<Snapshot, 'docs'> & { f: typeof WIRE; docs: Record<string, WireDoc[]> };
 
-const LEAN_META = new Set(['id', '_v', '_del', '_h', '_o']);
-
 /** The clock most fields carry (the newest of any tie), or undefined if no field has one. */
 function baseClock(hlc: Record<string, string>): string | undefined {
   const n = new Map<string, number>();
@@ -68,7 +66,7 @@ export function decodeDoc(w: WireDoc, v: number): StoredDoc {
   const o = w._o as Record<string, string | 0> | undefined;
   const hlc: Record<string, string> = {};
   for (const k in w) {
-    if (LEAN_META.has(k)) continue;
+    if (k.charCodeAt(0) === 95 /* _ */ ? (k === '_v' || k === '_del' || k === '_h' || k === '_o') : k === 'id') continue;
     const x = o !== undefined && k in o ? o[k] : base;
     if (x) hlc[k] = x;
   }

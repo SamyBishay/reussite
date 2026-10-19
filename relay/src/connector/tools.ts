@@ -11,9 +11,10 @@ import { importEncKey } from '../../../src/sync/keys';
 import { decisionLines, type TaskW } from '../../../src/domain/lists';
 import type { Env } from '../env';
 import { applyChanges, undo, type Ctx, type Out } from './changes';
+import { cacheGet, remember } from './cache';
 import { dayText, lines, projectText, queryText, taskText } from './render';
 import { findByName } from './resolve';
-import { loadSpace } from './space';
+import { compact, loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
 import { View } from './view';
 import { unwrap } from './wrap';
 
@@ -32,15 +33,25 @@ class ToolError extends Error {}
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 const text = (o: Out) => ({ content: [{ type: 'text' as const, text: o.text }], ...(o.error ? { isError: true } : {}) });
 
-/** Open the space once per request: unwrap the key, read the snapshot and batches, fold them in. */
+const viewOf = (s: Loaded): View => new View(s.maps, undefined, needsCold(s) ? { x: s.split!.x, from: s.split!.from } : null);
+
+/**
+ * Open the space once per request: unwrap the key, read the snapshot's hot part (or take the
+ * isolate's copy) and the batches after it, fold them in. The cold part is read only when
+ * something needs it: `full()` does that, and so does a hot part that points into the cold one.
+ */
 function opener(env: Env, space: string, row: Row) {
   let opened: Promise<Ctx> | undefined;
   return () => (opened ??= (async () => {
-    const w = await unwrap(env, space, row.wrapped);
-    const keys = { spaceId: space, encKey: await importEncKey(b64uDecode(w.k)) };
-    const s = await loadSpace(env, space, keys, { wall: row.wall, counter: row.counter });
+    const entry = cacheGet(space, row.wrapped);
+    const keys = entry?.keys ?? { spaceId: space, encKey: await importEncKey(b64uDecode((await unwrap(env, space, row.wrapped)).k)) };
+    const s = await loadSpace(env, space, keys, { wall: row.wall, counter: row.counter }, entry);
+    s.wrapped = row.wrapped;
     if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.');
-    return { env, s, v: new View(s.maps) };
+    const c: Ctx = { env, s, v: viewOf(s), full: async () => { if (needsCold(s)) { await loadCold(env, s); if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.'); } c.v = viewOf(s); } };
+    if (s.split?.pending) { await c.full(); await compact(env, s).catch(() => undefined); } // a stub of an old step: read the cold part, and cut the hot one again so the next call needn't
+    remember(s);
+    return c;
   })());
 }
 
@@ -51,10 +62,25 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
   const open = opener(env, space, row);
   const read = { readOnlyHint: true, openWorldHint: false } as const;
 
-  /** Run a tool: errors become a readable tool error, never a crash. */
+  /**
+   * Run a tool: errors become a readable tool error, never a crash. A tool that finds it needs the
+   * cold part (`NeedCold`, thrown before anything is written) gets it and runs again; a tool that
+   * writes starts from copies of the maps, so a run that stopped half way leaves nothing behind.
+   */
   const tool = <S extends z.ZodType>(name: string, description: string, input: S, annotations: object, fn: (c: Ctx, args: z.infer<S>) => Promise<Out> | Out) =>
     server.registerTool(name, { description, inputSchema: input, annotations }, (async (args: z.infer<S>) => {
-      try { return text(await fn(await open(), args)); } catch (e) {
+      try {
+        const c = await open();
+        const before = c.s.maps;
+        c.s.own = new Set();
+        try { return text(await fn(c, args)); } catch (e) {
+          if (!(e instanceof NeedCold)) throw e;
+          c.s.maps = before;
+          c.s.own = new Set();
+          await c.full();
+          return text(await fn(c, args));
+        }
+      } catch (e) {
         if (e instanceof ToolError) return text({ text: e.message, error: true });
         console.error('connector tool failed', name, e instanceof Error ? e.name : typeof e);
         return text({ text: 'Something went wrong reading or writing the list. Try again; if it keeps happening, switch the connector off and on in Réussite.', error: true });
@@ -67,12 +93,16 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     const f = findByName(value, [...c.v.tasks.values()].filter(x => !x.template).map(x => ({ id: x.id, name: x.title })));
     if ('id' in f) return c.v.tasks.get(f.id)!;
     if ('many' in f) throw new ToolError(`"${value}" matches ${f.many.length} steps; call again with the id of the one meant:\n${lines(c.v, f.many.slice(0, 8).map(m => c.v.tasks.get(m.id)!))}`);
+    if (needsCold(c.s)) throw new NeedCold(); // an old finished step: not in the hot part
     throw unknown('step', value, 'Use query_tasks to find it.');
   };
 
   tool('today', "Today: the current place, today's list in order with launch points and fixed times, the next step, steps carried from yesterday, and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
 
-  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, launch points, fixed times, and what was done that day.', z.object({ date: day }), read, (c, { date }) => ({ text: dayText(c.v, date) }));
+  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, launch points, fixed times, and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
+    if (needsCold(c.s) && date < c.s.split!.from) throw new NeedCold(); // before the hot window
+    return { text: dayText(c.v, date) };
+  });
 
   tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first.', z.object({
     quadrant: z.number().int().min(1).max(4).optional(),
@@ -83,6 +113,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     text: z.string().optional().describe('Words that must all appear in the title, note or project name'),
     limit: z.number().int().min(1).max(50).optional(),
   }), read, (c, a) => {
+    if (needsCold(c.s) && (a.status ?? 'open') !== 'open') throw new NeedCold(); // finished steps are mostly in the cold part
     const ids: { project?: string; place?: string } = {};
     if (a.project) {
       const f = c.v.projects.has(a.project) || a.project === 'inbox' ? { id: a.project } : findByName(a.project, [...c.v.projects.values()].map(p => ({ id: p.id, name: p.name })));

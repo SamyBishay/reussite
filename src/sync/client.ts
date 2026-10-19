@@ -8,6 +8,7 @@ import {
 } from './protocol';
 import { openFromText, sealToText } from './crypto';
 import { b64uEncode } from './bytes';
+import type { Parts } from './parts';
 import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from './wire';
 import type { SpaceKeys } from './keys';
 
@@ -18,7 +19,10 @@ export class RelayError extends Error {
 export interface Pulled {
   head: number;
   more: boolean;
+  /** The snapshot, or its hot part when it is in two. */
   snapshot: Snapshot | null;
+  /** The cold part of a two-part snapshot, when this reader is below its `upto`. */
+  cold: Snapshot | null;
   batches: { seq: number; at: number; batch: ChangeBatch }[];
 }
 
@@ -61,6 +65,7 @@ export class RelayClient {
       head: r.head,
       more: r.more,
       snapshot: r.snapshot ? decodeSnapshot(await openFromText(this.keys, r.snapshot.blob)) : null,
+      cold: r.cold ? decodeSnapshot(await openFromText(this.keys, r.cold.blob)) : null,
       batches: await Promise.all(r.batches.map(async b => ({ seq: b.seq, at: b.at, batch: decodeBatch(await openFromText(this.keys, b.blob)) }))),
     };
   }
@@ -70,6 +75,20 @@ export class RelayClient {
     const blob = await sealToText(this.keys, encodeSnapshot(snapshot), { lean: true });
     if (blob.length > b64uLength(MAX_SNAPSHOT_BYTES)) throw new RelayError(413, 'too_large');
     const body: SnapshotRequest = { upto: snapshot.upto, blob };
+    return this.call<SnapshotResponse>('PUT', '/snapshot', body);
+  }
+
+  /**
+   * Store a snapshot in two parts. With `parts.cold` both are replaced; without it only the hot part
+   * is, and the relay refuses (409 `bad_parts`) unless it holds a cold part at least as new as the
+   * one this hot part was cut with.
+   */
+  async putSnapshotParts(parts: Parts): Promise<SnapshotResponse> {
+    const seal = (s: Snapshot) => sealToText(this.keys, encodeSnapshot(s), { lean: true });
+    const [blob, cold] = await Promise.all([seal(parts.hot), parts.cold ? seal(parts.cold) : undefined]);
+    const max = b64uLength(MAX_SNAPSHOT_BYTES);
+    if (blob.length > max || (cold && cold.length > max)) throw new RelayError(413, 'too_large');
+    const body: SnapshotRequest = { upto: parts.hot.upto, blob, part: 'hot', ...(cold ? { cold: { upto: parts.cold!.upto, blob: cold } } : { coldUpto: parts.cut.coldUpto }) };
     return this.call<SnapshotResponse>('PUT', '/snapshot', body);
   }
 

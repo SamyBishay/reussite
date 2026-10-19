@@ -16,7 +16,15 @@ export const mins = (m: number): string => (m >= 60 ? `${Math.floor(m / 60)}h${S
 const model = new WeakMap<View, Model>();
 function estModel(v: View): Model {
   let m = model.get(v);
-  if (!m) { m = fit(estPointsOf(v.tasks.values(), v.sessions.values()), v.today); model.set(v, m); }
+  if (!m) {
+    const points = estPointsOf(v.tasks.values(), v.sessions.values());
+    // Finished steps in the cold part count too (hot ones were just counted: a step in both is skipped).
+    if (v.cold) for (const [id, est0, real, w0, doneDay, app, project, suit, by] of v.cold.x.est) {
+      if (!v.tasks.has(id as string)) points.push({ id: id as string, title: '', est0: est0 as number, real: real as number, w0: w0 as number, doneDay: doneDay as string, app: app as string | null, project: project as string | null, suit: suit as string, by: by as 'me' | 'ai' | null });
+    }
+    m = fit(points, v.today);
+    model.set(v, m);
+  }
   return m;
 }
 const personal = (v: View, t: Pick<Task, 'est' | 'app' | 'project' | 'suit' | 'estBy'>) => predict(estModel(v), { est: t.est, app: t.app, project: t.project, suit: t.suit, estBy: t.estBy });
@@ -145,7 +153,8 @@ export function projectText(v: View, id: string): string {
   const open = all.filter(t => t.status === 'open').sort((a, b) => (a.order || 0) - (b.order || 0));
   const smart = p.smart ? Object.entries(p.smart).filter(([, x]) => x).map(([k, x]) => `${k}: ${oneLine(String(x))}`).join('; ') : '';
   const where = p.where && p.where !== 'any' ? `, place ${v.places.get(p.where)?.name ?? p.where}` : '';
-  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\ngoal: ${p.goal ? oneLine(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
+  const done = all.length - open.length + (v.cold?.x.done[id] ?? 0);
+  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\ngoal: ${p.goal ? oneLine(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${done} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
 }
 
 // ---------- change-sets, in words ----------

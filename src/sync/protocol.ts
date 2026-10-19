@@ -27,6 +27,32 @@ export interface Snapshot {
   /** Covers every batch with seq <= upto. */
   upto: number;
   docs: Record<string, StoredDoc[]>;
+  /**
+   * A snapshot is whole (no `part`, as every one written before the split was) or two parts, hot
+   * and cold (src/sync/parts.ts). Only the hot part carries the fields below.
+   */
+  part?: 'hot' | 'cold';
+  /** hot: what the cold part it pairs with was cut from. */
+  cut?: Cut;
+  /** hot: the ids held only by the cold part, per collection, newline-separated. */
+  cold?: Record<string, string>;
+  /** hot: what the connector needs to know about the cold documents without reading them. */
+  x?: ColdDigest;
+  /** The newest clock in this part, so a reader need not scan for it. */
+  top?: string;
+}
+
+/** Where hot and cold were cut: the day and the time, and the `upto` of the cold part written then. */
+export interface Cut { day: string; wall: number; coldUpto: number }
+
+/**
+ * What the cold documents add to answers about the hot ones: points for the personal estimate
+ * (steps done in the last ~400 days, as [id, est0, real, w0, doneDay, app, project, suit, by])
+ * and how many steps each project has done, cold ones only.
+ */
+export interface ColdDigest {
+  est: (string | number | null)[][];
+  done: Record<string, number>;
 }
 
 // ---- Limits (DECISIONS.md). Sizes are of the encrypted blob before base64url.
@@ -50,13 +76,24 @@ export interface ChangesResponse {
   /** The latest seq in the space. `more` is true when this page stops before it. */
   head: number;
   more: boolean;
-  /** Present when `after` < the snapshot's `upto`. */
+  /** Present when `after` < the snapshot's `upto`. With a two-part snapshot this is the hot part. */
   snapshot: { upto: number; blob: string; at: number } | null;
+  /** The cold part, present when `after` is below its `upto`. Absent from answers to apps that predate it. */
+  cold?: { upto: number; blob: string; at: number } | null;
   batches: { seq: number; device: string; blob: string; at: number }[];
 }
 
 /** PUT /v1/spaces/:space/snapshot */
-export interface SnapshotRequest { upto: number; blob: string }
+export interface SnapshotRequest {
+  upto: number;
+  blob: string;
+  /** 'hot': `blob` is the hot part of a two-part snapshot. Without it the snapshot is whole and replaces everything. */
+  part?: 'hot';
+  /** With 'hot': a new cold part, replacing the stored one. */
+  cold?: { upto: number; blob: string };
+  /** With 'hot' and no `cold`: the `upto` of the cold part this hot one pairs with; the stored cold must be at least that new (else 409 `bad_parts`). */
+  coldUpto?: number;
+}
 export interface SnapshotResponse { upto: number; pruned: number }
 
 /** POST /v1/spaces/:space/devices/:device — `label` is an encrypted `{ name }`. */
@@ -103,7 +140,7 @@ export const INBOX_ID = /^[A-Za-z0-9_-]{16,32}$/;
 export interface ErrorBody { error: ErrorCode }
 export type ErrorCode =
   | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found'
-  | 'connector_off' | 'wrong_key' | 'connector_unavailable';
+  | 'connector_off' | 'wrong_key' | 'connector_unavailable' | 'bad_parts';
 
 export const SPACE_ID = /^[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url
 export const DEVICE_ID = /^[A-Za-z0-9_-]{1,64}$/;

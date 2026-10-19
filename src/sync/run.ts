@@ -4,8 +4,9 @@
 import type { Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection } from '../data/schema';
 import { RelayError, type Pulled, type RelayClient } from './client';
-import { applyIncoming, buildSnapshot, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
-import type { ChangeDoc, StoredDoc } from './protocol';
+import { applyIncoming, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
+import type { ChangeDoc, Cut, StoredDoc } from './protocol';
+import { buildParts, touchesCold } from './parts';
 
 /** What a device remembers between rounds. Keep it in the `local` table, never in synced data. */
 export interface SyncState {
@@ -15,6 +16,8 @@ export interface SyncState {
   watermark: string;
   /** The `upto` of the latest snapshot this device knows of. */
   snapshotSeq: number;
+  /** Where the relay's hot and cold parts were cut, as this device last saw or wrote it; unset for a whole snapshot or none. */
+  cut?: Cut;
 }
 export const INITIAL_STATE: SyncState = { seq: 0, watermark: '', snapshotSeq: 0 };
 
@@ -48,6 +51,8 @@ export interface SyncResult {
 export interface SyncOptions {
   /** Upload a snapshot once this many batches have piled up since the last (default `SNAPSHOT_EVERY`). */
   snapshotEvery?: number;
+  /** The time, for the cut between hot and cold (tests move it). */
+  now?: () => number;
   /** Documents per pushed batch (default 300; halved if the relay says too large). */
   batchDocs?: number;
   /** Push every field, whoever wrote it (after restoring a backup or importing). */
@@ -62,7 +67,7 @@ export interface SyncOptions {
  */
 export const SNAPSHOT_EVERY = 8;
 
-const EMPTY_PAGE: Pulled = { head: 0, more: false, snapshot: null, batches: [] };
+const EMPTY_PAGE: Pulled = { head: 0, more: false, snapshot: null, cold: null, batches: [] };
 
 async function fold(store: SyncStore, received: ChangeDoc[]): Promise<{ newer: boolean }> {
   const entries = store.upgrade ? store.upgrade(received) : received;
@@ -82,32 +87,42 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   const result: SyncResult = { newer: false, pulled: 0, pushed: 0, snapshot: false, emptySpace: false, gone: false, state };
 
   // Pull until caught up.
-  for (;;) {
-    const page = await client.pull(state.seq).catch(e => {
-      if (e instanceof RelayError && e.code === 'unknown_space') { result.emptySpace = true; return EMPTY_PAGE; }
-      throw e;
-    });
-    if (result.emptySpace && opts.stopIfGone && state.seq > 0) return { ...result, gone: true };
-    const entries: ChangeDoc[] = [];
-    if (page.snapshot) {
-      if (page.snapshot.v > SCHEMA_VERSION) return { ...result, newer: true };
-      entries.push(...snapshotDocs(page.snapshot));
+  const pull = async (): Promise<SyncResult | null> => {
+    for (;;) {
+      const page = await client.pull(state.seq).catch(e => {
+        if (e instanceof RelayError && e.code === 'unknown_space') { result.emptySpace = true; return EMPTY_PAGE; }
+        throw e;
+      });
+      if (result.emptySpace && opts.stopIfGone && state.seq > 0) return { ...result, gone: true };
+      const entries: ChangeDoc[] = [];
+      if (page.snapshot) {
+        if (page.snapshot.v > SCHEMA_VERSION || (page.cold && page.cold.v > SCHEMA_VERSION)) return { ...result, newer: true };
+        entries.push(...snapshotDocs(page.snapshot));
+        if (page.cold) entries.push(...snapshotDocs(page.cold));
+      }
+      let top = page.snapshot ? Math.max(state.seq, page.snapshot.upto) : state.seq;
+      for (const b of page.batches) {
+        if (b.batch.v > SCHEMA_VERSION) return { ...result, newer: true };
+        if (b.batch.device !== node) entries.push(...b.batch.docs); // our own are already here
+        top = Math.max(top, b.seq);
+      }
+      if ((await fold(store, entries)).newer) return { ...result, newer: true };
+      result.pulled += entries.length;
+      state = { ...state, seq: top, snapshotSeq: Math.max(state.snapshotSeq, page.snapshot?.upto ?? 0) };
+      if (page.snapshot) state = page.snapshot.cut ? { ...state, cut: page.snapshot.cut } : omitCut(state); // a whole snapshot has no cold part to build on
+      await store.saveState(state);
+      if (!page.more || (!page.snapshot && !page.batches.length)) return null; // nothing new: never spin on a gap at the head
     }
-    let top = page.snapshot ? Math.max(state.seq, page.snapshot.upto) : state.seq;
-    for (const b of page.batches) {
-      if (b.batch.v > SCHEMA_VERSION) return { ...result, newer: true };
-      if (b.batch.device !== node) entries.push(...b.batch.docs); // our own are already here
-      top = Math.max(top, b.seq);
-    }
-    if ((await fold(store, entries)).newer) return { ...result, newer: true };
-    result.pulled += entries.length;
-    state = { ...state, seq: top, snapshotSeq: Math.max(state.snapshotSeq, page.snapshot?.upto ?? 0) };
-    await store.saveState(state);
-    if (!page.more || (!page.snapshot && !page.batches.length)) break; // nothing new: never spin on a gap at the head
-  }
+  };
+  const stopped = await pull();
+  if (stopped) return stopped;
 
   // Push what changed here.
-  const out = collectOutgoing(await store.all(), node, state.watermark, { imported: state.watermark === '', all: opts.full });
+  const everything = await store.all();
+  const out = collectOutgoing(everything, node, state.watermark, { imported: state.watermark === '', all: opts.full });
+  // An edit to a document the cold part holds too leaves a reader with only the hot part looking at a stub:
+  // snapshot as soon as our own batch has come back, rather than after 8 more.
+  const urgent = !!state.cut && out.docs.length > 0 && touchesCold(out.docs, everything, state.cut);
   // A new space comes into being with its first write, so a first device with nothing yet still makes one.
   if (result.emptySpace && !out.docs.length) {
     await client.push({ v: SCHEMA_VERSION, device: node, docs: [] });
@@ -131,11 +146,26 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
     await store.saveState(state);
   }
 
-  // Now and then, a snapshot so new devices start fast and the relay can drop old batches.
-  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY)) {
+  if (urgent) {
+    const again = await pull(); // our batch's seq, and anything others wrote meanwhile, so the snapshot may cover it
+    if (again) return again;
+  }
+
+  // Now and then, a snapshot so new devices start fast and the relay can drop old batches. Two parts
+  // (src/sync/parts.ts): the hot one every time, the cold one when the cut is old or unknown.
+  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY) || (urgent && state.seq > state.snapshotSeq)) {
     try {
-      await client.putSnapshot(buildSnapshot(await store.all(), state.seq));
-      state = { ...state, snapshotSeq: state.seq };
+      const all = await store.all();
+      const now = (opts.now ?? Date.now)();
+      let parts = buildParts(all, state.seq, { now, prev: state.cut });
+      try {
+        await client.putSnapshotParts(parts);
+      } catch (e) {
+        if (!(e instanceof RelayError && e.code === 'bad_parts' && !parts.cold)) throw e;
+        parts = buildParts(all, state.seq, { now, full: true }); // the relay holds no cold part to build on
+        await client.putSnapshotParts(parts);
+      }
+      state = { ...state, snapshotSeq: state.seq, cut: parts.cut };
       await store.saveState(state);
       result.snapshot = true;
     } catch (e) {
@@ -144,3 +174,5 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   }
   return { ...result, state };
 }
+
+const omitCut = ({ cut: _cut, ...rest }: SyncState): SyncState => rest;

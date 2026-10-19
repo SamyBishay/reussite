@@ -8,6 +8,7 @@ import { type ConnectorCodeResponse, type ConnectorOffResponse, type ConnectorOn
 import type { Env } from '../env';
 import { fail, json, readJson } from '../http';
 import { authorize, ipGate, limited, spaceSlot } from '../sync';
+import { cacheDrop } from './cache';
 import { MCP_PATH, revokeConnector } from './oauth';
 import { formatCode, issueCode } from './pairing';
 import { wrap, wrapKeyReady } from './wrap';
@@ -31,7 +32,7 @@ async function keyFits(env: Env, space: string, raw: Uint8Array<ArrayBuffer>): P
   const keys = { spaceId: space, encKey: await importEncKey(raw) };
   const batch = await env.DB.prepare('SELECT blob FROM batches WHERE space = ?1 ORDER BY seq DESC LIMIT 1').bind(space).first<{ blob: string }>();
   if (batch) return authenticates(keys, b64uDecode(batch.blob));
-  const parts = await env.DB.prepare('SELECT blob FROM snapshots WHERE space = ?1 ORDER BY part').bind(space).all<{ blob: string }>();
+  const parts = await env.DB.prepare("SELECT blob FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') ORDER BY part").bind(space).all<{ blob: string }>();
   if (parts.results.length) return authenticates(keys, b64uDecode(parts.results.map(p => p.blob).join('')));
   return true;
 }
@@ -102,6 +103,7 @@ async function switchOff(req: Request, env: Env, space: string): Promise<Respons
     env.DB.prepare('DELETE FROM connector_undo WHERE space = ?1').bind(space),
     env.DB.prepare('DELETE FROM devices WHERE space = ?1 AND device = ?2').bind(space, CONNECTOR_DEVICE),
   ]);
+  cacheDrop(space); // the plaintext copy this isolate may hold
   const revoked = await revokeConnector(env, space);
   return json({ ok: true, revoked } satisfies ConnectorOffResponse);
 }

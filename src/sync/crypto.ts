@@ -13,6 +13,8 @@ export const FORMAT_LEAN = 3;
 export const FORMAT_LEAN_GZIP = 4;
 const IV_BYTES = 12;
 const COMPRESS_FROM = 128;
+/** Generation 2 compresses only from here: a small batch costs more CPU to gunzip (stream set-up) than it saves, and the connector reads many. */
+const COMPRESS_FROM_LEAN = 1024;
 const known = (f: number | undefined): f is number => f === FORMAT_PLAIN || f === FORMAT_GZIP || f === FORMAT_LEAN || f === FORMAT_LEAN_GZIP;
 const gzipped = (f: number) => f === FORMAT_GZIP || f === FORMAT_LEAN_GZIP;
 
@@ -41,7 +43,7 @@ export interface SealOptions {
 export async function encryptJson(keys: Sealer, value: unknown, o: SealOptions = {}): Promise<Bytes> {
   let body = utf8(JSON.stringify(value));
   let format = o.lean ? FORMAT_LEAN : FORMAT_PLAIN;
-  if (body.length >= COMPRESS_FROM && !o.plain && canGzip()) { body = await run(body, new CompressionStream('gzip')); format = o.lean ? FORMAT_LEAN_GZIP : FORMAT_GZIP; }
+  if (body.length >= (o.lean ? COMPRESS_FROM_LEAN : COMPRESS_FROM) && !o.plain && canGzip()) { body = await run(body, new CompressionStream('gzip')); format = o.lean ? FORMAT_LEAN_GZIP : FORMAT_GZIP; }
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const sealed = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad(format, keys.spaceId) }, keys.encKey, body);
   return concat(new Uint8Array([format]), iv, new Uint8Array(sealed));

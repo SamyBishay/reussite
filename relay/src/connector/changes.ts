@@ -10,7 +10,7 @@ import { ChangeSchema, type Change, type ChangeSet } from '../../../src/ai/chang
 import { b64uDecode } from '../../../src/sync/bytes';
 import { decryptJson, sealToText } from '../../../src/sync/crypto';
 import type { Env } from '../env';
-import { Edits, type Loaded, type UndoDoc } from './space';
+import { Edits, NeedCold, needsCold, type Loaded, type UndoDoc } from './space';
 import { describe } from './render';
 import { resolveChanges } from './resolve';
 import type { View } from './view';
@@ -24,7 +24,13 @@ export interface Out { text: string; error?: boolean }
 const err = (text: string): Out => ({ text, error: true });
 
 export interface Input { changes?: unknown[]; note?: string; v?: unknown; confirm?: string }
-export interface Ctx { env: Env; s: Loaded; v: View }
+export interface Ctx {
+  env: Env;
+  s: Loaded;
+  v: View;
+  /** Read the cold part too (if there is one and it isn't read yet); `v` is rebuilt over the whole list. */
+  full(): Promise<void>;
+}
 
 const gen = (v: View) => ({ id: newId, now: () => new Date().toISOString(), zone: v.zone });
 const rid = (p: string) => p + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => (b % 36).toString(36)).join('');
@@ -56,6 +62,7 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   if ('errors' in checked) return err(`${noWrite} The change-set is not valid:\n${checked.errors.join('\n')}\nThe contract is in get_method.`);
 
   const found = resolveChanges(checked.changes, c.v.data);
+  if (found.problems.some(p => p.text.startsWith('No step')) && needsCold(c.s)) throw new NeedCold(); // maybe it is an old finished step
   if (found.ambiguous.length) return err(`${noWrite} Which one is meant?\n${found.ambiguous.map(a => `Change ${a.index + 1}: ${a.text}`).join('\n')}\nRepeat the change with the id of the one meant.`);
   if (found.problems.length) return err(`${noWrite} Not found:\n${found.problems.map(p => `Change ${p.index + 1}: ${p.text}`).join('\n')}`);
 

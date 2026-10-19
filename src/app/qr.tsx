@@ -5,14 +5,21 @@ import qrcode from 'qrcode-generator';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { t } from '../i18n';
 
-/** The code as SVG. Always dark on white, with a quiet zone: dark mode would make it unreadable. */
-export function QrCode({ text, label }: { text: string; label: string }) {
+/** The dark modules of the code for `text` (a recovery key: upper case, digits and dashes, so alphanumeric mode). */
+export function qrModules(text: string): boolean[][] {
   const qr = qrcode(0, 'M');
   qr.addData(text.toUpperCase(), 'Alphanumeric');
   qr.make();
-  const n = qr.getModuleCount(), quiet = 4;
+  const n = qr.getModuleCount();
+  return Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => qr.isDark(r, c)));
+}
+
+/** The code as SVG. Always dark on white, with a quiet zone: dark mode would make it unreadable. */
+export function QrCode({ text, label }: { text: string; label: string }) {
+  const m = qrModules(text);
+  const n = m.length, quiet = 4;
   let d = '';
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + quiet} ${r + quiet}h1v1h-1z`;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (m[r]![c]) d += `M${c + quiet} ${r + quiet}h1v1h-1z`;
   const size = n + quiet * 2;
   return (
     <svg class="qr" viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label} shape-rendering="crispEdges">

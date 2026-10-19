@@ -179,6 +179,10 @@ test('sync: the recovery key is shown only on a tap, and an encrypted backup nee
   const text = await (await import('node:fs/promises')).readFile((await dl.path())!, 'utf8');
   expect(JSON.parse(text).format).toBe('reussite-backup-encrypted');
   expect(text).not.toContain('Doctolib');
+  // Restore detects the encrypted file and opens it with the key held here
+  page.once('dialog', d => void d.accept());
+  await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) });
+  await expect(page.locator('.toast')).toContainText('Backup restored');
 });
 
 test('sync: a backup reminder appears after two weeks with sync off, and can be put off', async ({ page }) => {

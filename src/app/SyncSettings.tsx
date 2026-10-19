@@ -24,7 +24,7 @@ function KeyView({ text }: { text: string }) {
     <>
       <Groups text={text} />
       <div class="qrbox"><QrCode text={text} label={t('syncKeyQr')} /></div>
-      <div class="actions"><button class="btn small" type="button" onClick={copy}>{t('syncCopyKey')}</button></div>
+      <div class="actions"><button class="btn" type="button" onClick={copy}>{t('syncCopyKey')}</button></div>
       <p class="hint">{t('syncKeySaveHint')}</p>
       <p class="warnline">{t('syncWarning')}</p>
     </>
@@ -239,7 +239,7 @@ export function SyncSettings() {
         <>
           <Status />
           {!keySaved.value && (
-            <div class="banner warn"><p>{t('syncKeyCardBody')}</p><button class="btn small" type="button" onClick={openShowKey}>{t('syncShowKeyBtn')}</button></div>
+            <div class="banner warn"><p>{t('syncKeyCardBody')}</p><button class="btn" type="button" onClick={openShowKey}>{t('syncShowKeyBtn')}</button></div>
           )}
           <div class="actions">
             <button class="btn" type="button" disabled={syncBusy.value || readOnly.value || spaceGone.value} onClick={() => void syncNow()} data-testid="sync-now">{t('syncNow')}</button>
@@ -272,8 +272,8 @@ export function SyncCards() {
         <div class="banner warn" data-testid="key-card" role="status">
           <p><b>{t('syncKeyCardTitle')}.</b> {t('syncKeyCardBody')}</p>
           <div class="go">
-            <button class="btn small" type="button" onClick={openShowKey} data-testid="key-card-show">{t('syncShowKeyBtn')}</button>
-            <button class="btn small primary" type="button" onClick={() => void confirmKeySaved()} data-testid="key-card-saved">{t('syncKeySavedBtn')}</button>
+            <button class="btn" type="button" onClick={openShowKey} data-testid="key-card-show">{t('syncShowKeyBtn')}</button>
+            <button class="btn primary" type="button" onClick={() => void confirmKeySaved()} data-testid="key-card-saved">{t('syncKeySavedBtn')}</button>
           </div>
         </div>
       )}
@@ -281,8 +281,8 @@ export function SyncCards() {
         <div class="banner" data-testid="backup-card" role="status">
           <p><b>{t('backupDueTitle')}.</b> {t('backupDueBody')}</p>
           <div class="go">
-            <button class="btn small primary" type="button" onClick={() => void saveBackupFile()} data-testid="backup-card-save">{t('backupDueSave')}</button>
-            <button class="btn small ghost" type="button" onClick={() => void snoozeBackupReminder()} data-testid="backup-card-snooze">{t('backupDueNotNow')}</button>
+            <button class="btn primary" type="button" onClick={() => void saveBackupFile()} data-testid="backup-card-save">{t('backupDueSave')}</button>
+            <button class="btn ghost" type="button" onClick={() => void snoozeBackupReminder()} data-testid="backup-card-snooze">{t('backupDueNotNow')}</button>
           </div>
         </div>
       )}

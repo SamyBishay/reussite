@@ -21,7 +21,7 @@ const MAX_LABEL_CHARS = 2048;
 /** Tables that hold a space's rows: "delete everywhere" and switching the connector off clear them. */
 const SPACE_TABLES: { table: string; col: string }[] = [
   { table: 'batches', col: 'space' }, { table: 'snapshots', col: 'space' }, { table: 'devices', col: 'space' },
-  { table: 'connector', col: 'space' }, { table: 'connector_codes', col: 'space' }, { table: 'connector_pending', col: 'space' }, { table: 'connector_undo', col: 'space' },
+  { table: 'inbox', col: 'space' }, { table: 'connector', col: 'space' }, { table: 'connector_codes', col: 'space' }, { table: 'connector_pending', col: 'space' }, { table: 'connector_undo', col: 'space' },
   { table: 'spaces', col: 'id' },
 ];
 export const deleteSpaceData = (db: D1Database, space: string) =>

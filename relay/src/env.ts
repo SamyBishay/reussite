@@ -19,4 +19,7 @@ export interface Env {
   /** Pairing-code attempts per IP per minute (default 10) and failed attempts overall per minute (default 60). */
   RATE_PAIR_IP_PER_MIN?: string;
   RATE_PAIR_ALL_PER_MIN?: string;
+  /** Drop-page posts to an inbox per IP per minute (default 10) and per space per minute (default 20). */
+  RATE_INBOX_IP_PER_MIN?: string;
+  RATE_INBOX_SPACE_PER_MIN?: string;
 }

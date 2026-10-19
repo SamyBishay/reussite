@@ -14,6 +14,8 @@ declare global {
       RATE_IP_PER_MIN?: string;
       RATE_PAIR_IP_PER_MIN?: string;
       RATE_PAIR_ALL_PER_MIN?: string;
+      RATE_INBOX_IP_PER_MIN?: string;
+      RATE_INBOX_SPACE_PER_MIN?: string;
       TEST_MIGRATIONS: D1Migration[];
     }
   }

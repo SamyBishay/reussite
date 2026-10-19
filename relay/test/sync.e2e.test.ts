@@ -1,7 +1,8 @@
 // Two simulated devices running the real src/sync engine against the real Worker.
 import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import { RelayClient, RelayError } from '../../src/sync/client';
+import { postToInbox, RelayClient, RelayError } from '../../src/sync/client';
+import { deriveInbox, InboxError, openFromInbox, sealToInbox } from '../../src/sync/inbox';
 import { DecryptError } from '../../src/sync/crypto';
 import { deriveKeys, decodeRecoveryKey, encodeRecoveryKey, generateKey } from '../../src/sync/keys';
 import { create } from '../../src/data/doc';
@@ -125,5 +126,55 @@ describe('sync through the relay', () => {
     expect(list.map(d => [d.device, d.name]).sort()).toEqual([['aaa', 'Laptop'], ['bbb', null]]);
     await c.deleteSpace();
     await expect(c.pull(0)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('a drop left by a browser that holds nothing is opened only by the person, then deleted', async () => {
+    const key = generateKey();
+    const keys = await deriveKeys(key);
+    const c = await clientFor(key);
+    const a = new FakeDevice('aaa');
+    a.add('tasks', 't1', { title: 'x' });
+    await syncOnce(a, c); // the space exists
+    const inbox = await deriveInbox(key);
+    const cs = { v: 1, changes: [{ op: 'task.done', id: 't1' }] };
+
+    // the drop page knows the space id, the public key and the relay's address; nothing secret
+    const id = await postToInbox(BASE, keys.spaceId, await sealToInbox(keys.spaceId, inbox.publicKey, cs), viaWorker);
+    await expect(postToInbox(BASE, keys.spaceId, 'A'.repeat(100_000), viaWorker)).rejects.toMatchObject({ code: 'too_large' });
+    const stranger = await deriveKeys(generateKey());
+    await expect(postToInbox(BASE, stranger.spaceId, await sealToInbox(stranger.spaceId, inbox.publicKey, cs), viaWorker)).rejects.toMatchObject({ status: 404, code: 'unknown_space' });
+
+    // a second device, restored from the key alone, finds it and opens it
+    const other = await clientFor(key);
+    const items = await other.inbox();
+    expect(items.map(i => i.id)).toEqual([id]);
+    expect(await openFromInbox(keys.spaceId, await deriveInbox(key), items[0]!.blob)).toEqual(cs);
+    // someone else's key cannot
+    await expect(openFromInbox(keys.spaceId, await deriveInbox(generateKey()), items[0]!.blob)).rejects.toBeInstanceOf(InboxError);
+
+    await other.deleteInboxItem(id);
+    expect(await c.inbox()).toEqual([]);
+    // a wrong secret reads nothing
+    await expect(new RelayClient(BASE, { ...keys, authSecret: stranger.authSecret }, viaWorker).inbox()).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('the connector switch through the client: on with a code, a fresh code, status, off', async () => {
+    const key = generateKey();
+    const c = await clientFor(key);
+    const a = new FakeDevice('aaa');
+    a.add('tasks', 't1', { title: 'x' });
+    await syncOnce(a, c);
+    expect(await c.connectorStatus()).toMatchObject({ on: false, lastUsed: null });
+    await expect(c.connectorCode()).rejects.toMatchObject({ code: 'connector_off' });
+    const on = await c.connectorOn();
+    expect(on).toMatchObject({ on: true });
+    expect(on.code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    expect(on.url).toMatch(/\/mcp$/);
+    expect((await c.connectorCode()).code).not.toBe(on.code);
+    expect(await c.connectorStatus()).toMatchObject({ on: true, url: on.url });
+    expect((await c.devices()).map(d => d.name)).toContain('Connector');
+    expect(await c.connectorOff()).toMatchObject({ ok: true });
+    expect(await c.connectorStatus()).toMatchObject({ on: false });
+    expect((await c.devices()).map(d => d.name)).not.toContain('Connector');
   });
 });

@@ -100,6 +100,12 @@ export async function deriveKeys(key: Uint8Array): Promise<SpaceKeys> {
   return { spaceId: b64uEncode(space), authSecret: b64uEncode(auth), encKey: await importEncKey(enc), encKeyRaw: enc };
 }
 
+/** More bytes from the same key under another `info` (the inbox key pair is made this way, see inbox.ts). */
+export async function deriveSecret(key: Uint8Array, info: string, bytes: number): Promise<Bytes> {
+  if (key.length !== KEY_BYTES) throw new Error('key must be 32 bytes');
+  return hkdf(await crypto.subtle.importKey('raw', key as Bytes, 'HKDF', false, ['deriveBits']), utf8(info), bytes);
+}
+
 export const importEncKey = (raw: Bytes): Promise<CryptoKey> => crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
 
 /** SHA-256 of the auth secret's text, base64url: what the relay stores and compares. */

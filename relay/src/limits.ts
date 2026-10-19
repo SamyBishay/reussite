@@ -9,6 +9,9 @@ export const ipLimit = (env: Env) => Number(env.RATE_IP_PER_MIN) || 120;
 export const pairIpLimit = (env: Env) => Number(env.RATE_PAIR_IP_PER_MIN) || 10;
 export const pairAllLimit = (env: Env) => Number(env.RATE_PAIR_ALL_PER_MIN) || 60;
 
+export const inboxIpLimit = (env: Env) => Number(env.RATE_INBOX_IP_PER_MIN) || 10;
+export const inboxSpaceLimit = (env: Env) => Number(env.RATE_INBOX_SPACE_PER_MIN) || 20;
+
 export const clientIp = (req: Request): string => req.headers.get('CF-Connecting-IP') ?? 'local';
 
 /** Count one event under `key` for this minute; false once it is over `limit`. */

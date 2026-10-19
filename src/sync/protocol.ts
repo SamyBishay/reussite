@@ -83,6 +83,23 @@ export interface ConnectorStatus { on: boolean; lastUsed: number | null; url: st
 /** DELETE /v1/spaces/:space/connector */
 export interface ConnectorOffResponse { ok: true; revoked: number }
 
+// ---- The inbox (docs/CHANGESET.md, "The one-tap link"). Sealed boxes for the owner; only ciphertext reaches the relay.
+
+/** A sealed change-set is at most this many bytes (before base64url). */
+export const MAX_INBOX_BYTES = 16 * 1024;
+/** Unread items per space; more are refused until some are read. */
+export const MAX_INBOX_ITEMS = 50;
+/** Items are kept this long. */
+export const INBOX_KEEP_MS = 30 * 86_400_000;
+/** POST /v1/spaces/:space/inbox — no Authorization: the drop page has no secret. */
+export interface InboxPostRequest { blob: string }
+export interface InboxPostResponse { id: string }
+/** GET /v1/spaces/:space/inbox (Bearer) */
+export interface InboxListResponse { items: { id: string; blob: string; at: number }[] }
+/** DELETE /v1/spaces/:space/inbox/:id (Bearer) */
+export interface InboxDeleteResponse { ok: true; deleted: number }
+export const INBOX_ID = /^[A-Za-z0-9_-]{16,32}$/;
+
 export interface ErrorBody { error: ErrorCode }
 export type ErrorCode =
   | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found'

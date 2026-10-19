@@ -10,9 +10,10 @@ import { oauthProvider } from './connector/oauth';
 import { corsHeaders, originAllowed } from './cors';
 import type { Env } from './env';
 import { fail } from './http';
+import { handleInbox } from './inbox';
 import { handleSync } from './sync';
 
-const SYNC_ROUTE = /^\/v1\/spaces\/([^/]+)(?:\/(batches|changes|snapshot|devices)(?:\/([^/]+))?)?$/;
+const SYNC_ROUTE = /^\/v1\/spaces\/([^/]+)(?:\/(batches|changes|snapshot|devices|inbox)(?:\/([^/]+))?)?$/;
 const CONNECTOR_ROUTE = /^\/v1\/spaces\/([^/]+)\/connector(?:\/(code))?$/;
 
 function withCors(res: Response, origin: string | null): Response {
@@ -32,6 +33,7 @@ export async function handle(req: Request, env: Env): Promise<Response> {
     if (origin && !originAllowed(origin, env)) return fail('origin_not_allowed', 403);
     if (req.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
     if (connector) return withCors(await handleConnector(req, env, connector[1]!, connector[2] ?? ''), origin);
+    if (sync![2] === 'inbox') return withCors(await handleInbox(req, env, sync![1]!, sync![3]), origin);
     return withCors(await handleSync(req, env, sync![1]!, sync![2] ?? '', sync![3]), origin);
   }
   if (url.pathname === '/authorize') return handleAuthorize(req, env);

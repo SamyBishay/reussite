@@ -1,7 +1,13 @@
 // A thin client for the relay's sync endpoints: encrypts on the way out, decrypts on the way in.
 // `fetch` is injectable (tests, the connector). Errors from the relay become `RelayError`.
-import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES, type ChangeBatch, type ChangesResponse, type DeviceRequest, type DevicesResponse, type ErrorCode, type PushRequest, type PushResponse, type Snapshot, type SnapshotRequest, type SnapshotResponse } from './protocol';
+import {
+  b64uLength, MAX_BATCH_BYTES, MAX_INBOX_BYTES, MAX_SNAPSHOT_BYTES, SPACE_ID,
+  type ChangeBatch, type ChangesResponse, type ConnectorCodeResponse, type ConnectorOffResponse, type ConnectorOnRequest, type ConnectorOnResponse, type ConnectorStatus,
+  type DeviceRequest, type DevicesResponse, type ErrorCode, type InboxListResponse, type InboxPostRequest, type InboxPostResponse, type PushRequest, type PushResponse,
+  type Snapshot, type SnapshotRequest, type SnapshotResponse,
+} from './protocol';
 import { openFromText, sealToText } from './crypto';
+import { b64uEncode } from './bytes';
 import type { SpaceKeys } from './keys';
 
 export class RelayError extends Error {
@@ -17,7 +23,7 @@ export interface Pulled {
 
 export class RelayClient {
   private base: string;
-  constructor(baseUrl: string, private keys: Pick<SpaceKeys, 'spaceId' | 'authSecret' | 'encKey'>, private fetchFn: typeof fetch = (...a) => fetch(...a)) {
+  constructor(baseUrl: string, private keys: Pick<SpaceKeys, 'spaceId' | 'authSecret' | 'encKey'> & Partial<Pick<SpaceKeys, 'encKeyRaw'>>, private fetchFn: typeof fetch = (...a) => fetch(...a)) {
     this.base = baseUrl.replace(/\/+$/, '') + '/v1/spaces/' + keys.spaceId;
   }
 
@@ -81,8 +87,57 @@ export class RelayClient {
     })));
   }
 
+  // ---- The connector (docs/dev/connector.md)
+
+  /** Switch it on: hands the relay the space's key. The pairing code is shown once. Throws RelayError('wrong_key' | 'connector_unavailable'). */
+  async connectorOn(): Promise<ConnectorOnResponse> {
+    if (!this.keys.encKeyRaw) throw new Error('the raw key is needed to switch the connector on');
+    const body: ConnectorOnRequest = { key: b64uEncode(this.keys.encKeyRaw) };
+    return this.call<ConnectorOnResponse>('POST', '/connector', body);
+  }
+  /** A fresh pairing code. Throws RelayError('connector_off') when it isn't on. */
+  connectorCode(): Promise<ConnectorCodeResponse> {
+    return this.call<ConnectorCodeResponse>('POST', '/connector/code');
+  }
+  connectorStatus(): Promise<ConnectorStatus> {
+    return this.call<ConnectorStatus>('GET', '/connector');
+  }
+  /** Switch it off: the relay deletes the key and signs every AI app out. */
+  connectorOff(): Promise<ConnectorOffResponse> {
+    return this.call<ConnectorOffResponse>('DELETE', '/connector');
+  }
+
+  // ---- The inbox: items are sealed to the inbox public key (src/sync/inbox.ts); the relay never opens them.
+
+  async inbox(): Promise<InboxListResponse['items']> {
+    return (await this.call<InboxListResponse>('GET', '/inbox')).items;
+  }
+  async deleteInboxItem(id: string): Promise<void> {
+    await this.call('DELETE', '/inbox/' + encodeURIComponent(id));
+  }
+
   /** "Delete everywhere": removes the space from the relay. */
   async deleteSpace(): Promise<void> {
     await this.call('DELETE', '');
   }
+}
+
+/**
+ * Leave a sealed change-set in a space's inbox. Needs no secret: this is what the drop page does,
+ * on a browser that holds nothing. Throws RelayError ('unknown_space', 'rate_limited', 'too_large', 'network'…).
+ */
+export async function postToInbox(baseUrl: string, space: string, blob: string, fetchFn: typeof fetch = (...a) => fetch(...a)): Promise<string> {
+  if (!SPACE_ID.test(space)) throw new RelayError(400, 'bad_request');
+  if (blob.length > b64uLength(MAX_INBOX_BYTES)) throw new RelayError(413, 'too_large');
+  let res: Response;
+  try {
+    res = await fetchFn(baseUrl.replace(/\/+$/, '') + '/v1/spaces/' + space + '/inbox', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blob } satisfies InboxPostRequest),
+    });
+  } catch {
+    throw new RelayError(0, 'network');
+  }
+  const out = (await res.json().catch(() => null)) as (Partial<InboxPostResponse> & { error?: ErrorCode }) | null;
+  if (!res.ok || !out?.id) throw new RelayError(res.status, out?.error ?? 'bad_request');
+  return out.id;
 }

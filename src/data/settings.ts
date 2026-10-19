@@ -109,7 +109,8 @@ export const DEFAULT_SETTINGS: Settings = {
     anthropic: { quick: 'claude-haiku-5-5', thinking: 'claude-sonnet-5-5' },
   },
   aiAlwaysShow: false,
-  relayUrl: (import.meta.env?.VITE_RELAY_URL ?? '').trim(),
+  // Vite fills this in at build time; the relay (no Vite) reads the settings' shape without it.
+  relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };
 
 /** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */

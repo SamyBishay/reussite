@@ -21,7 +21,7 @@ import { buildSpace, Edits } from '../src/connector/space';
 import { buildServer } from '../src/connector/tools';
 import { View } from '../src/connector/view';
 import { docWriter, newId } from '../src/connector/writer';
-import { HEAVY, syntheticSpace, type Sizes } from './synthetic';
+import { HEAVY, TODAY, syntheticSpace, type Sizes } from './synthetic';
 import { collectOutgoing } from '../../src/sync/engine';
 
 const BUDGET_MS = 7;
@@ -66,7 +66,7 @@ async function prepare(sizes: Sizes, batchesAfter = 30) {
 }
 
 export async function main() {
-  const sizes = HEAVY;
+  const sizes = process.env.BENCH_SIZE === 'today' ? TODAY : HEAVY;
   console.log(`Synthetic space: ${sizes.tasks} tasks, ${sizes.sessions} sessions, ${sizes.days} days, ${sizes.projects} projects, ${sizes.decisions} decisions`);
   const { keys, snapBlob, rows, json } = await prepare(sizes);
   console.log(`Snapshot: ${(json.length / 1e6).toFixed(2)} MB of JSON, ${(snapBlob.length / 1e3).toFixed(0)} KB gzipped, encrypted and base64 (what D1 returns)\n`);

@@ -8,6 +8,8 @@ import { addDays } from '../../src/domain/dates';
 import type { StoredDoc } from '../../src/sync/protocol';
 
 export interface Sizes { tasks: number; sessions: number; days: number; projects: number; decisions: number; places: number; stays: number }
+/** About the size of the owner's v1 export on 19 Oct 2026 (counts only). */
+export const TODAY: Sizes = { tasks: 281, sessions: 110, days: 13, projects: 22, decisions: 2, places: 2, stays: 0 };
 export const HEAVY: Sizes = { tasks: 1500, sessions: 3000, days: 200, projects: 40, decisions: 20, places: 3, stays: 12 };
 
 export type Docs = Record<string, StoredDoc[]>;

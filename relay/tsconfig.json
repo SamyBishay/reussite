@@ -17,5 +17,5 @@
     "../src/sync", "../src/data", "../src/domain",
     "../src/ai/changeset.ts", "../src/ai/apply.ts", "../src/ai/json.ts", "../src/ai/method.ts"
   ],
-  "exclude": ["../src/data/migrations", "../src/data/*.test.ts", "../src/data/db.ts", "../src/data/import-v1.ts", "../src/data/backup.ts", "../src/domain/*.test.ts", "../src/sync/*.test.ts"]
+  "exclude": ["../src/data/migrations", "../src/data/*.test.ts", "../src/data/db.ts", "../src/data/import-v1.ts", "../src/data/backup.ts", "../src/sync/backup.ts", "../src/domain/*.test.ts", "../src/sync/*.test.ts"]
 }

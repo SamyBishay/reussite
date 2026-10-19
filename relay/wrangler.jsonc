@@ -2,7 +2,6 @@
 // and the calendar feed arrive in this same Worker. Local dev and tests only need this file as is.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // TODO: set to the existing Worker's name
   "name": "reussite-relay",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
@@ -11,8 +10,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "reussite", // TODO: the name given to `wrangler d1 create`
-      "database_id": "00000000-0000-0000-0000-000000000000", // TODO: the id printed by `wrangler d1 create`
+      "database_name": "prod-d1",
+      "database_id": "eac5b14c-f7a1-4ea9-9c0f-3ae01cb73bf8",
       "migrations_dir": "migrations"
     }
   ],
@@ -20,7 +19,7 @@
     {
       // Connector sign-ins: clients, grants and tokens (the OAuth library's storage).
       "binding": "OAUTH_KV",
-      "id": "00000000000000000000000000000000" // TODO: the id printed by `wrangler kv namespace create OAUTH_KV`
+      "id": "ef4eab1767b3429a8c8d5e4bf42f365b"
     }
   ],
   // The method and the change-set contract are imported as text, so `get_method` ships them with the Worker.

@@ -4,7 +4,9 @@ import methodEn from '../../docs/METHOD.en.md?raw';
 import methodFr from '../../docs/METHOD.fr.md?raw';
 import changesetDoc from '../../docs/CHANGESET.md?raw';
 import { tasks, projects, places, decisions, settings, today, here, type WithId } from '../app/store';
-import { T, quad, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } from '../app/model';
+import { T, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } from '../app/model';
+import { cleanMethod, methodSummaryOf } from './method';
+import { oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
 import { lang } from '../i18n';
 import type { Decision, Project } from '../data/schema';
@@ -12,11 +14,9 @@ import type { Decision, Project } from '../data/schema';
 export const MAX_STEPS = 25;
 
 /** The method without the draft notice and evidence placeholders. */
-export function method(l = lang.value): string {
-  return (l === 'fr' ? methodFr : methodEn).replace(/^>.*\n(>.*\n)*/m, '').replace(/\s*`\[E[^\]]*\]`/g, '').trim();
-}
+export const method = (l = lang.value): string => cleanMethod(l === 'fr' ? methodFr : methodEn);
 /** The opening and the nine rules: the context pack's short summary. */
-export const methodSummary = (l = lang.value) => method(l).split(/\n## /).slice(0, 2).join('\n## ').replace(/^# .*\n+/, '').trim();
+export const methodSummary = (l = lang.value) => methodSummaryOf(method(l));
 export const changesetContract = () => changesetDoc.trim();
 
 const LANG_NAME = { en: 'English', fr: 'French' } as const;
@@ -27,16 +27,12 @@ export function systemPrompt(contract: string, l = lang.value): string {
   return `You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.\n\n${method(l)}\n\n# Your task\n\n${contract.trim()}\n\n${answerIn(l)}`;
 }
 
-const one = (s: string) => s.replace(/\s+/g, ' ').replace(/\|/g, '/').trim();
 const projName = (id: string) => (id === 'inbox' ? 'Inbox' : projects.value.get(id)?.name ?? id);
 
-/** `id | title | Q1 | due | est | project`, as v1 sent them. */
-export function stepLine(t: WithId<{ title: string; project: string; due: string | null; est: number | null; status: string }>): string {
-  const tk = T(t.id)!;
-  const done = t.status === 'done' ? ' (done)' : '';
-  return [t.id, one(t.title) + done, 'Q' + quad(tk), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(t.project))].join(' | ');
-}
-export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
+/** `id | title | Q1 | due | est | project`, as v1 sent them (the rule is in src/domain/lists.ts). */
+export const stepLine = (t: WithId<{ title: string; project: string; due: string | null; est: number | null; status: string }>): string =>
+  pureStepLine(T(t.id)!, { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
+export { STEP_HEADER };
 export const stepLines = (ts: { id: string }[], max = MAX_STEPS) => ts.slice(0, max).map(x => stepLine(T(x.id)!)).join('\n');
 
 export function projectLines(max = 30): string {

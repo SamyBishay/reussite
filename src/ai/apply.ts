@@ -48,7 +48,13 @@ export interface Planned {
   diffs: Diff[];
   ops: Op[];
 }
-export interface Plan { items: Planned[]; skipped: number; refTitles: Map<string, string> }
+export interface Plan {
+  items: Planned[];
+  skipped: number;
+  /** Positions in `cs.changes` of the changes that came to nothing: an unknown id, or nothing to change. */
+  skippedAt: number[];
+  refTitles: Map<string, string>;
+}
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const validZone = (z: string | undefined) => { if (!z) return false; try { new Intl.DateTimeFormat('en', { timeZone: z }); return true; } catch { return false; } };
@@ -69,6 +75,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
   const items: Planned[] = [];
   let skipped = cs.bad;
+  const skippedAt: number[] = [];
 
   /** Clean a task's fields: unknown references and unsafe links are dropped. */
   const cleanTask = (set: TaskSet): Partial<Task> => {
@@ -145,7 +152,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     return { f, ops, delta };
   };
 
-  for (const c of cs.changes) {
+  for (const [ci, c] of cs.changes.entries()) {
     const before = items.length;
     switch (c.op) {
       case 'task.create': {
@@ -295,9 +302,9 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         break;
       }
     }
-    if (items.length === before) skipped++;
+    if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
-  return { items, skipped, refTitles };
+  return { items, skipped, skippedAt, refTitles };
 
   function projectFields(set: Extract<Change, { op: 'project.update' }>['set'], cur: Project | null): Partial<Project> {
     const f: Partial<Project> = {};
@@ -339,6 +346,20 @@ function decisionDiffs(cur: Decision | null, f: Partial<Decision>): Diff[] {
     if (!same(was, v)) out.push({ field: k, before: was, after: v });
   }
   return out;
+}
+
+/**
+ * One low-risk change (brief §2, §10): a single change that adds a step, ticks one done, or moves
+ * one date. It may be applied at once, with Undo; anything else waits for a yes.
+ */
+export function isLowRisk(cs: Pick<ChangeSet, 'changes' | 'bad'>, plan: Pick<Plan, 'items'>): boolean {
+  if (cs.changes.length !== 1 || cs.bad || plan.items.length !== 1) return false;
+  const it = plan.items[0]!;
+  if (it.target !== 'task') return false;
+  if (it.kind === 'create' || it.kind === 'done') return true;
+  if (it.kind !== 'update') return false;
+  const fields = it.diffs.map(d => d.field);
+  return fields.includes('due') && fields.every(f => f === 'due' || f === 'at');
 }
 
 /** What a Writer does: the app's is built on store.ts and actions.ts (src/ai/writer.ts). */

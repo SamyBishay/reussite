@@ -3,7 +3,6 @@
 > A local-first planning app (PWA) built on a CBT method for adult ADHD. No accounts; data stays on the device.
 
 ## Docs
-- [BRIEF.md](BRIEF.md): the build brief — what the app does, by phase.
 - [AGENTS.md](AGENTS.md): commands, code layout and invariants for coding agents.
 - [DECISIONS.md](DECISIONS.md): decisions made while building, one line each.
 - [CHANGELOG.md](CHANGELOG.md): what changed, in plain language (shown in the app).

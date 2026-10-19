@@ -1,6 +1,6 @@
 # Réussite — notes for coding agents
 
-Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Read `BRIEF.md` (what to build, by phase), `DECISIONS.md` (choices already made) and `docs/METHOD.en.md` (the method) before changing behaviour.
+Réussite is a local-first PWA for planning with a CBT method for adult ADHD. The build brief (what to build, by phase) is the Claude doc "Réussite 2 — build brief" on the owner's account (https://claude.ai/code/artifact/b9d2a428-4a60-475c-8f19-e7b64cea1b19), read with the Claude Docs connector. Ignore `BRIEF.md` in this repo: it is out of date and not to be consulted. Read the doc, `DECISIONS.md` (choices already made) and `docs/METHOD.en.md` (the method) before changing behaviour.
 
 ## Commands
 

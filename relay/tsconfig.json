@@ -12,6 +12,10 @@
     "noEmit": true,
     "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types", "vitest/globals"]
   },
-  "include": ["src", "test", "vitest.config.ts", "../src/sync", "../src/data"],
-  "exclude": ["../src/data/migrations", "../src/data/*.test.ts", "../src/data/db.ts", "../src/data/import-v1.ts", "../src/data/backup.ts", "../src/data/normalize.ts", "../src/data/settings.ts"]
+  "include": [
+    "src", "test", "bench", "vitest.config.ts",
+    "../src/sync", "../src/data", "../src/domain",
+    "../src/ai/changeset.ts", "../src/ai/apply.ts", "../src/ai/json.ts", "../src/ai/method.ts"
+  ],
+  "exclude": ["../src/data/migrations", "../src/data/*.test.ts", "../src/data/db.ts", "../src/data/import-v1.ts", "../src/data/backup.ts", "../src/domain/*.test.ts", "../src/sync/*.test.ts"]
 }

@@ -43,10 +43,14 @@ export function isAllowedLink(url: string | null | undefined): boolean {
 
 export interface Platform { ios: boolean; standalone: boolean; mobile: boolean }
 
-export function detectPlatform(nav: Navigator = navigator, win: Window = window): Platform {
+/** Just what detectPlatform reads, so this file also compiles where there is no DOM (the relay Worker). */
+interface NavLike { userAgent: string; maxTouchPoints?: number; standalone?: boolean }
+interface WinLike { matchMedia?(query: string): { matches: boolean } }
+
+export function detectPlatform(nav: NavLike = (globalThis as unknown as { navigator: NavLike }).navigator, win: WinLike = globalThis as unknown as WinLike): Platform {
   const ua = nav.userAgent;
-  const ios = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && nav.maxTouchPoints > 1);
-  const standalone = win.matchMedia?.('(display-mode: standalone)').matches || (nav as Navigator & { standalone?: boolean }).standalone === true;
+  const ios = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && (nav.maxTouchPoints ?? 0) > 1);
+  const standalone = win.matchMedia?.('(display-mode: standalone)').matches || nav.standalone === true;
   return { ios, standalone: !!standalone, mobile: ios || /Android/i.test(ua) };
 }
 

@@ -6,9 +6,14 @@ declare global {
     interface GlobalProps { mainModule: typeof import('../src/index') }
     interface Env {
       DB: D1Database;
+      OAUTH_KV: KVNamespace;
       ALLOWED_ORIGINS: string;
+      RELAY_URL: string;
+      CONNECTOR_WRAP_KEY: string;
       RATE_SPACE_PER_MIN?: string;
       RATE_IP_PER_MIN?: string;
+      RATE_PAIR_IP_PER_MIN?: string;
+      RATE_PAIR_ALL_PER_MIN?: string;
       TEST_MIGRATIONS: D1Migration[];
     }
   }

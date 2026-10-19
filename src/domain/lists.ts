@@ -103,3 +103,15 @@ export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'es
   return [t.id, one(t.title) + done, 'Q' + quadOf(t, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
+
+/** A decision as compact lines: problem, options with their columns, and the choice. */
+export function decisionLines(d: WithId<Decision>): string {
+  const L = [`Decision ${d.id}: ${one(d.title)} (${d.status})`];
+  for (const [k, v] of Object.entries(d.problem)) if (v) L.push(`problem.${k}: ${one(v)}`);
+  for (const o of d.options) {
+    L.push(`option "${one(o.name)}"${o.screened ? ' (screened out: ' + one(o.screened) + ')' : ''}`);
+    for (const c of ['pros', 'cons', 'prosNot', 'consNot'] as const) if (o[c].length) L.push(`  ${c}: ${o[c].map(i => one(i.text)).join('; ')}`);
+  }
+  if (d.chosen) L.push(`chosen: ${one(d.chosen)}; why: ${one(d.why)}; falsifier: ${one(d.falsifier)}; check on ${d.reviewOn ?? '-'}`);
+  return L.join('\n');
+}

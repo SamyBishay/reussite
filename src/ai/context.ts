@@ -6,7 +6,7 @@ import changesetDoc from '../../docs/CHANGESET.md?raw';
 import { tasks, projects, places, decisions, settings, today, here, type WithId } from '../app/store';
 import { T, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } from '../app/model';
 import { cleanMethod, methodSummaryOf } from './method';
-import { oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
+import { decisionLines, oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
 import { lang } from '../i18n';
 import type { Decision, Project } from '../data/schema';
@@ -77,17 +77,6 @@ export function relevantSteps(text: string, max = MAX_STEPS) {
 }
 
 export type Scope = { kind: 'today' } | { kind: 'matrix' } | { kind: 'project'; id: string } | { kind: 'decision'; id: string };
-
-function decisionLines(d: Decision & { id: string }): string {
-  const L = [`Decision ${d.id}: ${one(d.title)} (${d.status})`];
-  for (const [k, v] of Object.entries(d.problem)) if (v) L.push(`problem.${k}: ${one(v)}`);
-  for (const o of d.options) {
-    L.push(`option "${one(o.name)}"${o.screened ? ' (screened out: ' + one(o.screened) + ')' : ''}`);
-    for (const c of ['pros', 'cons', 'prosNot', 'consNot'] as const) if (o[c].length) L.push(`  ${c}: ${o[c].map(i => one(i.text)).join('; ')}`);
-  }
-  if (d.chosen) L.push(`chosen: ${one(d.chosen)}; why: ${one(d.why)}; falsifier: ${one(d.falsifier)}; check on ${d.reviewOn ?? '-'}`);
-  return L.join('\n');
-}
 
 /** The chosen scope as compact lines. */
 export function scopeLines(s: Scope): string {

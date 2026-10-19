@@ -12,23 +12,26 @@ import {
 import type { Env } from './env';
 import { fail, json, readJson } from './http';
 import { clientIp, countIp, spaceLimit } from './limits';
+import { revokeConnector } from './connector/oauth';
 
 const MINUTE = 60_000;
 const PART_CHARS = 1_000_000; // a D1 row holds at most 2 MB
 const MAX_LABEL_CHARS = 2048;
 
-/** Tables that hold a space's rows. The connector adds its own here. */
+/** Tables that hold a space's rows: "delete everywhere" and switching the connector off clear them. */
 const SPACE_TABLES: { table: string; col: string }[] = [
-  { table: 'batches', col: 'space' }, { table: 'snapshots', col: 'space' }, { table: 'devices', col: 'space' }, { table: 'spaces', col: 'id' },
+  { table: 'batches', col: 'space' }, { table: 'snapshots', col: 'space' }, { table: 'devices', col: 'space' },
+  { table: 'connector', col: 'space' }, { table: 'connector_codes', col: 'space' }, { table: 'connector_pending', col: 'space' }, { table: 'connector_undo', col: 'space' },
+  { table: 'spaces', col: 'id' },
 ];
 export const deleteSpaceData = (db: D1Database, space: string) =>
   db.batch(SPACE_TABLES.map(t => db.prepare(`DELETE FROM ${t.table} WHERE ${t.col} = ?1`).bind(space)));
 
 const sizeOf = (blob: string) => Math.floor((blob.length * 3) / 4);
 
-type Auth = { ok: true; head: number } | { ok: false; res: Response };
+export type Auth = { ok: true; head: number } | { ok: false; res: Response };
 
-async function authorize(req: Request, env: Env, space: string, opts: { create?: boolean } = {}): Promise<Auth> {
+export async function authorize(req: Request, env: Env, space: string, opts: { create?: boolean } = {}): Promise<Auth> {
   const m = /^Bearer ([A-Za-z0-9_-]{20,64})$/.exec(req.headers.get('Authorization') ?? '');
   if (!m) return { ok: false, res: fail('unauthorized', 401) };
   const hash = await hashAuthSecret(m[1]!);
@@ -52,7 +55,7 @@ async function authorize(req: Request, env: Env, space: string, opts: { create?:
 }
 
 /** Count a write against the space's minute; returns the new head (bumped by `bump`) or null if over the limit. */
-async function spaceSlot(env: Env, space: string, now: number, bump: number): Promise<number | null> {
+export async function spaceSlot(env: Env, space: string, now: number, bump: number): Promise<number | null> {
   const win = Math.floor(now / MINUTE);
   const row = await env.DB.prepare(
     'UPDATE spaces SET win = ?1, n = CASE WHEN win = ?1 THEN n + 1 ELSE 1 END, last_write = ?2, head = head + ?3 WHERE id = ?4 AND (win <> ?1 OR n < ?5) RETURNING head',
@@ -60,10 +63,10 @@ async function spaceSlot(env: Env, space: string, now: number, bump: number): Pr
   return row ? row.head : null;
 }
 
-const limited = () => fail('rate_limited', 429, { 'Retry-After': '60' });
+export const limited = () => fail('rate_limited', 429, { 'Retry-After': '60' });
 
 /** Count the IP for a write; a response if it is over the limit. */
-async function ipGate(req: Request, env: Env): Promise<Response | null> {
+export async function ipGate(req: Request, env: Env): Promise<Response | null> {
   return (await countIp(env, clientIp(req), Date.now())) ? null : limited();
 }
 
@@ -92,11 +95,18 @@ async function pushBatch(req: Request, env: Env, space: string): Promise<Respons
   if (gate) return gate;
   const auth = await authorize(req, env, space, { create: true });
   if (!auth.ok) return auth.res;
+  const seq = await appendBatch(env, space, device, blob);
+  if (seq === null) return limited();
+  return json({ seq } satisfies PushResponse, 201);
+}
+
+/** Append an encrypted batch to a space (counts against the space's minute); its seq, or null when over the limit. The connector writes through here too. */
+export async function appendBatch(env: Env, space: string, device: string, blob: string): Promise<number | null> {
   const now = Date.now();
   const seq = await spaceSlot(env, space, now, 1);
-  if (seq === null) return limited();
+  if (seq === null) return null;
   await env.DB.prepare('INSERT INTO batches (space, seq, device, blob, size, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(space, seq, device, blob, sizeOf(blob), now).run();
-  return json({ seq } satisfies PushResponse, 201);
+  return seq;
 }
 
 async function changes(req: Request, env: Env, space: string): Promise<Response> {
@@ -185,6 +195,7 @@ async function deleteSpace(req: Request, env: Env, space: string): Promise<Respo
   if (gate) return gate;
   const auth = await authorize(req, env, space);
   if (!auth.ok) return auth.res;
+  await revokeConnector(env, space); // sign-ins live in KV, outside the tables below
   await deleteSpaceData(env.DB, space);
   return json({ ok: true });
 }

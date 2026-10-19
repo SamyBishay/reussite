@@ -63,9 +63,30 @@ export interface SnapshotResponse { upto: number; pruned: number }
 export interface DeviceRequest { label?: string }
 export interface DevicesResponse { devices: { device: string; label: string | null; lastSeen: number }[] }
 
+// ---- The connector (docs/dev/connector.md). The app switches it on and off; Bearer auth as for sync.
+
+/** POST /v1/spaces/:space/connector — the space's raw encryption key, base64url (32 bytes). */
+export interface ConnectorOnRequest { key: string }
+/** The pairing code is shown once: 8 characters from an alphabet without look-alikes, as `ABCD-EFGH`. */
+export interface ConnectorOnResponse {
+  on: true;
+  code: string;
+  /** ms epoch; the code is single use and lasts 10 minutes. */
+  expires: number;
+  /** The address to add in the AI app (Claude: Settings, Connectors, Add custom connector). */
+  url: string;
+}
+/** POST /v1/spaces/:space/connector/code — a fresh code, if the connector is on. */
+export type ConnectorCodeResponse = Pick<ConnectorOnResponse, 'code' | 'expires'>;
+/** GET /v1/spaces/:space/connector */
+export interface ConnectorStatus { on: boolean; lastUsed: number | null; url: string }
+/** DELETE /v1/spaces/:space/connector */
+export interface ConnectorOffResponse { ok: true; revoked: number }
+
 export interface ErrorBody { error: ErrorCode }
 export type ErrorCode =
-  | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found';
+  | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found'
+  | 'connector_off' | 'wrong_key' | 'connector_unavailable';
 
 export const SPACE_ID = /^[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url
 export const DEVICE_ID = /^[A-Za-z0-9_-]{1,64}$/;

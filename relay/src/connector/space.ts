@@ -38,13 +38,20 @@ export async function loadSpace(env: Env, space: string, keys: Sealer, persisted
     env.DB.prepare('SELECT blob, upto FROM snapshots WHERE space = ?1 ORDER BY part').bind(space),
     env.DB.prepare('SELECT seq, blob FROM batches WHERE space = ?1 AND seq > COALESCE((SELECT upto FROM snapshots WHERE space = ?1 AND part = 0), 0) ORDER BY seq').bind(space),
   ]);
+  return buildSpace(space, keys, snaps!.results.length ? snaps!.results.map(r => r.blob).join('') : null, batches!.results, persisted);
+}
+
+/** The work after the database reads, on its own so the benchmark can time it. */
+export async function buildSpace(
+  space: string, keys: Sealer, snapshotBlob: string | null, batchRows: { seq: number; blob: string }[], persisted: { wall: number; counter: number },
+): Promise<Loaded> {
   const clock = createClock(CONNECTOR_DEVICE);
   clock.wall = persisted.wall;
   clock.counter = persisted.counter;
   const out: Loaded = { space, keys, maps: emptyMaps(), head: 0, clock, newer: false };
 
-  if (snaps!.results.length) {
-    const snap = await decryptJson<Snapshot>(keys, b64uDecode(snaps!.results.map(r => r.blob).join('')));
+  if (snapshotBlob) {
+    const snap = await decryptJson<Snapshot>(keys, b64uDecode(snapshotBlob));
     out.head = snap.upto;
     if (snap.v > SCHEMA_VERSION) out.newer = true;
     // Straight into the maps: a snapshot has each document once, so there is nothing to merge.
@@ -63,7 +70,7 @@ export async function loadSpace(env: Env, space: string, keys: Sealer, persisted
   }
 
   const entries: ChangeDoc[] = [];
-  for (const row of await Promise.all(batches!.results.map(async r => ({ seq: r.seq, batch: await decryptJson<ChangeBatch>(keys, b64uDecode(r.blob)) })))) {
+  for (const row of await Promise.all(batchRows.map(async r => ({ seq: r.seq, batch: await decryptJson<ChangeBatch>(keys, b64uDecode(r.blob)) })))) {
     out.head = Math.max(out.head, row.seq);
     if (row.batch.v > SCHEMA_VERSION) out.newer = true;
     entries.push(...row.batch.docs);

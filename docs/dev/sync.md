@@ -52,13 +52,15 @@ JSON in, JSON out, blobs as base64url strings. `Authorization: Bearer <auth secr
 | `GET /devices` | `{devices: [{device, label, lastSeen}]}` |
 | `DELETE /` | Deletes the whole space (delete everywhere). |
 
-Errors are `{error: code}`: 400 `bad_request`, 401 `unauthorized`, 403 `forbidden` (wrong secret, nothing written) or `origin_not_allowed`, 404 `unknown_space` / `not_found`, 409 `bad_upto`, 413 `too_large`, 429 `rate_limited` (with `Retry-After`).
+The connector's switch (`/connector`, `/connector/code`) is in [connector.md](connector.md).
+
+Errors are `{error: code}`: 400 `bad_request`, 401 `unauthorized`, 403 `forbidden` (wrong secret, nothing written) or `origin_not_allowed`, 404 `unknown_space` / `not_found`, 409 `bad_upto` / `wrong_key`, 409 `connector_off`, 413 `too_large`, 429 `rate_limited` (with `Retry-After`), 503 `connector_unavailable`.
 
 Limits: a batch blob is at most 1 MiB, a snapshot 4 MiB (stored in 1 MB parts, because a D1 row holds 2 MB). Writes are limited to 60 a minute per space and, per IP, 120 a minute counting writes and failed sign-ins (`RATE_SPACE_PER_MIN`, `RATE_IP_PER_MIN`). CORS: only origins matching `ALLOWED_ORIGINS`; `*` stands for one DNS label or a port.
 
 ## What the relay can see
 
-The space id, a hash of the auth secret, the size, time and device id of every blob, the device list (names are encrypted), and IP addresses. Not the contents of anything. (While the connector is on, it also holds the key: see the connector doc.) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
+The space id, a hash of the auth secret, the size, time and device id of every blob, the device list (names are encrypted), and IP addresses. Not the contents of anything. (While the connector is on, it also holds the key: see [connector.md](connector.md).) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
 
 ## Using it from the app
 

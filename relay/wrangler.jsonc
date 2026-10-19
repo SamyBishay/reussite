@@ -2,7 +2,8 @@
 // and the calendar feed arrive in this same Worker. Local dev and tests only need this file as is.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "reussite-relay",
+  // The Worker created on 19 Oct; the first deploy replaced its placeholder.
+  "name": "d1-reussite",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   // nodejs_als: the MCP handler passes the signed-in space to tools with AsyncLocalStorage.
@@ -28,11 +29,10 @@
   "alias": { "zod": "./node_modules/zod" },
   "vars": {
     // Comma-separated. `*` stands for one DNS label or one port. `npm run dev` adds localhost.
-    // TODO: the real Pages project name
-    "ALLOWED_ORIGINS": "https://reussite.pages.dev,https://*.reussite.pages.dev",
+    // The app in production, and its preview URLs (`<branch or version>-reussite.…`).
+    "ALLOWED_ORIGINS": "https://reussite.rudolphem.workers.dev,https://*-reussite.rudolphem.workers.dev",
     // The relay's public address, no trailing slash: the connector's OAuth issuer and `/mcp` URL.
-    // TODO: the Worker's workers.dev address (or the custom domain, if one is added)
-    "RELAY_URL": "https://reussite-relay.example.workers.dev"
+    "RELAY_URL": "https://d1-reussite.rudolphem.workers.dev"
   }
   // Secrets, set with `wrangler secret put` (never in this file). Locally: relay/.dev.vars (see .dev.vars.example).
   //   CONNECTOR_WRAP_KEY  base64 of 32 random bytes; wraps the space keys the connector holds.

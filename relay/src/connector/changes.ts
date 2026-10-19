@@ -91,17 +91,26 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
 }
 
 async function confirmed(c: Ctx, id: string): Promise<Out> {
-  const row = await c.env.DB.prepare('SELECT blob FROM connector_pending WHERE id = ?1 AND space = ?2 AND expires > ?3').bind(id, c.s.space, Date.now()).first<{ blob: string }>();
+  const row = await c.env.DB.prepare('SELECT blob, expires FROM connector_pending WHERE id = ?1 AND space = ?2 AND expires > ?3').bind(id, c.s.space, Date.now()).first<{ blob: string; expires: number }>();
   if (!row) return err(`${noWrite} That confirmation id is unknown or has expired (they last an hour). Send the changes again to get a new one.`);
   const { cs, items } = await decryptJson<{ cs: ChangeSet; items: number }>(c.s.keys, b64uDecode(row.blob));
   // The list may have moved on since the person was shown the diff: if the plan is no longer the same size, show it again.
   const plan = planChanges(cs, c.v.snapshot(), gen(c.v));
   if (plan.items.length !== items) {
+    if (needsCold(c.s)) throw new NeedCold(); // it may name an old finished step, which only the cold part holds
     await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1').bind(id).run();
     return err(`${noWrite} The list changed since the person was shown these changes. Send the change-set again to get a fresh confirmation.`);
   }
-  await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1').bind(id).run();
-  return commit(c, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, []);
+  // Taking the row is what makes a confirmation work once. If the write turns out to need the cold part, nothing has been
+  // written yet: put the row back, so the same id works when the tool runs again with it.
+  const taken = await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1').bind(id).run();
+  if (!taken.meta.changes) return err(`${noWrite} That confirmation id is unknown or has expired (they last an hour). Send the changes again to get a new one.`);
+  try {
+    return await commit(c, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, []);
+  } catch (e) {
+    if (e instanceof NeedCold) await c.env.DB.prepare('INSERT OR REPLACE INTO connector_pending (id, space, blob, expires) VALUES (?1, ?2, ?3, ?4)').bind(id, c.s.space, row.blob, row.expires).run();
+    throw e;
+  }
 }
 
 /** Write the plan as one encrypted batch and keep what it replaced for undo. */

@@ -177,6 +177,20 @@ describe('the connector reads hot only for the common calls', () => {
     expect(text).toBe(dayText(v, v.today));
   });
 
+  it('a confirmation that turns out to need the cold part still works once, with the same id', async () => {
+    const v = expected();
+    const old = [...v.tasks.values()].filter(t => t.status === 'done' && String(t.doneDay) < day(-100)).at(-5)!;
+    const first = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: old.id, set: { note: 'asked first' } }] });
+    const id = /"confirm": "(c\w+)"/.exec(first.text)?.[1];
+    expect(id).toBeTruthy();
+    const done = await tool(access, 'apply_changes', { confirm: id });
+    expect(done.isError).toBe(false);
+    expect(done.text).toContain('Undo id');
+    expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(true); // once
+    await syncOnce(app.device, app.client);
+    expect(app.device.get('tasks', old.id)!.note).toBe('asked first');
+  });
+
   it('adds and ticks a step on the hot part alone', async () => {
     const open = docs.tasks!.find(t => t.status === 'open')!;
     await withoutCold(async () => {

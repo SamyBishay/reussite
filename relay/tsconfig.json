@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types", "vitest/globals"]
+  },
+  "include": ["src", "test", "vitest.config.ts", "../src/sync", "../src/data"],
+  "exclude": ["../src/data/migrations", "../src/data/*.test.ts", "../src/data/db.ts", "../src/data/import-v1.ts", "../src/data/backup.ts", "../src/data/normalize.ts", "../src/data/settings.ts"]
+}

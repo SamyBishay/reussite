@@ -3,7 +3,7 @@
 // fake in tests and against Dexie in the app. Safe to run again after any failure.
 import type { Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection } from '../data/schema';
-import { RelayError, type RelayClient } from './client';
+import { RelayError, type Pulled, type RelayClient } from './client';
 import { applyIncoming, buildSnapshot, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
 import type { ChangeDoc, StoredDoc } from './protocol';
 
@@ -36,6 +36,8 @@ export interface SyncResult {
   pulled: number;
   pushed: number;
   snapshot: boolean;
+  /** The relay has no space for this key yet: normal for the first device, a sign of a wrong key on a joining one. */
+  emptySpace: boolean;
   state: SyncState;
 }
 
@@ -45,6 +47,8 @@ export interface SyncOptions {
   /** Documents per pushed batch (default 300; halved if the relay says too large). */
   batchDocs?: number;
 }
+
+const EMPTY_PAGE: Pulled = { head: 0, more: false, snapshot: null, batches: [] };
 
 async function fold(store: SyncStore, entries: ChangeDoc[]): Promise<{ newer: boolean }> {
   const byColl = new Map<Collection, Set<string>>();
@@ -60,11 +64,14 @@ async function fold(store: SyncStore, entries: ChangeDoc[]): Promise<{ newer: bo
 export async function syncOnce(store: SyncStore, client: RelayClient, opts: SyncOptions = {}): Promise<SyncResult> {
   const node = store.clock.node;
   let state = { ...(await store.loadState()) };
-  const result: SyncResult = { newer: false, pulled: 0, pushed: 0, snapshot: false, state };
+  const result: SyncResult = { newer: false, pulled: 0, pushed: 0, snapshot: false, emptySpace: false, state };
 
   // Pull until caught up.
   for (;;) {
-    const page = await client.pull(state.seq);
+    const page = await client.pull(state.seq).catch(e => {
+      if (e instanceof RelayError && e.code === 'unknown_space') { result.emptySpace = true; return EMPTY_PAGE; }
+      throw e;
+    });
     const entries: ChangeDoc[] = [];
     if (page.snapshot) {
       if (page.snapshot.v > SCHEMA_VERSION) return { ...result, newer: true };
@@ -80,7 +87,7 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
     result.pulled += entries.length;
     state = { ...state, seq: top, snapshotSeq: Math.max(state.snapshotSeq, page.snapshot?.upto ?? 0) };
     await store.saveState(state);
-    if (!page.more) break;
+    if (!page.more || (!page.snapshot && !page.batches.length)) break; // nothing new: never spin on a gap at the head
   }
 
   // Push what changed here.

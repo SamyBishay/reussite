@@ -1,0 +1,22 @@
+// The relay: one Worker plus D1 (brief §3). Sync is built; push, the calendar feed and the
+// connector (/mcp, OAuth) arrive in this same Worker. Local dev and tests only need this file as is.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // TODO: set to the existing Worker's name
+  "name": "reussite-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "reussite", // TODO: the name given to `wrangler d1 create`
+      "database_id": "00000000-0000-0000-0000-000000000000", // TODO: the id printed by `wrangler d1 create`
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Comma-separated. `*` stands for one DNS label or one port. `npm run dev` adds localhost.
+    // TODO: the real Pages project name
+    "ALLOWED_ORIGINS": "https://reussite.pages.dev,https://*.reussite.pages.dev"
+  }
+}

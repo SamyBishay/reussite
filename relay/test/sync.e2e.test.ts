@@ -8,6 +8,7 @@ import { deriveKeys, decodeRecoveryKey, encodeRecoveryKey, generateKey } from '.
 import { create } from '../../src/data/doc';
 import { ZERO } from '../../src/data/hlc';
 import { SCHEMA_VERSION } from '../../src/data/schema';
+import { buildSnapshot } from '../../src/sync/engine';
 import { syncOnce } from '../../src/sync/run';
 import { FakeDevice } from '../../src/sync/testing';
 import { BASE } from './helpers';
@@ -82,6 +83,32 @@ describe('sync through the relay', () => {
     await syncOnce(restored, await clientFor(key));
     await syncOnce(a, ca);
     expect(a.get('tasks', 't2')!.title).toBe('From the phone');
+  });
+
+  it('a snapshot written by A while B pushes loses nothing', async () => {
+    const key = generateKey();
+    const [ca, cb, cc] = [await clientFor(key), await clientFor(key), await clientFor(key)];
+    const a = new FakeDevice('aaa'), b = new FakeDevice('bbb');
+    for (let i = 0; i < 4; i++) { a.add('tasks', 't' + i, { title: 'Step ' + i }); await syncOnce(a, ca); }
+    await syncOnce(b, cb);
+
+    // A is caught up and will snapshot at its seq; B pushes first, then A's snapshot lands.
+    b.edit('tasks', 't1', { title: 'B was here' });
+    b.add('tasks', 'tb', { title: 'From B' });
+    const aState = await a.loadState();
+    await syncOnce(b, cb);
+    await ca.putSnapshot(buildSnapshot(await a.all(), aState.seq));
+    // and an older snapshot, from a device that was slow, arrives afterwards
+    await ca.putSnapshot(buildSnapshot(await a.all(), Math.max(1, aState.seq - 2)));
+
+    await syncOnce(a, ca);
+    await syncOnce(b, cb);
+    const joined = new FakeDevice('ccc');
+    await syncOnce(joined, cc);
+    expect(joined.dump()).toEqual(b.dump());
+    expect(a.dump()).toEqual(b.dump());
+    expect(joined.get('tasks', 't1')!.title).toBe('B was here');
+    expect(joined.get('tasks', 'tb')).toBeDefined();
   });
 
   it('a wrong key cannot read or write', async () => {

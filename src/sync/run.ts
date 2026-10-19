@@ -46,7 +46,7 @@ export interface SyncResult {
 }
 
 export interface SyncOptions {
-  /** Upload a snapshot once this many batches have piled up since the last (default 50). */
+  /** Upload a snapshot once this many batches have piled up since the last (default `SNAPSHOT_EVERY`). */
   snapshotEvery?: number;
   /** Documents per pushed batch (default 300; halved if the relay says too large). */
   batchDocs?: number;
@@ -55,6 +55,12 @@ export interface SyncOptions {
   /** If the relay has no space but this device had already pulled from it, the space was deleted elsewhere: stop instead of recreating it. */
   stopIfGone?: boolean;
 }
+
+/**
+ * A short tail: every reader (the connector most of all) decrypts and folds the batches after the
+ * snapshot, which costs about 0.25 ms of CPU each, so the app snapshots after this few.
+ */
+export const SNAPSHOT_EVERY = 8;
 
 const EMPTY_PAGE: Pulled = { head: 0, more: false, snapshot: null, batches: [] };
 
@@ -126,7 +132,7 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   }
 
   // Now and then, a snapshot so new devices start fast and the relay can drop old batches.
-  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? 50)) {
+  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY)) {
     try {
       await client.putSnapshot(buildSnapshot(await store.all(), state.seq));
       state = { ...state, snapshotSeq: state.seq };

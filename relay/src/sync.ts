@@ -156,13 +156,22 @@ async function putSnapshot(req: Request, env: Env, space: string): Promise<Respo
   const current = await env.DB.prepare('SELECT upto FROM snapshots WHERE space = ?1 AND part = 0').bind(space).first<{ upto: number }>();
   if (current && current.upto >= upto) return json({ upto: current.upto, pruned: 0 } satisfies SnapshotResponse); // already have a newer one
   const size = sizeOf(blob);
-  const stmts = [env.DB.prepare('DELETE FROM snapshots WHERE space = ?1').bind(space)];
-  for (let i = 0, part = 0; i < blob.length; i += PART_CHARS, part++) {
-    stmts.push(env.DB.prepare('INSERT INTO snapshots (space, part, upto, blob, size, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(space, part, upto, blob.slice(i, i + PART_CHARS), size, now));
+  // Every statement carries the same guard, so two writers racing past the check above can't leave
+  // an older snapshot over a newer one: the batch is atomic, and the guard is evaluated inside it.
+  // Parts go in last-first, so the guard (which looks at part 0) still holds for the others.
+  const guard = 'NOT EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND part = 0 AND upto >= ?2)';
+  const stmts = [env.DB.prepare(`DELETE FROM snapshots WHERE space = ?1 AND ${guard}`).bind(space, upto)];
+  const parts = Math.ceil(blob.length / PART_CHARS);
+  for (let part = parts - 1; part >= 0; part--) {
+    stmts.push(env.DB.prepare(
+      `INSERT INTO snapshots (space, part, upto, blob, size, at) SELECT ?1, ?3, ?2, ?4, ?5, ?6 WHERE ${guard}`,
+    ).bind(space, upto, part, blob.slice(part * PART_CHARS, (part + 1) * PART_CHARS), size, now));
   }
-  stmts.push(env.DB.prepare('DELETE FROM batches WHERE space = ?1 AND seq <= ?2').bind(space, upto));
+  stmts.push(env.DB.prepare('DELETE FROM batches WHERE space = ?1 AND seq <= ?2 AND EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND part = 0 AND upto >= ?2)').bind(space, upto));
+  stmts.push(env.DB.prepare('SELECT upto FROM snapshots WHERE space = ?1 AND part = 0').bind(space));
   const res = await env.DB.batch(stmts);
-  return json({ upto, pruned: res.at(-1)!.meta.changes } satisfies SnapshotResponse);
+  const stored = (res.at(-1)!.results as { upto: number }[])[0]?.upto ?? upto;
+  return json({ upto: stored, pruned: res.at(-2)!.meta.changes } satisfies SnapshotResponse);
 }
 
 async function touchDevice(req: Request, env: Env, space: string, device: string): Promise<Response> {

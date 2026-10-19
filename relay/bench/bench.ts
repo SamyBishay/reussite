@@ -42,7 +42,10 @@ const ms = (n: number) => n.toFixed(1).padStart(6) + ' ms';
 const row = (label: string, r: { first: number; median: number; p95: number }, budget = false) =>
   console.log(`  ${label.padEnd(46)} median ${ms(r.median)}   p95 ${ms(r.p95)}   first run ${ms(r.first)}${budget ? (r.median <= BUDGET_MS ? '   ok' : '   OVER ' + BUDGET_MS + ' ms') : ''}`);
 
-async function prepare(sizes: Sizes, batchesAfter = 30) {
+/** Batches after the snapshot: the app snapshots after 8 (SNAPSHOT_EVERY); BENCH_TAIL=30 shows the old tail. */
+const TAIL = Number(process.env.BENCH_TAIL) || 8;
+
+async function prepare(sizes: Sizes, batchesAfter = TAIL) {
   const key = generateKey();
   const keys = await deriveKeys(key);
   const docs = syntheticSpace(sizes);
@@ -78,7 +81,7 @@ export async function main() {
   row('AES-GCM decrypt + gunzip + JSON.parse (decryptJson)', await time(() => decryptJson(keys, raw)));
   row('JSON.parse alone (for scale)', await time(() => JSON.parse(json)));
   const read = await time(() => buildSpace('s', keys, snapBlob, rows, persisted));
-  row('whole read: snapshot + 30 batches, folded', read, true);
+  row(`whole read: snapshot + ${TAIL} batches, folded`, read, true);
   const noBatches = await time(() => buildSpace('s', keys, snapBlob, [], persisted));
   row('whole read: snapshot only', noBatches, true);
   const loaded = read.last;

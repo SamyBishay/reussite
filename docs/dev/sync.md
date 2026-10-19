@@ -38,7 +38,9 @@ A document with `_v` above the app's `SCHEMA_VERSION` (or a batch/snapshot with 
 
 ## Snapshots and pruning
 
-Once 50 batches have piled up since the last snapshot, a device that has applied everything up to `seq` uploads a snapshot with `upto = seq`. The relay stores it (replacing the old one), deletes the batches with `seq <= upto`, and an older snapshot never replaces a newer one. A new or restored device pulls the snapshot and the batches after it.
+Once 8 batches (`SNAPSHOT_EVERY`) have piled up since the last snapshot, a device that has applied everything up to `seq` uploads a snapshot with `upto = seq`. The tail is kept short because every reader decrypts and folds it, about 0.25 ms of CPU a batch, and the connector has 10 ms. The relay stores it (replacing the old one), deletes the batches with `seq <= upto`, and an older snapshot never replaces a newer one. A new or restored device pulls the snapshot and the batches after it.
+
+Two writers can't lose anything: a snapshot must contain everything up to its `upto`, so whoever writes one has pulled and applied up to `upto` first (a device uses its own `seq`, which its own later pushes don't raise; the connector uses the highest seq it read). The relay refuses an `upto` above the head (409 `bad_upto`) and ignores one that isn't newer than the stored snapshot (the answer carries the stored `upto`, `pruned: 0`). The check is also inside the write: every statement of the (atomic) batch that replaces the snapshot is guarded by "no stored snapshot with `upto >=` mine", and pruning only deletes batches the stored snapshot covers, so two writers racing past the first check still can't put an older snapshot over a newer one.
 
 ## Relay endpoints
 

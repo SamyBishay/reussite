@@ -136,6 +136,19 @@ describe('snapshots', () => {
     expect((await call('PUT', url(k, '/snapshot'), k, { body: { upto: 0, blob: newer } })).status).toBe(400);
   });
 
+  it('writers racing past the check can not leave an older snapshot over a newer one', async () => {
+    const k = await newSpace();
+    for (let i = 0; i < 6; i++) await push(k);
+    const [b3, b5, b4] = [await blobOf(k, { n: 3 }), await blobOf(k, { n: 5 }), await blobOf(k, { n: 4 })];
+    const put = (upto: number, blob: string) => call('PUT', url(k, '/snapshot'), k, { body: { upto, blob } });
+    const rs = await Promise.all([put(3, b3), put(5, b5), put(4, b4)]);
+    expect(rs.every(r => r.status === 200)).toBe(true);
+    const got = (await call('GET', url(k, '/changes?after=0'), k)).body;
+    expect(got.snapshot).toMatchObject({ upto: 5, blob: b5 });
+    expect(got.batches.map((b: any) => b.seq)).toEqual([6]);
+    expect(await count('snapshots', k.spaceId)).toBe(1);
+  });
+
   it('stores a large snapshot in parts and gives it back whole', async () => {
     const k = await newSpace();
     await push(k);

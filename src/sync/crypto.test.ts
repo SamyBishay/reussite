@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { b64uDecode } from './bytes';
-import { DecryptError, decryptJson, encryptJson, openFromText, sealToText } from './crypto';
+import { DecryptError, NewerFormatError, decryptJson, encryptJson, openFromText, sealToText } from './crypto';
 import { deriveKeys, generateKey } from './keys';
 
 const setup = async () => deriveKeys(generateKey());
@@ -16,6 +16,15 @@ describe('blobs', () => {
     expect(small[0]).toBe(1);
     expect(await decryptJson(k, small)).toEqual({ a: 1 });
     expect(JSON.stringify(sample).length).toBeGreaterThan(big.length);
+  });
+
+  it('a format byte above the known ones says "newer app", not "broken"', async () => {
+    const k = await setup();
+    const blob = await encryptJson(k, { a: 1 });
+    blob[0] = 9;
+    await expect(decryptJson(k, blob)).rejects.toBeInstanceOf(NewerFormatError);
+    blob[0] = 0;
+    await expect(decryptJson(k, blob)).rejects.not.toBeInstanceOf(NewerFormatError);
   });
 
   it('generation 2 blobs carry format bytes 3 and 4, which every reader opens', async () => {

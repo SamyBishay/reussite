@@ -4,6 +4,7 @@
 import type { Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection } from '../data/schema';
 import { RelayError, type Pulled, type RelayClient } from './client';
+import { NewerFormatError } from './crypto';
 import { applyIncoming, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
 import type { ChangeDoc, Cut, StoredDoc } from './protocol';
 import { buildParts, touchesCold } from './parts';
@@ -91,8 +92,10 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
     for (;;) {
       const page = await client.pull(state.seq).catch(e => {
         if (e instanceof RelayError && e.code === 'unknown_space') { result.emptySpace = true; return EMPTY_PAGE; }
+        if (e instanceof NewerFormatError) return null; // written by a newer app: same as a newer schema
         throw e;
       });
+      if (!page) return { ...result, newer: true };
       if (result.emptySpace && opts.stopIfGone && state.seq > 0) return { ...result, gone: true };
       const entries: ChangeDoc[] = [];
       if (page.snapshot) {

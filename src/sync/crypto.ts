@@ -23,6 +23,10 @@ export type Sealer = Pick<SpaceKeys, 'spaceId' | 'encKey'>;
 export class DecryptError extends Error {
   constructor(why: string) { super('cannot decrypt: ' + why); }
 }
+/** A format byte above any this build knows: written by a newer app. Sync goes read-only and asks to reload. */
+export class NewerFormatError extends DecryptError {
+  constructor() { super('newer format'); }
+}
 
 const canGzip = () => typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined';
 
@@ -51,6 +55,7 @@ export async function encryptJson(keys: Sealer, value: unknown, o: SealOptions =
 
 export async function decryptJson<T = unknown>(keys: Sealer, blob: Uint8Array): Promise<T> {
   const format = blob[0];
+  if (format !== undefined && format > FORMAT_LEAN_GZIP) throw new NewerFormatError();
   if (!known(format)) throw new DecryptError('unknown format');
   if (blob.length < 1 + IV_BYTES + 16) throw new DecryptError('too short');
   let body: Bytes;

@@ -24,6 +24,7 @@ import { openDecision } from '../flows/decision';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
+import { DropHost, InboxHost } from './Drop';
 
 type View = 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings';
 const VIEWS: View[] = ['today', 'matrix', 'projects', 'calendar', 'log', 'settings'];
@@ -218,6 +219,8 @@ export function App() {
       <SheetHost />
       <OverlayHost />
       <PreviewHost />
+      <InboxHost />
+      <DropHost />
       <Moment />
       <Toast />
     </>

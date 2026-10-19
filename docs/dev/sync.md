@@ -6,13 +6,14 @@ Code: `src/sync/` (shared by the app, the relay and the connector) and `relay/` 
 
 One random 256-bit key per person, made on the first device. It is shown as a **recovery key**: Crockford base32 (no I, L, O, U), 32 key bytes plus a 3-byte CRC-32 checksum, 56 characters in 14 groups of 4 joined by dashes. Typing tolerates spaces, dashes, lower case and O/0, I/L/1 mix-ups; a typo fails the checksum.
 
-HKDF-SHA256 with the salt `reussite/sync/v1` and three `info` strings gives:
+HKDF-SHA256 with the salt `reussite/sync/v1` and these `info` strings gives:
 
 | info | bytes | use |
 | --- | --- | --- |
 | `space-id` | 16 | names the space on the relay (base64url) |
 | `auth-secret` | 32 | the Bearer token (base64url); the relay keeps only `SHA-256(token text)`, base64url |
 | `encryption-key` | 32 | AES-GCM-256 |
+| `inbox-x25519` | 32 | the seed of the inbox X25519 key pair (the drop page seals to its public half; every device derives the same pair) |
 
 ## Blobs
 
@@ -41,7 +42,7 @@ Once 50 batches have piled up since the last snapshot, a device that has applied
 
 ## Relay endpoints
 
-JSON in, JSON out, blobs as base64url strings. `Authorization: Bearer <auth secret>` on all of them. Base: `/v1/spaces/:space`.
+JSON in, JSON out, blobs as base64url strings. `Authorization: Bearer <auth secret>` on all of them except `POST /inbox`. Base: `/v1/spaces/:space`.
 
 | | |
 | --- | --- |
@@ -51,8 +52,11 @@ JSON in, JSON out, blobs as base64url strings. `Authorization: Bearer <auth secr
 | `POST /devices/:device` `{label?}` | Marks the device seen; `label` is an encrypted `{name}`. |
 | `GET /devices` | `{devices: [{device, label, lastSeen}]}` |
 | `DELETE /` | Deletes the whole space (delete everywhere). |
+| `POST /inbox` `{blob}` | **No Authorization.** A change-set sealed to the space's inbox public key by the drop page (`src/sync/inbox.ts`). 201 `{id}`. At most 16 KB, 50 waiting per space; 10 a minute per IP and 20 per space (`RATE_INBOX_IP_PER_MIN`, `RATE_INBOX_SPACE_PER_MIN`); 404 `unknown_space` for a space that doesn't exist; 429 `rate_limited` when over a limit or full. |
+| `GET /inbox` | `{items: [{id, blob, at}]}`, oldest first, up to 50 of the last 30 days. |
+| `DELETE /inbox/:id` | `{ok, deleted}`; the app calls it once a drop has been applied or dismissed. |
 
-The connector's switch (`/connector`, `/connector/code`) is in [connector.md](connector.md).
+The connector's switch (`/connector`, `/connector/code`) is in [connector.md](connector.md). The link format and the sealed box are in [CHANGESET.md](../CHANGESET.md) ("The one-tap link") and `src/sync/inbox.ts`; the relay only stores the box (table `inbox`, migration 0003, cleared by "delete everywhere").
 
 Errors are `{error: code}`: 400 `bad_request`, 401 `unauthorized`, 403 `forbidden` (wrong secret, nothing written) or `origin_not_allowed`, 404 `unknown_space` / `not_found`, 409 `bad_upto` / `wrong_key`, 409 `connector_off`, 413 `too_large`, 429 `rate_limited` (with `Retry-After`), 503 `connector_unavailable`.
 
@@ -60,7 +64,7 @@ Limits: a batch blob is at most 1 MiB, a snapshot 4 MiB (stored in 1 MB parts, b
 
 ## What the relay can see
 
-The space id, a hash of the auth secret, the size, time and device id of every blob, the device list (names are encrypted), and IP addresses. Not the contents of anything. (While the connector is on, it also holds the key: see [connector.md](connector.md).) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
+The space id, a hash of the auth secret, the size, time and device id of every blob, the device list (names are encrypted), and IP addresses. Not the contents of anything. The inbox holds sealed boxes it can't open. (While the connector is on, it also holds the key: see [connector.md](connector.md).) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
 
 ## Using it from the app
 

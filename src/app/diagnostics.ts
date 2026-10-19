@@ -16,7 +16,7 @@ const registry = new Map<string, Provider>();
  */
 export function registerDiagnostics(section: string, provider: Provider) { registry.set(section, provider); }
 
-const FALLBACK: Record<string, string> = { sync: 'off', push: 'not set up' };
+const FALLBACK: Record<string, string> = { sync: 'off', connector: 'off', push: 'not set up' };
 
 export function browser(ua: string): string {
   const m = /(Edg|OPR|Firefox|FxiOS|CriOS|Chrome|Version)\/([\d.]+)/.exec(ua);

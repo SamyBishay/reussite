@@ -1,5 +1,7 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
+import { deflateRawSync } from 'node:zlib';
 import { importSample, noSideways } from './helpers';
+import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
   await importSample(page);
@@ -228,3 +230,223 @@ for (const w of WIDTHS) {
     await noSideways(page, 'delete everywhere');
   });
 }
+
+// ---- The connector (Settings → Connector). The relay started by playwright.config.ts has a throwaway wrap key.
+
+test('connector: needs sync first; then switch on shows an address and a code, switch off returns to off', async ({ page }) => {
+  await page.goto('/#settings');
+  await expect(page.getByTestId('connector')).toContainText('sync comes first');
+  await expect(page.getByTestId('connector-on')).toBeHidden();
+  await page.getByTestId('connector-to-sync').click();
+  await expect(page.getByTestId('sync-setup')).toBeFocused();
+
+  await setUp(page);
+  await page.getByTestId('sync-key-saved').click();
+  await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+  const box = page.getByTestId('connector');
+  // off: what it does, and the privacy cost, before the button
+  await expect(page.getByTestId('connector-on')).toBeVisible();
+  await expect(box).toContainText('whoever runs the relay can read your whole list');
+  await expect(box).toContainText('Only a new recovery key fully undoes having shared it');
+  await page.getByTestId('connector-on').click();
+  await expect(page.getByTestId('connector-on-sheet')).toContainText('Switch the connector on?');
+  await noSideways(page, 'connector confirmation');
+  await page.getByTestId('connector-on-confirm').click();
+
+  await expect(page.getByTestId('connector-state')).toContainText('The connector is on');
+  await expect(page.getByTestId('connector-state')).toContainText('Not used yet');
+  await expect(page.getByTestId('connector-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
+  const code1 = (await page.getByTestId('connector-code').innerText()).replace(/\s+/g, '');
+  expect(code1).toMatch(/^[A-Z0-9]{8}$/);
+  await expect(page.getByTestId('connector-expiry')).toContainText(/[0-9]:[0-5][0-9]/);
+  // the relay lists itself in Sync & devices, as "Connector"
+  await expect(page.getByTestId('device-connector')).toContainText('Connector', { timeout: 10_000 });
+  await noSideways(page, 'connector on');
+
+  await page.getByTestId('connector-new-code').click();
+  await expect.poll(async () => (await page.getByTestId('connector-code').innerText()).replace(/\s+/g, '')).not.toBe(code1);
+
+  // the diagnostics say on / off and never the address or a code
+  await page.getByTestId('about').getByTestId('diagnostics-open').click();
+  await expect(page.getByTestId('diagnostics-text')).toContainText(/\[connector\]\s+state: on/);
+  await expect(page.getByTestId('diagnostics-text')).not.toContainText('/mcp');
+  await expect(page.getByTestId('diagnostics-text')).not.toContainText(code1);
+  await page.keyboard.press('Escape');
+
+  // turning sync off while it is on says so
+  await page.getByTestId('sync-off').click();
+  await expect(page.getByTestId('sync-off-connector')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByTestId('connector-off').click();
+  await noSideways(page, 'connector off confirmation');
+  await page.getByTestId('connector-off-confirm').click();
+  await expect(page.getByTestId('connector-on')).toBeVisible();
+  await expect(page.getByTestId('connector-code')).toBeHidden();
+  await expect(page.getByTestId('device-connector')).toBeHidden({ timeout: 10_000 });
+  await expect(page.getByTestId('about').getByTestId('privacy')).toContainText('your whole list while the connector is on');
+});
+
+for (const w of WIDTHS) {
+  test(`connector and one-tap link settings don't scroll sideways at ${w}px`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await page.goto('/#settings');
+    await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
+    await noSideways(page, 'sync off');
+    await setUp(page);
+    await page.getByTestId('sync-key-saved').click();
+    await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+    await expect(page.getByTestId('drop-address')).toContainText('/drop#');
+    await noSideways(page, 'drop address');
+    await page.getByTestId('connector-on').click();
+    await page.getByTestId('connector-on-confirm').click();
+    await expect(page.getByTestId('connector-code')).toBeVisible();
+    await noSideways(page, 'connector on');
+    await expect(page.getByTestId('privacy')).toBeVisible();
+    await noSideways(page, 'privacy note');
+  });
+}
+
+// ---- The one-tap link
+
+const ORIGIN = 'http://localhost:4174';
+const cs = (title: string) => ({ v: 1, note: 'From my AI', changes: [{ op: 'task.create', set: { title } }] });
+
+/** What an AI with a code tool would write: the drop address, then z. and the compressed change-set. */
+const linkFor = (address: string, change: unknown) => address.trim() + 'z.' + deflateRawSync(Buffer.from(JSON.stringify(change))).toString('base64url');
+
+async function dropAddress(page: Page): Promise<string> {
+  await page.goto('/#settings');
+  await expect(page.getByTestId('drop-address')).toContainText('/drop#');
+  return (await page.getByTestId('drop-address').innerText()).trim();
+}
+
+/** The change-sets the relay holds for a recovery key (read as the app does, with the space's secret). */
+async function inboxSize(recovery: string): Promise<number> {
+  const keys = await deriveKeys(decodeRecoveryKey(recovery));
+  const res = await fetch('http://localhost:8787/v1/spaces/' + keys.spaceId + '/inbox', { headers: { Authorization: 'Bearer ' + keys.authSecret } });
+  return ((await res.json()) as { items: unknown[] }).items.length;
+}
+
+test('one-tap link: Settings → AI shows the drop address and the sentence to paste; Ask any AI then asks for the link', async ({ page }) => {
+  await page.goto('/#settings');
+  await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
+  await page.getByTestId('tab-today').click();
+  await page.getByTestId('ask-any').click();
+  await page.locator('summary', { hasText: 'See the text' }).click();
+  await expect(page.getByTestId('pack')).toContainText('fenced code block labelled reussite');
+  await expect(page.getByTestId('pack')).not.toContainText('/drop#');
+  await page.keyboard.press('Escape');
+
+  await setUp(page);
+  await page.getByTestId('sync-key-saved').click();
+  const addr = await dropAddress(page);
+  expect(addr).toMatch(new RegExp('^' + ORIGIN + '/drop#[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}\\.$'));
+  await expect(page.getByTestId('drop-sentence')).toContainText(addr + 'z.DATA');
+  await expect(page.getByTestId('drop-sentence')).toContainText('8,000');
+  await page.getByTestId('tab-today').click();
+  await page.getByTestId('ask-any').click();
+  await page.locator('summary', { hasText: 'See the text' }).click();
+  await expect(page.getByTestId('pack')).toContainText(addr + 'z.DATA');
+  await expect(page.getByTestId('pack')).not.toContainText('end your reply with one fenced code block labelled reussite that holds');
+  // a link pasted where a block is expected is read the same way
+  await page.getByTestId('ask-any-sheet').getByRole('button', { name: 'Paste the reply' }).click();
+  await page.getByTestId('paste-text').fill('Here you go: ' + linkFor(addr, cs('Open Mail and answer the pasted one')) + ' — hope it helps.');
+  await page.getByTestId('paste-go').click();
+  await expect(page.getByTestId('review')).toContainText('answer the pasted one');
+});
+
+test('one-tap link: a browser with nothing leaves it in the inbox; the device with the list shows it at its next sync, one at a time, and the relay forgets each', async ({ browser }, info) => {
+  test.slow();
+  const a = await secondDevice(browser, info);
+  const pa = a.page;
+  const recovery = await setUp(pa);
+  await pa.getByTestId('sync-key-saved').click();
+  await expect(pa.getByTestId('sync-status')).toContainText('Synced at');
+  const addr = await dropAddress(pa);
+
+  // "iPhone Safari": a context of its own, no data, no sync
+  const b = await secondDevice(browser, info);
+  const requests: string[] = [];
+  b.page.on('request', r => { if (r.method() === 'POST') requests.push(r.url()); });
+  await b.page.goto(linkFor(addr, cs('Open Mail and answer the drop one')).replace(ORIGIN, ''));
+  await expect(b.page.getByTestId('drop-sent')).toHaveText('Sent to your list. Open Réussite to review it.', { timeout: 20_000 });
+  await b.page.goto(linkFor(addr, cs('Open Mail and answer the drop two')).replace(ORIGIN, ''));
+  await expect(b.page.getByTestId('drop-sent')).toBeVisible({ timeout: 20_000 });
+  expect(requests.filter(u => u.endsWith('/inbox'))).toHaveLength(2);
+  expect(await inboxSize(recovery)).toBe(2);
+  const dropWidth = await b.page.evaluate(() => { const d = document.querySelector('.drop')!; return [d.scrollWidth, d.clientWidth]; });
+  expect(dropWidth[0]).toBeLessThanOrEqual(dropWidth[1]!);
+  await b.page.getByTestId('drop-open-app').click();
+  await expect(b.page.getByTestId('drop-page')).toBeHidden();
+  expect(new URL(b.page.url()).pathname).toBe('/'); // the link is not run again on reload
+  await b.ctx.close();
+
+  // the device holding the list finds them at its next sync; nothing was written by itself
+  await pa.goto('/#today');
+  await eventually(pa, async () => { await expect(pa.getByTestId('review')).toBeVisible({ timeout: 500 }); });
+  await expect(pa.getByTestId('review')).toContainText('answer the drop one');
+  await expect(pa.getByTestId('review')).not.toContainText('answer the drop two');
+  await expect(pa.getByTestId('review')).toContainText('From my AI');
+  await noSideways(pa, 'inbox review');
+  await pa.getByTestId('apply-changes').click();
+  // then the second, which the person dismisses
+  await expect(pa.getByTestId('review')).toContainText('answer the drop two', { timeout: 10_000 });
+  await pa.getByRole('button', { name: 'Cancel' }).click();
+  await expect(pa.getByTestId('review')).toBeHidden();
+  await expect.poll(() => inboxSize(recovery), { timeout: 10_000 }).toBe(0);
+  await pa.getByTestId('tab-matrix').click();
+  await expect(pa.locator('.matrix')).toContainText('answer the drop one');
+  await expect(pa.locator('.matrix')).not.toContainText('answer the drop two');
+  // and it does not come back
+  await nudge(pa);
+  await pa.waitForTimeout(1500);
+  await expect(pa.getByTestId('review')).toBeHidden();
+  await a.ctx.close();
+});
+
+test('one-tap link: opened in the browser that holds the list, it shows the review at once and posts nothing', async ({ browser }, info) => {
+  test.slow();
+  const a = await secondDevice(browser, info);
+  const recovery = await setUp(a.page);
+  await a.page.getByTestId('sync-key-saved').click();
+  await expect(a.page.getByTestId('sync-status')).toContainText('Synced at');
+  const addr = await dropAddress(a.page);
+  const posts: string[] = [];
+  const tab = await a.ctx.newPage(); // the same storage
+  tab.on('request', r => { if (r.method() === 'POST') posts.push(r.url()); });
+  // the "j" form, as an AI that cannot compress would write it
+  const link = addr + 'j.' + encodeURIComponent(JSON.stringify(cs('Open Mail and answer the direct one')));
+  await tab.goto(link);
+  await expect(tab.getByTestId('review')).toContainText('answer the direct one', { timeout: 20_000 });
+  await expect(tab.getByTestId('drop-page')).toBeHidden();
+  expect(new URL(tab.url()).hash).toBe('');
+  await noSideways(tab, 'drop review');
+  await tab.getByTestId('apply-changes').click();
+  await expect(tab.getByTestId('sheet')).toBeHidden();
+  await tab.getByTestId('tab-matrix').click();
+  await expect(tab.locator('.matrix')).toContainText('answer the direct one');
+  expect(posts.filter(u => u.endsWith('/inbox'))).toEqual([]);
+  expect(await inboxSize(recovery)).toBe(0);
+  await a.ctx.close();
+});
+
+test('one-tap link: a broken link says so in a plain sentence and sends nothing', async ({ browser }, info) => {
+  const a = await secondDevice(browser, info);
+  const requests: string[] = [];
+  a.page.on('request', r => { if (r.url().includes('/inbox')) requests.push(r.url()); });
+  const open = async (hash: string) => { await a.page.goto('/drop#' + hash); await a.page.reload(); };
+  const addr = 'S'.repeat(22) + '.' + 'K'.repeat(43) + '.';
+  await open('garbage');
+  await expect(a.page.getByTestId('drop-error')).toContainText('isn’t a Réussite change-set');
+  // a well-formed address with a change-set that holds nothing usable
+  await open(addr + 'j.' + encodeURIComponent('{"v":1,"changes":[{"op":"nope"}]}'));
+  await expect(a.page.getByTestId('drop-error')).toContainText('isn’t a Réussite change-set');
+  expect(requests).toEqual([]);
+  // a good change-set for a list that isn't on the relay: it tries, and says so
+  await open(addr + 'j.' + encodeURIComponent(JSON.stringify(cs('x'))));
+  await expect(a.page.getByTestId('drop-error')).toContainText('isn’t on the relay');
+  await a.page.getByTestId('drop-open-app').click();
+  await expect(a.page.getByTestId('drop-page')).toBeHidden();
+  await a.ctx.close();
+});

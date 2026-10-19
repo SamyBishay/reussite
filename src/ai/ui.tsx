@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
 import { projects, decisions, toast } from '../app/store';
-import { t } from '../i18n';
+import { t, lang } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, contextPack, type Scope } from './context';
-import { parseChangeSet } from './changeset';
+import { parseChangeSet, readChangeSet } from './changeset';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { openChangeReview } from './Review';
+import { dropBase } from '../app/sync';
+import { parseDropFragment } from '../sync/droplink';
 
 /** Shown above any open sheet while a request waits for Send. Mount once, in App. */
 export function PreviewHost() {
@@ -107,7 +109,7 @@ function AskAny({ scope: s0, question: q0 }: { scope: Scope; question: string })
   const [copied, setCopied] = useState(false);
   const ps = [...projects.value.values()].filter(p => p.status === 'active' || p.status === 'paused');
   const ds = [...decisions.value.values()].filter(d => d.status !== 'closed');
-  const pack = contextPack(scope, q || t('askAnyDefaultQ'));
+  const pack = contextPack(scope, q || t('askAnyDefaultQ'), lang.value, dropBase.value);
   const val = scope.kind === 'project' || scope.kind === 'decision' ? scope.kind + ':' + scope.id : scope.kind;
   const pick = (v: string) => { const [k, id] = v.split(':'); setScope(id ? ({ kind: k, id } as Scope) : ({ kind: k } as Scope)); };
   const doCopy = async () => { const ok = await copy(pack); setCopied(ok); toast(ok ? t('packCopied') : t('packCopyBlocked')); };
@@ -144,9 +146,11 @@ const PASTE_ERR = { noJson: 'pasteNoBlock', invalid: 'pasteInvalid', version: 'p
 function Paste() {
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
-  const go = (e: Event) => {
+  const go = async (e: Event) => {
     e.preventDefault();
-    const r = parseChangeSet(text);
+    // A one-tap link pasted instead of a block: read it the same way the drop page does.
+    const link = /\/drop#([^\s<>"')\]]+)/.exec(text)?.[1];
+    const r = link ? await parseDropFragment(link).then(d => readChangeSet(d.json), () => ({ ok: false as const, error: 'invalid' as const })) : parseChangeSet(text);
     if (!r.ok) { setErr(t(PASTE_ERR[r.error])); return; }
     setErr('');
     openChangeReview(r.cs);

@@ -23,3 +23,6 @@ export function shortChangeset(doc: string): string {
 {"v": 1, "changes": [{"op": "task.create", "set": {"title": "Choir, Hill House 602", "due": "2026-10-26", "at": "19:00", "dur": 90}}]}
 \`\`\``;
 }
+
+/** The contract an AI is given: the document without its "one-tap link" section, which is for the person's own app. */
+export const contractOf = (doc: string): string => doc.split(/\n## The one-tap link/)[0]!.trim();

@@ -10,6 +10,10 @@ import { makeBackup, type BackupFile } from '../data/backup';
 import { SYNCED_COLLECTIONS, collectOutgoing } from '../sync/engine';
 import { RelayClient, RelayError } from '../sync/client';
 import { DecryptError } from '../sync/crypto';
+import { deriveInbox, InboxError, openFromInbox, type InboxKeys } from '../sync/inbox';
+import { dropPrefix } from '../sync/droplink';
+import type { ConnectorStatus } from '../sync/protocol';
+import { readChangeSet, type ChangeSet } from '../ai/changeset';
 import { b64uDecode, b64uEncode, type Bytes } from '../sync/bytes';
 import { decodeRecoveryKey, deriveKeys, encodeRecoveryKey, generateKey, type SpaceKeys } from '../sync/keys';
 import { INITIAL_STATE, syncOnce, type SyncState } from '../sync/run';
@@ -20,6 +24,7 @@ import { logError } from './errorlog';
 const K = {
   key: 'sync.key', saved: 'sync.keySaved', last: 'sync.lastAt', err: 'sync.lastError', full: 'sync.full',
   name: 'sync.deviceName', touched: 'sync.touchedAt', devices: 'sync.deviceCount',
+  conOn: 'connector.on', conUsed: 'connector.lastUsed',
   backupAt: 'backup.lastAt', backupSnooze: 'backup.snoozedAt', firstSeen: 'app.firstSeen',
 } as const;
 const DAY = 86_400_000;
@@ -43,7 +48,17 @@ export const devices = signal<DeviceInfo[] | null>(null);
 /** Sync is off and it has been two weeks since a backup file was saved (or the reminder put off). */
 export const backupDue = signal(false);
 
-let session: { recovery: Bytes; keys: SpaceKeys } | null = null;
+/** The key has been read from storage (or there is none): what the drop page waits for before it decides. */
+export const syncLoaded = signal(false);
+/** The connector's state as the relay last said. Null until asked. */
+export const connector = signal<ConnectorStatus | null>(null);
+/** Change-sets left in the inbox (by the one-tap link on another browser), waiting for the person's ticks. */
+export interface InboxDrop { id: string; cs: ChangeSet }
+export const inboxQueue = signal<InboxDrop[]>([]);
+/** `https://<app>/drop#<space>.<inbox key>.`: the start of every one-tap link for this person. Null with sync off, or where the browser has no X25519. */
+export const dropBase = signal<string | null>(null);
+
+let session: { recovery: Bytes; keys: SpaceKeys; inbox?: InboxKeys | null } | null = null;
 const store = dexieSyncStore(db, getClock, putMerged);
 
 /** The relay address if it is one we can use: https, or http on this computer. */
@@ -92,6 +107,7 @@ export async function syncNow(): Promise<void> {
       lastSyncAt.value = at; syncError.value = null; failures = 0;
       await setLocal(db, K.last, at); await setLocal(db, K.err, null);
       void touch();
+      void pullInbox();
     } while (again);
   } catch (e) {
     if (full) await setLocal(db, K.full, true).catch(() => undefined);
@@ -130,6 +146,7 @@ async function touch(force = false) {
     await client().touchDevice(getClock().node, name);
     await setLocal(db, K.touched, Date.now());
     await refreshDevices();
+    await refreshConnector();
   } catch (e) { void logError(e, 'sync-devices'); }
 }
 
@@ -147,12 +164,101 @@ export async function renameDevice(name: string) {
   await touch(true);
 }
 
+// ---------- the connector (docs/dev/connector.md)
+
+/** Ask the relay whether the connector is on and when it was last used. Keeps a copy for diagnostics. */
+export async function refreshConnector(): Promise<ConnectorStatus | null> {
+  if (!session) return null;
+  const st = await client().connectorStatus();
+  connector.value = st;
+  await setLocal(db, K.conOn, st.on); await setLocal(db, K.conUsed, st.lastUsed);
+  return st;
+}
+
+/** Switch it on: the relay gets the space's key. Returns the first pairing code (shown once) and the address to add. */
+export async function connectorOn(): Promise<{ code: string; expires: number }> {
+  if (!session) throw new Error('sync is off');
+  const r = await client().connectorOn();
+  connector.value = { on: true, lastUsed: null, url: r.url };
+  await setLocal(db, K.conOn, true); await setLocal(db, K.conUsed, null);
+  void refreshDevices().catch(() => undefined);
+  return { code: r.code, expires: r.expires };
+}
+
+export async function connectorNewCode(): Promise<{ code: string; expires: number }> {
+  if (!session) throw new Error('sync is off');
+  return client().connectorCode();
+}
+
+/** Switch it off: the relay deletes the key and every AI app is signed out. */
+export async function connectorOff(): Promise<void> {
+  if (!session) throw new Error('sync is off');
+  await client().connectorOff();
+  connector.value = { on: false, lastUsed: null, url: connector.value?.url ?? '' };
+  await setLocal(db, K.conOn, false); await setLocal(db, K.conUsed, null);
+  void refreshDevices().catch(() => undefined);
+}
+
+// ---------- the inbox (the one-tap link on a browser that holds nothing)
+
+const queued = new Set<string>(); // every item seen this session, so none is shown twice
+const toDelete = new Set<string>(); // reviewed, but the relay could not be told yet
+let inboxAt = 0;
+const INBOX_EVERY = 5_000;
+
+/** Fetch the inbox, open what is ours, and queue each change-set for review. Items that aren't ours are deleted from the relay. */
+async function pullInbox(): Promise<void> {
+  if (!session || Date.now() - inboxAt < INBOX_EVERY) return;
+  inboxAt = Date.now();
+  try {
+    const keys = await inboxKeys();
+    if (!keys) return;
+    const c = client();
+    for (const id of [...toDelete]) { await c.deleteInboxItem(id); toDelete.delete(id); }
+    const found: InboxDrop[] = [];
+    for (const item of await c.inbox()) {
+      if (queued.has(item.id)) continue;
+      queued.add(item.id);
+      let cs: ChangeSet | null = null;
+      try {
+        const r = readChangeSet(await openFromInbox(session.keys.spaceId, keys, item.blob));
+        if (r.ok) cs = r.cs;
+      } catch (e) {
+        if (!(e instanceof InboxError)) throw e;
+      }
+      if (cs) found.push({ id: item.id, cs }); else await c.deleteInboxItem(item.id); // not for this key, or not a change-set: nobody can use it
+    }
+    if (found.length) inboxQueue.value = [...inboxQueue.value, ...found];
+  } catch (e) {
+    void logError(e, 'inbox');
+  }
+}
+
+/** The person has applied or dismissed this drop: take it off the queue and off the relay. */
+export async function finishDrop(id: string): Promise<void> {
+  inboxQueue.value = inboxQueue.value.filter(d => d.id !== id);
+  toDelete.add(id);
+  try { await client().deleteInboxItem(id); toDelete.delete(id); } catch (e) { void logError(e, 'inbox'); }
+}
+
 // ---------- switching on and off
 
 async function open(recovery: Bytes) {
   session = { recovery, keys: await deriveKeys(recovery) };
   syncOn.value = true;
+  const inbox = await inboxKeys();
+  dropBase.value = inbox ? new URL('./drop', globalThis.document?.baseURI ?? 'https://app.invalid/').href + '#' + dropPrefix({ space: session.keys.spaceId, pub: inbox.publicKey }) : null;
 }
+
+/** The inbox key pair, the same on every device that holds the recovery key. Null where the browser has no X25519. */
+async function inboxKeys(): Promise<InboxKeys | null> {
+  if (!session) return null;
+  if (session.inbox === undefined) session.inbox = await deriveInbox(session.recovery).catch(() => null);
+  return session.inbox;
+}
+
+/** The space this browser syncs with, if any: the drop page opens the review at once when a link is for it. */
+export const spaceId = (): string | null => session?.keys.spaceId ?? null;
 
 /** First device: make a key, keep it here, start pushing. Returns the recovery key to show. */
 export async function setupSync(): Promise<string> {
@@ -203,8 +309,9 @@ export const recoveryKeyText = (): string => (session ? encodeRecoveryKey(sessio
 export async function turnOffSync() {
   clearTimeout(debounce); clearTimeout(retry);
   session = null;
-  for (const k of [K.key, K.saved, K.last, K.err, K.full, K.touched, K.devices, STATE_KEY]) await db.local.delete(k);
+  for (const k of [K.key, K.saved, K.last, K.err, K.full, K.touched, K.devices, K.conOn, K.conUsed, STATE_KEY]) await db.local.delete(k);
   syncOn.value = false; keySaved.value = true; lastSyncAt.value = null; syncError.value = null; spaceGone.value = false; devices.value = null;
+  connector.value = null; inboxQueue.value = []; dropBase.value = null; queued.clear(); toDelete.clear(); inboxAt = 0;
 }
 
 /** Delete the space on the relay, then forget the key. Other devices find the space gone and pause. */
@@ -268,6 +375,10 @@ export async function startSync() {
     'paired devices': (await getLocal<number>(db, K.devices)) ?? null,
     'last error': (await getLocal<string | null>(db, K.err)) ?? 'none',
   }));
+  registerDiagnostics('connector', async () => ({
+    state: session ? ((await getLocal<boolean>(db, K.conOn)) ? 'on' : 'off') : 'off',
+    'last used': (await getLocal<number | null>(db, K.conUsed)) ? new Date((await getLocal<number>(db, K.conUsed))!).toISOString() : null,
+  }));
   deviceName.value = (await getLocal<string>(db, K.name)) ?? '';
   lastSyncAt.value = (await getLocal<number>(db, K.last)) ?? null;
   syncError.value = (await getLocal<string | null>(db, K.err)) ?? null;
@@ -276,6 +387,7 @@ export async function startSync() {
     keySaved.value = (await getLocal<boolean>(db, K.saved)) ?? true;
     await open(b64uDecode(saved));
   }
+  syncLoaded.value = true;
   await checkBackupDue();
   onLocalWrite(() => requestSync());
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { void syncNow(); void checkBackupDue(); } });

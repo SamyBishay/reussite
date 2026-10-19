@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { tasks, projects } from '../app/store';
-import { contextPack, commandPrompt, systemPrompt, methodSummary, calibrationLine, MAX_STEPS } from './context';
+import { contextPack, changesetContract, dropInstruction, commandPrompt, systemPrompt, methodSummary, calibrationLine, MAX_STEPS } from './context';
 import type { Task } from '../data/schema';
 
 const task = (i: number): Task & { id: string } => ({
@@ -31,5 +31,23 @@ describe('prompt building', () => {
     expect(methodSummary()).not.toContain('## Starters');
     expect(systemPrompt('X', 'fr')).toMatch(/Answer in French\.$/);
     expect(calibrationLine()).toMatch(/^Calibration: not enough timed steps yet/);
+  });
+  it('asks for the block without a drop address, and for the one-tap link with one', () => {
+    const base = 'https://app.example/drop#' + 'S'.repeat(22) + '.' + 'K'.repeat(43) + '.';
+    const plain = contextPack({ kind: 'today' }, 'What first?');
+    expect(plain).toContain('end your reply with one fenced code block labelled reussite');
+    expect(plain).not.toContain('/drop#');
+    const link = contextPack({ kind: 'today' }, 'What first?', 'en', base);
+    expect(link).toContain(base + 'z.DATA');
+    expect(link).toContain(base + 'j.JSON');
+    expect(link).toContain('8,000');
+    expect(link).toContain('fenced reussite code block'); // the fallback over the size
+    expect(link).not.toContain('end your reply with one fenced code block labelled reussite that holds');
+    expect(dropInstruction(base)).toContain('raw deflate');
+  });
+  it('never tells an AI about the link section of CHANGESET.md', () => {
+    expect(changesetContract()).toContain('task.create');
+    expect(changesetContract()).not.toContain('one-tap');
+    expect(changesetContract()).not.toContain('X25519');
   });
 });

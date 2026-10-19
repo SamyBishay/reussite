@@ -6,9 +6,35 @@ import { settings, saveSettings, toast } from '../app/store';
 import { t } from '../i18n';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
 import { ask, getKey, setKey, forgetSeen } from './ask';
+import { dropMemoryLine } from './context';
+import { dropBase, syncOn } from '../app/sync';
 
 const set = (p: Parameters<typeof saveSettings>[0]) => void saveSettings(p);
 const TEST_SCHEMA = z.object({ ok: z.literal(true) });
+
+/** The drop address and the sentence to paste once into an AI (the one-tap link, docs/CHANGESET.md). */
+function DropAddress() {
+  const base = dropBase.value;
+  const sentence = base ? dropMemoryLine(base) : '';
+  const copy = () => navigator.clipboard?.writeText(sentence).then(() => toast(t('dropCopied')), () => undefined);
+  return (
+    <div class="field" data-testid="drop-section"><span>{t('dropSection')}</span>
+      <p class="hint" style="margin:0">{t('dropHint')}</p>
+      {!syncOn.value ? <p class="hint" data-testid="drop-needs-sync">{t('dropNeedsSync')}</p>
+        : !base ? <p class="hint">{t('dropUnsupported')}</p>
+        : (
+          <>
+            <p class="field-label">{t('dropAddress')}</p>
+            <p class="urlbox mono" data-testid="drop-address">{base}</p>
+            <small class="hint">{t('dropAddressHint')}</small>
+            <p class="field-label">{t('dropPaste')}</p>
+            <pre class="ai-pre" data-testid="drop-sentence">{sentence}</pre>
+            <div class="actions"><button class="btn" type="button" onClick={copy} data-testid="drop-copy">{t('dropCopy')}</button></div>
+          </>
+        )}
+    </div>
+  );
+}
 
 export function AiSettings() {
   const s = settings.value;
@@ -76,6 +102,7 @@ export function AiSettings() {
         <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
       </div>
       <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>
+      <DropAddress />
     </section>
   );
 }

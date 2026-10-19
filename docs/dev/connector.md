@@ -83,7 +83,7 @@ Every call updates `connector.last_used` in the same statement that checks the c
 
 ## What the relay can read while the connector is on
 
-The whole list: the relay holds the space's key (wrapped; unwrapped in memory for each call) and decrypts it to answer. It also keeps, encrypted with that key, the change-sets waiting for a yes and the undo records. The wrap key (`CONNECTOR_WRAP_KEY`, a Worker secret) never leaves the Worker. Whoever runs the relay could read the space during this time, and only a new recovery key fully undoes having shared it. Switching off deletes the key, the codes, the pending and undo records, and revokes every token. The privacy note in the app says this in plain words (app side).
+The whole list: the relay holds the space's key (wrapped; unwrapped in memory for each call) and decrypts it to answer. It also keeps, encrypted with that key, the change-sets waiting for a yes and the undo records. The wrap key (`CONNECTOR_WRAP_KEY`, a Worker secret) never leaves the Worker. Whoever runs the relay could read the space during this time, and only a new recovery key fully undoes having shared it. Switching off deletes the key, the codes, the pending and undo records, and revokes every token. The privacy note in the app says this in plain words, and Settings → Connector (`src/app/ConnectorSettings.tsx`) says it before the button and again in the confirmation. The app asks `GET …/connector` when Settings opens and every ten minutes, keeps `on` and `lastUsed` in `local` for the diagnostics `[connector]` section, and shows the relay's `connector` device row with its last use instead of the row's own `last_seen`.
 
 ## CPU on the free plan
 

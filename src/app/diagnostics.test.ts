@@ -33,6 +33,7 @@ describe('diagnostics', () => {
     expect(out).toContain('rateLimit 429');
     expect(out).toContain('devices: 3');
     expect(out).toContain('[push]\nnot set up');
+    expect(out).toContain('[connector]\noff');
   });
 
   it('keeps only the last 50 errors', async () => {

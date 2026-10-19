@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { saveSettings, settings, toast, readOnly, tasks, getClock } from './store';
 import { openSheet, closeSheet } from './sheet';
 import { QrCode, QrScanner } from './qr';
-import { backupDue, backupText, confirmKeySaved, deleteEverywhere, deviceName, devices, joinSync, keySaved, lastSyncAt, probeKey, recoveryKeyText, refreshDevices, relayBase, renameDevice, setupSync, snoozeBackupReminder, spaceGone, syncBusy, syncError, syncNow, syncOn, turnOffSync, defaultDeviceName } from './sync';
+import { connector, backupDue, backupText, confirmKeySaved, deleteEverywhere, deviceName, devices, joinSync, keySaved, lastSyncAt, probeKey, recoveryKeyText, refreshDevices, relayBase, renameDevice, setupSync, snoozeBackupReminder, spaceGone, syncBusy, syncError, syncNow, syncOn, turnOffSync, defaultDeviceName } from './sync';
 import { RecoveryKeyError } from '../sync/keys';
 import { RelayError } from '../sync/client';
 import { saveFile } from '../data/backup';
@@ -138,6 +138,7 @@ function TurnOffSheet() {
     <div class="flow" data-testid="sync-off-sheet">
       <h3>{t('syncTurnOff')}</h3>
       <p>{t('syncTurnOffBody')}</p>
+      {connector.value?.on && <p class="warnline" data-testid="sync-off-connector">{t('syncTurnOffConnector')}</p>}
       <label class="tog"><input type="checkbox" checked={ok} onChange={e => setOk((e.target as HTMLInputElement).checked)} data-testid="sync-off-saved" /> {t('syncTurnOffSaved')}</label>
       <div class="actions">
         <button class="btn primary" type="button" disabled={!ok} data-testid="sync-off-confirm" onClick={async () => { await turnOffSync(); closeSheet(); toast(t('syncTurnedOff')); }}>{t('syncTurnOffConfirm')}</button>
@@ -206,7 +207,10 @@ function Devices() {
       </label>
       {list && list.length ? (
         <ul class="devlist">
-          {list.map(d => <li><b>{d.name ?? '—'}</b>{d.device === getClock().node ? ' · ' + t('syncThisDevice') : ''} <small class="hint">{t('syncLastSeen', { when: when(d.lastSeen) })}</small></li>)}
+          {list.map(d => d.device === 'connector'
+            // The relay's own row: it is stamped when the connector is switched on, so show real use instead.
+            ? <li data-testid="device-connector"><b>{t('connectorDevice')}</b> <small class="hint">{connector.value?.lastUsed ? t('connectorLastUsed', { when: when(connector.value.lastUsed) }) : t('connectorNeverUsed')}</small></li>
+            : <li><b>{d.name ?? '—'}</b>{d.device === getClock().node ? ' · ' + t('syncThisDevice') : ''} <small class="hint">{t('syncLastSeen', { when: when(d.lastSeen) })}</small></li>)}
         </ul>
       ) : <p class="hint">{t('syncNoDevices')}</p>}
     </div>

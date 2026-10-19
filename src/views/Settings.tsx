@@ -15,6 +15,7 @@ import { addDays } from '../domain/dates';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
+import { ConnectorSettings } from '../app/ConnectorSettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
 
 const set = (p: Partial<S>) => void saveSettings(p);
@@ -340,6 +341,7 @@ export function Settings() {
       <Method />
       <AiSettings />
       <SyncSettings />
+      <ConnectorSettings />
       <Data />
       <section class="set" data-testid="about">
         <h2>{t('about')}</h2>
@@ -347,6 +349,11 @@ export function Settings() {
         <div class="actions"><DiagnosticsButton ghost={false} /></div>
         {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
         <p class="hint">{t('notTherapy')}</p>
+        <div data-testid="privacy"><h3 class="privacy-h">{t('privacyTitle')}</h3>
+          <p>{t('privacyRelay')}</p>
+          <p>{t('privacyAi')}</p>
+          <p>{t('privacyLoss')}</p>
+        </div>
         <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
       </section>
     </div>

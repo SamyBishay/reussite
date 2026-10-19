@@ -4,20 +4,13 @@ import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minu
 import { projects } from './store';
 import type { Day, Launch, Place, Project, Session, SessionSource, Stay, Task } from '../data/schema';
 import { addDays } from '../domain/dates';
-import { nextDue } from '../domain/repeat';
-import { dueBeforeEnd } from '../domain/places';
+import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
 
 const nowISO = () => new Date().toISOString();
 
-export function newTaskDoc(title: string, suit: Task['suit'] | null, project: string | null, extra: Partial<Task> = {}): Task {
-  const p = projects.value.get(project ?? '') ?? ({} as Partial<WithId<{ suit: Task['suit']; where: string }>>);
-  return {
-    title, suit: suit || p.suit || 'S', project: project || 'inbox', kind: 'task', urgent: false, important: true, due: null,
-    est: null, est0: null, estBy: null, status: 'open', doneDay: null, doneAt: null, started: null, resume: null, carried: 0,
-    where: p.where || 'any', template: false, note: '', order: Date.now(), created: nowISO(), src: 'page', ...extra,
-  };
-}
+export const newTaskDoc = (title: string, suit: Task['suit'] | null, project: string | null, extra: Partial<Task> = {}): Task =>
+  newTaskFields(title, suit, project, extra, projects.value, nowISO(), Date.now());
 export const createTask = (doc: Task) => createDoc('tasks', doc);
 export const patchTask = (id: string, p: Partial<Task>) => update<Task>('tasks', id, p);
 
@@ -64,10 +57,8 @@ export interface Finished { last: boolean; projectDone: string | null; nextId: s
 export async function finishTask(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
   const wasLast = rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0;
-  const patch: Partial<Task> = { status: 'done', doneAt: day === k ? nowISO() : day + 'T12:00:00.000Z', doneDay: day, resume: null, started: null, stillAt: null };
-  if (tk.started) await addSession(tk.id, minutes ?? Math.max(1, Math.round(elapsedSec(tk) / 60)), 'done', minutes != null ? 'corrected' : 'timer', day);
-  else if (typed && typed > 0) await addSession(tk.id, typed, 'done', 'typed', day);
-  if (tk.est0 == null && tk.est) patch.est0 = tk.est;
+  const { patch, session } = finishEffects(tk, { today: k, day, nowIso: nowISO(), nowMs: Date.now(), typed, minutes });
+  if (session) await addSession(tk.id, session.m, session.why, session.source, session.d);
   await patchTask(tk.id, patch);
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
@@ -76,10 +67,7 @@ export async function finishTask(tk: Tk, typed: number | null, day = today.value
 
 /** A project whose real steps are all done moves to the Completed shelf. */
 async function maybeCompleteProject(pid: string): Promise<string | null> {
-  const p = projects.value.get(pid);
-  if (!p || pid === 'inbox' || p.status === 'done') return null;
-  const real = [...tasks.value.values()].filter(x => x.project === pid && !x.template && x.status !== 'dropped');
-  if (real.length < 2 || real.some(x => x.status === 'open')) return null;
+  if (!projectCompletes(pid, projects.value, tasks.value.values())) return null;
   await update<Project>('projects', pid, { status: 'done', doneAt: nowISO() });
   return pid;
 }
@@ -99,15 +87,10 @@ export async function dropTask(id: string) {
 // ---------- repeating steps ----------
 /** Create the next occurrence once; returns its id, or null when the series has ended. */
 export async function createNext(tk: Tk, day: string): Promise<string | null> {
-  if (!tk.repeat) return null;
-  const existing = [...tasks.value.values()].find(x => x.prev === tk.id && x.status !== 'dropped');
-  if (existing) return existing.id;
-  const due = nextDue(tk.repeat, tk.due, day);
-  if (!due) return null;
-  const keep: (keyof Task)[] = ['title', 'starter', 'est', 'estBy', 'project', 'where', 'app', 'link', 'prompt', 'suit', 'important', 'kind', 'repeat', 'at', 'dur', 'note'];
-  const extra: Partial<Task> = {};
-  for (const k of keep) if (tk[k] !== undefined) (extra as Record<string, unknown>)[k] = tk[k];
-  return createTask(newTaskDoc(tk.title, tk.suit, tk.project, { ...extra, due, prev: tk.id, est0: null, src: 'repeat' }));
+  const next = nextOccurrence(tk, day, tasks.value.values());
+  if (!next) return null;
+  if ('existing' in next) return next.existing;
+  return createTask(newTaskDoc(tk.title, tk.suit, tk.project, next.fields));
 }
 /** "Skip this time": drop this occurrence and create the next. */
 export async function skipThisTime(id: string) {
@@ -255,9 +238,5 @@ export const removeStay = (id: string) => removeDoc('stays', id);
 /** "Before I leave" steps move with their stay's dates, so they turn urgent on their own. */
 export async function syncDueRules(stayId: string, s: Pick<Stay, 'to'> | undefined = stays.value.get(stayId)) {
   if (!s) return;
-  for (const x of tasks.value.values()) {
-    if (x.status !== 'open' || x.dueRule?.beforeEndOf !== stayId) continue;
-    const due = dueBeforeEnd(s, x.dueRule.daysBefore);
-    if (x.due !== due) await patchTask(x.id, { due });
-  }
+  for (const x of dueRulePatches(stayId, s, tasks.value.values())) await patchTask(x.id, { due: x.due });
 }

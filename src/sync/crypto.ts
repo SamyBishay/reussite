@@ -52,6 +52,18 @@ export async function decryptJson<T = unknown>(keys: Sealer, blob: Uint8Array): 
   return JSON.parse(fromUtf8(body)) as T;
 }
 
+/** Does the blob decrypt under these keys? No decompression, no parsing: a cheap "right key, right space?" check. */
+export async function authenticates(keys: Sealer, blob: Uint8Array): Promise<boolean> {
+  const format = blob[0];
+  if ((format !== FORMAT_PLAIN && format !== FORMAT_GZIP) || blob.length < 1 + IV_BYTES + 16) return false;
+  try {
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv: blob.slice(1, 1 + IV_BYTES), additionalData: aad(format, keys.spaceId) }, keys.encKey, blob.slice(1 + IV_BYTES));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** The same, as base64url text: how blobs travel in the relay's JSON. */
 export const sealToText = async (keys: Sealer, value: unknown): Promise<string> => b64uEncode(await encryptJson(keys, value));
 export const openFromText = <T = unknown>(keys: Sealer, text: string): Promise<T> => decryptJson<T>(keys, b64uDecode(text));

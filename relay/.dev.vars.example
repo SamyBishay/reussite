@@ -1,0 +1,4 @@
+# Copy to .dev.vars (gitignored) for `npm run dev`. Never commit real values.
+# 32 random bytes, base64:  openssl rand -base64 32
+CONNECTOR_WRAP_KEY=
+RELAY_URL=http://localhost:8787

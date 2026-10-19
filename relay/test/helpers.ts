@@ -21,7 +21,7 @@ export async function call(method: string, path: string, keys: SpaceKeys, o: Cal
   if (o.origin) headers.Origin = o.origin;
   headers['CF-Connecting-IP'] = o.ip ?? 'ip-' + Math.random().toString(36).slice(2);
   const req = new Request(BASE + path, { method, headers, body: o.body === undefined ? undefined : JSON.stringify(o.body) });
-  const res = o.env ? await handle(req, { ...(env as Env), ...o.env }) : await exports.default.fetch(req);
+  const res = o.env ? await handle(req, { ...(env as unknown as Env), ...o.env }) : await exports.default.fetch(req);
   const text = await res.text();
   return { status: res.status, body: text ? JSON.parse(text) : null, headers: res.headers };
 }

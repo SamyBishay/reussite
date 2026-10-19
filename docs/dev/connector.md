@@ -9,7 +9,7 @@ AI app ──OAuth 2.1 + DCR──▶ /oauth/register, /authorize (pairing code)
        ──Bearer token──────▶ /mcp  (Streamable HTTP, stateless, JSON responses)
                                 │ props {spaceId}
                                 ▼
-                  decrypt snapshot + later batches ──▶ tools ──▶ one encrypted batch, device "connector"
+                  decrypt the snapshot's hot part + later batches ──▶ tools ──▶ one encrypted batch, device "connector"
 ```
 
 - `@cloudflare/workers-oauth-provider` (pinned) sits in front of the Worker. It owns `/oauth/*`, the discovery documents (`/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource/mcp`) and token checks; storage is the KV namespace `OAUTH_KV`. Everything else goes to `handle` in `relay/src/index.ts`.
@@ -77,7 +77,7 @@ Reverts one applied change-set by its undo id. Each document the change-set touc
 
 ## The connector as a device
 
-Its node id is `connector`; its clock is kept per space in D1 (`connector.hlc_wall`, `hlc_counter`) and is moved past every timestamp it reads, so a phone with a fast clock can't make the connector's writes lose against older values. It writes with the same document functions as the app (`create`, `patch`, `remove` in `src/data/doc.ts`), collects what to send with `collectOutgoing` (every field whose clock carries its node and is above the clock it started from), and appends the batch through the same code path as `POST /batches` (`appendBatch`: sequence number, per-space rate limit). Batches and snapshots are read with `loadSpace` (`relay/src/connector/space.ts`): the snapshot goes straight into maps (it has each document once), later batches are folded in with `applyIncoming`. A document from a newer schema than the Worker's `SCHEMA_VERSION` makes every tool answer "update the relay" and write nothing.
+Its node id is `connector`; its clock is kept per space in D1 (`connector.hlc_wall`, `hlc_counter`) and is moved past every timestamp it reads, so a phone with a fast clock can't make the connector's writes lose against older values. It writes with the same document functions as the app (`create`, `patch`, `remove` in `src/data/doc.ts`), collects what to send with `collectOutgoing` (every field whose clock carries its node and is above the clock it started from), and appends the batch through the same code path as `POST /batches` (`appendBatch`: sequence number, per-space rate limit). The space is read with `loadSpace` (`relay/src/connector/space.ts`): the snapshot's **hot part** goes straight into maps (it has each document once), later batches are folded in with `applyIncoming`. The cold part is read (`loadCold`, merged under the hot documents) only when something needs it, see "What a call reads". A document from a newer schema than the Worker's `SCHEMA_VERSION` makes every tool answer "update the relay" and write nothing.
 
 Every call updates `connector.last_used` in the same statement that checks the connector is on. When it isn't, `/mcp` answers 403 with a message saying so (normally the token is already revoked and the answer is 401).
 
@@ -85,9 +85,34 @@ Every call updates `connector.last_used` in the same statement that checks the c
 
 The whole list: the relay holds the space's key (wrapped; unwrapped in memory for each call) and decrypts it to answer. It also keeps, encrypted with that key, the change-sets waiting for a yes and the undo records. The wrap key (`CONNECTOR_WRAP_KEY`, a Worker secret) never leaves the Worker. Whoever runs the relay could read the space during this time, and only a new recovery key fully undoes having shared it. Switching off deletes the key, the codes, the pending and undo records, and revokes every token. The privacy note in the app says this in plain words, and Settings → Connector (`src/app/ConnectorSettings.tsx`) says it before the button and again in the confirmation. The app asks `GET …/connector` when Settings opens and every ten minutes, keeps `on` and `lastUsed` in `local` for the diagnostics `[connector]` section, and shows the relay's `connector` device row with its last use instead of the row's own `last_seen`.
 
+## What a call reads
+
+A snapshot is in two parts, hot and cold (docs/dev/sync.md, "Hot and cold"). Hot holds what the common questions are about; cold holds finished history. A snapshot written before the split is one whole part and is read whole.
+
+| call | reads |
+| --- | --- |
+| `today`, `get_day` (a date in the hot window, 30 days back and all the future), `query_tasks` for open steps, `get_project`, `get_decision`, `get_task` by id for an open or recent step, `apply_changes` and `undo` on open or recent things | hot only |
+| `query_tasks` with `status` done, dropped or all; `get_day` for an older date; `get_task` by an id or title that isn't in hot; `apply_changes` naming a step that isn't in hot or a day or step that exists only in cold | hot, then cold |
+
+How it is done: a tool that finds it needs cold throws `NeedCold` before it has written anything, the wrapper in `tools.ts` reads cold and runs it again (a write starts from copies of the maps, so a run that stopped half way leaves nothing behind). Two things keep hot-only answers equal to whole-list answers (a test compares them): the hot header's **index** of cold ids says whether a document that a batch touched, or that a day or decision points to, also lives in cold, and then cold is read first; and its **digest** gives the personal estimate (steps done in the last 400 days, so older ones weigh under 1%) and "steps done" per project (`ColdDigest`; `View.cold`). Titles are looked up among hot steps first, and in cold only if none matches there.
+
+After a write the connector may cut the hot part again (`compact`): once 10 batches (`COMPACT_TAIL`) have piled up on it, if the cold part wasn't involved and the hot part is under 600 documents (`COMPACT_MAX_DOCS`; above that gzip alone takes more than the call has left), or at once when this call had to read cold and so holds the whole list. It never rewrites the cold part; the apps do, about weekly. `storeSnapshot` (`relay/src/sync.ts`) is the one place that writes a snapshot, for the HTTP route and for this.
+
 ## CPU on the free plan
 
-One call decrypts, gunzips and parses the whole snapshot before it can answer, which costs several times the free plan's 10 ms. `npm run relay:bench` measures it on a synthetic space (1,500 steps, 3,000 sessions, 200 days, 40 projects, 20 decisions). See DECISIONS.md for the numbers and the options. A connector-owned cache of the merged state would not help: it is as big as the snapshot and writing it costs more CPU than reading it.
+The free plan gives a request 10 ms of CPU. One call used to decrypt, gunzip and parse the whole snapshot (3.5 MB of JSON for a list of 1,500 steps and 3,000 sessions) and fold up to 50 batches, 25 to 45 ms. Four changes, in the order they were measured (`npm run relay:bench`, median ms of CPU on a laptop, Node's V8; database round trips not counted; `BENCH_SIZE=today` is the owner's list: 281 steps, 110 sessions; the default is the heavy one: 1,500 and 3,000):
+
+| | today's list, read | today's list, `today` | heavy, read | heavy, `today` |
+| --- | --- | --- | --- | --- |
+| whole snapshot, 30 batches (before) | 12.2 | 11.6 | 31.2 | 36.3 |
+| snapshot after 8 batches | 6.1 | 9.3 | 28.4 | 41.4 |
+| clocks on the wire as one base clock a document | 5.2 | 6.8 | 21.4 | 27.3 |
+| hot part only (the tool's own time also fell by memoising the view: it built an Intl formatter for every line it printed) | 2.7 | 2.3 | 6.1 | 9.2 |
+| warm isolate, the cache holds the merged list | 0.3 | 1.1 | 0.3 | 2.6 |
+
+What is left: on the heavy list the hot part is 583 steps and 485 sessions, 480 KB of JSON in 100 KB. Reading it is gunzip 1.3 ms, UTF-8 and `JSON.parse` 1.6 ms, rebuilding each document's `_hlc` 1.9 ms, the tail of 8 batches 0.8 ms; AES-GCM is 0.1 ms. So parsing and rebuilding dominate, not crypto. The tool's own work is 0.2 to 2 ms, the MCP layer 1.2 ms on top. The first call of a fresh process is slower (cold code: 8 to 15 ms at today's size, 20 to 35 at the heavy one). Rewriting the hot part (`compact`) costs 2.6 ms for today's list and 17 ms for the heavy one, mostly gzip, which is why the connector leaves it to the apps above 600 documents.
+
+**The cache.** A module-level LRU in the Worker isolate (`relay/src/connector/cache.ts`) keeps the decrypted, merged maps of up to 3 spaces (24 MB by a rough count), keyed by space and the wrapped key, with the highest seq they contain. A call that finds its space there reads only the batches after that seq (plus a small query that checks no newer snapshot folded batches away and the space still exists). It is an optimisation: a new isolate starts empty, and the benchmark reports the cold-isolate number (no cache) as the guarantee and the warm one apart. It holds plaintext in the isolate's memory only while the connector is on, which doesn't change the trust model: the relay already holds the key then, and everyone who can run the Worker can read the list as it is. An entry is dropped when the connector is switched off or the space deleted (in the isolate that handles that), when it is switched on again (the wrapped key differs), after 5 minutes idle, and to stay within its budget. Other isolates can't be reached from the one that handles the switch-off, but every call first runs the statement that checks the connector is on, so a stale entry there can never answer; it is gone with its isolate or after 5 idle minutes. A call that writes works on copies of the maps it changes, and a refused write leaves the cache alone.
 
 ## Running it
 

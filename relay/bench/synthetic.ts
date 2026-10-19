@@ -1,7 +1,7 @@
 // A synthetic space the size of a heavy user's list, for the connector's CPU benchmark and for
 // tests that want a realistic amount of data. Deterministic (a small PRNG), nothing personal.
-import { create, patch } from '../../src/data/doc';
-import { createClock, tick } from '../../src/data/hlc';
+import { create } from '../../src/data/doc';
+import { createClock, format, tick } from '../../src/data/hlc';
 import { DEFAULT_SETTINGS } from '../../src/data/settings';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import { addDays } from '../../src/domain/dates';
@@ -58,7 +58,11 @@ export function syntheticSpace(sizes: Sizes = HEAVY, today = '2026-10-19', node 
       started: null, resume: null, carried: Math.floor(r() * 3), where: 'any', template: false, note: r() < 0.3 ? words(10) : '', order: i, created: new Date(now).toISOString(),
       src: 'page', starter: r() < 0.5 ? words(3) : null, app: r() < 0.4 ? pick(['Mail', 'Calendar', 'Notes']) : null, link: null, prompt: null,
     }, SCHEMA_VERSION, at());
-    if (done) doc = patch(doc, { status: 'done', doneDay: day, doneAt: day + 'T10:00:00.000Z' }, clock, SCHEMA_VERSION);
+    if (done) {
+      // finished on `day`, so those fields carry a clock from that day, not from now
+      const h = format(Date.parse(day + 'T10:00:00Z'), 0, node);
+      doc = { ...doc, status: 'done', doneDay: day, doneAt: day + 'T10:00:00.000Z', _hlc: { ...doc._hlc, status: h, doneDay: h, doneAt: h } } as typeof doc;
+    }
     docs.tasks!.push(doc as unknown as StoredDoc);
   }
   const doneIds = docs.tasks!.filter(d => d.status === 'done').map(d => d.id);

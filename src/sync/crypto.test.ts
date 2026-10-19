@@ -18,6 +18,22 @@ describe('blobs', () => {
     expect(JSON.stringify(sample).length).toBeGreaterThan(big.length);
   });
 
+  it('generation 2 blobs carry format bytes 3 and 4, which every reader opens', async () => {
+    const k = await setup();
+    const big = await encryptJson(k, sample, { lean: true });
+    expect(big[0]).toBe(4);
+    expect(await decryptJson(k, big)).toEqual(sample);
+    const small = await encryptJson(k, { a: 1 }, { lean: true });
+    expect(small[0]).toBe(3);
+    expect(await decryptJson(k, small)).toEqual({ a: 1 });
+    const plain = await encryptJson(k, sample, { lean: true, plain: true });
+    expect(plain[0]).toBe(3);
+    expect(await decryptJson(k, plain)).toEqual(sample);
+    // the format byte is authenticated: flipping a generation 2 blob to generation 1 fails
+    const flipped = big.slice(); flipped[0] = 2;
+    await expect(decryptJson(k, flipped)).rejects.toThrow(DecryptError);
+  });
+
   it('uses a fresh IV every time', async () => {
     const k = await setup();
     const a = await encryptJson(k, sample), b = await encryptJson(k, sample);

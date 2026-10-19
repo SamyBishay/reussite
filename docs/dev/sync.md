@@ -17,12 +17,16 @@ HKDF-SHA256 with the salt `reussite/sync/v1` and these `info` strings gives:
 
 ## Blobs
 
-`[format byte][12-byte random IV][AES-GCM ciphertext + tag]`. Format 1 is JSON, format 2 is gzipped JSON (used from 128 bytes up when `CompressionStream` exists). Additional authenticated data is the format byte plus the space id, so a blob can't be moved to another space. On the wire a blob is base64url text.
+`[format byte][12-byte random IV][AES-GCM ciphertext + tag]`. Format 1 is JSON, format 2 is gzipped JSON (used from 128 bytes up when `CompressionStream` exists). Formats 3 and 4 are the same two with **wire generation 2** inside (below). The format byte is the version gate: an app from before generation 2 doesn't know 3 and 4, so it fails to open such a blob (a decrypt error, nothing applied) instead of misreading it; a current app reads all four. Additional authenticated data is the format byte plus the space id, so a blob can't be moved to another space. On the wire a blob is base64url text.
 
 ## What is encrypted
 
 - **Change batch**: `{ v, device, docs: [{ c: collection, d: partial doc }] }`. A partial doc is `{ id, _v, _hlc: {changed fields only}, ...those fields, _del? }`.
 - **Snapshot**: `{ v, upto, docs: { collection: [whole docs, tombstones included] } }`.
+
+### Wire generation 2: clocks
+
+A stored document has one HLC per field, about 27 characters each, 70% of a snapshot. On the wire (`src/sync/wire.ts`; the stored shape and `SCHEMA_VERSION` don't change) a document is `{ id, _v?, _del?, _h?: base, _o?: { field: clock | 0 }, ...fields }`: `_h` is the clock of every present field not listed in `_o`; `_o` gives the clock of the fields that differ, `0` for a field present with no clock, and a clock for a field the document doesn't hold (clocks with no value are kept); `_v` is left out when it equals the blob's `v`. A batch is `{ f: 2, v, device, docs }`, a snapshot `{ f: 2, v, upto, docs, … }`. `f` marks the generation; blobs without it (generation 1) hold whole documents and are still read. A document with a field named `_h` or `_o` is sent whole. Decoding rebuilds `_hlc` in place, so everything after it (merge, the engine, the connector) sees ordinary documents. Round-trip tests in `wire.test.ts` check tombstones, fields with no clock and clocks with no field, on thousands of random documents.
 
 Synced collections: everything in `COLLECTIONS` (schema.ts) including `meta` (settings). The `local` and `backups` tables never sync, so the sync key, the AI key and the push subscription can't enter a batch.
 

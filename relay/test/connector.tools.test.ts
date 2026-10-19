@@ -2,6 +2,7 @@
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { openFromText } from '../../src/sync/crypto';
+import { decodeBatch } from '../../src/sync/wire';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import type { ChangeBatch } from '../../src/sync/protocol';
 import { newApp, signIn, switchOn, tool, type App } from './connector';
@@ -19,7 +20,7 @@ let access: string;
 const batches = async () => (await env.DB.prepare('SELECT COUNT(*) AS n FROM batches WHERE space = ?').bind(app.keys.spaceId).first<{ n: number }>())!.n;
 const batchBodies = async () => {
   const rows = await env.DB.prepare('SELECT blob, device FROM batches WHERE space = ? ORDER BY seq').bind(app.keys.spaceId).all<{ blob: string; device: string }>();
-  return Promise.all(rows.results.map(async r => ({ device: r.device, batch: await openFromText<ChangeBatch>(app.keys, r.blob) })));
+  return Promise.all(rows.results.map(async r => ({ device: r.device, batch: decodeBatch(await openFromText(app.keys, r.blob)) })));
 };
 
 beforeAll(async () => {

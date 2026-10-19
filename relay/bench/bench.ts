@@ -23,6 +23,7 @@ import { View } from '../src/connector/view';
 import { docWriter, newId } from '../src/connector/writer';
 import { HEAVY, TODAY, syntheticSpace, type Sizes } from './synthetic';
 import { collectOutgoing } from '../../src/sync/engine';
+import { encodeBatch, encodeSnapshot } from '../../src/sync/wire';
 
 const BUDGET_MS = 7;
 const RUNS = 25;
@@ -50,7 +51,7 @@ async function prepare(sizes: Sizes, batchesAfter = TAIL) {
   const keys = await deriveKeys(key);
   const docs = syntheticSpace(sizes);
   const snapshot: Snapshot = { v: SCHEMA_VERSION, upto: 100, docs };
-  const snapBlob = await sealToText(keys, snapshot);
+  const snapBlob = await sealToText(keys, encodeSnapshot(snapshot), { lean: true });
   // Batches written by the app since: a few edits each, like a day of use.
   const clock = createClock('phone0002');
   clock.wall = Date.parse('2026-10-19T09:00:00Z');
@@ -62,9 +63,9 @@ async function prepare(sizes: Sizes, batchesAfter = TAIL) {
     const fresh = create('n' + i, { title: 'New step ' + i, project: 'p1', status: 'open', suit: 'S', est: 10, due: null, important: true, urgent: false, where: 'any', template: false, note: '', order: 1 }, SCHEMA_VERSION, tick(clock));
     const out = collectOutgoing({ tasks: [edited, fresh as never] }, 'phone0002', '');
     const batch: ChangeBatch = { v: SCHEMA_VERSION, device: 'phone0002', docs: out.docs };
-    rows.push({ seq: 101 + i, blob: await sealToText(keys, batch) });
+    rows.push({ seq: 101 + i, blob: await sealToText(keys, encodeBatch(batch), { lean: true }) });
   }
-  const json = JSON.stringify(snapshot);
+  const json = JSON.stringify(encodeSnapshot(snapshot));
   return { keys, snapBlob, rows, json, docs };
 }
 
@@ -108,7 +109,7 @@ export async function main() {
     const e = new Edits(s);
     await applyPlanned(plan, () => true, docWriter(e, v));
     const batch: ChangeBatch = { v: SCHEMA_VERSION, device: 'connector', docs: e.outgoing() };
-    return sealToText(keys, batch);
+    return sealToText(keys, encodeBatch(batch), { lean: true });
   };
   row('apply_changes (tick one done): read + plan + write', await time(quickEdit), true);
 

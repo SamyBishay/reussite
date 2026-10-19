@@ -8,6 +8,7 @@ import {
 } from './protocol';
 import { openFromText, sealToText } from './crypto';
 import { b64uEncode } from './bytes';
+import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from './wire';
 import type { SpaceKeys } from './keys';
 
 export class RelayError extends Error {
@@ -47,7 +48,7 @@ export class RelayClient {
 
   /** Encrypt and append a batch; returns its seq. Throws RelayError('too_large') before sending if over the cap. */
   async push(batch: ChangeBatch): Promise<number> {
-    const blob = await sealToText(this.keys, batch);
+    const blob = await sealToText(this.keys, encodeBatch(batch), { lean: true });
     if (blob.length > b64uLength(MAX_BATCH_BYTES)) throw new RelayError(413, 'too_large');
     const body: PushRequest = { device: batch.device, blob };
     return (await this.call<PushResponse>('POST', '/batches', body)).seq;
@@ -59,14 +60,14 @@ export class RelayClient {
     return {
       head: r.head,
       more: r.more,
-      snapshot: r.snapshot ? await openFromText<Snapshot>(this.keys, r.snapshot.blob) : null,
-      batches: await Promise.all(r.batches.map(async b => ({ seq: b.seq, at: b.at, batch: await openFromText<ChangeBatch>(this.keys, b.blob) }))),
+      snapshot: r.snapshot ? decodeSnapshot(await openFromText(this.keys, r.snapshot.blob)) : null,
+      batches: await Promise.all(r.batches.map(async b => ({ seq: b.seq, at: b.at, batch: decodeBatch(await openFromText(this.keys, b.blob)) }))),
     };
   }
 
   /** Store a snapshot; the relay drops the batches it covers. */
   async putSnapshot(snapshot: Snapshot): Promise<SnapshotResponse> {
-    const blob = await sealToText(this.keys, snapshot);
+    const blob = await sealToText(this.keys, encodeSnapshot(snapshot), { lean: true });
     if (blob.length > b64uLength(MAX_SNAPSHOT_BYTES)) throw new RelayError(413, 'too_large');
     const body: SnapshotRequest = { upto: snapshot.upto, blob };
     return this.call<SnapshotResponse>('PUT', '/snapshot', body);

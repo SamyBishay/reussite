@@ -3,7 +3,8 @@ import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { postToInbox, RelayClient, RelayError } from '../../src/sync/client';
 import { deriveInbox, InboxError, openFromInbox, sealToInbox } from '../../src/sync/inbox';
-import { DecryptError } from '../../src/sync/crypto';
+import { b64uDecode } from '../../src/sync/bytes';
+import { DecryptError, sealToText } from '../../src/sync/crypto';
 import { deriveKeys, decodeRecoveryKey, encodeRecoveryKey, generateKey } from '../../src/sync/keys';
 import { create } from '../../src/data/doc';
 import { ZERO } from '../../src/data/hlc';
@@ -109,6 +110,30 @@ describe('sync through the relay', () => {
     expect(a.dump()).toEqual(b.dump());
     expect(joined.get('tasks', 't1')!.title).toBe('B was here');
     expect(joined.get('tasks', 'tb')).toBeDefined();
+  });
+
+  it('reads batches and a snapshot written before generation 2', async () => {
+    const key = generateKey();
+    const keys = await deriveKeys(key);
+    const c = await clientFor(key);
+    const old = new FakeDevice('old');
+    old.add('tasks', 't1', { title: 'Written by an older app', est: 10 });
+    old.add('tasks', 't2', { title: 'Also old' });
+    const hdr = { Authorization: 'Bearer ' + keys.authSecret, 'Content-Type': 'application/json' };
+    const send = (path: string, method: string, body: unknown) => exports.default.fetch(new Request(BASE + `/v1/spaces/${keys.spaceId}${path}`, { method, headers: hdr, body: JSON.stringify(body) }));
+    // whole documents, format bytes 1 and 2, exactly as an app before this change wrote them
+    const docs = [...old.docs.get('tasks')!.values()];
+    expect((await send('/batches', 'POST', { device: 'old', blob: await sealToText(keys, { v: SCHEMA_VERSION, device: 'old', docs: [{ c: 'tasks', d: docs[0] }] }) })).status).toBe(201);
+    expect((await send('/batches', 'POST', { device: 'old', blob: await sealToText(keys, { v: SCHEMA_VERSION, device: 'old', docs: [{ c: 'tasks', d: docs[1] }] }) })).status).toBe(201);
+    expect((await send('/snapshot', 'PUT', { upto: 1, blob: await sealToText(keys, { v: SCHEMA_VERSION, upto: 1, docs: { tasks: [docs[0]] } }) })).status).toBe(200);
+    const fresh = new FakeDevice('new');
+    expect((await syncOnce(fresh, c)).pulled).toBe(2);
+    expect(fresh.dump().tasks).toEqual(old.dump().tasks);
+    // and what the new device writes is readable by another new device, in format byte 3 or 4
+    fresh.edit('tasks', 't1', { title: 'Edited' });
+    await syncOnce(fresh, c);
+    const raw = await env.DB.prepare('SELECT blob FROM batches WHERE space = ?1 ORDER BY seq DESC LIMIT 1').bind(keys.spaceId).first<{ blob: string }>();
+    expect([3, 4]).toContain(b64uDecode(raw!.blob)[0]);
   });
 
   it('a wrong key cannot read or write', async () => {

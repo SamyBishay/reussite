@@ -4,6 +4,7 @@
 // Nothing here knows about tools; tools.ts and the writer sit on top.
 import { b64uDecode } from '../../../src/sync/bytes';
 import { decryptJson, sealToText, type Sealer } from '../../../src/sync/crypto';
+import { decodeBatch, decodeSnapshot, encodeBatch } from '../../../src/sync/wire';
 import { applyIncoming, collectOutgoing, SYNCED_COLLECTIONS, type DocSet } from '../../../src/sync/engine';
 import { create, patch, remove } from '../../../src/data/doc';
 import { createClock, format, receive, tick, type Clock } from '../../../src/data/hlc';
@@ -51,7 +52,7 @@ export async function buildSpace(
   const out: Loaded = { space, keys, maps: emptyMaps(), head: 0, clock, newer: false };
 
   if (snapshotBlob) {
-    const snap = await decryptJson<Snapshot>(keys, b64uDecode(snapshotBlob));
+    const snap = decodeSnapshot(await decryptJson(keys, b64uDecode(snapshotBlob)));
     out.head = snap.upto;
     if (snap.v > SCHEMA_VERSION) out.newer = true;
     // Straight into the maps: a snapshot has each document once, so there is nothing to merge.
@@ -70,7 +71,7 @@ export async function buildSpace(
   }
 
   const entries: ChangeDoc[] = [];
-  for (const row of await Promise.all(batchRows.map(async r => ({ seq: r.seq, batch: await decryptJson<ChangeBatch>(keys, b64uDecode(r.blob)) })))) {
+  for (const row of await Promise.all(batchRows.map(async r => ({ seq: r.seq, batch: decodeBatch(await decryptJson(keys, b64uDecode(r.blob))) })))) {
     out.head = Math.max(out.head, row.seq);
     if (row.batch.v > SCHEMA_VERSION) out.newer = true;
     entries.push(...row.batch.docs);
@@ -162,7 +163,7 @@ export class Edits {
   async flush(env: Env): Promise<number | null> {
     const docs = this.outgoing();
     if (!docs.length) return this.s.head;
-    const blob = await sealToText(this.s.keys, { v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs } satisfies ChangeBatch);
+    const blob = await sealToText(this.s.keys, encodeBatch({ v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs }), { lean: true });
     if (blob.length > b64uLength(MAX_BATCH_BYTES)) throw new Error('This change is too big for one batch. Split it into smaller change-sets.');
     const seq = await appendBatch(env, this.s.space, CONNECTOR_DEVICE, blob);
     if (seq === null) return null;

@@ -1,6 +1,7 @@
 # What's new
 
 ## 2.0 — in progress
+- Copy diagnostics: in Settings → About, and on error screens, Réussite shows a short report (versions, device, errors) that you can copy to a friend when something breaks. It never includes your steps, notes, names, places or keys.
 - AI, if you want it: choose OpenRouter (or any OpenAI-compatible service) or Anthropic in Settings → AI and add your key. The key stays on this device.
 - Change the list in plain words: type "drop the games; the photos are due Friday" on Today, the Matrix or Projects, then tick the changes you want. Nothing is written until you confirm.
 - Ask any AI: copy a summary of the method and part of your list, with your question, into any chatbot. Paste its reply back and tick the changes you want.

@@ -12,6 +12,7 @@ import { makeBackup, parseBackup, restoreBackup, saveFile } from '../data/backup
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
 
 const set = (p: Partial<S>) => void saveSettings(p);
@@ -269,7 +270,7 @@ function ImportSheet() {
       <h3>{t('importTitle')}</h3>
       <p class="hint">{t('importHint')}</p>
       <div class="actions"><label class="btn">{t('chooseFile')}<input type="file" accept="application/json,.json" hidden onChange={choose} data-testid="import-file" /></label></div>
-      {err && <p class="err" style="margin-top:12px">{err}</p>}
+      {err && <><p class="err" style="margin-top:12px">{err}</p><div class="actions"><DiagnosticsButton /></div></>}
       {s && (
         <>
           <div class="counts" data-testid="import-summary">
@@ -338,6 +339,7 @@ export function Settings() {
       <section class="set" data-testid="about">
         <h2>{t('about')}</h2>
         <p class="hint">{t('version', { v: __APP_VERSION__ })}</p>
+        <div class="actions"><DiagnosticsButton ghost={false} /></div>
         {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
         <p class="hint">{t('notTherapy')}</p>
         <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>

@@ -8,5 +8,8 @@ import '@fontsource/atkinson-hyperlegible-mono/600.css';
 import './styles/tokens.css';
 import './styles/app.css';
 import { App } from './app/App';
+import { ErrorBoundary } from './app/Diagnostics';
+import { startErrorLog } from './app/errorlog';
 
-render(<App />, document.getElementById('root')!);
+startErrorLog();
+render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('root')!);

@@ -6,6 +6,7 @@ import { t } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, contextPack, type Scope } from './context';
 import { parseChangeSet } from './changeset';
+import { DiagnosticsButton } from '../app/Diagnostics';
 import { openChangeReview } from './Review';
 
 /** Shown above any open sheet while a request waits for Send. Mount once, in App. */
@@ -47,6 +48,7 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
       <p class="err">{message}</p>
       <div class="actions" style="margin-top:6px">
         {manual && <button class="btn small" type="button" onClick={manual}>{manualLabel ?? t('aiManual')}</button>}
+        <DiagnosticsButton />
         {toSettings && <button class="btn small ghost" type="button" onClick={() => { closeSheet(); location.hash = '#settings'; }}>{t('aiOpenSettings')}</button>}
       </div>
     </div>

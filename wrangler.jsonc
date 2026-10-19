@@ -1,0 +1,11 @@
+// The app: the static files `npm run build` writes to `dist/`, served by the Worker `reussite`
+// (Workers Builds, deployed from GitHub `main`; other branches get preview URLs).
+// The relay is a separate Worker with its own config in `relay/`.
+{
+  "name": "reussite",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -8,6 +8,8 @@ import { connector, backupDue, backupText, confirmKeySaved, deleteEverywhere, de
 import { RecoveryKeyError } from '../sync/keys';
 import { RelayError } from '../sync/client';
 import { saveFile } from '../data/backup';
+import { feedId, feedOff } from './feed';
+import { disablePush, pushOn } from './push';
 import { t, locale, type Key } from '../i18n';
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
@@ -148,12 +150,18 @@ function TurnOffSheet() {
   );
 }
 
+/** Delete everywhere also takes this device's calendar feed and notifications off the relay. Other devices' rows are out of reach and expire (DECISIONS). */
+async function leaveRelay() {
+  if (feedId.value) await feedOff();
+  if (pushOn.value) await disablePush();
+}
+
 function DeleteSheet() {
   const [typed, setTyped] = useState('');
   const [err, setErr] = useState('');
   const word = t('syncDeleteWord');
   const go = async () => {
-    try { await deleteEverywhere(); closeSheet(); toast(t('syncDeleted')); }
+    try { await deleteEverywhere(); await leaveRelay(); closeSheet(); toast(t('syncDeleted')); }
     catch (e) { setErr(t('syncFailed', { code: e instanceof RelayError ? e.code : 'error' })); }
   };
   return (

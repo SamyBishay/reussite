@@ -354,7 +354,7 @@ export const en = {
   syncTurnOffConfirm: 'Turn sync off',
   syncTurnedOff: 'Sync is off. Your list is still here.',
   syncDelete: 'Delete everywhere',
-  syncDeleteBody: 'This deletes the scrambled copy from the relay, and sync stops on every device. Each device keeps the list it has. It can’t be undone.',
+  syncDeleteBody: 'This deletes the scrambled copy from the relay, and sync stops on every device. If notifications or the calendar feed are on here, they are switched off and removed from the relay too. Each device keeps the list it has. It can’t be undone.',
   syncDeleteType: 'Type “{word}” to confirm',
   syncDeleteWord: 'delete',
   syncDeleteConfirm: 'Delete from the relay',

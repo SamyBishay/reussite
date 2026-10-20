@@ -987,7 +987,7 @@ export const fr: Partial<Strings> = {
   syncTurnOffConfirm: 'Désactiver la synchronisation',
   syncTurnedOff: 'Synchronisation désactivée. Votre liste est toujours là.',
   syncDelete: 'Supprimer partout',
-  syncDeleteBody: 'Cela supprime la copie brouillée du relais, et la synchronisation s’arrête sur tous les appareils. Chacun garde la liste qu’il a. Irréversible.',
+  syncDeleteBody: 'Cela supprime la copie brouillée du relais, et la synchronisation s’arrête sur tous les appareils. Si les notifications ou le flux de calendrier sont activés ici, ils sont désactivés et retirés du relais aussi. Chacun garde la liste qu’il a. Irréversible.',
   syncDeleteType: 'Saisissez « {word} » pour confirmer',
   syncDeleteWord: 'supprimer',
   syncDeleteConfirm: 'Supprimer du relais',

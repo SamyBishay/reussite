@@ -51,6 +51,32 @@ test('switching on subscribes, registers and uploads the schedule; switching off
   expect(await pushId(page)).toBeNull();
 });
 
+test('Delete everywhere also removes the notifications and calendar feed from the relay', async ({ page, request }) => {
+  await importSample(page);
+  const pid = await switchOn(page);
+  await expect.poll(() => relayHeld(pid).length, { timeout: 15_000 }).toBeGreaterThan(0);
+  await page.getByTestId('feed-switch').check();
+  await expect(page.getByTestId('feed-url')).toContainText('/cal/');
+  const url = (await page.getByTestId('feed-url').textContent())!.trim();
+  await expect.poll(async () => (await request.get(url)).status()).toBe(200);
+
+  await page.getByTestId('sync-setup').click();
+  await page.getByTestId('sync-make-key').click();
+  await expect(page.locator('svg.qr')).toBeVisible();
+  await page.getByTestId('sync-key-saved').click();
+  await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+  await page.getByTestId('sync-delete').click();
+  await page.getByTestId('sync-delete-word').fill('delete');
+  await page.getByTestId('sync-delete-confirm').click();
+  await expect(page.getByTestId('sync-setup')).toBeVisible();
+
+  await expect.poll(() => relayHeld(pid).length).toBe(0);
+  expect(await pushId(page)).toBeNull();
+  await expect(page.getByTestId('notify-master')).not.toBeChecked();
+  await expect(page.getByTestId('feed-switch')).not.toBeChecked();
+  await expect.poll(async () => (await request.get(url)).status()).toBe(404);
+});
+
 test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push the device can read', async ({ page }) => {
   test.slow();
   const hour = new Date().getHours();

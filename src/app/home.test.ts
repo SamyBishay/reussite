@@ -5,7 +5,7 @@ import { withDefaults } from '../data/settings';
 import { setKey } from '../ai/ask';
 import { setLocal } from '../data/db';
 import { sheet, closeSheet } from './sheet';
-import { choose, homeCard, openExchange, pruneExchanges, receiptLine, run, saveDuration, submitHome, undoExchange, canUndo, OPEN_MS } from './home';
+import { choose, homeCard, recordArrival, openExchange, pruneExchanges, receiptLine, run, saveDuration, submitHome, undoExchange, canUndo, OPEN_MS } from './home';
 import { newTaskFields } from '../domain/effects';
 
 const settle = () => new Promise(r => setTimeout(r, 40));
@@ -30,6 +30,33 @@ afterEach(async () => {
   for (const x of [...tasks.value.values()]) await db.table_('tasks').delete(x.id);
   for (const x of [...sessions.value.values()]) await db.table_('sessions').delete(x.id);
   await settle();
+});
+
+describe('a change-set that came by a link', () => {
+  it('is an exchange of its own that Home does not continue, listed with its source and undone like any other', async () => {
+    await submitHome('call the bank');
+    await settle();
+    const t = await step('x1', 'From the link');
+    await recordArrival({ v: 1, note: 'From my AI', changes: [], bad: 0 }, 'link', 1, [{ c: 'tasks', id: t, created: true }]);
+    await settle();
+    const all = [...exchanges.value.values()];
+    expect(all).toHaveLength(2);
+    const link = all.find(x => x.src === 'link')!;
+    expect(link).toMatchObject({ text: 'From my AI', turns: [{ kind: 'changes', n: 1 }] });
+    expect(receiptLine(link)).toBe('1 change');
+    expect(canUndo(link)).toBe(true);
+    // a Home line a minute later starts from Home's own exchange, never the link's
+    await submitHome('call the dentist');
+    await settle();
+    expect([...exchanges.value.values()].find(x => x.id === link.id)!.turns).toHaveLength(1);
+    expect([...exchanges.value.values()].filter(x => x.src === 'home')).toHaveLength(1);
+    await undoExchange(link.id);
+    await settle();
+    expect(titles()).not.toContain('From the link');
+    await recordArrival({ v: 1, note: '', changes: [], bad: 0 }, 'inbox', 2, []);
+    await settle();
+    expect([...exchanges.value.values()].find(x => x.src === 'inbox')).toMatchObject({ text: 'Changes from an AI’s link, sent through the relay' });
+  });
 });
 
 describe('a line typed on Home', () => {

@@ -8,6 +8,8 @@ import { signal } from '@preact/signals';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { VNode } from 'preact';
 import { ready, readOnly } from './store';
+import { go as goTo } from './nav';
+import { recordArrival } from './home';
 import { sheet, openSheet, overlay } from './sheet';
 import { finishDrop, inboxQueue, relayBase, spaceId, syncLoaded } from './sync';
 import { logError } from './errorlog';
@@ -60,7 +62,12 @@ export function DropHost() {
       try { link = await parseDropFragment(frag); } catch (e) { setState({ kind: 'error', key: e instanceof DropLinkError ? 'dropBad' : 'dropFailed', code: 'link' }); return; }
       const r = readChangeSet(link.json);
       if (!r.ok) { setState({ kind: 'error', key: r.error === 'empty' ? 'dropEmpty' : 'dropBad' }); return; }
-      if (spaceId() === link.space) { leaveDropPage(); openChangeReview(r.cs); return; } // this browser holds the list
+      if (spaceId() === link.space) { // this browser holds the list: the review opens on Home, and what is applied is kept in History with Undo
+        leaveDropPage();
+        goTo('home');
+        openChangeReview(r.cs, { record: true, onApplied: (n, undo) => { if (n) void recordArrival(r.cs, 'link', n, undo); } });
+        return;
+      }
       setState({ kind: 'sending' });
       setState(await sendDrop(link.space, link.pub, r.cs));
     })();
@@ -75,6 +82,19 @@ export function DropHost() {
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  // The installed app asked to focus its open window for a link (manifest `launch_handler`): the link comes here, not as a page load.
+  useEffect(() => {
+    const queue = (window as unknown as { launchQueue?: { setConsumer(f: (p: { targetURL?: string }) => void): void } }).launchQueue;
+    queue?.setConsumer(p => {
+      let u: URL;
+      try { u = new URL(p.targetURL ?? ''); } catch { return; }
+      if (u.origin !== location.origin || !/\/drop\/?$/.test(u.pathname) || !u.hash) return;
+      try { history.replaceState(null, '', u.pathname + u.hash); } catch { return; }
+      ran.current = false;
+      setState({ kind: 'wait' });
+      dropFragment.value = u.hash;
+    });
   }, []);
   if (frag === null) return null;
   return (
@@ -108,7 +128,7 @@ export function InboxHost() {
     if (!next || !idle) return;
     const plan = prepareReview(next.cs); // says so itself when nothing would change
     if (!plan) { void finishDrop(next.id); return; }
-    const node = <ReviewList key={'inbox' + next.id} plan={plan} note={next.cs.note} />;
+    const node = <ReviewList key={'inbox' + next.id} plan={plan} note={next.cs.note} record onApplied={(n, undo) => { if (n) void recordArrival(next.cs, 'inbox', n, undo); }} />;
     showing.current = { id: next.id, node };
     openSheet(node, true);
   }, [queue, open, idle]);

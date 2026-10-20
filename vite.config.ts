@@ -35,6 +35,8 @@ export default defineConfig(({ mode }) => {
           start_url: './#home',
           scope: './',
           display: 'standalone',
+          // A link from an AI chat (/drop#…) opens in the window that is already open, not a second one.
+          launch_handler: { client_mode: 'focus-existing' },
           background_color: '#F2F1F6',
           theme_color: '#6B4BA6',
           icons: [

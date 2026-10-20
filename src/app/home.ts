@@ -87,17 +87,25 @@ async function continuing(): Promise<WithId<Exchange> | null> {
   return null;
 }
 
-/** Add a turn (and its change-set's Undo records, if any) to the open exchange, or start one. */
-export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }): Promise<{ exchange: string }> {
-  const ex = await continuing();
+/**
+ * Add a turn (and its change-set's Undo records, if any) to the open exchange, or start one. Only Home's own
+ * exchanges are continued: one from a link or the inbox (`src`) is always an exchange of its own.
+ */
+export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }, src: Exchange['src'] = 'home'): Promise<{ exchange: string }> {
+  const ex = src === 'home' ? await continuing() : null;
   const changes = applied ? { changes: [...(ex?.changes ?? []), applied.cs], undo: { ...(ex?.undo ?? {}), [applied.cs]: applied.undo } } : {};
   if (ex) {
     await update<Exchange>('exchanges', ex.id, { turns: [...ex.turns, turn], ...changes });
     return { exchange: ex.id };
   }
-  const id = await createDoc<Exchange>('exchanges', { at: turn.at, text: turn.text, turns: [turn], changes: [], undo: {}, undone: [], src: 'home', ...changes });
-  lastWritten = id;
+  const id = await createDoc<Exchange>('exchanges', { at: turn.at, text: turn.text, turns: [turn], changes: [], undo: {}, undone: [], src, ...changes });
+  if (src === 'home') lastWritten = id;
   return { exchange: id };
+}
+
+/** A change-set that came from outside Home (a one-tap link, or the relay's inbox) and was applied: its own exchange, so History lists it and Undo takes it back. */
+export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox', n: number, undo: UndoDoc[]): Promise<void> {
+  await addTurn({ at: new Date().toISOString(), text: cs.note.slice(0, 200) || t(src === 'link' ? 'arrivedLink' : 'arrivedInbox'), kind: 'changes', n }, { cs: gen.id('c'), undo }, src);
 }
 
 /** The receipt line of an exchange: what one change did, else how many changes. */

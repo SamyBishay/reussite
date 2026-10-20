@@ -1217,7 +1217,11 @@ export const en = {
   undone: 'Undone',
   undoneOk: 'Undone.',
   undoneKept: { one: 'Undone. {n} edit you made since was left alone.', other: 'Undone. {n} edits you made since were left alone.' } as P,
-  historyIntro: 'What you typed on Home and what came of it, for the last 90 days. Undo puts back what a line changed, and leaves alone anything you edited since.',
+  historyIntro: 'What you typed on Home or applied from an AI’s link, and what came of it, for the last 90 days. Undo puts back what a line changed, and leaves alone anything you edited since.',
+  historyFromLink: 'AI link',
+  historyFromInbox: 'AI link, sent through the relay',
+  arrivedLink: 'Changes from an AI’s link',
+  arrivedInbox: 'Changes from an AI’s link, sent through the relay',
   historyEmpty: 'Nothing here yet. Once a line you type on Home has been applied, it is listed here.',
   // memory
   memIntro: 'Short notes about the people, places and things in your life: one line per fact, in your words. A note that matches what you ask an AI can go with it, unless you mark it Private.',

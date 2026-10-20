@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { deflateRawSync } from 'node:zlib';
-import { importSample, noSideways, goTab } from './helpers';
+import { importSample, noSideways, goTab, openMenu } from './helpers';
 import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
@@ -398,6 +398,11 @@ test('one-tap link: a browser with nothing leaves it in the inbox; the device wi
   await pa.getByTestId('tab-matrix').click();
   await expect(pa.locator('.matrix')).toContainText('answer the drop one');
   await expect(pa.locator('.matrix')).not.toContainText('answer the drop two');
+  // what was applied is in History, marked as coming through the relay; the one that was dismissed is not
+  await goTab(pa, 'home');
+  await openMenu(pa, 'history');
+  await expect(pa.getByTestId('history-row')).toHaveCount(1);
+  await expect(pa.getByTestId('history-src')).toHaveText('AI link, sent through the relay');
   // and it does not come back
   await nudge(pa);
   await pa.waitForTimeout(1500);
@@ -420,14 +425,54 @@ test('one-tap link: opened in the browser that holds the list, it shows the revi
   await tab.goto(link);
   await expect(tab.getByTestId('review')).toContainText('answer the direct one', { timeout: 20_000 });
   await expect(tab.getByTestId('drop-page')).toBeHidden();
-  expect(new URL(tab.url()).hash).toBe('');
+  expect(new URL(tab.url()).pathname).toBe('/'); // the link is gone from the address, so a reload does not run it again
+  expect(new URL(tab.url()).hash).toBe('#home');
   await noSideways(tab, 'drop review');
+  // it opens on Home, and what is applied is an exchange of its own: the receipt on Home, a row in History
+  await expect(tab.getByTestId('home')).toBeVisible();
   await tab.getByTestId('apply-changes').click();
   await expect(tab.getByTestId('sheet')).toBeHidden();
+  await expect(tab.getByTestId('receipt')).toContainText('1 change');
   await tab.getByTestId('tab-matrix').click();
   await expect(tab.locator('.matrix')).toContainText('answer the direct one');
   expect(posts.filter(u => u.endsWith('/inbox'))).toEqual([]);
   expect(await inboxSize(recovery)).toBe(0);
+  await tab.getByTestId('tab-home').click();
+  await openMenu(tab, 'history');
+  const rows = tab.getByTestId('history-row');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText('From my AI');
+  await expect(rows.first().getByTestId('history-src')).toHaveText('AI link');
+  await noSideways(tab, 'history with a link');
+  await rows.first().getByTestId('history-undo').click();
+  await expect(rows.first().getByTestId('history-undo')).toHaveCount(0);
+  await tab.getByTestId('tab-matrix').click();
+  await expect(tab.locator('.matrix')).not.toContainText('answer the direct one');
+  await a.ctx.close();
+});
+
+test('one-tap link: the installed app, told to focus its open window, gets the link from the launch queue', async ({ browser }, info) => {
+  test.slow();
+  const a = await secondDevice(browser, info);
+  await setUp(a.page);
+  await a.page.getByTestId('sync-key-saved').click();
+  await expect(a.page.getByTestId('sync-status')).toContainText('Synced at');
+  const addr = await dropAddress(a.page);
+  const tab = await a.ctx.newPage();
+  // what Chrome gives an installed app whose manifest says launch_handler focus-existing
+  await tab.addInitScript(() => Object.defineProperty(window, 'launchQueue', { configurable: true, value: { setConsumer: (f: unknown) => { (window as unknown as { launched: unknown }).launched = f; } } }));
+  await tab.goto('/#today');
+  await expect(tab.getByTestId('tab-today')).toBeVisible();
+  const target = linkFor(addr, cs('Open Mail and answer the launched one'));
+  await tab.evaluate(t => (window as unknown as { launched: (p: unknown) => void }).launched({ targetURL: t }), target);
+  await expect(tab.getByTestId('review')).toContainText('answer the launched one', { timeout: 20_000 });
+  await expect(tab.getByTestId('home')).toBeVisible();
+  expect(new URL(tab.url()).hash).toBe('#home');
+  // a link from another origin is not ours to run
+  await tab.keyboard.press('Escape');
+  await tab.evaluate(() => (window as unknown as { launched: (p: unknown) => void }).launched({ targetURL: 'https://example.com/drop#x' }));
+  await tab.waitForTimeout(300);
+  await expect(tab.getByTestId('review')).toBeHidden();
   await a.ctx.close();
 });
 

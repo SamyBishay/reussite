@@ -3,8 +3,8 @@
 // snapshot is written as two blobs:
 //
 //   hot   open steps, steps done or due in the last ~30 days, their sessions, the days from the last
-//         30 days on, every project, decision, place, stay and setting, and anything whose clocks
-//         changed in the last 30 days. Plus an index of the cold ids and a digest of the cold
+//         30 days on, every project, decision, place, stay, memory note and setting, exchanges written
+//         in the 2 days before the cut or since, and anything else whose clocks changed in the last 30 days. Plus an index of the cold ids and a digest of the cold
 //         documents (`ColdDigest`), so the common questions never open the cold part.
 //   cold  everything else.
 //
@@ -24,6 +24,15 @@ export const HOT_DAYS = 30;
 const DAY = 86_400_000;
 /** The cold part is rewritten (a new cut) when the cut is older than this. */
 export const FULL_EVERY_MS = 7 * DAY;
+/**
+ * Exchanges (Home's history, with their Undo records) are the bulk of a month and the connector never
+ * reads them, so they are hot only while written within this of the cut, not 30 days: wide enough for
+ * a device's clock being behind and a push being late by a day. An exchange write pushed more than
+ * LATE_MS after it was made (a phone offline for days) could be older than that, so the device that
+ * pushes it rewrites both parts (`lateExchanges`, run.ts).
+ */
+export const EXCHANGE_MARGIN_MS = 2 * DAY;
+export const LATE_MS = DAY;
 /** The digest carries estimate points for steps done within this many days of the cut; older ones weigh under 1% already. */
 export const DIGEST_DAYS = 400;
 
@@ -53,6 +62,7 @@ export interface Split { hot: Docs; cold: Docs }
 export function split(all: DocSet, cut: Cut, o: { closure?: boolean } = {}): Split {
   const from = hotFrom(cut);
   const min = format(cut.wall - HOT_DAYS * DAY, 0, '');
+  const exMin = format(cut.wall - EXCHANGE_MARGIN_MS, 0, '');
   const hot: Docs = {}, cold: Docs = {};
   const list = (c: string): StoredDoc[] => [...((all as Record<string, Iterable<StoredDoc> | undefined>)[c] ?? [])];
   const put = (c: string, d: StoredDoc, isHot: boolean) => ((isHot ? hot : cold)[c] ??= []).push(d);
@@ -81,7 +91,9 @@ export function split(all: DocSet, cut: Cut, o: { closure?: boolean } = {}): Spl
   }
   for (const d of days) put('days', d, hotDay(d));
   for (const d of list('sessions')) put('sessions', d, touchedSince(d, min) || str(d.d) >= from || hotTasks.has(str(d.taskId)));
-  for (const c of ['projects', 'decisions', 'places', 'stays', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
+  for (const c of ['projects', 'decisions', 'places', 'stays', 'memory', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
+  // Home's history: only what was written just before the cut or since (EXCHANGE_MARGIN_MS).
+  for (const d of list('exchanges')) put('exchanges', d, touchedSince(d, exMin));
   return { hot, cold };
 }
 
@@ -131,9 +143,12 @@ export function touchesCold(pushed: { c: string; d: StoredDoc }[], all: DocSet, 
     if (!h) hots.set(c, (h = new Set((byState.hot[c] ?? []).map(d => d.id))));
     return h.has(id);
   };
+  const exMin = format(cut.wall - EXCHANGE_MARGIN_MS, 0, '');
   for (const { c, d } of pushed) {
     const full = lookup(c).get(d.id);
     if (!full) continue;
+    // An exchange can be in the cold part only if it was there before the cut's margin (a follow-up to a fresh one is not).
+    if (c === 'exchanges') { if (Object.values(full._hlc).some(h => h < exMin)) return true; continue; }
     const made = Object.keys(full._hlc).every(k => k in d._hlc) && new Set(Object.values(d._hlc)).size === 1;
     if (!made && (!isHot(c, d.id) || d._del !== undefined || STATE_FIELDS[c]?.some(k => k in d._hlc))) return true;
     const first = (d.first as { id?: unknown } | null | undefined)?.id;
@@ -141,6 +156,12 @@ export function touchesCold(pushed: { c: string; d: StoredDoc }[], all: DocSet, 
     if (refs.some(id => lookup('tasks').has(id) && !isHot('tasks', id))) return true;
   }
   return false;
+}
+
+/** Exchange writes pushed more than LATE_MS after they were made: they may be older than the hot part's margin, so both parts are rewritten. */
+export function lateExchanges(pushed: { c: string; d: StoredDoc }[], now: number): boolean {
+  const late = format(now - LATE_MS, 0, '');
+  return pushed.some(({ c, d }) => c === 'exchanges' && Object.values(d._hlc).some(h => h < late));
 }
 
 export interface Parts {

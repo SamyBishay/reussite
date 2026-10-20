@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -170,5 +170,79 @@ export interface Stay {
   [extra: string]: unknown;
 }
 
-export const COLLECTIONS = ['tasks', 'sessions', 'projects', 'days', 'decisions', 'places', 'stays', 'meta'] as const;
+export type MemoryKind = 'profile' | 'person' | 'place' | 'area' | 'topic';
+export const MEMORY_KINDS: readonly MemoryKind[] = ['profile', 'person', 'place', 'area', 'topic'];
+
+/** One fact, in the person's words. `id` is stable, so an edit or a Forget finds the same line on every device. */
+export interface MemoryLine {
+  id: string;
+  text: string;
+  at: string;
+  by: By;
+}
+
+/**
+ * A memory note (brief §4, §10): one subject, one line per fact. The lines are an array, so they merge
+ * whole like any other array (the last writer to the note wins the lines; docs/dev/sync.md).
+ */
+export interface MemoryNote {
+  kind: MemoryKind;
+  name: string;
+  aliases: string[];
+  lines: MemoryLine[];
+  /** Never sent to an AI and never read by the connector. */
+  private: boolean;
+  updated: string;
+  description?: string;
+  [extra: string]: unknown;
+}
+
+/** What one edit replaced, kept so it can be put back (Undo). */
+export interface UndoDoc {
+  c: Collection;
+  id: string;
+  /** Made by this change-set: undone with a tombstone, if nothing was written to it since. */
+  created?: true;
+  /** Removed by this change-set (tombstoned). */
+  removed?: true;
+  fields?: Record<string, { was: unknown; now: unknown }>;
+  /** The newest clock this change-set wrote on the document: a field with a newer one was written since. */
+  at?: string;
+}
+
+/**
+ * One line the person typed or dictated on Home (or a link brought), and what came of it. `kind` is
+ * one of (Home writes a turn only when something came of it, so there is never a half-finished one):
+ *  - `add`, `standing`, `done`, `move`, `drop`: the local parser read it and a change-set was applied
+ *    (a drop after the review). `reply` is the title of the step it names; `n` how many changes were written.
+ *  - `changes`: a change-set that is not one of those was applied (a reply from an AI, a link). `reply` is its
+ *    note, if any; `n` how many changes.
+ *  - `answer`: an AI answered about the list, the memory or the method and changed nothing. `reply` is the answer.
+ *  - `duration`: the person said how long a step they had just ticked done took; the session joined the
+ *    Undo of the change-set before it. `text` is what they said, `reply` the step.
+ * Strings stay as written (a new kind is read as a plain turn by older devices).
+ */
+export interface ExchangeTurn {
+  at: string;
+  text: string;
+  reply?: string;
+  kind: string;
+  n?: number;
+}
+
+/** What the person typed on Home (or a link brought) and what came of it; Home's history, kept 90 days. */
+export interface Exchange {
+  at: string;
+  text: string;
+  turns: ExchangeTurn[];
+  /** The ids of the applied change-sets; `undo` holds each one's records. */
+  changes: string[];
+  undo: Record<string, UndoDoc[]>;
+  /** The ids (from `changes`) that have been undone. */
+  undone: string[];
+  src: 'home' | 'link' | 'inbox';
+  [extra: string]: unknown;
+}
+
+export const COLLECTIONS = ['tasks', 'sessions', 'projects', 'days', 'decisions', 'places', 'stays', 'memory', 'exchanges', 'meta'] as const;
 export type Collection = (typeof COLLECTIONS)[number];

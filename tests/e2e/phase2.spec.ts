@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, goTab } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -134,6 +134,40 @@ test('Ask any AI, then Paste the reply: only ticked changes are applied', async 
   await expect(page.locator('.matrix')).not.toContainText('thank the agency');
 });
 
+const standing = JSON.stringify({ v: 1, changes: [
+  { op: 'task.create', set: { title: 'Choir, Hill House 602', template: true, weekdays: [1], at: '19:00', dur: 90, lead: 30 } },
+  { op: 'memory.add', note: 'Choir', kind: 'topic', text: 'Rehearsal is at Hill House 602' },
+] });
+const notes = (page: Page) => page.evaluate(() => new Promise<{ name: string; lines: { text: string; by: string }[] }[]>((res, rej) => {
+  const open = indexedDB.open('reussite');
+  open.onerror = () => rej(open.error);
+  open.onsuccess = () => {
+    const all = open.result.transaction('memory').objectStore('memory').getAll();
+    all.onsuccess = () => res(all.result);
+  };
+}));
+
+for (const w of [320, 375, 430]) {
+  test(`a pasted standing obligation and memory line: memory sits under Remember, at ${w}px`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await importSample(page);
+    await page.getByTestId('ask-any').click();
+    await sheet(page).getByRole('button', { name: 'Paste the reply' }).click();
+    await page.getByTestId('paste-text').fill('```reussite\n' + standing + '\n```');
+    await page.getByTestId('paste-go').click();
+    await expect(page.getByTestId('chg')).toHaveCount(2);
+    await expect(page.getByTestId('remember')).toContainText('Rehearsal is at Hill House 602');
+    await expect(page.getByTestId('remember')).toContainText('new');
+    await expect(page.getByTestId('review')).toContainText('Mon');
+    await noSideways(page, 'review with memory');
+    await page.getByTestId('apply-changes').click();
+    await expect(sheet(page)).toBeHidden();
+    const saved = await notes(page);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ name: 'Choir', lines: [{ text: 'Rehearsal is at Hill House 602', by: 'ai' }] });
+  });
+}
+
 for (const w of [320, 375, 430]) {
   test(`AI screens don't scroll sideways at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
@@ -235,7 +269,7 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
 
 test('Decision help drafts the problem, options and items, and never weights', async ({ page }) => {
   const { answer } = await aiSession(page);
-  await page.getByTestId('tab-log').click();
+  await goTab(page, 'projects');
   await page.getByTestId('new-decision').click();
   answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up 8% in January', should: 'Rent under a third of income', gap: '60 a month short' } });
   await page.getByTestId('ai-dw-describe').fill('My rent goes up and I’m not sure whether to move.');
@@ -340,7 +374,7 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'stuck with an AI starter');
     await page.keyboard.press('Escape');
     answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up', should: 'Less than a third of income', constraints: 'Lease ends in June' } });
-    await page.getByTestId('tab-log').click();
+    await goTab(page, 'projects');
     await page.getByTestId('new-decision').click();
     await page.getByTestId('ai-dw-describe').fill('Rent goes up.');
     await page.getByTestId('ai-dw-problem').click();
@@ -363,6 +397,6 @@ test('the built page breaks none of its own Content-Security-Policy', async ({ p
   const blocked: string[] = [];
   page.on('console', m => { if (/Content-Security-Policy/i.test(m.text())) blocked.push(m.text()); });
   await importSample(page);
-  for (const tab of ['matrix', 'projects', 'calendar', 'settings', 'today']) await page.getByTestId('tab-' + tab).click();
+  for (const tab of ['matrix', 'projects', 'calendar', 'log', 'settings', 'today'] as const) await goTab(page, tab);
   expect(blocked).toEqual([]);
 });

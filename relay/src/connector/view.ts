@@ -1,9 +1,9 @@
 // A loaded space seen through the app's own read rules (src/domain/lists.ts): live documents
 // (no tombstones) as Maps, today and the current place, settings with their defaults. Built lazily,
 // so a tool that only needs tasks never touches sessions.
-import type { Day, Decision, Place, Project, Session, Stay, Task } from '../../../src/data/schema';
+import type { Day, Decision, Exchange, MemoryNote, Place, Project, Session, Stay, Task } from '../../../src/data/schema';
 import { fieldsOf } from '../../../src/data/doc';
-import { normDecision } from '../../../src/data/normalize';
+import { normDecision, normExchange, normNote } from '../../../src/data/normalize';
 import { withDefaults, type Settings } from '../../../src/data/settings';
 import { whereNow } from '../../../src/domain/places';
 import type { Data } from '../../../src/domain/lists';
@@ -43,6 +43,8 @@ export class View {
   get places() { return this.live<Place>('places'); }
   get stays() { return this.live<Stay>('stays'); }
   get decisions() { return this.live<Decision>('decisions', normDecision); }
+  get memory() { return this.live<MemoryNote>('memory', normNote); }
+  get exchanges() { return this.live<Exchange>('exchanges', normExchange); }
 
   // Each of these is asked for again and again (a step line asks for `data`, which asks for today,
   // which builds an Intl formatter), so they are worked out once per View.
@@ -70,11 +72,14 @@ export class View {
   get zone(): string { return this.places.get(this.where.here)?.timeZone ?? 'UTC'; }
 
   get data(): Data {
-    return this.once('data', () => ({ today: this.today, urgencyDays: this.settings.urgencyDays, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays }));
+    const v = this;
+    // `memory` is read only by a change that names a note: building the notes costs nothing for the calls that don't.
+    return this.once('data', () => ({ today: this.today, urgencyDays: this.settings.urgencyDays, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays, get memory() { return v.memory; } }));
   }
 
   /** What the change-set planner checks a change-set against. */
   snapshot(): Snapshot {
-    return { today: this.today, tasks: this.tasks, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays };
+    const v = this;
+    return { today: this.today, tasks: this.tasks, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays, get memory() { return v.memory; } };
   }
 }

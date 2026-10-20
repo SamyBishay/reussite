@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { RelayClient } from './client';
 import { openFromText } from './crypto';
 import { deriveKeys, generateKey } from './keys';
@@ -60,6 +60,27 @@ describe('the snapshot a device uploads', () => {
     await syncOnce(a, c, at(FULL_EVERY_MS + DAY));
     expect(space().cold!.blob).not.toBe(cold1);
     expect((await a.loadState()).cut!.wall).toBe(NOW + FULL_EVERY_MS + DAY);
+  });
+
+  it('is both parts after an exchange written days ago, offline, is pushed: the hot part would leave it out', async () => {
+    const { client, space, snap } = await setup();
+    const a = new FakeDevice('aaa'), b = new FakeDevice('bbb');
+    const c = client();
+    const at = (n: number) => ({ snapshotEvery: 1, now: () => NOW + n });
+    a.add('tasks', 't0', { title: 'x', status: 'open' });
+    await syncOnce(a, c, at(0));
+    await syncOnce(a, c, at(0));
+    const cold1 = space().cold!.blob;
+    // b typed a line on Home while offline, five days before it is pushed
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(NOW - 5 * DAY);
+    b.add('exchanges', 'e1', { at: new Date().toISOString(), text: 'call the bank', turns: [], changes: [], undo: {}, undone: [], src: 'home' });
+    vi.useRealTimers();
+    await syncOnce(b, c, at(DAY));
+    expect(space().cold!.blob).not.toBe(cold1);
+    const all = [...((await snap(space().snapshot!.blob))!.docs.exchanges ?? []), ...((await snap(space().cold!.blob))!.docs.exchanges ?? [])];
+    expect(all.map(d => d.id)).toContain('e1');
+    expect((await b.loadState()).owesFull).toBeUndefined();
   });
 
   it('is both parts when the relay holds a whole snapshot, which a hot part alone would replace', async () => {

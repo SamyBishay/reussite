@@ -134,7 +134,8 @@ test('the calendar feed: generic titles, step titles when asked, a new address r
   await expect.poll(link).not.toBe(first);
   const second = await link();
   await expect.poll(async () => (await fetchFeed(second)).status()).toBe(200);
-  expect((await fetchFeed(first)).status()).toBe(404);
+  // The old address is deleted right after the new one is up, a request later: wait for it, don't race it.
+  await expect.poll(async () => (await fetchFeed(first)).status()).toBe(404);
 
   await feed.getByTestId('feed-switch').uncheck();
   await expect(feed.getByTestId('feed-url')).toHaveCount(0);

@@ -1,6 +1,6 @@
 # Réussite change-set, version 1
 
-A change-set is one JSON object: `{"v": 1, "note": "…", "changes": [ … ]}`. Réussite shows each change as before → after with a checkbox; only ticked changes are written. `note` is optional: one short line for the person (say there what was unclear).
+A change-set is one JSON object: `{"v": 1, "note": "…", "changes": [ … ]}`. Réussite shows each change as before → after with a checkbox; only ticked changes are written. `note` is optional: one short line for the person (say there what was unclear), up to 1,000 characters.
 
 Use the ids from the lines you were given (`t…` steps, `p…` projects, places, `d…` decisions). To refer to something you create in the same change-set, give it `"ref": "any-name"` and use that name as its id later. Dates are `YYYY-MM-DD`, times `HH:MM`, estimates in minutes. Leave out any field you don't change. **Never give weights**: the person weighs pros and cons themselves.
 
@@ -19,8 +19,14 @@ Use the ids from the lines you were given (`t…` steps, `p…` projects, places
 | `place.create` / `place.update` | `ref?` or `id`, `set`: `name`, `timeZone` (IANA, e.g. `Europe/Paris`) |
 | `stay.create` / `stay.update` | `id` for updates, `set`: `place` (id or name), `from`, `to`, `note?` |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (create needs `title`) |
+| `memory.add` | `note`, `kind?`, `text` (a new line in the note; `kind` makes the note if there is none of that name) |
+| `memory.edit` | `note`, `line`, `text` (replace a line) |
+| `memory.remove` | `note`, `line` (forget a line) |
+| `memory.note` | `note`, `set`: `name`, `aliases` (the whole list), `kind` |
 
-**Step `set`**: `title` (start with the concrete first action: "Open Mail and reply to…"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` life: people, leisure, health), `urgent`, `important` (true/false), `due`, `est`, `starter` (the smallest first action), `app`, `link` (https only), `note`, `where` (place id or `any`), `after` (step ids it waits for), `at` and `dur` (a fixed time and duration).
+**Step `set`**: `title` (start with the concrete first action: "Open Mail and reply to…"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` life: people, leisure, health), `urgent`, `important` (true/false), `due`, `est`, `starter` (the smallest first action), `app`, `link` (https only), `note`, `where` (place id or `any`), `after` (step ids it waits for), `at` and `dur` (a fixed time and duration), and for a standing obligation that repeats every week: `template` (true), `weekdays` (1 = Monday … 7 = Sunday) and `at`, with `lead` (minutes of notice before it; leave it out for the person's usual). A `template` without `at` and `weekdays` is ignored. `template` is read only when a step is created, and `task.update` leaves a standing obligation alone (the person edits those). `lead` is 0 to 1440 minutes; `null` means the person's usual. A change-set holds at most 80 changes.
+
+**Memory**: short notes about people, places and ongoing matters, in the person's words. `note` is a note's id, name or alias; `kind` is `profile`, `person`, `place`, `area` or `topic`. `line` is a line's number in the context you were given (from 1), its id, or its exact text; a line is at most 600 characters, and several `memory.add` for one note are fine. A name that two notes share is left alone, and a name no note has makes a new note only when you give a `kind`. Write a line only for what the person said, in their words, never a conclusion about their health, character or anyone's private life. Private notes are not shown to you and cannot be changed. Memory changes always wait for the person's yes, under Remember.
 
 **Project `set`**: `name`, `suit`, `where`, `goal` (one sentence), `smart` (`specific`, `measurable`, `attainable`, `relevant`, `dated`), `due`, `status` (`active`, `paused`, `done`, `dropped`).
 
@@ -60,6 +66,17 @@ Options and pros and cons for a decision (no weights):
 ]}
 ```
 
+A standing obligation (every Monday at 19:00, a reminder before it starts) and a memory line, in one change-set:
+
+```reussite
+{"v": 1, "changes": [
+  {"op": "task.create", "set": {"title": "Choir, Hill House 602", "template": true, "weekdays": [1], "at": "19:00", "dur": 90, "lead": 30}},
+  {"op": "memory.add", "note": "Choir", "kind": "topic", "text": "Rehearsal is on Mondays at Hill House 602"},
+  {"op": "memory.edit", "note": "Ibrahim", "line": 2, "text": "Works days now"},
+  {"op": "memory.remove", "note": "Ibrahim", "line": "Has a cat"}
+]}
+```
+
 ## The one-tap link
 
 This section is for Réussite itself; it is left out of what an AI is given. When the person has a drop address, the AI answers with a link instead of the fenced block: `https://<app>/drop#<space>.<key>.<mode>.<data>`, with no trailing slash after `drop`.
@@ -67,6 +84,7 @@ This section is for Réussite itself; it is left out of what an AI is given. Whe
 - `space`: the space id, 22 characters of base64url. `key`: the inbox public key (X25519), 43 characters of base64url. Together they are the drop address, shown in Settings, AI. They are not secret.
 - `mode` `z`: `data` is the change-set JSON compressed with deflate-raw, then base64url (padding and the `+/` alphabet are tolerated). Mode `j`: `data` is the JSON itself, percent-encoded, for an AI that cannot compress. The fragment never reaches a server.
 - Over about 8,000 characters of fragment, the AI gives the fenced block instead. The page reads up to 64 KB and refuses a link that expands past 256 KB.
-- Opening it: where the browser holds the same space (sync on, same space id), the page opens the diff-and-tick screen at once. Elsewhere (an iPhone's Safari, whose storage is separate from the Home Screen app's) the page checks the change-set, seals it to the inbox public key (ephemeral X25519, HKDF-SHA256, AES-GCM, the space id as authenticated data), and posts it to the relay's inbox. The person's devices derive the same key pair from the recovery key, fetch the inbox at each sync, and open the diff-and-tick screen for each drop, one at a time. A drop is deleted from the relay once it has been applied or dismissed.
+- Opening it: where the browser holds the same space (sync on, same space id), the page goes to Home and opens the diff-and-tick screen at once (an installed app with `launch_handler: focus-existing` gets the address from `launchQueue` in its open window). Elsewhere (an iPhone's Safari, whose storage is separate from the Home Screen app's) the page checks the change-set, seals it to the inbox public key (ephemeral X25519, HKDF-SHA256, AES-GCM, the space id as authenticated data), and posts it to the relay's inbox. The person's devices derive the same key pair from the recovery key, fetch the inbox at each sync, and open the diff-and-tick screen for each drop, one at a time. A drop is deleted from the relay once it has been applied or dismissed.
+- What is applied is kept as an exchange (`src` `link`, or `inbox` for a drop from the relay), listed in History with Undo.
 - Nothing is applied without the person's ticks. The inbox accepts at most 16 KB per drop, 50 waiting drops, and keeps each 30 days.
 

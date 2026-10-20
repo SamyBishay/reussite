@@ -31,7 +31,7 @@ import { buildParts } from '../../src/sync/parts';
 import { collectOutgoing } from '../../src/sync/engine';
 import { decodeSnapshot, encodeBatch, encodeSnapshot } from '../../src/sync/wire';
 import { resolveChanges } from '../src/connector/resolve';
-import { dayText, projectText, queryText, taskText } from '../src/connector/render';
+import { dayText, memoryText, projectText, queryText, taskText } from '../src/connector/render';
 import { buildSpace, Edits, loadCold, loadSpace, sealHot, type Loaded } from '../src/connector/space';
 import { buildServer } from '../src/connector/tools';
 import { cacheGet, remember, setCacheEnabled } from '../src/connector/cache';
@@ -40,6 +40,10 @@ import { docWriter, newId } from '../src/connector/writer';
 import { HEAVY, TODAY, syntheticSpace, type Sizes } from './synthetic';
 
 const BUDGET_MS = 7;
+/** Notes in the space (8 lines each): a heavy user's memory. */
+const MEMORY = Number(process.env.BENCH_MEMORY ?? 150);
+/** Exchanges in the space over 90 days (ten lines a day on Home): what History holds. */
+const EXCHANGES = Number(process.env.BENCH_EXCHANGES ?? 900);
 const RUNS = 25;
 const TAIL = Number(process.env.BENCH_TAIL) || 8;
 const NOW = Date.parse('2026-10-19T09:30:00Z');
@@ -109,6 +113,10 @@ const toolsFor = (openId: string): Record<string, (s: Loaded, v: View) => unknow
   query_tasks: (_s, v) => queryText(v, { quadrant: 1 }, {}),
   get_project: (_s, v) => projectText(v, 'p1'),
   get_task: (_s, v) => taskText(v, v.tasks.get(openId)!),
+  // 150 notes of 8 lines (MEMORY): the profile and the index, one note by name with its steps, and a query that reads every line.
+  read_memory: (_s, v) => memoryText(v, {}),
+  read_memory_name: (_s, v) => memoryText(v, { name: 'm4' }),
+  read_memory_query: (_s, v) => memoryText(v, { query: 'choir rehearsal notes' }),
 });
 
 /** apply_changes with one low-risk change: plan, write, seal the batch (the database round trips are left out). */
@@ -158,8 +166,8 @@ function fresh(file: string, name: string, n = 7): number[] {
 
 export async function main() {
   if (process.env.BENCH_CHILD) return child(process.env.BENCH_CHILD);
-  const sizes = process.env.BENCH_SIZE === 'today' ? TODAY : HEAVY;
-  console.log(`Synthetic space: ${sizes.tasks} tasks, ${sizes.sessions} sessions, ${sizes.days} days, ${sizes.projects} projects, ${sizes.decisions} decisions; ${TAIL} batches after the snapshot`);
+  const sizes = { ...(process.env.BENCH_SIZE === 'today' ? TODAY : HEAVY), memory: MEMORY, exchanges: EXCHANGES };
+  console.log(`Synthetic space: ${sizes.tasks} tasks, ${sizes.sessions} sessions, ${sizes.days} days, ${sizes.projects} projects, ${sizes.decisions} decisions; ${sizes.memory} memory notes; ${sizes.exchanges} exchanges; ${TAIL} batches after the snapshot`);
   const p = await prepare(sizes);
   const { keys, rows } = p;
   const persisted = { wall: 0, counter: 0 };
@@ -266,7 +274,7 @@ export async function main() {
 
   console.log(`\nSummary, ms of CPU, without the MCP layer (${layer.median.toFixed(1)} ms warm) that every call adds:`);
   console.log('  call                 cold isolate: first call / steady     warm isolate (cache hit)');
-  for (const name of ['today', 'query_tasks', 'get_project', 'get_task']) console.log(`  ${name.padEnd(18)}   ${fresh1[name]!.toFixed(1).padStart(8)} / ${results[name]!.median.toFixed(1).padStart(5)}                  ${wr[name]!.median.toFixed(1).padStart(5)}`);
+  for (const name of ['today', 'query_tasks', 'get_project', 'get_task', 'read_memory', 'read_memory_name', 'read_memory_query']) console.log(`  ${name.padEnd(18)}   ${fresh1[name]!.toFixed(1).padStart(8)} / ${results[name]!.median.toFixed(1).padStart(5)}                  ${wr[name]!.median.toFixed(1).padStart(5)}`);
   console.log(`  ${'one-step edit'.padEnd(18)}   ${fresh1.edit!.toFixed(1).padStart(8)} / ${results.edit!.median.toFixed(1).padStart(5)}                  ${wedit.median.toFixed(1).padStart(5)}`);
   console.log(`\nVerdict: a hot read of the ${sizes.tasks}-task space takes about ${read.median.toFixed(0)} ms of CPU before any tool work; the free plan allows 10 ms and the target was ${BUDGET_MS} ms.`);
 }

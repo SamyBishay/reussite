@@ -28,15 +28,17 @@ HKDF-SHA256 with the salt `reussite/sync/v1` and these `info` strings gives:
 
 A stored document has one HLC per field, about 27 characters each, 70% of a snapshot. On the wire (`src/sync/wire.ts`; the stored shape and `SCHEMA_VERSION` don't change) a document is `{ id, _v?, _del?, _h?: base, _o?: { field: clock | 0 }, ...fields }`: `_h` is the clock of every present field not listed in `_o`; `_o` gives the clock of the fields that differ, `0` for a field present with no clock, and a clock for a field the document doesn't hold (clocks with no value are kept); `_v` is left out when it equals the blob's `v`. A batch is `{ f: 2, v, device, docs }`, a snapshot `{ f: 2, v, upto, docs, … }`. `f` marks the generation; blobs without it (generation 1) hold whole documents and are still read. A document with a field named `_h` or `_o` is sent whole. Decoding rebuilds `_hlc` in place, so everything after it (merge, the engine, the connector) sees ordinary documents. Round-trip tests in `wire.test.ts` check tombstones, fields with no clock and clocks with no field, on thousands of random documents.
 
-Synced collections: everything in `COLLECTIONS` (schema.ts) including `meta` (settings). The `local` and `backups` tables never sync, so the sync key, the AI key and the push subscription can't enter a batch.
+Synced collections: everything in `COLLECTIONS` (schema.ts) including `meta` (settings), `memory` (notes: `kind`, `name`, `aliases`, `lines` with an id and `by` each, `private`) and `exchanges` (Home's history: the text, the turns, the applied change-sets and their Undo records). The `local` and `backups` tables never sync, so the sync key, the AI key and the push subscription can't enter a batch.
 
 ## Merge
 
-Per field, last writer wins by hybrid logical clock; the node id breaks exact ties; arrays replace whole; a deletion (`_del`) is kept as a tombstone. `merge()` in `src/data/doc.ts` is commutative, associative and idempotent, so batches can arrive twice, late or in any order. A device receiving a timestamp advances its clock past it.
+Per field, last writer wins by hybrid logical clock; the node id breaks exact ties; arrays replace whole (so a note's `lines` and an exchange's `changes` and `undo` do too: two devices that edit one note before syncing keep the later write's lines, and a Home follow-up joins an exchange only if every field of it was last written by this device); a deletion (`_del`) is kept as a tombstone. `merge()` in `src/data/doc.ts` is commutative, associative and idempotent, so batches can arrive twice, late or in any order. A device receiving a timestamp advances its clock past it.
 
 There is no outbox. A clock ends with the node id of the device that wrote it, and a device's clocks only go up. So "what to push" = every field (and `_del`) whose clock was written by this node and is above the **watermark** (the highest clock already pushed). Imported (v1) fields carry the oldest clock, node `0`; the first sync, and the sync after an import, also send those (`imported: true`).
 
 A device remembers `{ seq, watermark, snapshotSeq }` (in `local`): the last relay seq applied, the push watermark, and the latest snapshot's `upto`. Its own batches are skipped when pulled.
+
+**Schema 3** (phase 2b) adds the `memory` and `exchanges` collections. Migration 3 changes no stored data; the schema number is what matters: a device still on schema 2 reads a schema-3 batch as newer and goes read-only (the relay marks such a space `newer` too) instead of skipping the memory it does not know and writing back over it. See "Rolling out schema 3" below.
 
 A document with `_v` above the app's `SCHEMA_VERSION` (or a batch/snapshot with a higher `v`) stops the round: nothing from that page is applied or saved, the result says `newer`, and the app goes read-only and asks to reload. The data stays on the relay.
 
@@ -50,7 +52,7 @@ Two writers can't lose anything: a snapshot must contain everything up to its `u
 
 Reading the whole list costs CPU in proportion to its size, and most of a year's list is finished history. So a snapshot is two separately encrypted blobs (`src/sync/parts.ts`), which the relay stores as rows of kind `hot` and `cold` (migration `0004`; a snapshot written before it is kind `full`, one whole blob):
 
-- **hot**: open steps; steps done in the last 30 days, or with a time and due in them; the sessions of those steps and of the last 30 days; the days from 30 days ago on, future included; every project, decision, place, stay and setting; the steps a hot day's list or a decision points to; and any document with a clock from the last 30 days. Its header carries the **cut** (`{ day, wall, coldUpto }`: when and with what `upto` the cold part was made), an **index** of the cold ids per collection (`"\nid\nid\n"`), and a **digest** of the cold documents (estimate points for steps done in the last 400 days, steps done per project).
+- **hot**: open steps; steps done in the last 30 days, or with a time and due in them; the sessions of those steps and of the last 30 days; the days from 30 days ago on, future included; every project, decision, place, stay and setting, and every live memory note (a forgotten one, a tombstone, only if it was touched in the last 30 days; the connector's `read_memory` needs the notes and never the cold part); the steps a hot day's list or a decision points to; and any other document with a clock from the last 30 days. Exchanges (Home's history) are hot only when written in the 2 days before the cut or since (`EXCHANGE_MARGIN_MS`): nothing hot-only reads them, and a month of them with their Undo records costs every connector call about 2 ms. A device that pushes an exchange write made more than a day earlier (it was offline) rewrites both parts at once (`lateExchanges`, `SyncState.owesFull`), since that write may be older than the margin. Its header carries the **cut** (`{ day, wall, coldUpto }`: when and with what `upto` the cold part was made), an **index** of the cold ids per collection (`"\nid\nid\n"`), and a **digest** of the cold documents (estimate points for steps done in the last 400 days, steps done per project).
 - **cold**: everything else, tombstones of old documents included.
 
 A document can be in both; merging is idempotent and commutative, so a reader merges both and gets the whole list.
@@ -105,8 +107,17 @@ The space id, a hash of the auth secret, the size, time and device id of every b
 
 `npm run relay:dev` (local D1, localhost origins allowed), `npm run relay:test` (Workers runtime, in-memory D1). Deploying needs the real Worker name and D1 id in `relay/wrangler.jsonc`, then `wrangler d1 migrations apply`.
 
+## Rolling out schema 3
+
+Deploy the **app first, the relay a few minutes later**, never the other way round (DECISIONS.md, phase 2b).
+
+- Until the relay is updated, its connector (schema 2) reads the app's schema-3 batches as newer and refuses to read or write, and says so. Nothing is lost, and the connector is the only thing that waits.
+- The other way round, the new relay's connector writes and its compactions are schema 3 at once. Every device still on schema 2 then goes read-only, and its Reload banner can only load the old app until the new one is deployed. The banner's Reload (`src/app/reload.ts`) tells a waiting service worker to take over and reloads once it has, so after the app is deployed one tap on Reload is enough.
+
+This is the opposite of the order for wire generation 2 below, which only added blob formats an old app cannot open; there the relay went first.
+
 ## Older apps and older blobs
 
 - Blobs of wire generation 1 (format bytes 1 and 2, whole documents, a whole snapshot) are read by every version.
-- An app from before generation 2 can't open format bytes 3 and 4 (it gets a decrypt error and applies nothing) and doesn't know the `cold` field. Deploy the relay first, then the app; an app that is not yet updated stops syncing with an error until it is reloaded, and loses nothing.
+- An app from before generation 2 can't open format bytes 3 and 4 (it gets a decrypt error and applies nothing) and doesn't know the `cold` field. For that change the relay went first, then the app; an app that was not yet updated stops syncing with an error until it is reloaded, and loses nothing.
 - A whole snapshot on the relay stays readable by everything. The first app of the new version that snapshots replaces it with two parts. A whole snapshot from an old app replaces two parts (it holds everything).

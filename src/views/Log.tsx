@@ -1,7 +1,6 @@
-// The Log, ported from v1: totals, the last seven days, timed sessions, decisions.
+// The Log, ported from v1: totals, the last seven days, timed sessions. A mode of the Calendar.
 import { sessions, tasks, today, settings } from '../app/store';
 import { cardsOn, minutesOn, allCards, ratio, estPoints } from '../app/model';
-import { decisionGroups, openDecisionPage, openDecision } from '../flows/decision';
 import { medianRatio, closeness } from '../domain/estimates';
 import { Title, suitName } from '../app/ui';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
@@ -10,8 +9,6 @@ import { SUIT_ORDER } from '../data/settings';
 
 const WHY: Record<string, Key> = { done: 'whyDone', later: 'whyLater', focus: 'whyFocus', blocked: 'whyBlocked', interrupted: 'whyInterrupted', tired: 'whyTired', switched: 'whySwitched', close: 'whyClose' };
 const whyText = (w: string | null | undefined) => (w && WHY[w] ? t(WHY[w]!) : '');
-
-const GROUP_KEY = { check: 'decToCheck', open: 'decOpen', decided: 'decDecided', closed: 'decClosed' } as const;
 
 /** Getting better at estimating is real progress: the median ratio by month and by app, and whose estimates land closer. */
 function Calibration() {
@@ -54,7 +51,6 @@ export function Log() {
   const friction: Record<string, number> = {};
   sess.forEach(s => { const w = s.why; if (w && w !== 'done' && w !== 'switched' && w !== 'close') friction[w] = (friction[w] ?? 0) + 1; });
   const fk = Object.keys(friction).sort((a, b) => friction[b]! - friction[a]!);
-  const groups = decisionGroups();
 
   return (
     <div>
@@ -90,20 +86,6 @@ export function Log() {
         </>
       ) : <p class="hint">{t('nothingTimed')}</p>}
       <Calibration />
-      <h2 class="sec">{t('decisions')} <button type="button" class="btn small" onClick={() => void openDecision(null)} data-testid="new-decision">{t('newDecision')}</button></h2>
-      {(['check', 'open', 'decided', 'closed'] as const).map(g => groups[g].length > 0 && (
-        <>
-          <h3 class="subsec">{t(GROUP_KEY[g])}</h3>
-          <ul class="decs">{groups[g].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).map(d => (
-            <li>
-              <button type="button" class="linklike" onClick={() => openDecisionPage(d.id, g === 'check')}><b>{d.title || t('untitledDecision')}</b></button>
-              <p class="meta">{d.date && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{d.chosen ? t('chosen', { what: d.chosen }) : t('dst_' + d.status as Key)}</p>
-              {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{d.reviewOn && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
-            </li>
-          ))}</ul>
-        </>
-      ))}
-      {!Object.values(groups).some(g => g.length) && <p class="hint">{t('noDecisions')}</p>}
     </div>
   );
 }

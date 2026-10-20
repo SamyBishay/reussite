@@ -4,10 +4,11 @@
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
 import type { Change, ChangeSet, TaskSet } from './changeset';
-import type { Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch } from '../data/schema';
+import type { Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
 import { isAllowedLink } from '../domain/links';
+import { norm } from '../domain/names';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -18,6 +19,8 @@ export interface Snapshot {
   decisions: Map<string, W<Decision>>;
   places: Map<string, W<Place>>;
   stays: Map<string, W<Stay>>;
+  /** Only read when a change names a memory note (the connector builds it on first use). */
+  memory: Map<string, W<MemoryNote>>;
 }
 /** Ids, time and zone come from outside so tests are deterministic. */
 export interface Gen { id: (prefix: string) => string; now: () => string; zone: string }
@@ -30,20 +33,24 @@ export const isRef = (v: unknown): v is string => typeof v === 'string' && v.sta
 export type Op =
   | { t: 'task'; ref?: string; fields: Partial<Task> & { title: string } }
   | { t: 'create'; c: Collection; ref?: string; fields: Record<string, unknown> }
-  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta }
+  /** `ifMissing`: for a change to something made earlier in the change-set, the fields to make it with if that change wasn't ticked. */
+  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta; ifMissing?: Record<string, unknown> }
   | { t: 'finish'; id: string; day: string }
   | { t: 'drop'; id: string }
   | { t: 'day'; k: string; patch: Partial<Day> }
   | { t: 'stay'; id: string | null; ref?: string; fields: Stay };
 
-/** What a decision update adds, so two ticked updates of the same decision both land (see mergeDelta). */
-export interface Delta { problem?: Record<string, string>; options?: Option[] }
+/** What a decision or memory update adds, so two ticked updates of the same document both land (see mergeDelta). */
+export interface Delta { problem?: Record<string, string>; options?: Option[]; lines?: LinesDelta }
+/** One change to a memory note's lines, kept as a change (not as the whole list) for the same reason. */
+export interface LinesDelta { add?: MemoryLine; edit?: MemoryLine; remove?: string }
 
 export interface Diff { field: string; before: unknown; after: unknown }
 export interface Planned {
   /** What it acts on and how; the review screen shows these. */
-  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision';
-  kind: 'create' | 'update' | 'done' | 'drop' | 'reorder';
+  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory';
+  /** `remember`: a change to a memory note (a line added, edited or forgotten, or the note's own fields). */
+  kind: 'create' | 'update' | 'done' | 'drop' | 'reorder' | 'remember';
   title: string;
   diffs: Diff[];
   ops: Op[];
@@ -57,7 +64,44 @@ export interface Plan {
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+/** Whether a memory change makes a new note (the review marks it as new). */
+export const createsNote = (it: Planned): boolean => it.target === 'memory' && it.ops[0]?.t === 'create';
 const validZone = (z: string | undefined) => { if (!z) return false; try { new Intl.DateTimeFormat('en', { timeZone: z }); return true; } catch { return false; } };
+
+/** The notes a change-set may name: never a private one (an AI is never told one exists, so planning acts as if it didn't). */
+const openNotes = (m: Map<string, W<MemoryNote>>): W<MemoryNote>[] => [...m.values()].filter(n => !n.private);
+/** A note by id, then by name or alias; 'many' when several match. */
+function findOpenNote(notes: W<MemoryNote>[], v: string): W<MemoryNote> | 'many' | undefined {
+  const byId = notes.find(n => n.id === v);
+  if (byId) return byId;
+  const want = norm(v);
+  const hits = want ? notes.filter(n => norm(n.name) === want || n.aliases.some(a => norm(a) === want)) : [];
+  return hits.length > 1 ? 'many' : hits[0];
+}
+/** A line by its number (from 1, as shown to the AI), its id, or its exact text. */
+function lineOf(n: MemoryNote, want: number | string): MemoryLine | undefined {
+  if (typeof want === 'number') return n.lines[want - 1];
+  const text = norm(want.replace(/^\d+\.\s+/, ''));
+  return n.lines.find(l => l.id === want) ?? n.lines.find(l => norm(l.text) === text) ?? (/^\d+$/.test(want) ? n.lines[Number(want) - 1] : undefined);
+}
+
+/**
+ * The change-set with each memory line named by its id instead of its number or text, as `s` has them:
+ * for a change-set kept to be applied later (the connector's confirmation), so a line that moved up
+ * since is not mistaken for another. A line not found is left as it was (planning skips it).
+ */
+export function pinLines(cs: ChangeSet, s: Pick<Snapshot, 'memory'>): ChangeSet {
+  const notes = openNotes(s.memory);
+  return {
+    ...cs,
+    changes: cs.changes.map(c => {
+      if (c.op !== 'memory.edit' && c.op !== 'memory.remove') return c;
+      const hit = findOpenNote(notes, c.note);
+      const ln = hit && hit !== 'many' ? lineOf(hit, c.line) : undefined;
+      return ln ? { ...c, note: hit !== 'many' && hit ? hit.id : c.note, line: ln.id } : c;
+    }),
+  };
+}
 
 export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const refs = new Map<string, { target: string; title: string }>();
@@ -73,11 +117,16 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     return r && r.target === target ? asRef(v) : undefined;
   };
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
+  /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
+  const madeNotes = new Map<string, { ref: string; name: string; kind: MemoryNote['kind'] }>();
+  const notes = openNotes(s.memory);
+  const findNote = (v: string) => findOpenNote(notes, v);
   const items: Planned[] = [];
   let skipped = cs.bad;
   const skippedAt: number[] = [];
 
   /** Clean a task's fields: unknown references and unsafe links are dropped. */
+  const by = cs.by ?? 'ai';
   const cleanTask = (set: TaskSet): Partial<Task> => {
     const o: Partial<Task> = {};
     for (const [k, v] of Object.entries(set)) {
@@ -87,9 +136,12 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       if (k === 'after') { const a = ((v as string[] | null) ?? []).map(taskId).filter((x): x is string => !!x); o.after = a.length ? a : null; continue; }
       if (k === 'link') { if (v === null || isAllowedLink(v as string)) o.link = (v as string | null) || null; continue; }
       if (k === 'title' && !v) continue;
+      if (k === 'weekdays') { const w = [...new Set((v as number[] | null) ?? [])].sort((a, b) => a - b); o.weekdays = w.length ? w : null; continue; }
       (o as Record<string, unknown>)[k] = v;
     }
-    if (o.est != null) o.estBy = 'ai';
+    // A standing obligation with no time or no days would sit unseen: it stays an ordinary step.
+    if (o.template && (!o.at || !o.weekdays?.length)) delete o.template;
+    if (o.est != null) o.estBy = by;
     if ('due' in o) o.dueRule = null;
     return o;
   };
@@ -158,7 +210,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'task.create': {
         const f = cleanTask(c.set);
         const p = f.project && !isRef(f.project) ? s.projects.get(f.project) : undefined;
-        const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by: 'ai', src: 'ai' } as Partial<Task> & { title: string };
+        const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
         items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
         break;
       }
@@ -166,6 +218,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const tk = s.tasks.get(c.id);
         if (!tk || tk.status === 'dropped' || tk.template) break;
         const f = cleanTask(c.set);
+        delete f.template; // only a new step becomes a standing obligation
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k === 'estBy' || k === 'dueRule') continue;
@@ -301,10 +354,75 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         items.push({ target: 'decision', kind: 'update', title: d.title, diffs, ops: [...ops, { t: 'update', c: 'decisions', id: d.id, patch: f, delta }] });
         break;
       }
+      case 'memory.add':
+      case 'memory.edit':
+      case 'memory.remove':
+      case 'memory.note': {
+        const it = memoryChange(c);
+        if (it) items.push(it);
+        break;
+      }
     }
     if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
   return { items, skipped, skippedAt, refTitles };
+
+  /**
+   * A change to memory (brief §10). A note is found by id, then by name or alias; one that several notes
+   * match is left alone. Private notes are not looked at at all (they are never sent to an AI, so an AI
+   * has no business writing to one, and planning must not tell it one exists): a new note may take a
+   * private note's name. Lines an AI writes are marked `by: 'ai'`. A line is named by its number (from
+   * 1, as shown to the AI), its id, or its exact text; once planned, the write names it by id.
+   */
+  function memoryChange(c: Extract<Change, { op: `memory.${string}` }>): Planned | undefined {
+    const now = gen.now();
+    const hit = findNote(c.note);
+    if (hit === 'many') return undefined;
+    const item = (note: { name: string }, diffs: Diff[], op: Op): Planned => ({ target: 'memory', kind: 'remember', title: note.name, diffs, ops: [op] });
+    if (c.op === 'memory.add') {
+      const line: MemoryLine = { id: gen.id('l'), text: c.text, at: now, by: 'ai' };
+      const diff: Diff = { field: 'line', before: undefined, after: c.text };
+      if (hit) {
+        if (hit.lines.some(l => norm(l.text) === norm(c.text))) return undefined;
+        return item(hit, [diff], { t: 'update', c: 'memory', id: hit.id, patch: { lines: [...hit.lines, line], updated: now }, delta: { lines: { add: line } } });
+      }
+      const made = madeNotes.get(norm(c.note));
+      if (made) {
+        const fields: MemoryNote = { kind: made.kind, name: made.name, aliases: [], lines: [line], private: false, updated: now };
+        return item(fields, [diff], { t: 'update', c: 'memory', id: asRef(made.ref), patch: { lines: [line], updated: now }, delta: { lines: { add: line } }, ifMissing: fields as unknown as Record<string, unknown> });
+      }
+      if (!c.kind) return undefined;
+      const ref = 'note ' + norm(c.note);
+      madeNotes.set(norm(c.note), { ref, name: c.note, kind: c.kind });
+      const fields: MemoryNote = { kind: c.kind, name: c.note, aliases: [], lines: [line], private: false, updated: now };
+      return item(fields, [{ field: 'kind', before: undefined, after: c.kind }, diff], { t: 'create', c: 'memory', ref, fields: fields as unknown as Record<string, unknown> });
+    }
+    if (!hit) return undefined;
+    if (c.op === 'memory.note') {
+      const patch: Partial<MemoryNote> = {};
+      const diffs: Diff[] = [];
+      const others = notes.filter(n => n.id !== hit.id);
+      const taken = (name: string) => others.some(n => norm(n.name) === norm(name) || n.aliases.some(a => norm(a) === norm(name)));
+      const name = c.set.name ?? hit.name;
+      if (name !== hit.name && !taken(name)) { patch.name = name; diffs.push({ field: 'name', before: hit.name, after: name }); }
+      if (c.set.aliases) {
+        const seen = new Set([norm(patch.name ?? hit.name)]);
+        const aliases = c.set.aliases.filter(a => !seen.has(norm(a)) && !!seen.add(norm(a)));
+        if (!same(aliases, hit.aliases)) { patch.aliases = aliases; diffs.push({ field: 'aliases', before: hit.aliases, after: aliases }); }
+      }
+      if (c.set.kind && c.set.kind !== hit.kind) { patch.kind = c.set.kind; diffs.push({ field: 'kind', before: hit.kind, after: c.set.kind }); }
+      if (!diffs.length) return undefined;
+      return item(hit, diffs, { t: 'update', c: 'memory', id: hit.id, patch: { ...patch, updated: now } });
+    }
+    const ln = lineOf(hit, c.line);
+    if (!ln) return undefined;
+    if (c.op === 'memory.remove') {
+      return item(hit, [{ field: 'line', before: ln.text, after: undefined }], { t: 'update', c: 'memory', id: hit.id, patch: { lines: hit.lines.filter(l => l.id !== ln.id), updated: now }, delta: { lines: { remove: ln.id } } });
+    }
+    if (ln.text === c.text) return undefined;
+    const edited: MemoryLine = { ...ln, text: c.text, at: now, by: 'ai' };
+    return item(hit, [{ field: 'line', before: ln.text, after: c.text }], { t: 'update', c: 'memory', id: hit.id, patch: { lines: hit.lines.map(l => (l.id === ln.id ? edited : l)), updated: now }, delta: { lines: { edit: edited } } });
+  }
 
   function projectFields(set: Extract<Change, { op: 'project.update' }>['set'], cur: Project | null): Partial<Project> {
     const f: Partial<Project> = {};
@@ -349,13 +467,15 @@ function decisionDiffs(cur: Decision | null, f: Partial<Decision>): Diff[] {
 }
 
 /**
- * One low-risk change (brief §2, §10): a single change that adds a step, ticks one done, or moves
- * one date. It may be applied at once, with Undo; anything else waits for a yes.
+ * One low-risk change (brief §2, §10): a single change that adds a step (not a decision), ticks one
+ * done, or moves one date. It may be applied at once, with Undo; anything else waits for a yes.
  */
 export function isLowRisk(cs: Pick<ChangeSet, 'changes' | 'bad'>, plan: Pick<Plan, 'items'>): boolean {
   if (cs.changes.length !== 1 || cs.bad || plan.items.length !== 1) return false;
   const it = plan.items[0]!;
   if (it.target !== 'task') return false;
+  const first = cs.changes[0]!;
+  if (first.op === 'task.create' && first.set.kind === 'decision') return false; // a decision opens the review (brief §10)
   if (it.kind === 'create' || it.kind === 'done') return true;
   if (it.kind !== 'update') return false;
   const fields = it.diffs.map(d => d.field);
@@ -371,6 +491,8 @@ export interface Writer {
   drop(id: string): Promise<void>;
   day(k: string, patch: Partial<Day>): Promise<void>;
   stay(id: string | null, s: Stay): Promise<string>;
+  /** The document as stored now (undefined for none or a tombstone): a note's line changes apply to its lines at the time of writing. */
+  read?(c: Collection, id: string): Promise<Record<string, unknown> | undefined>;
 }
 
 /** Write the ticked changes, in order, resolving refs to the ids just created. Returns how many were applied. */
@@ -389,17 +511,38 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
   // Each update was planned against the same snapshot; later ones build on what earlier ones wrote.
   const wrote = new Map<string, Record<string, unknown>>();
   let n = 0;
-  for (const [i, it] of plan.items.entries()) {
+  items: for (const [i, it] of plan.items.entries()) {
     if (!ticked(i)) continue;
     for (const op of it.ops) {
       switch (op.t) {
         case 'task': { const id = await w.createTask(subst(op.fields) as Task); if (op.ref) ids.set(asRef(op.ref), id); break; }
-        case 'create': { const id = await w.create(op.c, subst(op.fields) as Record<string, unknown>); if (op.ref) ids.set(asRef(op.ref), id); break; }
+        case 'create': {
+          const fields = subst(op.fields) as Record<string, unknown>;
+          const id = await w.create(op.c, fields);
+          if (op.ref) { ids.set(asRef(op.ref), id); wrote.set(op.c + '/' + asRef(op.ref), fields); }
+          break;
+        }
         case 'update': {
           const key = op.c + '/' + op.id, prev = wrote.get(key);
+          // Something made by an earlier change: its id is only known now. If that change wasn't ticked, this one
+          // makes it (a ticked line is not lost); with nothing to make it from, it is not applied and not counted.
+          const id = isRef(op.id) ? ids.get(op.id) : op.id;
+          if (!id) {
+            if (!op.ifMissing) continue items;
+            ids.set(op.id, await w.create(op.c, op.ifMissing));
+            wrote.set(key, op.ifMissing);
+            break;
+          }
           let p = subst(op.patch) as Record<string, unknown>;
-          if (prev && op.delta) p = mergeDelta(prev, p, subst(op.delta) as Delta);
-          await w.update(op.c, op.id, p);
+          const delta = op.delta ? (subst(op.delta) as Delta) : undefined;
+          if (delta?.lines && w.read) {
+            // Lines are changed as a delta on what the note holds now, by line id, not on the copy the plan was made
+            // from: a line added or forgotten since (here or on another device) stays so. A note gone since is left gone.
+            const base = prev ?? (await w.read(op.c, id));
+            if (!base) continue items;
+            p = mergeDelta(base, p, delta);
+          } else if (prev && delta) p = mergeDelta(prev, p, delta);
+          await w.update(op.c, id, p);
           wrote.set(key, { ...prev, ...p });
           break;
         }
@@ -438,6 +581,13 @@ export function mergeDelta(prev: Record<string, unknown>, p: Record<string, unkn
       for (const c of COLUMNS) for (const it of o[c]) if (!have[c].some(x => x.id === it.id || x.text.trim().toLowerCase() === it.text.trim().toLowerCase())) have[c].push(it);
     }
     out.options = opts;
+  }
+  if (d.lines && Array.isArray(prev.lines)) {
+    let lines = [...(prev.lines as MemoryLine[])];
+    if (d.lines.add && !lines.some(l => l.id === d.lines!.add!.id)) lines.push(d.lines.add);
+    if (d.lines.edit) lines = lines.map(l => (l.id === d.lines!.edit!.id ? d.lines!.edit! : l));
+    if (d.lines.remove) lines = lines.filter(l => l.id !== d.lines!.remove);
+    out.lines = lines;
   }
   return out;
 }

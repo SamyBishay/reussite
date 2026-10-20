@@ -5,11 +5,14 @@ import { z } from 'zod';
 import { extractJson } from './json';
 
 export const CHANGESET_VERSION = 1;
+/** The longest `note` (the AI's one line for the person) kept. */
+export const NOTE_MAX = 1000;
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 const hhmm = z.string().regex(/^\d{1,2}:\d{2}$/, 'HH:MM');
 const id = z.union([z.string().min(1), z.number()]).transform(String);
 const minutes = z.union([z.number(), z.string().regex(/^\s*\d+(\.\d+)?\s*$/).transform(Number)]).pipe(z.number().min(1).max(1440)).transform(Math.round);
+const minutes0 = z.union([z.number(), z.string().regex(/^\s*\d+(\.\d+)?\s*$/).transform(Number)]).pipe(z.number().min(0).max(1440)).transform(Math.round);
 const text = (max: number) => z.string().transform(s => s.trim().slice(0, max));
 const ids = z.union([id, z.array(id)]).transform(v => (Array.isArray(v) ? v : [v]));
 const suit = z.enum(['S', 'D', 'C', 'H']);
@@ -32,6 +35,10 @@ const taskSet = z.object({
   kind: z.enum(['task', 'decision']).optional(),
   at: hhmm.nullable().optional(),
   dur: minutes.nullable().optional(),
+  /** A standing obligation (needs `at` and `weekdays`), and minutes of notice before it; null = the person's default. */
+  template: z.boolean().optional(),
+  weekdays: z.array(z.number().int().min(1).max(7)).max(7).nullable().optional(),
+  lead: minutes0.nullable().optional(),
 });
 export type TaskSet = z.infer<typeof taskSet>;
 
@@ -68,6 +75,17 @@ export type DecisionSet = z.infer<typeof decisionSet>;
 
 const launch = z.object({ t: hhmm, k: z.enum(['start', 'restart']).optional(), n: text(120).optional() });
 
+// Memory (brief §10): a note is named by its id, its name or an alias; a line by its number in the
+// context (from 1) or its exact text.
+const note = text(120).pipe(z.string().min(1));
+const line = z.union([z.number().int().min(1), text(600).pipe(z.string().min(1))]);
+const noteSet = z.object({
+  name: text(120).pipe(z.string().min(1)).optional(),
+  aliases: z.array(text(120).pipe(z.string().min(1))).max(20).optional(),
+  kind: z.enum(['profile', 'person', 'place', 'area', 'topic']).optional(),
+});
+export type NoteSet = z.infer<typeof noteSet>;
+
 const ref = text(40).optional();
 export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('task.create'), ref, set: taskSet.extend({ title: text(240).pipe(z.string().min(1)) }) }),
@@ -84,6 +102,10 @@ export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('stay.update'), id, set: z.object({ place: id.optional(), from: day.optional(), to: day.optional(), note: text(300).optional() }) }),
   z.object({ op: z.literal('decision.create'), ref, set: decisionSet.extend({ title: text(200).pipe(z.string().min(1)) }) }),
   z.object({ op: z.literal('decision.update'), id, set: decisionSet }),
+  z.object({ op: z.literal('memory.add'), note, kind: noteSet.shape.kind, text: text(600).pipe(z.string().min(1)) }),
+  z.object({ op: z.literal('memory.edit'), note, line, text: text(600).pipe(z.string().min(1)) }),
+  z.object({ op: z.literal('memory.remove'), note, line }),
+  z.object({ op: z.literal('memory.note'), note, set: noteSet }),
 ]);
 export type Change = z.infer<typeof ChangeSchema>;
 
@@ -91,11 +113,14 @@ export type Change = z.infer<typeof ChangeSchema>;
 export const ChangeSetSchema = z.object({
   v: z.union([z.literal(1), z.literal('1').transform(() => 1 as const)]).optional(),
   note: z.string().optional(),
+  /** Home's box only: the request is not about the list, the memory or the method. Read when there are no changes. */
+  outside: z.boolean().optional(),
   changes: z.array(z.unknown()).max(80),
 });
 export type ChangeSetRaw = z.infer<typeof ChangeSetSchema>;
 
-export interface ChangeSet { v: 1; note: string; changes: Change[]; bad: number }
+/** `by: 'me'` marks a change-set the person's own words made (Home's local parser); an AI's reply never carries it. */
+export interface ChangeSet { v: 1; note: string; changes: Change[]; bad: number; by?: 'me' }
 
 export type ParseResult = { ok: true; cs: ChangeSet } | { ok: false; error: 'noJson' | 'invalid' | 'version' | 'empty' };
 
@@ -112,7 +137,7 @@ export function readChangeSet(raw: unknown): ParseResult {
     if (r.success) changes.push(r.data); else bad++;
   }
   if (!changes.length) return { ok: false, error: bad ? 'invalid' : 'empty' };
-  return { ok: true, cs: { v: 1, note: (env.data.note ?? '').trim().slice(0, 600), changes, bad } };
+  return { ok: true, cs: { v: 1, note: (env.data.note ?? '').trim().slice(0, NOTE_MAX), changes, bad } };
 }
 
 /** Find the ```reussite block in a pasted reply (or any JSON) and validate it. */

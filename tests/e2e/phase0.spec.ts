@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { sampleExport } from './fixture';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, goTab, openMenu } from './helpers';
 
 test('imports a v1 export, with a summary first', async ({ page }) => {
   await page.goto('/#settings');
@@ -13,19 +13,24 @@ test('imports a v1 export, with a summary first', async ({ page }) => {
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await page.getByTestId('tab-projects').click();
   await expect(page.locator('main')).toContainText('Housing papers');
-  await page.getByTestId('tab-log').click();
-  await expect(page.locator('main')).toContainText('Stay one more year');
+  await expect(page.locator('main')).toContainText('Stay in the flat or move?');
+  await goTab(page, 'log');
+  await expect(page.locator('main')).toContainText('Timed sessions');
 });
 
 for (const width of [320, 375, 430]) {
   test(`nothing scrolls sideways at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await importSample(page);
-    for (const v of ['today', 'matrix', 'projects', 'calendar', 'log', 'settings']) {
-      await page.getByTestId('tab-' + v).click();
+    for (const v of ['home', 'today', 'matrix', 'projects', 'calendar', 'log', 'settings'] as const) {
+      await goTab(page, v);
       await noSideways(page, v);
     }
-    await page.getByTestId('tab-today').click();
+    for (const v of ['memory', 'history'] as const) {
+      await openMenu(page, v);
+      await noSideways(page, v);
+    }
+    await goTab(page, 'today');
     const sheets: [string, () => Promise<void>][] = [
       ['task details', () => page.getByTestId('details').first().click()],
       ['how long', () => page.getByTestId('first').getByRole('button', { name: 'Already done' }).click()],
@@ -45,7 +50,7 @@ for (const width of [320, 375, 430]) {
     await page.getByTestId('first').getByRole('button', { name: 'Pause' }).click();
     await noSideways(page, 'pause');
     await page.keyboard.press('Escape');
-    await page.getByTestId('tab-settings').click();
+    await goTab(page, 'settings');
     await page.getByTestId('open-import').click();
     await noSideways(page, 'import');
   });
@@ -59,7 +64,7 @@ test('marking an untimed step done asks how long it took', async ({ page }) => {
   await expect(page.getByTestId('dur')).toHaveText(['5 min', '10 min', '15 min', '20 min']);
   await page.getByTestId('dur').nth(1).click();
   await expect(page.getByTestId('first')).not.toContainText('Doctolib');
-  await page.getByTestId('tab-log').click();
+  await goTab(page, 'log');
   await expect(page.locator('main')).toContainText('Doctolib');
 });
 
@@ -93,14 +98,14 @@ test('a step’s link opens the website outside Réussite', async ({ page }) => 
 });
 
 test('footer shows the credit line and the not-therapy line', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/#today');
   await expect(page.locator('.foot')).toContainText('doesn’t replace therapy');
   await expect(page.locator('.foot')).toContainText('Special thanks to Nelly Darmon, psychologist.');
 });
 
 test('French uses French typography', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('tab-settings').click();
+  await goTab(page, 'settings');
   await page.getByRole('button', { name: 'Français' }).click();
   await expect(page.getByTestId('tab-today')).toContainText('Aujourd’hui');
   await page.getByTestId('tab-today').click();

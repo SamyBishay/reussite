@@ -148,6 +148,34 @@ describe('applyIncoming', () => {
     expect(r).toEqual({ writes: [], newer: true, skipped: 0 });
   });
 
+  it('carries memory notes and exchanges between devices, lines whole', () => {
+    const a = new FakeDevice('aaa'), b = new FakeDevice('bbb');
+    const line = (id: string, text: string) => ({ id, text, at: '2026-10-01T10:00:00Z', by: 'me' });
+    a.add('memory', 'm1', { kind: 'person', name: 'Ibrahim', aliases: ['Ibra'], lines: [line('l0', 'one')], private: false, updated: '2026-10-01T10:00:00Z' });
+    a.add('exchanges', 'e1', { at: '2026-10-01T10:00:00Z', text: 'hi', turns: [], changes: ['c1'], undo: { c1: [{ c: 'tasks', id: 't1', created: true }] }, undone: [], src: 'home' });
+    expect(SYNCED_COLLECTIONS).toEqual(expect.arrayContaining(['memory', 'exchanges']));
+    send(a, b, '');
+    expect(b.get('memory', 'm1')).toMatchObject({ name: 'Ibrahim', lines: [line('l0', 'one')] });
+    expect(b.get('exchanges', 'e1')!.undo).toEqual({ c1: [{ c: 'tasks', id: 't1', created: true }] });
+  });
+
+  it('two devices editing one note\'s lines before syncing keep one side (arrays replace whole)', () => {
+    const a = new FakeDevice('aaa'), b = new FakeDevice('bbb');
+    const line = (id: string, text: string) => ({ id, text, at: '2026-10-01T10:00:00Z', by: 'me' });
+    a.add('memory', 'm1', { kind: 'person', name: 'Ibrahim', aliases: [], lines: [line('l0', 'one')], private: false, updated: '' });
+    send(a, b, '');
+    at(10);
+    a.edit('memory', 'm1', { lines: [line('l0', 'one'), line('la', 'from a')] });
+    at(10);
+    b.edit('memory', 'm1', { lines: [line('l0', 'one'), line('lb', 'from b')] });
+    send(a, b, '');
+    send(b, a, '');
+    expect(a.get('memory', 'm1')!.lines).toEqual(b.get('memory', 'm1')!.lines);
+    expect((a.get('memory', 'm1')!.lines as unknown[]).length).toBe(2); // one side's new line is lost: the later write wins whole
+    expect(JSON.stringify(a.get('memory', 'm1')!.lines)).toContain('from b');
+    expect(JSON.stringify(a.get('memory', 'm1')!.lines)).not.toContain('from a');
+  });
+
   it('leaves out unknown collections and malformed documents', () => {
     const a = new FakeDevice('aaa');
     const ok = create<Record<string, unknown>>('t8', { title: 'Fine' }, SCHEMA_VERSION, tick(createClock('z'), 5));

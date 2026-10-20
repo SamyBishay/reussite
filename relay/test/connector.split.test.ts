@@ -7,13 +7,13 @@ import { openFromText } from '../../src/sync/crypto';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import type { Collection } from '../../src/data/schema';
 import { buildSnapshot } from '../../src/sync/engine';
-import { dayOf } from '../../src/sync/parts';
+import { dayOf, EXCHANGE_MARGIN_MS } from '../../src/sync/parts';
 import { syncOnce } from '../../src/sync/run';
 import { FakeDevice } from '../../src/sync/testing';
 import { syntheticSpace, type Docs } from '../bench/synthetic';
 import { cacheGet, cacheSize, setCacheEnabled } from '../src/connector/cache';
-import { COMPACT_TAIL, emptyMaps } from '../src/connector/space';
-import { dayText, projectText, queryText, taskText } from '../src/connector/render';
+import { buildSpace, COMPACT_TAIL, emptyMaps } from '../src/connector/space';
+import { dayText, memoryText, projectText, queryText, taskText } from '../src/connector/render';
 import { View } from '../src/connector/view';
 import { decodeSnapshot } from '../../src/sync/wire';
 import { BASE, call, url } from './helpers';
@@ -21,7 +21,7 @@ import { newApp, signIn, switchOn, tool, viaWorker, type App } from './connector
 
 const TODAY = dayOf(Date.now());
 const day = (n: number) => dayOf(Date.now() + n * 86_400_000);
-const SIZES = { tasks: 130, sessions: 150, days: 45, projects: 8, decisions: 3, places: 2, stays: 2 }; // small enough for the connector to compact (COMPACT_MAX_DOCS)
+const SIZES = { tasks: 130, sessions: 150, days: 45, projects: 8, decisions: 3, places: 2, stays: 2, memory: 12, exchanges: 40 }; // small enough for the connector to compact (COMPACT_MAX_DOCS)
 
 let app: App;
 let access: string;
@@ -123,6 +123,17 @@ describe('the connector reads hot only for the common calls', () => {
       expect(d).toContain('Decision d0');
       expect((await tool(access, 'get_task', { id: docs.tasks!.find(t => t.status === 'open')!.id })).isError).toBe(false);
       expect((await tool(access, 'get_day', { date: day(-5) })).text).toBe(dayText(v, day(-5)));
+    });
+  });
+
+  it('read_memory answers from the hot part alone, as a read of the whole list would', async () => {
+    const v = expected();
+    const named = [...v.memory.values()].find(n => !n.private && n.kind !== 'profile')!;
+    const hidden = [...v.memory.values()].find(n => n.private)!;
+    await withoutCold(async () => {
+      expect((await tool(access, 'read_memory')).text).toBe(memoryText(v, {}));
+      expect((await tool(access, 'read_memory', { name: named.name })).text).toBe(memoryText(v, { name: named.name }));
+      expect((await tool(access, 'read_memory', { name: hidden.name })).text).not.toContain(hidden.lines[0]!.text);
     });
   });
 
@@ -406,3 +417,24 @@ describe("the isolate's cache", () => {
 });
 
 void b64uDecode; void SCHEMA_VERSION;
+
+describe('memory notes and exchanges in the two parts', () => {
+  it('a hot-only read holds every live note and the exchanges of the two days before the cut, and the View reads them', async () => {
+    const hotBlob = (await rows("SELECT blob FROM snapshots WHERE space = ?1 AND kind = 'hot' ORDER BY part", space())).map(r => r.blob).join('');
+    const s = await buildSpace(space(), app.keys, hotBlob, [], { wall: 0, counter: 0 });
+    expect(s.newer).toBe(false);
+    const v = new View(s.maps, undefined, { x: s.split!.x, from: s.split!.from });
+    const whole = expected();
+    expect(whole.memory.size).toBe(SIZES.memory);
+    expect([...v.memory.keys()].sort()).toEqual([...whole.memory.keys()].sort());
+    const note = [...v.memory.values()][0]!;
+    expect(note.lines.length).toBe(8);
+    expect(typeof note.private).toBe('boolean');
+    const edge = s.split!.cut.wall - EXCHANGE_MARGIN_MS;
+    const recent = [...whole.exchanges.values()].filter(e => Date.parse(e.at) >= edge);
+    expect(recent.length).toBeGreaterThan(0);
+    expect(recent.length).toBeLessThan(whole.exchanges.size);
+    expect([...v.exchanges.keys()].sort()).toEqual(recent.map(e => e.id).sort());
+    expect(v.exchanges.get(recent[0]!.id)!.undone).toEqual([]);
+  });
+});

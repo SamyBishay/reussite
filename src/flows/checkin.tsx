@@ -171,8 +171,8 @@ function Checkin() {
   const p: Plan = aiItems ? { ...rule, items: [...ruleFixed, ...aiItems], total: totalOf(aiItems, inp) } : rule;
   const improve = async () => {
     setFault(''); setProposed(null);
-    const { system, user } = planPrompt(inp, rule, [...fixed, ...rule.items.filter(i => i.role === 'fixed').map(i => ({ title: T(i.id)?.title ?? '', at: i.at!, dur: T(i.id)?.dur ?? 60 }))]);
-    const r = await ai.run(signal => ask('plan', 'thinking', system, user, PlanReply, { signal }));
+    const { system, user, notes } = planPrompt(inp, rule, [...fixed, ...rule.items.filter(i => i.role === 'fixed').map(i => ({ title: T(i.id)?.title ?? '', at: i.at!, dur: T(i.id)?.dur ?? 60 }))]);
+    const r = await ai.run(signal => ask('plan', 'thinking', system, user, PlanReply, { signal, notes }));
     if (!r) return;
     const v = readAiPlan(r, inp, rule);
     if (!v.ok) { setAiPlan(null); setFault(t(FAULT[v.why])); return; }

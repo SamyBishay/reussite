@@ -1,4 +1,4 @@
-// The connector's MCP server: nine tools (docs/dev/connector.md). A server is built per request
+// The connector's MCP server: ten tools (docs/dev/connector.md). A server is built per request
 // (the handler is stateless); the space is only decrypted when a tool actually runs.
 import { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
@@ -12,8 +12,8 @@ import { decisionLines, type TaskW } from '../../../src/domain/lists';
 import type { Env } from '../env';
 import { applyChanges, undo, type Ctx, type Out } from './changes';
 import { cacheGet, remember } from './cache';
-import { dayText, lines, projectText, queryText, taskText } from './render';
-import { findByName } from './resolve';
+import { dayText, lines, memoryText, projectText, queryText, taskText } from './render';
+import { findByName } from '../../../src/domain/names';
 import { compact, loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
 import { View } from './view';
 import { unwrap } from './wrap';
@@ -21,6 +21,8 @@ import { unwrap } from './wrap';
 export const INSTRUCTIONS = `Réussite is a planning app built on a CBT method for adults with ADHD. This connector reads and edits one person's list: steps, projects, the day's plan, places, decisions.
 
 Call get_method before planning a day or running a decision, and follow it. Read with today, get_day, query_tasks, get_task, get_project and get_decision.
+
+Call read_memory when the person names someone, a place or a matter ("what does Ibrahim have on", "the flat"): it gives what they told Réussite about it and the open steps that name it. With no arguments it gives their profile and the index of notes. A new fact goes through apply_changes as a memory.add change, in the person's own words, and a memory change always waits for their yes, however small.
 
 Never change the list without the person's yes, except one low-risk change they asked for (add one step, tick one done, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
 
@@ -146,6 +148,11 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     const steps = d.taskIds.map(i => c.v.tasks.get(i)).filter((t): t is TaskW => !!t);
     return { text: decisionLines(d) + (steps.length ? `\nsteps:\n${lines(c.v, steps)}` : '') };
   });
+
+  tool('read_memory', "What the person told Réussite, in their own words. Nothing: their profile and an index of the notes. A name (a person, place or matter, or an alias): that note with its lines numbered from 1 and the open steps that name it. A query (free words): the notes named in it or with those words in a line. Private notes are never shown.", z.object({
+    name: z.string().optional().describe('A note id, name or alias; or words that contain one'),
+    query: z.string().optional().describe('Free words, e.g. a question'),
+  }), read, (c, a) => ({ text: memoryText(c.v, a) }));
 
   // The method needs no list: it doesn't open the space.
   server.registerTool('get_method', {

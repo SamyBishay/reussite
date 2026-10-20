@@ -10,14 +10,16 @@ import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from '../../
 import { applyIncoming, collectOutgoing, SYNCED_COLLECTIONS, type DocSet } from '../../../src/sync/engine';
 import { create, merge, patch, remove } from '../../../src/data/doc';
 import { createClock, format, receive, tick, type Clock } from '../../../src/data/hlc';
-import { COLLECTIONS, SCHEMA_VERSION, type Collection } from '../../../src/data/schema';
+import { COLLECTIONS, SCHEMA_VERSION, type Collection, type UndoDoc } from '../../../src/data/schema';
 import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES, type ChangeBatch, type ChangeDoc, type ColdDigest, type Cut, type Snapshot, type StoredDoc } from '../../../src/sync/protocol';
 import { buildParts, hotFrom, inCold } from '../../../src/sync/parts';
 import type { Env } from '../env';
 import { appendBatch, spaceSlot, storeSnapshot, type SnapshotWrite } from '../sync';
 import { CONNECTOR_DEVICE } from './admin';
 import { cacheGet, remember, type Entry } from './cache';
+import { UndoLog } from '../../../src/ai/undo';
 
+export type { UndoDoc };
 export type Maps = Record<Collection, Map<string, StoredDoc>>;
 export const emptyMaps = (): Maps => Object.fromEntries(COLLECTIONS.map(c => [c, new Map()])) as unknown as Maps;
 
@@ -236,9 +238,8 @@ export async function loadCold(env: Env, s: Loaded): Promise<void> {
 export class Edits {
   private touched = new Map<string, Collection>();
   private watermark: string;
-  /** What changed, field by field: `was` is null for a field the document didn't have. */
-  readonly undo: UndoDoc[] = [];
-  private undoBy = new Map<string, UndoDoc>();
+  /** What changed, field by field (src/ai/undo.ts, shared with the app). */
+  private log = new UndoLog();
 
   constructor(readonly s: Loaded, private now: () => number = Date.now) {
     this.watermark = format(s.clock.wall, s.clock.counter, s.clock.node);
@@ -263,7 +264,8 @@ export class Edits {
     if (!this.s.maps[c].has(id)) this.guard(c, id); // a day that exists in the cold part would be made again from nothing
     const doc = create(id, fields, SCHEMA_VERSION, tick(this.s.clock, this.now())) as StoredDoc;
     writable(this.s, c).set(id, doc);
-    this.mark(c, id, { c, id, created: true });
+    this.touch(c, id);
+    this.log.created(c, id, doc);
     return id;
   }
 
@@ -271,13 +273,8 @@ export class Edits {
     const cur = this.get(c, id);
     if (!cur) throw new Error('missing ' + c + '/' + id);
     const next = patch(cur, changes, this.s.clock, SCHEMA_VERSION) as StoredDoc;
-    const u = this.mark(c, id, { c, id, fields: {} });
-    for (const k of Object.keys(changes)) {
-      if (next._hlc[k] === cur._hlc[k]) continue; // unchanged: no new clock
-      u.fields ??= {};
-      u.fields[k] ??= { was: k in cur ? cur[k] ?? null : null, now: null };
-      u.fields[k]!.now = next[k] ?? null;
-    }
+    this.touch(c, id);
+    this.log.updated(c, id, cur, next, Object.keys(changes));
     writable(this.s, c).set(id, next);
   }
 
@@ -286,21 +283,14 @@ export class Edits {
     const cur = this.get(c, id);
     if (!cur) return;
     writable(this.s, c).set(id, remove(cur, this.s.clock) as StoredDoc);
-    this.mark(c, id, { c, id, removed: true });
+    this.touch(c, id);
+    this.log.removed(c, id);
   }
 
-  private mark(c: Collection, id: string, u: UndoDoc): UndoDoc {
-    const key = c + '/' + id;
-    this.touched.set(key, c);
-    const have = this.undoBy.get(key);
-    if (have) {
-      if (u.removed) have.removed = true;
-      return have;
-    }
-    this.undoBy.set(key, u);
-    this.undo.push(u);
-    return u;
-  }
+  private touch(c: Collection, id: string) { this.touched.set(c + '/' + id, c); }
+
+  /** The undo records so far. */
+  get undo(): UndoDoc[] { return this.log.docs; }
 
   get empty() { return this.touched.size === 0; }
 
@@ -381,14 +371,3 @@ export async function sealHot(s: Loaded, upto: number): Promise<string> {
 
 /** Compaction writes the hot part uncompressed: gzip of the whole hot part costs more CPU than the call has left (relay/bench). */
 const COMPACT_PLAIN = false;
-
-/** What one edit replaced, kept so `undo` can put it back. */
-export interface UndoDoc {
-  c: Collection;
-  id: string;
-  /** Made by this change-set: undone with a tombstone. */
-  created?: true;
-  /** Removed by this change-set (tombstoned). */
-  removed?: true;
-  fields?: Record<string, { was: unknown; now: unknown }>;
-}

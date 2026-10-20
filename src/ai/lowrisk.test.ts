@@ -14,7 +14,7 @@ const snap = (): Snapshot => {
     tasks: m([task('t1'), task('t2'), task('t3', { status: 'dropped' })]),
     projects: m([{ id: 'p1', name: 'Thesis', suit: 'S', where: 'any', goal: null, goalBy: null, due: null, order: 1, status: 'active' }]),
     days: m([{ id: '2026-10-09', date: '2026-10-09', plan: ['t1'], launches: [], first: null, checkin: null, closed: null, summary: null }]),
-    decisions: new Map(), places: new Map(), stays: new Map(),
+    decisions: new Map(), places: new Map(), stays: new Map(), memory: new Map(),
   };
 };
 const gen = { id: (p: string) => p + 'x', now: () => '2026-10-09T10:00:00.000Z', zone: 'Europe/Paris' };
@@ -35,6 +35,8 @@ describe('one low-risk change', () => {
     expect(low([{ op: 'day.update', date: '2026-10-09', add: ['t2'] }])).toBe(false);
     expect(low([{ op: 'task.done', id: 't1' }, { op: 'task.done', id: 't2' }])).toBe(false);
     expect(low([{ op: 'task.update', id: 'nope', set: { due: '2026-10-16' } }])).toBe(false);
+    // a decision is a step too, but one that opens the review
+    expect(low([{ op: 'task.create', set: { title: 'Choose a flat', kind: 'decision' } }])).toBe(false);
   });
   it('says which changes came to nothing', () => {
     const c = cs([{ op: 'task.drop', id: 't1' }, { op: 'task.update', id: 'nope', set: { due: '2026-10-10' } }, { op: 'task.drop', id: 't3' }]);

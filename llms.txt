@@ -10,3 +10,9 @@
 - [docs/METHOD.fr.md](docs/METHOD.fr.md): la méthode, en français (brouillon, en relecture).
 - [docs/CHANGESET.md](docs/CHANGESET.md): the change-set contract any AI uses to propose edits (short enough to paste into a chatbot).
 - [docs/reussite-v1.html](docs/reussite-v1.html): version 1, kept for reference.
+- [docs/dev/sync.md](docs/dev/sync.md): the sync protocol: keys, encrypted blobs, merge, snapshots (hot and cold), relay endpoints, schema 3 and the rollout order.
+- [docs/dev/connector.md](docs/dev/connector.md): the MCP connector in the relay: signing in, the tools (including read_memory), apply_changes and undo, CPU on the free plan.
+- [docs/dev/home.md](docs/dev/home.md): Home: the line parser's grammar (English and French), the greeting, the card, exchanges and Undo, the AI route, spend and the monthly limit.
+- [docs/dev/push.md](docs/dev/push.md): Web Push: the schedule, encryption, the reconciler, what the relay sees.
+- [docs/dev/feed.md](docs/dev/feed.md): the calendar feed: ids, limits and the text.
+- [docs/dev/infra.md](docs/dev/infra.md): names, ids and URLs of the hosting, the relay, its database and its stores (no secrets).

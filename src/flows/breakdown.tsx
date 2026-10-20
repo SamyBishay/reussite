@@ -34,8 +34,8 @@ function BreakDown({ id }: { id: string }) {
   const [note, setNote] = useState('');
   if (!tk) return null;
   const propose = async () => {
-    const { system, user } = breakDownPrompt(id);
-    const r = await ai.run(signal => ask('breakdown', 'thinking', system, user, BreakDownReply, { signal }));
+    const { system, user, notes } = breakDownPrompt(id);
+    const r = await ai.run(signal => ask('breakdown', 'thinking', system, user, BreakDownReply, { signal, notes }));
     if (!r) return;
     setProposed(r.steps.map(x => ({ on: true, title: x.title, starter: x.starter ?? '', est: x.est ? String(x.est) : '', est0: x.est ?? null, app: x.app ?? null })));
     setNote(r.note);

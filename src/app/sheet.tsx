@@ -21,7 +21,8 @@ export function SheetHost() {
   const ref = useRef<HTMLDivElement>(null);
   const open = !!sheet.value;
   useEffect(() => {
-    if (open) ref.current?.focus({ preventScroll: true });
+    // The dialog takes focus when it opens, unless a field inside already has it (the effect runs after the first paint, and a field filled in that gap must keep its focus).
+    if (open && ref.current && !ref.current.contains(document.activeElement)) ref.current.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && sheet.value) closeSheet(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);

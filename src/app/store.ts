@@ -5,13 +5,14 @@ import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
 import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
-import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay } from '../data/schema';
-import { normDecision } from '../data/normalize';
+import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange } from '../data/schema';
+import { normDecision, normExchange, normNote } from '../data/normalize';
 import { whereNow } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { writeMerged, type Write } from '../data/syncstore';
 import { lang, t } from '../i18n';
+import { UndoLog, undoWrites } from '../ai/undo';
 
 export type WithId<T> = T & { id: string };
 
@@ -25,6 +26,8 @@ export const days = signal(new Map<string, WithId<Day>>());
 export const decisions = signal(new Map<string, WithId<Decision>>());
 export const places = signal(new Map<string, WithId<Place>>());
 export const stays = signal(new Map<string, WithId<Stay>>());
+export const memory = signal(new Map<string, WithId<MemoryNote>>());
+export const exchanges = signal(new Map<string, WithId<Exchange>>());
 export const settings = signal<Settings>(withDefaults(undefined));
 export const ready = signal(false);
 /** Data written by a newer version: look but don't touch, and ask to reload. */
@@ -70,7 +73,8 @@ const live = <T>(c: Collection) => (docs: Stored<Record<string, unknown>>[]) => 
   for (const d of docs) {
     if (d._del) continue;
     const f = fieldsOf(d);
-    m.set(d.id, { ...((c === 'decisions' ? normDecision(f) : f) as T), id: d.id });
+    const norm = c === 'decisions' ? normDecision : c === 'memory' ? normNote : c === 'exchanges' ? normExchange : null;
+    m.set(d.id, { ...((norm ? norm(f) : f) as T), id: d.id });
   }
   return m;
 };
@@ -92,6 +96,8 @@ export async function start(): Promise<void> {
     ['decisions', v => (decisions.value = v)],
     ['places', v => (places.value = v)],
     ['stays', v => (stays.value = v)],
+    ['memory', v => (memory.value = v)],
+    ['exchanges', v => (exchanges.value = v)],
   ];
   const first: Promise<void>[] = [];
   for (const [c, set] of subs) {
@@ -123,10 +129,62 @@ export const getClock = () => clock;
 
 export const newId = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+/** Set while `recordWrites` runs: local writes are noted here (never merged ones; `putMerged` doesn't look). */
+let recording: UndoLog | null = null;
+let recordQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Run `fn` (an applied change-set) and keep what its local writes replaced, as `UndoDoc` records for
+ * `applyUndo` (src/ai/undo.ts). Only the writes made while `fn` runs are noted, so wrap just the apply,
+ * never anything the person can do at the same time. Two runs never overlap. Forget in Memory must not
+ * go through here: a record holds the text it replaced.
+ */
+export function recordWrites<T>(fn: () => Promise<T>): Promise<{ result: T; undo: UndoDoc[] }> {
+  const run = async () => {
+    const log = (recording = new UndoLog());
+    try {
+      const result = await fn();
+      return { result, undo: log.docs };
+    } finally {
+      recording = null;
+    }
+  };
+  const next = recordQueue.then(run, run);
+  recordQueue = next.catch(() => undefined);
+  return next;
+}
+
+/**
+ * Put back what recorded writes replaced. A field changed since is left alone; something the change-set
+ * created is tombstoned. Returns how many documents were touched and how many fields were kept.
+ */
+export async function applyUndo(undo: UndoDoc[], at = Date.now()): Promise<{ restored: number; kept: number }> {
+  const cur = new Map<string, Stored<Record<string, unknown>>>();
+  for (const d of undo) {
+    const doc = await db.table_(d.c).get(d.id);
+    if (doc && !doc._del) cur.set(d.c + '/' + d.id, doc as Stored<Record<string, unknown>>);
+  }
+  // A step it made that has sessions logged since, or a project that has steps added since, stays.
+  const made = new Set(undo.filter(d => d.created).map(d => d.c + '/' + d.id));
+  const used = (c: Collection, id: string) =>
+    c === 'tasks' ? [...sessions.value.values()].some(s => s.taskId === id && !made.has('sessions/' + s.id))
+      : c === 'projects' ? [...tasks.value.values()].some(x => x.project === id && !made.has('tasks/' + x.id))
+        : false;
+  let restored = 0, kept = 0;
+  for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id), { now: at, used })) {
+    if (u.remove) { await removeDoc(u.c, u.id); restored++; }
+    if (u.patch) { await update(u.c, u.id, u.patch); restored++; }
+    kept += (u.kept?.length ?? 0) + (u.inUse ? 1 : 0);
+  }
+  return { restored, kept };
+}
+
 /** Create a document; returns its id. Every field gets the same fresh clock. */
 export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
   if (!guard()) return id;
-  await db.table_(c).put(create(id, fields, SCHEMA_VERSION, tick(clock)) as never);
+  const doc = create(id, fields, SCHEMA_VERSION, tick(clock));
+  await db.table_(c).put(doc as never);
+  recording?.created(c, id, doc as never);
   afterWrite();
   return id;
 }
@@ -134,11 +192,15 @@ export async function createDoc<T extends object>(c: Collection, fields: T, id =
 export async function update<T extends object>(c: Collection, id: string, changes: Partial<T>): Promise<void> {
   if (!guard()) return;
   try {
+    let was: unknown, now: unknown;
     await db.transaction('rw', db.table_(c), async () => {
       const cur = await db.table_(c).get(id);
       if (!cur) throw new Error('missing ' + c + '/' + id);
-      await db.table_(c).put(patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION) as never);
+      const next = patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION);
+      await db.table_(c).put(next as never);
+      was = cur; now = next;
     });
+    recording?.updated(c, id, was as never, now as never, Object.keys(changes));
     afterWrite();
   } catch (e) {
     console.error(e);
@@ -157,7 +219,7 @@ export async function upsert<T extends object>(c: Collection, id: string, fields
 export async function removeDoc(c: Collection, id: string): Promise<void> {
   if (!guard()) return;
   const cur = await db.table_(c).get(id);
-  if (cur) { await db.table_(c).put(remove(cur, clock) as never); afterWrite(); }
+  if (cur) { await db.table_(c).put(remove(cur, clock) as never); recording?.removed(c, id); afterWrite(); }
 }
 
 /**

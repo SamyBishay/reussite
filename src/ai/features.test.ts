@@ -77,7 +77,7 @@ describe('Plan my day: the AI plan keeps the rules or is set aside', () => {
 const snap = (): Snapshot => {
   const m = <T extends { id: string }>(xs: T[]) => new Map(xs.map(x => [x.id, x]));
   return {
-    today: '2026-10-09', tasks: new Map(), days: new Map(), places: new Map(), stays: new Map(),
+    today: '2026-10-09', tasks: new Map(), days: new Map(), places: new Map(), stays: new Map(), memory: new Map(),
     projects: m([{ id: 'p1', name: 'Move', suit: 'D', where: 'any', goal: null, goalBy: null, due: null, order: 1, status: 'active' }]),
     decisions: m([{ ...normDecision({ title: 'Stay or move?', projectId: 'p1', options: [{ id: 'o1', name: 'Stay', pros: [{ id: 'i1', text: 'cheap', w: 4 }] }] }), id: 'd1' }]),
   };

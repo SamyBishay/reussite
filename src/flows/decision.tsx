@@ -78,8 +78,8 @@ function DecisionAi({ d, what, option, label, onApplied }: { d: D; what: Exclude
   const [rv, setRv] = useState<{ plan: ChangePlan; note: string } | null>(null);
   if (!aiOn.value) return null;
   const go = async () => {
-    const { system, user } = decisionPrompt(d, what, what === 'problem' ? descRef.current?.value ?? '' : option);
-    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal }));
+    const { system, user, notes } = decisionPrompt(d, what, what === 'problem' ? descRef.current?.value ?? '' : option);
+    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal, notes }));
     if (!r) return;
     const cs = decisionChangeSet(r, d, what, option);
     if (!cs) { toast(r.note || t('chgNoneLeft')); return; }
@@ -349,8 +349,8 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
   };
   // Decision help: steps join the draft list (to edit or remove); a SMART goal is ticked.
   const draft_ = async () => {
-    const { system, user } = decisionPrompt(d, 'steps');
-    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal }));
+    const { system, user, notes } = decisionPrompt(d, 'steps');
+    const r = await ai.run(signal => ask('decision', 'quick', system, user, DecisionReply, { signal, notes }));
     if (!r) return;
     setSteps([...steps, ...(r.steps ?? []).map(x => ({ title: x.title, starter: x.starter ?? '', est: x.est ? String(x.est) : '', est0: x.est ?? null }))]);
     const cs = decisionChangeSet(r, { ...d, projectId: pid || null }, 'steps');

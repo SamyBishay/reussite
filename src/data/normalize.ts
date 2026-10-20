@@ -1,7 +1,7 @@
 // Read any stored decision as the v2 shape (brief §9). v1 decisions had a free-text problem
 // and items as [text, weight]; both still read. Unknown fields are kept.
 import { normItems, COLUMNS, type Option } from '../domain/decision';
-import type { Decision, Problem } from './schema';
+import { MEMORY_KINDS, type Decision, type Exchange, type ExchangeTurn, type MemoryKind, type MemoryLine, type MemoryNote, type Problem, type UndoDoc } from './schema';
 
 const PROBLEM_KEYS: (keyof Problem)[] = ['what', 'should', 'gap', 'constraints', 'deadline', 'control'];
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -50,5 +50,42 @@ export function normDecision(raw: Record<string, unknown>): Decision {
     newFacts: arr(raw.newFacts),
     reviews: arr(raw.reviews),
     history: arr(raw.history),
+  };
+}
+
+/** Read any stored memory note with every field filled. Lines without an id get a stable one from their position. */
+export function normNote(raw: Record<string, unknown>): MemoryNote {
+  const lines: MemoryLine[] = (Array.isArray(raw.lines) ? raw.lines : []).filter(isObj).map((l, i) => ({
+    ...l,
+    id: str(l.id) || 'l' + i,
+    text: str(l.text),
+    at: str(l.at),
+    by: l.by === 'ai' ? 'ai' : 'me',
+  }));
+  return {
+    ...raw,
+    kind: (MEMORY_KINDS as readonly unknown[]).includes(raw.kind) ? (raw.kind as MemoryKind) : 'topic',
+    name: str(raw.name),
+    aliases: (Array.isArray(raw.aliases) ? raw.aliases : []).filter((a): a is string => typeof a === 'string'),
+    lines,
+    private: raw.private === true,
+    updated: str(raw.updated),
+  };
+}
+
+/** Read any stored exchange with every field filled. */
+export function normExchange(raw: Record<string, unknown>): Exchange {
+  const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  const undo: Record<string, UndoDoc[]> = {};
+  if (isObj(raw.undo)) for (const [k, v] of Object.entries(raw.undo)) undo[k] = Array.isArray(v) ? (v as UndoDoc[]) : [];
+  return {
+    ...raw,
+    at: str(raw.at),
+    text: str(raw.text),
+    turns: (Array.isArray(raw.turns) ? raw.turns : []).filter(isObj).map(t => ({ ...t, at: str(t.at), text: str(t.text), kind: str(t.kind) }) as ExchangeTurn),
+    changes: strs(raw.changes),
+    undo,
+    undone: strs(raw.undone),
+    src: raw.src === 'link' || raw.src === 'inbox' ? raw.src : 'home',
   };
 }

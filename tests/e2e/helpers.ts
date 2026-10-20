@@ -1,6 +1,23 @@
 import { expect, type Page } from '@playwright/test';
 import { sampleExport } from './fixture';
 
+/** Settings, Places, Memory and History sit behind the menu icon at the top of Home. */
+export async function openMenu(page: Page, item: 'settings' | 'places' | 'memory' | 'history') {
+  await page.getByTestId('tab-home').click();
+  await page.getByTestId('home-menu').click();
+  await page.getByTestId('menu-' + item).click();
+}
+
+/** A tab of the bottom bar, or what lives behind one: the Log is a mode of Calendar, Settings is in Home's menu. */
+export async function goTab(page: Page, tab: 'home' | 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings') {
+  if (tab === 'settings') return openMenu(page, 'settings');
+  if (tab === 'log') {
+    await page.getByTestId('tab-calendar').click();
+    return page.getByTestId('cal-log').click();
+  }
+  await page.getByTestId('tab-' + tab).click();
+}
+
 export async function importSample(page: Page) {
   await page.goto('/#settings');
   await page.getByTestId('open-import').click();
@@ -8,7 +25,7 @@ export async function importSample(page: Page) {
   await expect(page.getByTestId('import-summary')).toBeVisible();
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(page.getByTestId('sheet')).toBeHidden();
-  await page.getByTestId('tab-today').click();
+  await goTab(page, 'today');
   await expect(page.getByTestId('first')).toContainText('Doctolib');
 }
 

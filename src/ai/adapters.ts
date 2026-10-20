@@ -5,7 +5,17 @@ import type { AiProvider } from '../data/settings';
 
 export type Slot = 'quick' | 'thinking';
 /** Every way a call can fail, each with one plain sentence in en.ts (`aiErr…`). */
-export type ErrorKind = 'off' | 'noKey' | 'noCredit' | 'rateLimit' | 'auth' | 'network' | 'invalid' | 'refused' | 'server' | 'cancelled';
+export type ErrorKind = 'off' | 'noKey' | 'noCredit' | 'rateLimit' | 'auth' | 'network' | 'invalid' | 'refused' | 'server' | 'cancelled' | 'cap';
+
+/**
+ * The system prompt: one string, or two parts. `stable` has the same bytes in every feature (the method,
+ * the profile, the language), so a provider that caches a prefix can reuse it; `rest` is what this feature adds.
+ */
+export type System = string | { stable: string; rest: string };
+export const systemText = (s: System): string => (typeof s === 'string' ? s : s.stable + '\n\n' + s.rest);
+
+/** What one call used, as the provider reported it. `input` is the prompt's uncached tokens; `cost` is dollars, when reported. */
+export interface Usage { input: number; output: number; cacheRead: number; cacheWrite: number; cost?: number }
 
 export interface AiConfig {
   provider: Exclude<AiProvider, 'none'>;
@@ -19,6 +29,7 @@ export interface AiRequest {
   provider: AiConfig['provider'];
   url: string;
   model: string;
+  /** The whole system prompt as text (the preview shows this); `body` may split it in two blocks. */
   system: string;
   user: string;
   headers: Record<string, string>;
@@ -30,9 +41,14 @@ export const MAX_TOKENS = 16000;
 
 const trimSlash = (s: string) => s.trim().replace(/\/+$/, '');
 
-export function buildRequest(cfg: AiConfig, slot: Slot, system: string, user: string, maxTokens = MAX_TOKENS): AiRequest {
+const CACHE = { type: 'ephemeral' } as const;
+
+export function buildRequest(cfg: AiConfig, slot: Slot, sys: System, user: string, maxTokens = MAX_TOKENS): AiRequest {
   const model = cfg.models[slot];
+  const system = systemText(sys);
   if (cfg.provider === 'anthropic') {
+    // Two blocks, the first marked for caching: it ends the prefix every feature shares.
+    const blocks = typeof sys === 'string' ? sys : [{ type: 'text', text: sys.stable, cache_control: CACHE }, { type: 'text', text: sys.rest }];
     return {
       provider: 'anthropic', url: ANTHROPIC_URL, model, system, user,
       headers: {
@@ -41,15 +57,18 @@ export function buildRequest(cfg: AiConfig, slot: Slot, system: string, user: st
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true',
       },
-      body: { model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] },
+      body: { model, max_tokens: maxTokens, system: blocks, messages: [{ role: 'user', content: user }] },
     };
   }
   const base = trimSlash(cfg.baseUrl);
   const headers: Record<string, string> = { 'content-type': 'application/json', authorization: 'Bearer ' + cfg.key };
-  if (/openrouter\.ai/i.test(base)) headers['x-title'] = 'Reussite';
+  const openrouter = /openrouter\.ai/i.test(base);
+  if (openrouter) headers['x-title'] = 'Reussite';
+  // OpenRouter passes cache_control on to Anthropic models; anything else gets the stable part first, in one string.
+  const content = typeof sys !== 'string' && openrouter && /^anthropic\//.test(model) ? [{ type: 'text', text: sys.stable, cache_control: CACHE }, { type: 'text', text: sys.rest }] : system;
   return {
     provider: 'openai', url: base + '/chat/completions', model, system, user, headers,
-    body: { model, max_tokens: maxTokens, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] },
+    body: { model, max_tokens: maxTokens, messages: [{ role: 'system', content }, { role: 'user', content: user }] },
   };
 }
 
@@ -72,7 +91,7 @@ export function classify(status: number, body: string): ErrorKind {
   return 'server';
 }
 
-export type SendResult = { ok: true; text: string } | { ok: false; error: ErrorKind; status?: number; detail?: string };
+export type SendResult = { ok: true; text: string; usage?: Usage } | { ok: false; error: ErrorKind; status?: number; detail?: string };
 
 /** Send the request and return the model's text. Never throws. */
 export async function send(r: AiRequest, fetchFn: typeof fetch = fetch, signal?: AbortSignal): Promise<SendResult> {
@@ -95,7 +114,30 @@ function readAnthropic(j: Record<string, unknown>): SendResult {
   if (j.stop_reason === 'refusal') return { ok: false, error: 'refused' };
   const blocks = Array.isArray(j.content) ? (j.content as { type?: string; text?: string }[]) : [];
   const text = blocks.filter(b => b.type === 'text' && typeof b.text === 'string').map(b => b.text).join('');
-  return text ? { ok: true, text } : { ok: false, error: 'invalid' };
+  return text ? { ok: true, text, ...usageOf(anthropicUsage(j.usage)) } : { ok: false, error: 'invalid' };
+}
+
+const num = (x: unknown): number => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : 0);
+const usageOf = (usage: Usage | undefined) => (usage ? { usage } : {});
+
+/** Anthropic: `input_tokens` counts only what was not read from or written to the cache. */
+function anthropicUsage(u: unknown): Usage | undefined {
+  if (!u || typeof u !== 'object') return undefined;
+  const o = u as Record<string, unknown>;
+  return { input: num(o.input_tokens), output: num(o.output_tokens), cacheRead: num(o.cache_read_input_tokens), cacheWrite: num(o.cache_creation_input_tokens) };
+}
+
+/**
+ * OpenAI shape (OpenRouter too): `prompt_tokens` counts everything, cached or not, so the cache figures are taken out of it.
+ * OpenRouter's `cost` is dollars charged; it is in every reply (the old `usage: {include: true}` is deprecated).
+ */
+function openAIUsage(u: unknown): Usage | undefined {
+  if (!u || typeof u !== 'object') return undefined;
+  const o = u as Record<string, unknown>;
+  const d = (o.prompt_tokens_details ?? {}) as Record<string, unknown>;
+  const cacheRead = num(d.cached_tokens), cacheWrite = num(d.cache_write_tokens);
+  const cost = typeof o.cost === 'number' && Number.isFinite(o.cost) && o.cost >= 0 ? o.cost : undefined;
+  return { input: Math.max(0, num(o.prompt_tokens) - cacheRead - cacheWrite), output: num(o.completion_tokens), cacheRead, cacheWrite, ...(cost === undefined ? {} : { cost }) };
 }
 
 function readOpenAI(j: Record<string, unknown>): SendResult {
@@ -109,5 +151,5 @@ function readOpenAI(j: Record<string, unknown>): SendResult {
   const c = ch?.message?.content;
   const text = typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (typeof p === 'string' ? p : (p as { text?: string })?.text ?? '')).join('') : '';
   if (!text && ch?.message?.refusal) return { ok: false, error: 'refused' };
-  return text ? { ok: true, text } : { ok: false, error: 'invalid' };
+  return text ? { ok: true, text, ...usageOf(openAIUsage(j.usage)) } : { ok: false, error: 'invalid' };
 }

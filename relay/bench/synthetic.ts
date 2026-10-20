@@ -7,7 +7,7 @@ import { SCHEMA_VERSION } from '../../src/data/schema';
 import { addDays } from '../../src/domain/dates';
 import type { StoredDoc } from '../../src/sync/protocol';
 
-export interface Sizes { tasks: number; sessions: number; days: number; projects: number; decisions: number; places: number; stays: number }
+export interface Sizes { tasks: number; sessions: number; days: number; projects: number; decisions: number; places: number; stays: number; memory?: number; exchanges?: number }
 /** About the size of the owner's v1 export on 19 Oct 2026 (counts only). */
 export const TODAY: Sizes = { tasks: 281, sessions: 110, days: 13, projects: 22, decisions: 2, places: 2, stays: 0 };
 export const HEAVY: Sizes = { tasks: 1500, sessions: 3000, days: 200, projects: 40, decisions: 20, places: 3, stays: 12 };
@@ -32,7 +32,7 @@ export function syntheticSpace(sizes: Sizes = HEAVY, today = '2026-10-19', node 
   const t0 = Date.parse(today + 'T08:00:00Z') - 400 * 86400000;
   let now = t0;
   const at = () => tick(clock, (now += 60_000 + Math.floor(r() * 600_000)));
-  const docs: Docs = { tasks: [], sessions: [], projects: [], days: [], decisions: [], places: [], stays: [], meta: [] };
+  const docs: Docs = { tasks: [], sessions: [], projects: [], days: [], decisions: [], places: [], stays: [], memory: [], exchanges: [], meta: [] };
 
   docs.meta!.push(create('settings', { ...DEFAULT_SETTINGS }, SCHEMA_VERSION, at()) as unknown as StoredDoc);
   const places = Array.from({ length: sizes.places }, (_, i) => `l${i}`);
@@ -82,6 +82,25 @@ export function syntheticSpace(sizes: Sizes = HEAVY, today = '2026-10-19', node 
       options: [{ id: 'o1', name: words(2), screened: null, pros: [{ id: 'i1', text: words(5), w: 3 }], cons: [{ id: 'i2', text: words(5), w: 2 }], prosNot: [], consNot: [] }, { id: 'o2', name: words(2), screened: null, pros: [], cons: [], prosNot: [], consNot: [] }],
       status: 'draft', listClosedAt: null, chosen: null, chosenId: null, why: '', mustBeTrue: '', falsifier: '', date: null, reviewOn: null, taskIds: [], newFacts: [], reviews: [], history: [],
     }, SCHEMA_VERSION, at()) as unknown as StoredDoc);
+  }
+  for (let i = 0; i < (sizes.memory ?? 0); i++) {
+    docs.memory!.push(create('m' + i, {
+      kind: i === 0 ? 'profile' : pick(['person', 'place', 'area', 'topic'] as const), name: i === 0 ? 'Me' : `${pick(WORDS)} ${i}`, aliases: i % 3 ? [] : [`alias${i}`], private: i % 10 === 9, updated: new Date(now).toISOString(),
+      lines: Array.from({ length: 8 }, (_, j) => ({ id: `l${j}`, text: words(8), at: new Date(now).toISOString(), by: j % 4 ? 'me' : 'ai' })),
+    }, SCHEMA_VERSION, at()) as unknown as StoredDoc);
+  }
+  // Home's history: a line or two typed, what came of it, and its Undo records (a step made, a step's fields, now and then a note's lines).
+  for (let i = 0; i < (sizes.exchanges ?? 0); i++) {
+    const day = addDays(today, -Math.floor((i * 90) / (sizes.exchanges ?? 1)));
+    const at = day + 'T10:00:00.000Z';
+    const cs = ['c' + i + 'a', ...(i % 3 ? [] : ['c' + i + 'b'])];
+    const undo: Record<string, unknown[]> = {};
+    for (const c of cs) undo[c] = [
+      i % 2 ? { c: 'tasks', id: 't' + (i % 50), created: true, at: format(Date.parse(at), 0, node) } : { c: 'tasks', id: 't' + (i % 50), fields: { status: { was: 'open', now: 'done' }, doneDay: { was: null, now: day }, doneAt: { was: null, now: at } }, at: format(Date.parse(at), 0, node) },
+      ...(i % 10 === 0 ? [{ c: 'memory', id: 'm' + (i % 20), fields: { lines: { was: Array.from({ length: 7 }, (_, j) => ({ id: `l${j}`, text: words(8), at, by: 'me' })), now: Array.from({ length: 8 }, (_, j) => ({ id: `l${j}`, text: words(8), at, by: 'me' })) } } }] : []),
+    ];
+    const turns = cs.map(() => ({ at, text: words(7), kind: i % 2 ? 'add' : 'done', reply: words(4), n: 1 }));
+    docs.exchanges!.push(create('e' + i, { at, text: turns[0]!.text, turns, changes: cs, undo, undone: [], src: 'home' }, SCHEMA_VERSION, format(Date.parse(day + 'T10:00:00Z'), 0, node)) as unknown as StoredDoc);
   }
   return docs;
 }

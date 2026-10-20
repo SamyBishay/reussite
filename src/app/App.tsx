@@ -1,25 +1,31 @@
-// The app frame, ported from v1: masthead, suit piles, tabs, running bar, the view, footer.
-import { signal, effect } from '@preact/signals';
+// The app frame: masthead and suit piles, running bar, the view, footer, and the tab bar at the bottom.
+import { effect } from '@preact/signals';
+import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { ready, readOnly, settings, today, toastMsg, saveSettings, start, here, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
-import { planOf, cardsOn, minutesOn, allCards, running, isOpen, inPlace, quad, T, dayDoc } from './model';
-import { tasks } from './store';
+import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
+import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc, greetingNow } from './model';
 import { applyTheme } from './theme';
-import { SheetHost, openSheet, closeSheet, Title, suitName } from './ui';
+import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openPause, placeIds, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
-import { addPlace, startTask, patchTask } from './actions';
+import { openPile, openPause, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { startTask, patchTask } from './actions';
+import { openPlaces } from './PlacesSheet';
+import { view, go, fromHash, TABS, calMode, type View } from './nav';
+import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
 import { startSync } from './sync';
 import { startFeed } from './feed';
 import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
+import { reloadNewest } from './reload';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
 import { Projects } from '../views/Projects';
 import { Calendar } from '../views/Calendar';
-import { Log } from '../views/Log';
 import { Settings } from '../views/Settings';
+import { Home } from '../views/Home';
+import { Memory } from '../views/Memory';
+import { History } from '../views/History';
 import { openBreakDown } from '../flows/breakdown';
 import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
@@ -27,22 +33,12 @@ import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { DropHost, InboxHost } from './Drop';
-
-type View = 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings';
-const VIEWS: View[] = ['today', 'matrix', 'projects', 'calendar', 'log', 'settings'];
+import { pruneExchanges } from './home';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
 flows.stuck = openStuck;
 flows.decide = (id, link) => void openDecision(id, link);
-const fromHash = (): View | null => { const h = location.hash.slice(1) as View; return VIEWS.includes(h) ? h : null; };
-const stored = (): View => { try { const v = localStorage.getItem('reussite.view') as View; return VIEWS.includes(v) ? v : 'today'; } catch { return 'today'; } };
-export const view = signal<View>(fromHash() ?? stored());
-function go(v: View) {
-  view.value = v;
-  try { localStorage.setItem('reussite.view', v); history.replaceState(null, '', '#' + v); } catch { /* fine */ }
-  window.scrollTo({ top: 0 });
-}
 
 effect(() => { applyTheme(settings.value); });
 // "By time of day" re-checks every minute.
@@ -63,38 +59,6 @@ function Mast() {
 }
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-function openPlaces() {
-  openSheet(<PlacesSheet key={'places' + Date.now()} />);
-}
-/** The place switcher (brief §5): look at another place's page without moving there, or say you're there. */
-function PlacesSheet() {
-  const add = async (e: Event) => {
-    e.preventDefault();
-    const f = e.currentTarget as HTMLFormElement;
-    const name = (f.elements.namedItem('name') as HTMLInputElement).value.trim();
-    if (!name) return;
-    f.reset();
-    await addPlace(name);
-  };
-  return (
-    <div data-testid="places-sheet">
-      <h3>{t('placesTitle')}</h3>
-      <p class="hint">{t('placesSheetHint', { place: placeName(here.value) })}</p>
-      <ul class="picklist">{[...placeIds(), 'any'].map(id => (
-        <li><div><p>{placeName(id)}{id === here.value && <> <span class="tag today">{t('youAreHere')}</span></>}{id === pagePlace.value && id !== here.value && <> <span class="tag">{t('viewing')}</span></>}</p></div>
-          <div class="go">
-            <button class="btn small" type="button" disabled={pagePlace.value === id} onClick={() => { viewPlace(id); closeSheet(); }}>{t('viewPage')}</button>
-            <button class="btn small" type="button" disabled={settings.value.here === id && here.value === id} onClick={() => { void saveSettings({ here: id }); viewPlace(null); closeSheet(); }}>{t('imHere')}</button>
-          </div></li>
-      ))}</ul>
-      <form class="addplace" onSubmit={add}>
-        <input type="text" name="name" placeholder={t('newPlaceName')} aria-label={t('newPlaceName')} autocomplete="off" required />
-        <button class="btn" type="submit" data-testid="add-place">{t('addPlaceBtn')}</button>
-      </form>
-      <p class="hint" style="margin-top:10px">{t('staysInSettings')}</p>
-    </div>
-  );
-}
 function Side() {
   const cards = cardsOn(today.value);
   const by: Record<string, number> = { S: 0, D: 0, C: 0, H: 0 };
@@ -118,20 +82,29 @@ function Side() {
   );
 }
 
-const TAB_KEY: Record<View, Key> = { today: 'tabToday', matrix: 'tabMatrix', projects: 'tabProjects', calendar: 'tabCalendar', log: 'tabLog', settings: 'tabSettings' };
+const TAB_KEY: Record<string, Key> = { home: 'tabHome', today: 'tabToday', matrix: 'tabMatrix', projects: 'tabProjects', calendar: 'tabCalendar' };
+// Line icons, 24 px grid; the label is what names the tab.
+const TAB_ICON: Record<string, string> = {
+  home: 'M4 11 12 4l8 7M6 10v9h12v-9',
+  today: 'M5 4h14v16H5zM9 9h6M9 13h6M9 17h3',
+  matrix: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  projects: 'M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+};
+/** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
 function Tabs() {
-  const open = planOf(today.value).filter(id => T(id)!.status === 'open').length;
-  let now = 0;
-  for (const x of tasks.value.values()) if (isOpen(x) && inPlace(x) && quad(x) === 1) now++;
-  void pagePlace.value;
-  const n: Partial<Record<View, number>> = { today: open, matrix: now };
+  const v = view.value;
+  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' : v === x);
   return (
-    <nav class="tabs" role="tablist" aria-label={t('views')}>
-      {VIEWS.map(v => (
-        <button class="tab" role="tab" type="button" aria-selected={view.value === v} onClick={() => go(v)} data-testid={'tab-' + v}>
-          {t(TAB_KEY[v])}{n[v] ? <span class="n">{n[v]}</span> : null}
-        </button>
-      ))}
+    <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
+      <div class="tabbar-in">
+        {TABS.map(x => (
+          <button class="tab" type="button" aria-current={current(x) ? 'page' : undefined} onClick={() => go(x)} data-testid={'tab-' + x}>
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={TAB_ICON[x]} /></svg>
+            <span>{t(TAB_KEY[x]!)}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }
@@ -147,11 +120,12 @@ function Runbar() {
           <button class="btn small ghost" type="button" onClick={() => void patchTask(r.id, { stillAt: new Date().toISOString() })}>{t('stillGoing')}</button></div></div></div>
     );
   }
-  if (r && view.value !== 'today') return (
+  // Home's greeting is the running step (clock, Pause, Done), so the bar would say it twice; a fixed-time item taking over leaves it.
+  if (r && view.value !== 'today' && !(view.value === 'home' && greetingNow.value.kind === 'running')) return (
     <div id="runbar"><div class="runbar"><Clock tk={r} /><span class="rt"><Title s={r.title} /></span><button class="btn small" type="button" onClick={() => openPause(r.id)}>{t('pause')}</button></div></div>
   );
-  if (!r && view.value !== 'today' && view.value !== 'settings') {
-    // Gentle insisting (brief §5): while a plan is open, the first step stays in sight. No counters.
+  if (!r && view.value !== 'today' && view.value !== 'settings' && view.value !== 'home') {
+    // Gentle insisting (brief §5): while a plan is open, the first step stays in sight, except on Home, which shows it. No counters.
     const first = planOf(today.value).map(id => T(id)).find(isOpen);
     if (first) return (
       <div id="runbar"><div class="insist" data-testid="insist"><span class="rt">{first.starter ? first.starter + ' → ' : ''}<Title s={first.title} /></span>
@@ -161,7 +135,7 @@ function Runbar() {
   return <div id="runbar" />;
 }
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'log' || view.value === 'settings') return null;
+  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
       <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
@@ -194,30 +168,36 @@ function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
 
+/** Home and the screens behind its menu have no masthead, suit piles or footer; the others keep them. */
+const BARE: View[] = ['home', 'memory', 'history'];
+const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History };
+
 export function App() {
-  useEffect(() => { void start().then(() => { void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(() => { void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
   void lang.value;
-  const V = { today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, log: Log, settings: Settings }[view.value];
+  const V = SCREENS[view.value];
+  const bare = BARE.includes(view.value);
   return (
     <>
-      <div class="app">
-        <Mast />
-        <Side />
-        <Tabs />
+      <div class={'app' + (bare ? ' bare' : '')}>
+        {!bare && <Mast />}
+        {!bare && <Side />}
         <Runbar />
         <main>
           <UpdateBanner />
           <PlaceBanner />
-          {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => location.reload()}>{t('reload')}</button></div>}
+          {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
           {ready.value ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
-          <Footer />
+          {!bare && <Footer />}
         </main>
       </div>
+      <Tabs />
       <SheetHost />
       <OverlayHost />
       <PreviewHost />

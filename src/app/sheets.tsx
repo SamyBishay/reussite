@@ -7,7 +7,7 @@ import { T, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor,
 import { tasks } from './store';
 import {
   patchTask, finishTask, stopTimer, addToday, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
-  deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, type Finished,
+  deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, type Finished,
 } from './actions';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
@@ -19,6 +19,7 @@ import { isAllowedLink } from '../domain/links';
 import { moveTo, firstCalmDay } from '../domain/moves';
 import { stillOnDue, minutesBetween } from '../domain/calendar';
 import { validZone } from '../domain/zone';
+import { findTime } from '../domain/parse';
 import { dueBeforeEnd } from '../domain/places';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Repeat, Session, Task } from '../data/schema';
@@ -274,13 +275,18 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 export function openTask(id: string) {
   openSheet(<TaskSheet key={id + Date.now()} id={id} />);
 }
+/** A new step in the task sheet, filled from `prefill`. Nothing is written until Save; then `onSaved` gets the new id. */
+export function openNewTask(prefill: Partial<Task> = {}, onSaved?: (id: string) => void) {
+  const { title = '', suit = null, project = null, ...extra } = prefill;
+  openSheet(<TaskForm key={'new' + Date.now()} tk={{ ...newTaskDoc(title, suit, project, extra), id: '' }} draft onSaved={onSaved} />);
+}
 
 const REPEAT_KINDS = ['never', 'day', 'week', 'month', 'custom'] as const;
 type RepeatKind = (typeof REPEAT_KINDS)[number];
 const kindOf = (r: Repeat | null | undefined): RepeatKind => (!r ? 'never' : r.every === 1 ? r.unit : 'custom');
 
 /** ISO weekdays 1–7 with their short names in the app's language. */
-const weekdayNames = (): [number, string][] => [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
+export const weekdayNames = (): [number, string][] => [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
 
 function RepeatField({ value, onChange }: { value: Repeat | null; onChange: (r: Repeat | null) => void }) {
   const kind = kindOf(value);
@@ -346,17 +352,27 @@ function AfterField({ id, value, onChange }: { id: string; value: string[]; onCh
 
 function TaskSheet({ id }: { id: string }) {
   const tk = T(id);
+  return tk ? <TaskForm tk={tk} /> : null;
+}
+
+/** The sheet's body. A `draft` is a step not yet written: the same form, and Save creates it. */
+function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void }) {
+  const id = tk.id;
   const [armed, setArmed] = useState(false);
-  const [estV, setEstV] = useState(tk?.est ? String(tk.est) : '');
-  const [where, setWhere] = useState(tk ? whereOf(tk) : 'any');
-  const [after, setAfter] = useState<string[]>(tk ? (Array.isArray(tk.after) ? tk.after : tk.after ? [String(tk.after)] : []) : []);
-  const [repeat, setRepeat] = useState<Repeat | null>(tk?.repeat ?? null);
-  const [rule, setRule] = useState(tk?.dueRule ?? null);
-  const [weekdays, setWeekdays] = useState<number[]>(tk?.weekdays ?? []);
+  const [estV, setEstV] = useState(tk.est ? String(tk.est) : '');
+  const [where, setWhere] = useState(whereOf(tk));
+  const [after, setAfter] = useState<string[]>(Array.isArray(tk.after) ? tk.after : tk.after ? [String(tk.after)] : []);
+  const [repeat, setRepeat] = useState<Repeat | null>(tk.repeat ?? null);
+  const [rule, setRule] = useState(tk.dueRule ?? null);
+  const [weekdays, setWeekdays] = useState<number[]>(tk.weekdays ?? []);
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
-  if (!tk) return null;
-  const inPlan = rawPlan(today.value).includes(id);
+  // A time written in the title or the note, with no fixed time set: offer to set it.
+  const [titleV, setTitleV] = useState(tk.title);
+  const [noteV, setNoteV] = useState(tk.note || '');
+  const [atV, setAtV] = useState(tk.at ?? '');
+  const seen = atV ? null : findTime(titleV) ?? findTime(noteV);
+  const inPlan = !draft && rawPlan(today.value).includes(id);
   const projs = [...projects.value.values()].filter(p => p.status !== 'dropped').sort((a, b) => SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || byOrder(a, b));
   const hint: Key = tk.kind === 'decision' ? 'hintDecision' : tk.template ? 'hintStanding' : 'hintStep';
   const spent = spentOf(id);
@@ -367,7 +383,11 @@ function TaskSheet({ id }: { id: string }) {
 
   const write = (p: Partial<Task>) => {
     closeSheet();
-    if (Object.keys(p).length) {
+    if (draft) {
+      const { id: _none, ...fields } = { ...tk, ...p };
+      void createTask(fields).then(nid => { if (fields.dueRule) void syncDueRules(fields.dueRule.beforeEndOf); onSaved?.(nid); });
+      toast(t('saved'));
+    } else if (Object.keys(p).length) {
       void patchTask(id, p).then(() => { if (p.dueRule) void syncDueRules(p.dueRule.beforeEndOf); });
       toast(t('saved'));
     }
@@ -444,7 +464,8 @@ function TaskSheet({ id }: { id: string }) {
           <button class="btn small" type="button" onClick={() => { void movePlan(id, 1); closeSheet(); }}>{t('later')}</button>
         </div>
       )}
-      <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required /></label>
+      <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
+      {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => setAtV(seen.at)}>{t('setTimeHint', { t: seen.at })}</button></p>}
       <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
       <div class="field"><span>{t('urgImp')}</span>
         <div class="toggles">
@@ -469,7 +490,7 @@ function TaskSheet({ id }: { id: string }) {
       </label>
       {tk.prompt && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:12px"><GoLink tk={tk} variant="small" /></div>}
-      <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} /></label>
+      <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
       <details class="more" open={!!(tk.repeat || tk.at || tk.dueRule || tk.weekdays?.length || after.length)}>
         <summary>{t('moreFields')}</summary>
         <div class="row2">
@@ -487,7 +508,7 @@ function TaskSheet({ id }: { id: string }) {
         <label class="field"><span>{t('promptField')}</span><textarea name="prompt" defaultValue={tk.prompt ?? ''} /></label>
         <RepeatField value={repeat} onChange={setRepeat} />
         <div class="row2">
-          <label class="field"><span>{t('atField')}</span><input type="time" name="at" defaultValue={tk.at ?? ''} /></label>
+          <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
           <label class="field"><span>{t('durField')}</span><input type="number" name="dur" min="5" max="720" inputMode="numeric" defaultValue={tk.dur ? String(tk.dur) : ''} /></label>
         </div>
         <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /><small class="hint">{t('leadHint', { n: settings.value.notifyLead })}</small></label>
@@ -518,7 +539,7 @@ function TaskSheet({ id }: { id: string }) {
       {spent > 0 && <p class="hint" style="margin-top:10px">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
       <div class="actions">
         <button class="btn primary" type="submit">{t('save')}</button>
-        {tk.template ? (
+        {draft ? null : tk.template ? (
           <button class="btn" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
         ) : open ? (
           <>
@@ -532,7 +553,7 @@ function TaskSheet({ id }: { id: string }) {
           <button class="btn" type="button" onClick={() => { void reopen(id); closeSheet(); }}>{t('reopen')}</button>
         )}
       </div>
-      {open && !tk.template && (
+      {open && !tk.template && !draft && (
         <div class="actions" style="margin-top:8px">
           <button class="btn small" type="button" onClick={() => openMove(id)}>{t('moveTo')}</button>
           <button class="btn small" type="button" onClick={() => flows.breakDown(id)}>{t('breakItDown')}</button>
@@ -541,7 +562,7 @@ function TaskSheet({ id }: { id: string }) {
           {tk.repeat && <button class="btn small ghost" type="button" onClick={() => { void stopRepeating(id); closeSheet(); }}>{t('stopRepeating')}</button>}
         </div>
       )}
-      {tk.status !== 'dropped' && (
+      {tk.status !== 'dropped' && !draft && (
         <div class="actions" style="margin-top:8px">
           <button class="btn ghost small" type="button" onClick={() => { if (!armed) return setArmed(true); void dropTask(id); closeSheet(); toast(t('dropped')); }}>
             {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}

@@ -1,12 +1,14 @@
 // What the read tools say, as compact plain text an AI can use: the same lines the app's AI
 // context uses (src/domain/lists.ts), plus a few labelled facts. Nothing here writes.
-import type { Planned } from '../../../src/ai/apply';
+import { createsNote, type Planned } from '../../../src/ai/apply';
 import type { Task } from '../../../src/data/schema';
 import { fit, predict, type Model } from '../../../src/domain/estimates';
 import {
   blocked, byPriority, decisionsToCheck, estPointsOf, fixedOn, isOpen, listOf, oneLine, planOf, projName, quadOf, stepLine, yesterdayOpen, type TaskW,
 } from '../../../src/domain/lists';
 import { addDays } from '../../../src/domain/dates';
+import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
+import { findByName, norm } from '../../../src/domain/names';
 import type { View } from './view';
 
 export const MAX_LINES = 50;
@@ -157,6 +159,64 @@ export function projectText(v: View, id: string): string {
   return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\ngoal: ${p.goal ? oneLine(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${done} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
 }
 
+// ---------- memory ----------
+
+export const MAX_INDEX = 60;
+const MAX_NOTES = 8;
+const MAX_NOTE_STEPS = 10;
+const newest = (a: Note, b: Note) => (a.updated < b.updated ? 1 : a.updated > b.updated ? -1 : a.id < b.id ? -1 : 1);
+
+/** `id | kind | name | aliases` for the newest notes, at most MAX_INDEX. */
+function noteIndex(notes: Note[]): string {
+  const sorted = [...notes].sort(newest);
+  return sorted.slice(0, MAX_INDEX).map(noteHead).join('\n') + (sorted.length > MAX_INDEX ? `\n(${sorted.length - MAX_INDEX} more; ask by name)` : '');
+}
+
+/**
+ * What read_memory says. Private notes are not read at all: nothing here can tell an AI one exists.
+ * Nothing asked: the profile in full, then the index. A name (an id, a name, an alias, or words with
+ * one in them) and/or a query (free words: notes named in them, or with all the words in a line): the
+ * matching notes in full, each with its open steps. Memory is in the hot part, so this never needs the cold one.
+ */
+export function memoryText(v: View, a: { name?: string; query?: string }): string {
+  const notes: Note[] = [...v.memory.values()].filter(n => !n.private);
+  const name = a.name?.trim(), query = a.query?.trim();
+  if (!name && !query) {
+    const profile = notes.filter(n => n.kind === 'profile').sort((x, y) => (x.id < y.id ? -1 : 1));
+    const rest = notes.filter(n => n.kind !== 'profile');
+    return [
+      profile.length ? 'About the person, in their own words (note id | kind | name | aliases, then numbered lines):\n\n' + profile.map(noteBlock).join('\n\n') : 'No profile note yet.',
+      rest.length ? `Other notes (id | kind | name | aliases; ask for one by name):\n${noteIndex(rest)}` : 'No other notes yet.',
+    ].join('\n\n');
+  }
+  const hit = new Map<string, Note>();
+  if (name) {
+    const want = norm(name);
+    const byId = v.memory.get(name);
+    if (byId && !byId.private) hit.set(byId.id, byId);
+    for (const n of notes) if (want && (norm(n.name) === want || n.aliases.some(x => norm(x) === want))) hit.set(n.id, n);
+    for (const n of notesMatching(name, notes)) hit.set(n.id, n);
+    if (!hit.size) { const f = findByName(name, notes.map(n => ({ id: n.id, name: n.name }))); if ('id' in f) hit.set(f.id, v.memory.get(f.id)!); else if ('many' in f) for (const m of f.many) hit.set(m.id, v.memory.get(m.id)!); }
+  }
+  if (query) {
+    for (const n of notesMatching(query, notes)) hit.set(n.id, n);
+    const words = norm(query).split(' ').filter(w => w.length > 2);
+    if (words.length) for (const n of notes) if (n.lines.some(l => { const t = norm(l.text); return words.every(w => t.includes(w)); })) hit.set(n.id, n);
+  }
+  const found = [...hit.values()].sort(newest);
+  if (!found.length) return `No memory note matches that. The notes (id | kind | name | aliases):\n${noteIndex(notes.filter(n => n.kind !== 'profile'))}`;
+  const shown = found.slice(0, MAX_NOTES);
+  const out = shown.map(n => {
+    let t = noteBlock(n);
+    if (n.kind !== 'profile') {
+      const steps = queryText(v, { text: n.name, limit: MAX_NOTE_STEPS }, {});
+      if (steps !== 'No steps match.') t += `\nOpen steps naming ${oneLine(n.name)}:\n${steps}`;
+    }
+    return t;
+  });
+  return (found.length > shown.length ? `${found.length} notes match, showing the ${shown.length} most recently updated.\n\n` : '') + `Memory (note id | kind | name | aliases, then numbered lines):\n\n` + out.join('\n\n');
+}
+
 // ---------- change-sets, in words ----------
 
 const show = (x: unknown): string => {
@@ -168,9 +228,9 @@ const show = (x: unknown): string => {
 
 /** One planned change as a line, with `before → after` for each field. */
 export function describe(it: Planned, v: View): string {
-  const what = it.target === 'task' ? 'step' : it.target;
+  const what = it.target === 'task' ? 'step' : it.target === 'memory' ? 'memory note' : it.target;
   const name = it.title ? ` "${oneLine(it.title)}"` : '';
-  const head = it.kind === 'create' ? `Add ${what}${name}` : it.kind === 'done' ? `Mark done:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
+  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${what}${name}` : it.kind === 'done' ? `Mark done:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
   const diffs = it.diffs.map(d => {
     const nice = (x: unknown) => (d.field === 'plan' || d.field === 'order' || d.field === 'after') && Array.isArray(x) ? x.map(i => v.tasks.get(String(i))?.title ?? i).join(', ') : show(x);
     return d.before === undefined ? `${d.field} ${nice(d.after)}` : `${d.field} ${nice(d.before)} → ${nice(d.after)}`;

@@ -277,18 +277,24 @@ export async function saveBackupFile(encrypted = false) {
   toast(t('backupSaved'));
 }
 
+/** "Save your recovery key", while sync is on and the person hasn't said they did. Also Home's first nudge. */
+export function KeyCard() {
+  if (!syncOn.value || keySaved.value) return null;
+  return (
+    <div class="banner warn" data-testid="key-card" role="status">
+      <p><b>{t('syncKeyCardTitle')}.</b> {t('syncKeyCardBody')}</p>
+      <div class="go">
+        <button class="btn" type="button" onClick={openShowKey} data-testid="key-card-show">{t('syncShowKeyBtn')}</button>
+        <button class="btn primary" type="button" onClick={() => void confirmKeySaved()} data-testid="key-card-saved">{t('syncKeySavedBtn')}</button>
+      </div>
+    </div>
+  );
+}
+
 export function SyncCards() {
   return (
     <>
-      {syncOn.value && !keySaved.value && (
-        <div class="banner warn" data-testid="key-card" role="status">
-          <p><b>{t('syncKeyCardTitle')}.</b> {t('syncKeyCardBody')}</p>
-          <div class="go">
-            <button class="btn" type="button" onClick={openShowKey} data-testid="key-card-show">{t('syncShowKeyBtn')}</button>
-            <button class="btn primary" type="button" onClick={() => void confirmKeySaved()} data-testid="key-card-saved">{t('syncKeySavedBtn')}</button>
-          </div>
-        </div>
-      )}
+      <KeyCard />
       {!syncOn.value && backupDue.value && tasks.value.size > 0 && (
         <div class="banner" data-testid="backup-card" role="status">
           <p><b>{t('backupDueTitle')}.</b> {t('backupDueBody')}</p>

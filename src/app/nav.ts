@@ -1,10 +1,10 @@
 // Where the person is: the current view, the hash that names it, and the Calendar's mode.
-// The five tabs are the main places; Settings, Memory and History sit behind the menu on Home.
+// The five tabs are the main places; Settings, Addresses & people, Memory and History sit behind the menu on Home.
 import { signal } from '@preact/signals';
 
-export type View = 'home' | 'today' | 'matrix' | 'projects' | 'calendar' | 'settings' | 'memory' | 'history';
+export type View = 'home' | 'today' | 'matrix' | 'projects' | 'calendar' | 'settings' | 'memory' | 'history' | 'addresses';
 export const TABS: View[] = ['home', 'today', 'matrix', 'projects', 'calendar'];
-const VIEWS: View[] = [...TABS, 'settings', 'memory', 'history'];
+const VIEWS: View[] = [...TABS, 'settings', 'memory', 'history', 'addresses'];
 
 /** Week and month are remembered; the Log is a mode of the Calendar that you open on purpose. */
 export type CalMode = 'week' | 'month' | 'log';

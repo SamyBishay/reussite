@@ -4,16 +4,17 @@
 // one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
-import { db, tasks, places, memory, exchanges, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
-import { T } from './model';
+import { db, tasks, places, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
+import { T, addressesOn } from './model';
 import { addSession } from './actions';
-import { openNewTask } from './sheets';
+import { openNewTask, flows } from './sheets';
 import { fieldsOf, type Stored } from '../data/doc';
 import { normExchange } from '../data/normalize';
 import type { Exchange, ExchangeTurn, Task, UndoDoc } from '../data/schema';
 import { parseHome, type HomeParse, type Intent, type ParseContext } from '../domain/parse';
 import { parseMinutes } from '../domain/duration';
 import { norm, type Named } from '../domain/names';
+import { visitPromptFor } from '../domain/offers';
 import { planChanges, applyPlanned, isLowRisk } from '../ai/apply';
 import { appWriter, snapshot, gen } from '../ai/writer';
 import { openChangeReview } from '../ai/Review';
@@ -263,6 +264,9 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
     const { exchange } = await addTurn({ at: new Date().toISOString(), text, kind: turn, reply: title || cs.note || undefined, n }, { cs: id, undo });
     // A step ticked done with no timer running: how long did it take? (With one, its time was saved.)
     if (done && !timed) homeCard.value = { kind: 'duration', task: done, exchange, cs: id, at: Date.now() };
+    // A step that feeds an address asks how it was, as when it is ticked on Today.
+    const fed = done ? T(done) : undefined, a = fed && visitPromptFor(fed, addresses.value);
+    if (fed && a && addressesOn()) flows.visit(a, { stepId: fed.id, day: fed.doneDay ?? today.value });
   };
   if (isLowRisk(cs, plan)) {
     const { result: n, undo } = await recordWrites(() => applyPlanned(plan, () => true, appWriter));

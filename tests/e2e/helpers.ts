@@ -1,8 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import { sampleExport } from './fixture';
 
-/** Settings, Places, Memory and History sit behind the menu icon at the top of Home. */
-export async function openMenu(page: Page, item: 'settings' | 'places' | 'memory' | 'history') {
+/** Settings, Places, Addresses, Memory and History sit behind the menu icon at the top of Home. */
+export async function openMenu(page: Page, item: 'settings' | 'places' | 'memory' | 'history' | 'addresses' | 'add-address') {
   await page.getByTestId('tab-home').click();
   await page.getByTestId('home-menu').click();
   await page.getByTestId('menu-' + item).click();

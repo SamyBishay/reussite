@@ -1,7 +1,7 @@
 // Shared view pieces, ported from v1's render helpers.
 import type { ComponentChildren } from 'preact';
 import { settings, projects, today, toast } from './store';
-import { quad, blocked, waitingOn, spentOf, personal, estModel, type T } from './model';
+import { quad, blocked, waitingOn, spentOf, personal, estModel, addressById, personById, addressesOn, type T } from './model';
 import { openDue } from './due';
 import { OPTS } from '../domain/estimates';
 import { startTask } from './actions';
@@ -99,8 +99,18 @@ export function Meta({ tk, withQuad }: { tk: T; withQuad?: boolean }) {
     tk.repeat && <span key="r" class="tag" title={t('repeats')}>↻</span>,
     blocked(tk) && w && <span key="w" class="tag">{t('waitsFor', { what: w.title.length > 40 ? w.title.slice(0, 38) + '…' : w.title })}</span>,
     (tk.carried || 0) >= 3 && <span key="c" class="tag warn">{t('carriedTag', { n: tk.carried })}</span>,
+    feeds(tk),
   ];
   return <>{joinDots(parts)}</>;
+}
+
+/** The address or person a step feeds, said quietly (nothing when the module is off or the link points at nothing). */
+function feeds(tk: T): ComponentChildren {
+  if (!addressesOn()) return null;
+  const a = addressById(tk.addressId), p = personById(tk.personId);
+  if (a) return <span key="fa" class="feeds" data-testid="feeds">{t('feedsAddress', { name: a.name })}</span>;
+  if (p) return <span key="fp" class="feeds" data-testid="feeds">{t('feedsPerson', { name: p.name })}</span>;
+  return null;
 }
 
 // ---------- opening apps and websites ----------
@@ -129,5 +139,15 @@ export function GoLink({ tk, variant }: { tk: T; variant: 'big' | 'small' | 'inl
       {...(isWeb && !settings.value.linksInApp ? { target: '_blank', rel: 'noopener' } : {})}>
       {variant === 'inline' ? (tk.prompt ? 'Claude ↗' : tk.app ? tk.app + ' ↗' : '↗') : label}
     </a>
+  );
+}
+
+/** A link out of the app (Maps, WhatsApp, Mail…) under the same rules as a step's link: an app by its own scheme, a website in the browser. */
+export function ExtLink({ href, class: cls, children, testid }: { href: string; class?: string; children: ComponentChildren; testid?: string }) {
+  const target = resolveLink({ link: href }, platform, settings.value.linksInApp);
+  if (!target) return null;
+  const web = target.href.startsWith('https:');
+  return (
+    <a class={cls} href={target.href} data-testid={testid} {...(web && !settings.value.linksInApp ? { target: '_blank', rel: 'noopener' } : {})}>{children}</a>
   );
 }

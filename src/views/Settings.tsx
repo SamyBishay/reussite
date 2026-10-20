@@ -12,6 +12,9 @@ import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
+import { categoryName } from '../app/model';
+import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
@@ -191,6 +194,50 @@ export function StaysEditor() {
   );
 }
 
+/** The module's switch and the address categories (brief §5). Off hides every screen, button and offer; what is stored stays. */
+function AddressesSettings() {
+  const s = settings.value;
+  const list = s.addressCategories;
+  const save = (next: S['addressCategories']) => set({ addressCategories: next });
+  const add = (e: Event) => {
+    e.preventDefault();
+    const f = e.currentTarget as HTMLFormElement;
+    const input = f.elements.namedItem('name') as HTMLInputElement;
+    // An id an address still carries (from a category removed earlier) is never reused for another name.
+    const next = addCategory(list, input.value, [...addresses.value.values()].map(a => a.category));
+    if (next.length === list.length) return;
+    save(next);
+    f.reset();
+  };
+  return (
+    <div class="field" data-testid="addresses-settings"><span>{t('addrTitle')}</span>
+      <label class="tog"><input type="checkbox" checked={s.addressesPeople} onChange={e => set({ addressesPeople: (e.target as HTMLInputElement).checked })} data-testid="addresses-switch" /> {t('addrSwitch')}</label>
+      <p class="hint">{t('addrSwitchHint')}</p>
+      {s.addressesPeople && (
+        <>
+          <p class="field-label">{t('addrCategories')}</p>
+          <ul class="catlist" data-testid="categories">
+            {list.map((c, i) => (
+              <li key={c.id + lang.value + c.name}>
+                <input type="text" aria-label={t('addrCategoryName')} defaultValue={categoryName(c.id)} placeholder={categoryName(c.id)} autocomplete="off"
+                  onChange={e => save(renameCategory(list, c.id, (e.target as HTMLInputElement).value))} data-testid="category-name" />
+                <button class="btn small ghost" type="button" disabled={i === 0} aria-label={t('moveUp', { what: categoryName(c.id) })} onClick={() => save(moveCategory(list, c.id, -1))}>↑</button>
+                <button class="btn small ghost" type="button" disabled={i === list.length - 1} aria-label={t('moveDown', { what: categoryName(c.id) })} onClick={() => save(moveCategory(list, c.id, 1))}>↓</button>
+                <button class="btn small ghost" type="button" aria-label={t('remove', { what: categoryName(c.id) })} onClick={() => { save(removeCategory(list, c.id)); toast(t('addrCategoryRemoved')); }} data-testid="category-remove">×</button>
+              </li>
+            ))}
+          </ul>
+          <form class="addplace" onSubmit={add}>
+            <input type="text" name="name" placeholder={t('addrCategoryNew')} aria-label={t('addrCategoryNew')} autocomplete="off" required />
+            <button class="btn" type="submit" data-testid="category-add">{t('add')}</button>
+          </form>
+          <p class="hint">{t('addrCategoriesHint')}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Method() {
   const s = settings.value;
   const saveSuit = (k: SuitId, field: 'name' | 'short' | 'glyph', v: string) => {
@@ -244,6 +291,7 @@ function Method() {
       <p class="hint">{t('remindersLater')}</p>
       <PlacesEditor />
       <StaysEditor />
+      <AddressesSettings />
     </section>
   );
 }

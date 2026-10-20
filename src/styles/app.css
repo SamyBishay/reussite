@@ -605,3 +605,19 @@ textarea.mono{letter-spacing:.04em}
 .drop{position:fixed;inset:0;z-index:50;background:var(--ground);overflow-y:auto;overflow-x:hidden;display:grid;align-content:center;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
 .drop>div{width:min(460px,100%);display:grid;gap:12px}
 .drop h1{margin:0;font:700 24px/1.25 var(--serif)}
+
+/* Addresses and people */
+.addrlist li>div:first-child{min-width:0}
+.addrlist .linklike{display:block;width:100%;min-height:44px;padding:8px 0 0;text-align:left}
+.addrlist b{overflow-wrap:anywhere}
+.addrlist .meta{margin:0;overflow-wrap:anywhere}
+.addrlist .go{justify-content:flex-end}
+.addrlist .btn.small{min-height:44px}
+.visitlist li{grid-template-columns:auto minmax(0,1fr) auto}
+.visitlist .why{min-width:0;overflow-wrap:anywhere}
+.catlist{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.catlist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center}
+.catlist .btn.small{min-width:44px;min-height:44px;justify-content:center;padding:6px}
+.verdicts button{font-family:var(--sans)}
+.hint.ask{color:var(--ink);font-weight:600}
+.feeds{color:var(--ink-3)}

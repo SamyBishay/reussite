@@ -17,7 +17,18 @@ Names, ids and URLs only; never secrets. Brief §3, Infrastructure. Free plan on
 Set with `npx wrangler secret put <NAME>` from `relay/`.
 
 - `CONNECTOR_WRAP_KEY`: 32 random bytes, base64 (`openssl rand -base64 32`). Wraps the space keys the connector holds. Changing it switches every connector off.
-- The VAPID private key arrives with phase 3b.
+- `VAPID_PRIVATE_KEY`: the private half of the Web Push signing pair, base64url of the 32-byte scalar. Made once with `node scripts/vapid-keygen.mjs` (prints to the terminal, writes no file); its public half goes in the `VAPID_PUBLIC_KEY` var below and in `.env.production` as `VITE_VAPID_PUBLIC_KEY`. Changing the pair makes every device subscribe again the next time the app is opened. See [push.md](push.md).
+
+## Relay variables and triggers (`relay/wrangler.jsonc`)
+
+Not secrets. Names only here; values in the file.
+
+- `ALLOWED_ORIGINS`, `RELAY_URL`: as for sync and the connector.
+- `VAPID_PUBLIC_KEY`: the public half of the pair above (the file holds a placeholder until the pair is made).
+- `VAPID_SUBJECT`: the relay's https address, the VAPID token's `sub`.
+- `PUSH_HOSTS`: the push services a registered endpoint may point at.
+- `triggers.crons`: `* * * * *` (one of the free plan's five): sends due notifications, and prunes at minute 0.
+- Migration `0005_push.sql` creates `push_devices` and `push_items`.
 
 ## Build settings of the `reussite` Worker (dashboard → Settings → Builds)
 

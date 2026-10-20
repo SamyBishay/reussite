@@ -1075,7 +1075,7 @@ export const en = {
   syncTurnOffConnector: 'The connector is on. It stays on for your other devices until you switch it off, and you can’t from here once sync is off. Switch it off first if you don’t want that.',
   // About → Privacy (phase 3)
   privacyTitle: 'Privacy',
-  privacyRelay: 'What the relay can see: your list as scrambled blobs, their sizes and when they arrive, IP addresses, the push address of each device, the calendar feed only if you switch it on, and your whole list while the connector is on. It never sees what is inside a scrambled blob.',
+  privacyRelay: 'What the relay can see: your list as scrambled blobs, their sizes and when they arrive, IP addresses, the push address of each device, the calendar feed only if you switch it on (with generic titles unless you include step titles), and your whole list while the connector is on. It never sees what is inside a scrambled blob.',
   privacyAi: 'What an AI provider sees: exactly what each request sends, which you can read first with “Show me what’s sent”. People you saved are included only if you tick them.',
   privacyLoss: 'If you lose every device and the recovery key, the list is gone for good. Nobody can recover it, including whoever runs the relay.',
   // One-tap link (phase 3)
@@ -1121,6 +1121,25 @@ export const en = {
   icsDone: 'Calendar file ready ({n} events).',
   calendarSection: 'Calendar',
   calendarExportHint: 'Add to calendar (in the Calendar tab) makes a file of your launch points and fixed-time items for today or the week, each with a reminder at its start, and hands it to your phone’s share sheet or downloads it. Open it with Apple Calendar or a desktop calendar app. It is a copy: later changes in Réussite do not follow.',
+  // Settings → Calendar → the subscribable feed (phase 3b)
+  feedSwitch: 'Subscribe from a calendar app',
+  feedIntro: 'A web address your calendar app can subscribe to. It shows your launch points and fixed-time items from a week back to six weeks ahead, updated whenever you open the app or change something here. Anyone who has the address can read it, so keep it to yourself.',
+  feedNoRelay: 'The feed needs a relay address (Settings → Sync). It works without turning sync on.',
+  feedOpenLink: 'Open in my calendar app',
+  feedHttpsLabel: 'Address to paste into a calendar app',
+  feedCopyLink: 'Copy address',
+  feedCopied: 'Address copied.',
+  feedRegenerate: 'Make a new address',
+  feedRegenerateAsk: 'The old address stops working. Calendars subscribed to it will need the new one.',
+  feedRegenerateConfirm: 'Make a new address',
+  feedRegenerateCancel: 'Keep this one',
+  feedRegenerated: 'New address made.',
+  feedTitlesSwitch: 'Include step titles',
+  feedTitlesWarn: 'Titles in the feed are not end-to-end encrypted: the relay stores them as plain text and whoever runs it can read them. Without this, the feed says only “▶ Start” or “Fixed time”.',
+  feedRefresh: 'Your calendar app decides how often it refreshes the feed (Google Calendar can take hours), so do not count on it for reminders. Reminders come from notifications.',
+  feedUploadFailed: 'Could not reach the relay. It will try again.',
+  feedCopyBlocked: 'Copy was blocked here. Select the address and copy it by hand.',
+  feedTooBig: 'The feed is too big to upload.',
 };
 
 export type Strings = typeof en;

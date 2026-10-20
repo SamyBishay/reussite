@@ -29,6 +29,7 @@ Not secrets. Names only here; values in the file.
 - `PUSH_HOSTS`: the push services a registered endpoint may point at.
 - `triggers.crons`: `* * * * *` (one of the free plan's five): sends due notifications, and prunes at minute 0.
 - Migration `0005_push.sql` creates `push_devices` and `push_items`.
+- Migration `0006_feed.sql` creates `feeds`. No new var or secret; `GET /cal/<fid>.ics` needs no route of its own on the same Worker. Optional tuning vars `RATE_FEED_NEW_IP_PER_MIN`, `RATE_FEED_PUT_PER_MIN`, `RATE_FEED_MISS_PER_MIN`. See [feed.md](feed.md).
 
 ## Build settings of the `reussite` Worker (dashboard → Settings → Builds)
 

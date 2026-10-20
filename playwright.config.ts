@@ -12,7 +12,7 @@ export default defineConfig({
     // The connector needs its wrap secret: a throwaway for these tests (32 bytes, base64), and the relay's own address.
     // Push needs a VAPID pair (a throwaway too, the app is built with its public half) and a push-host list that
     // allows only this computer, where the tests' push stub listens (http, any port): no real push service is reachable.
-    { command: `npm run relay:migrate && npm run relay:dev -- --var CONNECTOR_WRAP_KEY:ZTJlLXRlc3Qtd3JhcC1rZXktbm90LXNlY3JldC0wMDE= --var RELAY_URL:http://localhost:8787 --var VAPID_PUBLIC_KEY:${E2E_VAPID.publicKey} --var VAPID_PRIVATE_KEY:${E2E_VAPID.privateKey} --var VAPID_SUBJECT:http://localhost:8787 --var 'PUSH_HOSTS:localhost:*,127.0.0.1:*'`, url: 'http://localhost:8787/health', reuseExistingServer: false, timeout: 120_000, env: { WRANGLER_SEND_METRICS: 'false' } },
+    { command: `npm run relay:migrate && npm run relay:dev -- --var CONNECTOR_WRAP_KEY:ZTJlLXRlc3Qtd3JhcC1rZXktbm90LXNlY3JldC0wMDE= --var RELAY_URL:http://localhost:8787 --var VAPID_PUBLIC_KEY:${E2E_VAPID.publicKey} --var VAPID_PRIVATE_KEY:${E2E_VAPID.privateKey} --var VAPID_SUBJECT:http://localhost:8787 --var 'PUSH_HOSTS:localhost:*,127.0.0.1:*' --var RATE_FEED_NEW_IP_PER_MIN:1000 --var RATE_FEED_MISS_PER_MIN:1000`, url: 'http://localhost:8787/health', reuseExistingServer: false, timeout: 120_000, env: { WRANGLER_SEND_METRICS: 'false' } },
   ],
   projects: [
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

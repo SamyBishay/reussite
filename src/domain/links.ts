@@ -4,7 +4,7 @@
 /** Schemes a link may use. Anything else (javascript:, data:, file:…) is refused. */
 export const ALLOWED_SCHEMES = new Set([
   'https:', 'mailto:', 'sms:', 'tel:', 'facetime:', 'facetime-audio:', 'maps:', 'whatsapp:', 'claude:', 'tg:', 'signal:',
-  'spotify:', 'shortcuts:', 'x-safari-https:', 'comgooglemaps:', 'googlegmail:', 'ms-outlook:', 'slack:', 'zoomus:', 'notion:', 'obsidian:',
+  'spotify:', 'shortcuts:', 'x-safari-https:', 'comgooglemaps:', 'googlegmail:', 'ms-outlook:', 'slack:', 'zoomus:', 'notion:', 'obsidian:', 'webcal:',
 ]);
 
 /** Apps a step can name, with the URL that opens them when the step has no link of its own. */

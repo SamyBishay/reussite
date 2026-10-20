@@ -95,3 +95,64 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
   await noSideways(page, 'settings');
 });
 }
+
+test('the calendar feed: generic titles, step titles when asked, a new address replaces the old, off removes it', async ({ page, request }) => {
+  await addChoir(page);
+  await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
+  await sheet(page).getByTestId('weekdays').getByLabel(todayName(), { exact: true }).check();
+  await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(sheet(page)).toBeHidden();
+
+  await page.goto('/#settings');
+  const feed = page.getByTestId('calendar-feed');
+  await expect(feed.getByTestId('feed-url')).toHaveCount(0);
+  await feed.getByTestId('feed-switch').check();
+  const link = async () => (await feed.getByTestId('feed-url').textContent())!.trim();
+  await expect(feed.getByTestId('feed-url')).toContainText('/cal/');
+  const first = await link();
+  expect(first).toMatch(/^http:\/\/localhost:8787\/cal\/[A-Za-z0-9_-]{32}\.ics$/);
+  await expect(feed.getByTestId('feed-webcal')).toHaveAttribute('href', first.replace('http:', 'webcal:'));
+  await expect(feed.getByTestId('feed-titles-warn')).toContainText('not end-to-end encrypted');
+
+  const fetchFeed = async (url: string) => request.get(url);
+  await expect.poll(async () => (await fetchFeed(first)).status()).toBe(200);
+  const res = await fetchFeed(first);
+  expect(res.headers()['content-type']).toBe('text/calendar; charset=utf-8');
+  expect(res.headers()['access-control-allow-origin']).toBeUndefined();
+  const generic = await res.text();
+  expect(generic).toContain('SUMMARY:Fixed time');
+  expect(generic).not.toContain('Choir');
+  expect(generic).not.toContain('VALARM');
+
+  await feed.getByTestId('feed-titles').check();
+  await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('SUMMARY:Choir'), { timeout: 20_000 }).toBe(true);
+
+  await feed.getByTestId('feed-regenerate').click();
+  await feed.getByTestId('feed-regenerate-confirm').click();
+  await expect.poll(link).not.toBe(first);
+  const second = await link();
+  await expect.poll(async () => (await fetchFeed(second)).status()).toBe(200);
+  expect((await fetchFeed(first)).status()).toBe(404);
+
+  await feed.getByTestId('feed-switch').uncheck();
+  await expect(feed.getByTestId('feed-url')).toHaveCount(0);
+  await expect.poll(async () => (await fetchFeed(second)).status()).toBe(404);
+});
+
+for (const width of [320, 375, 430]) {
+test(`the feed block does not scroll sideways at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 800 });
+  await importSample(page);
+  await page.goto('/#settings');
+  const feed = page.getByTestId('calendar-feed');
+  await feed.getByTestId('feed-switch').check();
+  await expect(feed.getByTestId('feed-url')).toContainText('/cal/');
+  await feed.getByTestId('feed-regenerate').click();
+  await noSideways(page, 'feed block');
+  for (const id of ['feed-webcal', 'feed-copy', 'feed-titles', 'feed-regenerate-confirm']) {
+    const box = (await feed.getByTestId(id).locator('xpath=ancestor-or-self::*[self::a or self::button or self::label][1]').boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44 - 1);
+  }
+  await feed.getByTestId('feed-switch').uncheck();
+});
+}

@@ -11,6 +11,7 @@ import { openPile, openPause, placeIds, placeName, rankOf, isLong, openStillOn, 
 import { addPlace, startTask, patchTask } from './actions';
 import { Clock } from './Clock';
 import { startSync } from './sync';
+import { startFeed } from './feed';
 import { UpdateBanner } from './UpdateBanner';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
@@ -193,7 +194,7 @@ function Toast() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(startSync); }, []);
+  useEffect(() => { void start().then(() => { void startFeed(); return startSync(); }); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
     window.addEventListener('hashchange', onHash);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { create, merge, patch, remove } from '../data/doc';
-import { createClock, tick } from '../data/hlc';
+import { createClock, format, tick } from '../data/hlc';
 import { SCHEMA_VERSION } from '../data/schema';
 import { estPointsOf, type TaskW } from '../domain/lists';
 import { HEAVY, syntheticSpace, TODAY, type Docs } from '../../relay/bench/synthetic';
@@ -171,5 +171,72 @@ describe('edits that might touch the cold part', () => {
     expect(push('days', day, { plan: [...(day.plan as string[]), old.id] })).toBe(true);
     expect(push('days', day, { plan: [open.id] })).toBe(false);
     expect(push('decisions', all.decisions![0]!, { taskIds: [old.id] })).toBe(true);
+  });
+});
+
+describe('memory notes and exchanges', () => {
+  const sizes = { ...TODAY, memory: 20, exchanges: 60 };
+  const all = syntheticSpace(sizes);
+  const clock = createClock('phone0001');
+  const exchange = (day: string) => all.exchanges!.find(e => String(e.at).startsWith(day))!;
+  const from = hotFrom(cut);
+  const recent = all.exchanges!.find(e => String(e.at).slice(0, 10) >= from)!;
+  const older = all.exchanges!.find(e => String(e.at).slice(0, 10) < from)!;
+
+  it('keeps every live note hot, however old its clocks', () => {
+    const { hot, cold } = split(all, cut);
+    expect(ids(hot, 'memory').size).toBe(20);
+    expect(cold.memory ?? []).toEqual([]);
+  });
+
+  it('puts an old tombstoned note in cold, and one deleted lately in hot', () => {
+    const [a, b] = all.memory!;
+    const goneOld = { ...a!, _del: format(NOW - 60 * DAY, 0, 'phone0001') } as StoredDoc;
+    const goneNow = { ...b!, _del: format(NOW - DAY, 0, 'phone0001') } as StoredDoc;
+    const { hot, cold } = split({ ...all, memory: [goneOld, goneNow, ...all.memory!.slice(2)] }, cut);
+    expect(ids(cold, 'memory')).toEqual(new Set([a!.id]));
+    expect(ids(hot, 'memory').has(b!.id)).toBe(true);
+  });
+
+  it('puts exchanges of the last 30 days in hot and older ones in cold', () => {
+    expect(recent && older).toBeTruthy();
+    const { hot, cold } = split(all, cut);
+    for (const e of all.exchanges!) {
+      const isHot = String(e.at).slice(0, 10) >= from;
+      expect(ids(hot, 'exchanges').has(e.id), e.id).toBe(isHot);
+      expect(ids(cold, 'exchanges').has(e.id), e.id).toBe(!isHot);
+    }
+    expect(exchange(String(older.at).slice(0, 10))).toBeDefined();
+  });
+
+  it('puts an old exchange touched lately (an Undo) in hot', () => {
+    const undone = patch(older, { undone: ['c'] }, clock, SCHEMA_VERSION) as unknown as StoredDoc;
+    const { hot } = split({ ...all, exchanges: all.exchanges!.map(e => (e.id === older.id ? undone : e)) }, cut);
+    expect(ids(hot, 'exchanges').has(older.id)).toBe(true);
+  });
+
+  it('holds all of it across the two parts, the cold ids indexed', () => {
+    const p = buildParts(all, 7, { now: NOW });
+    sameAs(union(p.hot.docs, p.cold!.docs), all);
+    for (const e of p.cold!.docs.exchanges ?? []) expect(inCold(p.hot.cold, 'exchanges', e.id)).toBe(true);
+    expect(p.hot.cold!.memory).toBeUndefined();
+    // a hot-only snapshot a few days later still adds up
+    const next = buildParts(all, 9, { now: NOW + 3 * DAY, prev: p.cut });
+    sameAs(union(p.cold!.docs, next.hot.docs), all);
+  });
+
+  it('does not ask for a new snapshot when a recent exchange or a live note is edited, but does for an old one or a revived note', () => {
+    const push = (c: string, doc: StoredDoc, changes: Record<string, unknown>) => {
+      const next = patch(doc, changes, clock, SCHEMA_VERSION) as unknown as StoredDoc;
+      const d = { id: doc.id, _v: SCHEMA_VERSION, _hlc: Object.fromEntries(Object.keys(changes).map(k => [k, next._hlc[k]!])), ...changes } as StoredDoc;
+      return touchesCold([{ c, d }], { ...all, [c]: all[c]!.map(x => (x.id === doc.id ? next : x)) }, cut);
+    };
+    expect(push('exchanges', recent, { undone: ['c'] })).toBe(false);
+    expect(push('exchanges', older, { undone: ['c'] })).toBe(true);
+    expect(push('memory', all.memory![3]!, { aliases: ['x'] })).toBe(false);
+    const gone = { ...all.memory![4]!, _del: format(NOW - 60 * DAY, 0, 'phone0001') } as StoredDoc;
+    const docs = { ...all, memory: all.memory!.map(m => (m.id === gone.id ? gone : m)) };
+    const revived = patch(gone, { name: 'Back' }, clock, SCHEMA_VERSION) as unknown as StoredDoc;
+    expect(touchesCold([{ c: 'memory', d: { id: gone.id, _v: SCHEMA_VERSION, _hlc: { name: revived._hlc.name! }, name: 'Back' } as StoredDoc }], { ...docs, memory: docs.memory!.map(m => (m.id === gone.id ? revived : m)) }, cut)).toBe(true);
   });
 });

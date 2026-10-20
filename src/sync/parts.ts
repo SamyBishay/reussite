@@ -3,8 +3,8 @@
 // snapshot is written as two blobs:
 //
 //   hot   open steps, steps done or due in the last ~30 days, their sessions, the days from the last
-//         30 days on, every project, decision, place, stay and setting, and anything whose clocks
-//         changed in the last 30 days. Plus an index of the cold ids and a digest of the cold
+//         30 days on, every project, decision, place, stay, memory note and setting, exchanges from the
+//         last 30 days, and anything whose clocks changed in the last 30 days. Plus an index of the cold ids and a digest of the cold
 //         documents (`ColdDigest`), so the common questions never open the cold part.
 //   cold  everything else.
 //
@@ -81,7 +81,9 @@ export function split(all: DocSet, cut: Cut, o: { closure?: boolean } = {}): Spl
   }
   for (const d of days) put('days', d, hotDay(d));
   for (const d of list('sessions')) put('sessions', d, touchedSince(d, min) || str(d.d) >= from || hotTasks.has(str(d.taskId)));
-  for (const c of ['projects', 'decisions', 'places', 'stays', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
+  for (const c of ['projects', 'decisions', 'places', 'stays', 'memory', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
+  // Home's history: hot by its own date, so an edit to a recent one (an Undo) never forces a new snapshot.
+  for (const d of list('exchanges')) put('exchanges', d, touchedSince(d, min) || (!d._del && str(d.at).slice(0, 10) >= from));
   return { hot, cold };
 }
 
@@ -108,7 +110,7 @@ export function digestOf(cold: Docs, all: DocSet, cut: Cut): ColdDigest {
 }
 
 /** The fields whose value decides whether a document is hot by itself (not by being touched lately). */
-const STATE_FIELDS: Record<string, string[]> = { tasks: ['status', 'doneDay', 'due', 'at'], sessions: ['d', 'taskId'], days: ['date'] };
+const STATE_FIELDS: Record<string, string[]> = { tasks: ['status', 'doneDay', 'due', 'at'], sessions: ['d', 'taskId'], days: ['date'], exchanges: ['at'] };
 
 /**
  * Might these just-pushed documents also be held by the cold part? If so a reader that has only the

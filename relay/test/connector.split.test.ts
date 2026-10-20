@@ -12,7 +12,7 @@ import { syncOnce } from '../../src/sync/run';
 import { FakeDevice } from '../../src/sync/testing';
 import { syntheticSpace, type Docs } from '../bench/synthetic';
 import { cacheGet, cacheSize, setCacheEnabled } from '../src/connector/cache';
-import { COMPACT_TAIL, emptyMaps } from '../src/connector/space';
+import { buildSpace, COMPACT_TAIL, emptyMaps } from '../src/connector/space';
 import { dayText, projectText, queryText, taskText } from '../src/connector/render';
 import { View } from '../src/connector/view';
 import { decodeSnapshot } from '../../src/sync/wire';
@@ -21,7 +21,7 @@ import { newApp, signIn, switchOn, tool, viaWorker, type App } from './connector
 
 const TODAY = dayOf(Date.now());
 const day = (n: number) => dayOf(Date.now() + n * 86_400_000);
-const SIZES = { tasks: 130, sessions: 150, days: 45, projects: 8, decisions: 3, places: 2, stays: 2 }; // small enough for the connector to compact (COMPACT_MAX_DOCS)
+const SIZES = { tasks: 130, sessions: 150, days: 45, projects: 8, decisions: 3, places: 2, stays: 2, memory: 12, exchanges: 40 }; // small enough for the connector to compact (COMPACT_MAX_DOCS)
 
 let app: App;
 let access: string;
@@ -406,3 +406,24 @@ describe("the isolate's cache", () => {
 });
 
 void b64uDecode; void SCHEMA_VERSION;
+
+describe('memory notes and exchanges in the two parts', () => {
+  it('a hot-only read holds every live note and the last 30 days of exchanges, and the View reads them', async () => {
+    const hotBlob = (await rows("SELECT blob FROM snapshots WHERE space = ?1 AND kind = 'hot' ORDER BY part", space())).map(r => r.blob).join('');
+    const s = await buildSpace(space(), app.keys, hotBlob, [], { wall: 0, counter: 0 });
+    expect(s.newer).toBe(false);
+    const v = new View(s.maps, undefined, { x: s.split!.x, from: s.split!.from });
+    const whole = expected();
+    expect(whole.memory.size).toBe(SIZES.memory);
+    expect([...v.memory.keys()].sort()).toEqual([...whole.memory.keys()].sort());
+    const note = [...v.memory.values()][0]!;
+    expect(note.lines.length).toBe(8);
+    expect(typeof note.private).toBe('boolean');
+    const from = day(-30);
+    const recent = [...whole.exchanges.values()].filter(e => e.at.slice(0, 10) >= from);
+    expect(recent.length).toBeGreaterThan(0);
+    expect(recent.length).toBeLessThan(whole.exchanges.size);
+    expect([...v.exchanges.keys()].sort()).toEqual(recent.map(e => e.id).sort());
+    expect(v.exchanges.get(recent[0]!.id)!.undone).toEqual([]);
+  });
+});

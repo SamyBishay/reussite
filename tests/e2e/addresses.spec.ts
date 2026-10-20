@@ -341,11 +341,16 @@ test('a standing obligation chooses what the planner offers', async ({ page }) =
   expect((await standing()).offer).toBe('person');
 });
 
-for (const width of [320, 375, 430]) {
-  test(`no sideways scroll on the addresses screen and its sheets at ${width}px`, async ({ page }) => {
+for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
+  test(`no sideways scroll on the addresses screen and its sheets at ${width}px${french ? ' in French' : ''}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await clipboard(page, SHORT);
+    if (french) {
+      await page.goto('/#settings');
+      await page.getByRole('button', { name: 'Français' }).click();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    }
     await page.goto('/#addresses');
     await expect(page.getByTestId('addr-empty')).toBeVisible();
     await noSideways(page, 'empty addresses');

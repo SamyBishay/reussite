@@ -34,7 +34,7 @@ const person = (name: string, o: Record<string, unknown> = {}) => ({ name, place
 
 async function openPlan(page: Page) {
   await page.goto('/');
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.locator('main').getByRole('button', { name: /Plan the day|Planifier la journée/ }).click();
   await page.getByTestId('ci-next').click(); // nothing was planned yesterday, so the first screen is the day's shape
   await expect(page.getByTestId('plan-items')).toBeVisible();
 }
@@ -276,17 +276,22 @@ test('Plan this trip is not offered with the module off', async ({ page }) => {
   await expect(page.getByTestId('plan-trip')).toHaveCount(0);
 });
 
-for (const width of [320, 375, 430]) {
-  test(`no sideways scroll on the trip sheet, its review and the offers at ${width}px`, async ({ page }) => {
+for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
+  test(`no sideways scroll on the trip sheet, its review and the offers at ${width}px${french ? ' in French' : ''}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await seed(page, { ...tripSeed(), tasks: [...tripSeed().tasks!, ['ob1', task('Go out somewhere in the city with a very long name', { template: true, offer: 'address', est: 60 })]],
       addresses: [...tripSeed().addresses!, ['a9', address('A very long name for a place that someone saved from Maps one rainy afternoon in the old town')]] });
+    if (french) {
+      await page.goto('/#settings');
+      await page.getByRole('button', { name: 'Français' }).click();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    }
     await openPlan(page);
     await noSideways(page, 'offers in the plan');
     await page.keyboard.press('Escape');
     await openTrip(page);
-    await sheet(page).locator('summary', { hasText: 'See the text' }).click();
+    await sheet(page).locator('summary', { hasText: /See the text|Voir le texte/ }).click();
     await sheet(page).getByTestId('trip-people').check();
     await noSideways(page, 'trip sheet');
     await sheet(page).getByTestId('pack-paste').click();

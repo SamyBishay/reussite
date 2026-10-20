@@ -153,10 +153,14 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('places-sheet')).toContainText('Lisbon');
   });
 
-  for (const width of [320, 375, 430]) {
-    test(`every screen fits at ${width}px, with 44px targets`, async ({ page }) => {
+  for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
+    test(`every screen fits at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/');
+      if (french) {
+        await page.getByTestId('ob-lang-fr').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+      }
       const check = async (id: string) => {
         await expect(page.getByTestId(id)).toBeVisible();
         await noSideways(page, id);

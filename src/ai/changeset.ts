@@ -117,7 +117,8 @@ export const ChangeSetSchema = z.object({
 });
 export type ChangeSetRaw = z.infer<typeof ChangeSetSchema>;
 
-export interface ChangeSet { v: 1; note: string; changes: Change[]; bad: number }
+/** `by: 'me'` marks a change-set the person's own words made (Home's local parser); an AI's reply never carries it. */
+export interface ChangeSet { v: 1; note: string; changes: Change[]; bad: number; by?: 'me' }
 
 export type ParseResult = { ok: true; cs: ChangeSet } | { ok: false; error: 'noJson' | 'invalid' | 'version' | 'empty' };
 

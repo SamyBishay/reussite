@@ -100,6 +100,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const skippedAt: number[] = [];
 
   /** Clean a task's fields: unknown references and unsafe links are dropped. */
+  const by = cs.by ?? 'ai';
   const cleanTask = (set: TaskSet): Partial<Task> => {
     const o: Partial<Task> = {};
     for (const [k, v] of Object.entries(set)) {
@@ -114,7 +115,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     }
     // A standing obligation with no time or no days would sit unseen: it stays an ordinary step.
     if (o.template && (!o.at || !o.weekdays?.length)) delete o.template;
-    if (o.est != null) o.estBy = 'ai';
+    if (o.est != null) o.estBy = by;
     if ('due' in o) o.dueRule = null;
     return o;
   };
@@ -183,7 +184,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'task.create': {
         const f = cleanTask(c.set);
         const p = f.project && !isRef(f.project) ? s.projects.get(f.project) : undefined;
-        const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by: 'ai', src: 'ai' } as Partial<Task> & { title: string };
+        const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
         items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
         break;
       }

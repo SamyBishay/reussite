@@ -17,6 +17,10 @@ export const pushUpdateLimit = (env: Env) => Number(env.RATE_PUSH_UPDATE_PER_MIN
 export const pushScheduleLimit = (env: Env) => Number(env.RATE_PUSH_SCHEDULE_PER_MIN) || 10;
 export const pushSendLimit = (env: Env) => Number(env.RATE_PUSH_SEND_PER_MIN) || 3;
 
+export const feedNewIpLimit = (env: Env) => Number(env.RATE_FEED_NEW_IP_PER_MIN) || 5;
+export const feedPutLimit = (env: Env) => Number(env.RATE_FEED_PUT_PER_MIN) || 20;
+export const feedMissLimit = (env: Env) => Number(env.RATE_FEED_MISS_PER_MIN) || 30;
+
 export const clientIp = (req: Request): string => req.headers.get('CF-Connecting-IP') ?? 'local';
 
 /** Count one event under `key` for this minute; false once it is over `limit`. */

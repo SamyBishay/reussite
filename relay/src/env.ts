@@ -26,6 +26,10 @@ export interface Env {
   RATE_PUSH_UPDATE_PER_MIN?: string;
   RATE_PUSH_SCHEDULE_PER_MIN?: string;
   RATE_PUSH_SEND_PER_MIN?: string;
+  /** Calendar feed, per minute: new feeds per IP (default 5), writes per feed (20), unknown addresses asked for per IP (30). */
+  RATE_FEED_NEW_IP_PER_MIN?: string;
+  RATE_FEED_PUT_PER_MIN?: string;
+  RATE_FEED_MISS_PER_MIN?: string;
   /** Writes per space per minute (default 60) and writes plus failed sign-ins per IP per minute (default 120). */
   RATE_SPACE_PER_MIN?: string;
   RATE_IP_PER_MIN?: string;

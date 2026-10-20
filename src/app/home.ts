@@ -4,7 +4,7 @@
 // one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
-import { db, tasks, places, memory, exchanges, today, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, type WithId } from './store';
+import { db, tasks, places, memory, exchanges, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, type WithId } from './store';
 import { T } from './model';
 import { addSession } from './actions';
 import { openNewTask } from './sheets';
@@ -150,6 +150,9 @@ export async function pruneExchanges(now = Date.now()): Promise<void> {
 function parseContext(): ParseContext {
   return {
     today: today.value,
+    now: Date.now(),
+    dayStart: settings.value.dayStart,
+    zone: hereZone.value,
     places: [...places.value.values()].map(p => ({ id: p.id, name: p.name })),
     tasks: [...tasks.value.values()].map(x => ({ id: x.id, title: x.title, status: x.status, template: x.template })),
     notes: [...memory.value.values()].filter(n => !n.private).flatMap(n => [n.name, ...n.aliases]),

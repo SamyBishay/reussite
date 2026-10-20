@@ -157,6 +157,19 @@ describe('times and lengths', () => {
     expect(made('réunion de 14h à 15h30')).toEqual({ title: 'Réunion', due: '2026-10-20', at: '14:00', dur: 90 });
     expect(made('meeting from 9:00 to 9:30')).toMatchObject({ at: '09:00', dur: 30 });
   });
+  it('puts a time with no date that has passed today on the next day, by the day-start rule', () => {
+    const paris = (iso: string) => Date.parse(iso); // Paris is UTC+2 until the 25th
+    const at = (now: string, dayStart = '04:00', today = '2026-10-20') => ({ ...ctx, today, now: paris(now), dayStart, zone: 'Europe/Paris' });
+    // 20:00 on the 20th: 9:00 was this morning, so it is tomorrow; 21:00 is still today
+    expect(made('call mum 9:00', at('2026-10-20T18:00:00Z'))).toMatchObject({ due: '2026-10-21', at: '09:00' });
+    expect(made('call mum 21:00', at('2026-10-20T18:00:00Z'))).toMatchObject({ due: '2026-10-20', at: '21:00' });
+    // 00:30 on the 21st with the day starting at 04:00 is still the 20th: 9:00 is later this calendar day, the 21st
+    expect(made('call mum 9:00', at('2026-10-20T22:30:00Z'))).toMatchObject({ due: '2026-10-21', at: '09:00' });
+    // a time before the day starts belongs to the end of today (02:00 the next calendar day): not passed at 20:00
+    expect(made('take the bins out 2:00', at('2026-10-20T18:00:00Z'))).toMatchObject({ due: '2026-10-20', at: '02:00' });
+    // a date said is kept, passed or not
+    expect(made('call mum 9:00 today', at('2026-10-20T18:00:00Z'))).toMatchObject({ due: '2026-10-20' });
+  });
   it('findTime, for the task sheet', () => {
     expect(findTime('Dentist 14:30')).toMatchObject({ at: '14:30' });
     expect(findTime('Choir, Hill House 602 at 7pm')).toMatchObject({ at: '19:00' });

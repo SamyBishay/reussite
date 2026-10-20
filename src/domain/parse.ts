@@ -8,6 +8,7 @@ import type { Task } from '../data/schema';
 import { addDays, type DayKey } from './dates';
 import { findByName, norm, type Named } from './names';
 import { isoDow, type Repeat } from './repeat';
+import { atOnDay } from './zone';
 
 export interface ParseContext {
   today: DayKey;
@@ -15,6 +16,10 @@ export interface ParseContext {
   tasks: { id: string; title: string; status: string; template?: boolean }[];
   /** Names and aliases of the memory notes that may be shown to an AI (a line starting with one and a verb is a statement about them). */
   notes?: string[];
+  /** Now (ms), the day-start rule and the time zone: a time with no date that has passed today means tomorrow. Without `now`, it is today. */
+  now?: number;
+  dayStart?: string;
+  zone?: string;
 }
 
 export type Intent = 'add' | 'standing' | 'done' | 'move' | 'drop';
@@ -327,6 +332,11 @@ const ARROW = /^(.+?)\s*(?:→|->|=>)\s*(.+)$/u;
 const MOVE_TO = /\s(?:to|until|till|a|au|pour|jusqu'a|jusqu'au|vers)\s/gu;
 
 const create = (set: Record<string, unknown>) => ({ op: 'task.create' as const, set: set as { title: string } });
+/** The day a time with no date is on: today, or tomorrow when it has already passed today (the day-start rule decides which calendar day "today" at 09:00 is). */
+function dayOfTime(at: string, ctx: ParseContext): DayKey {
+  if (ctx.now === undefined) return ctx.today;
+  return atOnDay(ctx.today, at, ctx.dayStart ?? '05:00', ctx.zone) <= ctx.now ? addDays(ctx.today, 1) : ctx.today;
+}
 const csOf = (changes: ChangeSet['changes']): ChangeSet => ({ v: 1, note: '', changes, bad: 0, by: 'me' });
 const draft = (title: string): Partial<Task> => ({ title });
 
@@ -396,7 +406,7 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
   const p = extract(text, ctx);
   const prefill: Partial<Task> = { title: p.title };
   if (p.due) prefill.due = p.due;
-  if (p.at) { prefill.at = p.at; if (!p.due && !p.recur) prefill.due = ctx.today; }
+  if (p.at) { prefill.at = p.at; if (!p.due && !p.recur) prefill.due = dayOfTime(p.at, ctx); }
   if (p.dur) prefill.dur = p.dur;
   if (p.est) { prefill.est = p.est; prefill.estBy = 'me'; }
   if (p.where) prefill.where = p.where;

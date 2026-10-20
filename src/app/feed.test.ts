@@ -4,7 +4,7 @@ import { choir, day, state, settings as agendaSettings, tr } from '../domain/age
 import type { IcsTranslate } from '../domain/ics';
 import { withDefaults } from '../data/settings';
 import { getLocal } from '../data/db';
-import { feedHash, feedId, feedOff, feedOn, feedText, regenerateFeed, uploadFeed } from './feed';
+import { FEED_REFRESH_MS, feedHash, feedId, feedOff, feedOn, feedText, regenerateFeed, uploadFeed } from './feed';
 import { db, days, settings, tasks } from './store';
 
 const itr = tr as unknown as IcsTranslate;
@@ -82,5 +82,21 @@ describe('uploading', () => {
     const m = calls.length;
     await uploadFeed();
     expect(calls.length).toBe(m);
+  });
+
+  it('writes an unchanged feed again after a week, so the relay never forgets one in use', async () => {
+    await feedOn();
+    const n = calls.length;
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + FEED_REFRESH_MS - 60_000 });
+    await uploadFeed();
+    expect(calls.length).toBe(n);
+    vi.setSystemTime(Date.now() + 120_000);
+    await uploadFeed();
+    expect(calls.length).toBe(n + 1);
+    expect(calls.at(-1)!.method).toBe('PUT');
+    await uploadFeed();
+    expect(calls.length).toBe(n + 1);
+    vi.useRealTimers();
+    await feedOff();
   });
 });

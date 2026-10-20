@@ -6,7 +6,7 @@ import { verifyVapid } from '../../src/push/vapid';
 import { fromUtf8 } from '../../src/sync/bytes';
 import worker from '../src/index';
 import type { Env } from '../src/env';
-import { DEVICE_KEEP_MS, MAX_TRIES, runTick, TICK_LIMIT } from '../src/tick';
+import { DEVICE_KEEP_MS, FEED_KEEP_MS, MAX_TRIES, runTick, TICK_LIMIT } from '../src/tick';
 import { countAll, deviceRow, held, item, newDevice, pcall, pushStub, putSchedule, register, seed } from './push.helpers';
 
 // 2026-10-20 18:30:00 UTC: minute 30, so no pruning unless a test says so.
@@ -211,6 +211,17 @@ describe('the hourly prune', () => {
     expect(await deviceRow(edge.pid)).not.toBeNull(); // exactly 45 days is not yet older
     expect((await held(fresh.pid)).map(i => i.id).sort()).toEqual(['future', 'running']);
     expect(await countAll('push_items')).toBe(2);
+  });
+
+  it('forgets calendar feeds not written for 60 days, and keeps the others', async () => {
+    const row = (fid: string, updated: number) => env.DB.prepare("INSERT INTO feeds (fid, auth_hash, ics, updated) VALUES (?1, 'h', 'BEGIN:VCALENDAR', ?2)").bind(fid, updated);
+    await env.DB.batch([env.DB.prepare('DELETE FROM feeds'), row('old', HOUR - FEED_KEEP_MS - MIN), row('edge', HOUR - FEED_KEEP_MS), row('fresh', HOUR - 86_400_000)]);
+    await run(HOUR_PLUS(1), pushStub());
+    expect(await countAll('feeds')).toBe(3); // not at minute 1
+    await run(HOUR_PLUS(0), pushStub());
+    const { results } = await env.DB.prepare('SELECT fid FROM feeds ORDER BY fid').all<{ fid: string }>();
+    expect(results.map(r => r.fid)).toEqual(['edge', 'fresh']);
+    await env.DB.prepare('DELETE FROM feeds').run();
   });
 
   it('only runs at minute 0', async () => {

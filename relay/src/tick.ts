@@ -15,6 +15,8 @@ export const EARLY_MS = 5_000;
 export const MAX_TRIES = 3;
 /** A device with no schedule write for this long is forgotten (the app rewrites it whenever it is opened). */
 export const DEVICE_KEEP_MS = 45 * 86_400_000;
+/** A calendar feed not written for this long is forgotten (the app rewrites it at least weekly while it is on; docs/dev/feed.md). */
+export const FEED_KEEP_MS = 60 * 86_400_000;
 
 interface Due { pid: string; id: string; at: number; ttl: number; urgency: PushUrgency; blob: string; tries: number; endpoint: string }
 
@@ -92,12 +94,13 @@ async function send(env: Env, now: number, deps: { fetch: typeof fetch }, result
   if (writes.length) await db.batch(writes);
 }
 
-/** Hourly: forget devices with no schedule write for 45 days, items past their TTL, and items of no device. */
+/** Hourly: forget devices with no schedule write for 45 days, items past their TTL, items of no device, and calendar feeds not written for 60 days. */
 export async function prune(env: Env, now: number): Promise<void> {
   await env.DB.batch([
     env.DB.prepare('DELETE FROM push_items WHERE pid IN (SELECT pid FROM push_devices WHERE updated < ?1)').bind(now - DEVICE_KEEP_MS),
     env.DB.prepare('DELETE FROM push_devices WHERE updated < ?1').bind(now - DEVICE_KEEP_MS),
     env.DB.prepare('DELETE FROM push_items WHERE at < ?1 AND at + ttl * 1000 < ?1').bind(now),
     env.DB.prepare('DELETE FROM push_items WHERE pid NOT IN (SELECT pid FROM push_devices)'),
+    env.DB.prepare('DELETE FROM feeds WHERE updated < ?1').bind(now - FEED_KEEP_MS),
   ]);
 }

@@ -18,8 +18,10 @@ export const FEED_PAST_DAYS = 7;
 export const FEED_AHEAD_DAYS = 45;
 /** The wait after a change before uploading, so a burst of edits is one upload. */
 export const FEED_DEBOUNCE_MS = 4000;
+/** An unchanged feed is still written this often, so the relay's 60-day clock (tick.ts) never runs out on a feed in use. */
+export const FEED_REFRESH_MS = 7 * 86_400_000;
 
-const K = { id: 'feed.id', secret: 'feed.secret', on: 'feed.on', hash: 'feed.hash', old: 'feed.old' } as const;
+const K = { id: 'feed.id', secret: 'feed.secret', on: 'feed.on', hash: 'feed.hash', at: 'feed.at', old: 'feed.old' } as const;
 interface Old { fid: string; secret: string }
 
 /** Whether this device has a feed, and its address id. Null while off. */
@@ -88,9 +90,10 @@ export async function uploadFeed(force = false): Promise<void> {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) break;
       const text = feedText({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, settings.value, today.value, settings.value.feedTitles, t, Date.now());
       const hash = await feedHash(text);
-      if (!force && hash === (await getLocal<string>(db, K.hash))) { feedError.value = null; break; }
+      const same = hash === (await getLocal<string>(db, K.hash)) && Date.now() - ((await getLocal<number>(db, K.at)) ?? 0) < FEED_REFRESH_MS;
+      if (!force && same) { feedError.value = null; break; }
       if (new TextEncoder().encode(text).length > MAX_FEED_BYTES) { feedError.value = t('feedTooBig'); break; }
-      if (await call('PUT', fid, secret, text)) { await setLocal(db, K.hash, hash); feedError.value = null; }
+      if (await call('PUT', fid, secret, text)) { await setLocal(db, K.hash, hash); await setLocal(db, K.at, Date.now()); feedError.value = null; }
       else { feedError.value = t('feedUploadFailed'); break; }
       force = false;
     } while (again);
@@ -107,7 +110,7 @@ export function scheduleFeed(): void {
 async function newFeed(): Promise<void> {
   const fid = random(24), secret = random(32);
   feedId.value = fid; // the switch answers at once
-  await setLocal(db, K.id, fid); await setLocal(db, K.secret, secret); await setLocal(db, K.hash, ''); await setLocal(db, K.on, true);
+  await setLocal(db, K.id, fid); await setLocal(db, K.secret, secret); await setLocal(db, K.hash, ''); await setLocal(db, K.at, 0); await setLocal(db, K.on, true);
 }
 
 export async function feedOn(): Promise<void> {

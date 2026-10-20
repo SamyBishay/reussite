@@ -398,6 +398,8 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 @media (max-width:480px){.planlist li{grid-template-columns:minmax(0,1fr) auto}.planlist li .tag{grid-column:1 / -1;justify-self:start}}
 .planlist .role-plan{opacity:.75;border-style:dashed}
 .planlist .role-optional{border-style:dashed}
+.planlist .role-fixed{border-color:var(--accent)}
+.planlist .leave{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
 .planmeta{margin-top:10px;font-size:14px;color:var(--ink-2)}
 .chips-pick.small{gap:6px;margin-top:6px}
 .chips-pick.small button{min-height:36px;padding:5px 11px;font-size:13.5px}

@@ -1,7 +1,7 @@
 // The morning check-in (brief §5, METHOD "Morning check-in"), one question per screen:
 // yesterday, what's carried, today's shape, then the rule-based plan.
 import { useState } from 'preact/hooks';
-import { today, settings, tasks, here, days, createDoc } from '../app/store';
+import { today, settings, tasks, here, days, places, stays, decisions, createDoc } from '../app/store';
 import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, personal, planEst, lastDoneOf, type T as Tk } from '../app/model';
 import { finishTask, carry, dayPatch, cloneTemplate, patchTask, addSession, newTaskDoc } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
@@ -9,6 +9,8 @@ import { Title, Meta, quadName } from '../app/ui';
 import { flows } from '../app/sheets';
 import { t, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
+import { fixedOnDay } from '../domain/agenda';
+import { withTime } from '../domain/calendar';
 import { plan as makePlan, totalOf, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
 import type { Task } from '../data/schema';
 import { ask } from '../ai/ask';
@@ -22,7 +24,7 @@ export function openCheckin() {
   openSheet(<Checkin key={'ci' + Date.now()} />, true);
 }
 
-const ROLE_KEY: Record<Role, Key> = { carried: 'roleCarried', now: 'qNow', protect: 'qProtect', quick: 'qQuick', obligation: 'roleObligation', optional: 'ifRoom' };
+const ROLE_KEY: Record<Role, Key> = { fixed: 'roleFixed', carried: 'roleCarried', now: 'qNow', protect: 'qProtect', quick: 'qQuick', obligation: 'roleObligation', optional: 'ifRoom' };
 const FAULT: Record<PlanFault, Key> = {
   empty: 'aiPlanEmpty', unknown: 'aiPlanUnknown', twice: 'aiPlanTwice', roles: 'aiPlanRoles', tooMany: 'aiPlanTooMany',
   twoProtect: 'aiPlanTwoProtect', noProtect: 'aiPlanNoProtect', twoObligations: 'aiPlanTwoObligations', noObligation: 'aiPlanNoObligation',
@@ -36,19 +38,24 @@ const step = (x: Tk): PStep => {
 /** The planner's input, from the list as it stands now. */
 export function planInput(k: string, shape: { start: string; preset: Preset; fixed: { at: string; dur: number }[] }, skip: Set<string> = new Set(), forced: string[] = []) {
   const s = settings.value, place = here.value;
-  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id));
+  // Every fixed-time item of the day, one-off or standing, comes first and is never skipped or swapped.
+  const fixedEvents = fixedOnDay({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, s, k);
+  const timed = fixedEvents.map(e => ({ id: e.taskId!, at: e.time, lead: e.lead ?? 0, template: e.template }));
+  const timedIds = new Set(timed.map(x => x.id)), timedRoots = new Set(fixedEvents.map(e => e.rootId!));
+  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id) && !timedIds.has(x.id));
   const optionalIds = new Set(dayDoc(k)?.optional ?? []);
   // Steps already on today's list (carried, or added earlier), then any swapped in by hand.
   const carried = [...inPlan.filter(x => !optionalIds.has(x.id) && x.src !== 'plan'), ...forced.map(id => T(id)).filter(isOpen)];
-  const cands = candidates(k, place).filter(x => !skip.has(x.id) && !x.at && !forced.includes(x.id));
+  const cands = candidates(k, place).filter(x => !skip.has(x.id) && !x.at && !forced.includes(x.id) && !timedIds.has(x.id));
   const later = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
     .sort((a, b) => String(a.created).localeCompare(String(b.created)));
-  const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place) && !skip.has(x.id))
+  // A standing item with weekdays belongs to those days only; one already on today's list isn't offered twice.
+  const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place) && !skip.has(x.id) && !x.weekdays?.length && !timedRoots.has(x.id))
     .map(x => ({ id: x.id, lastDone: lastDoneOf(x.id), at: x.at ?? null, est: planEst(x) }));
   const loads = [...days.value.values()].filter(d => d.date < k && d.date >= addDays(k, -14) && typeof d.load === 'number').map(d => d.load as number).sort((a, b) => a - b);
   return {
     today: k, maxWorkSteps: s.maxWorkSteps, planningMin: s.planningMin, defaultRestarts: s.launchDefaults.restarts, obligationAt: s.obligationAt, shape,
-    carried: carried.map(step), candidates: cands.map(step), obligations,
+    carried: carried.map(step), candidates: cands.map(step), obligations, timed,
     optional: [...optionalIds].map(id => T(id)).filter(isOpen).map(step), laterPool: later.map(step),
     usualLoad: loads.length ? loads[Math.floor(loads.length / 2)]! : null,
   };
@@ -158,11 +165,13 @@ function Checkin() {
   // ---------- the plan ----------
   const inp = planInput(k, shape, skip, forced);
   const rule: Plan = makePlan(inp);
+  // The AI's plan never drops a fixed-time item: they come first in either plan.
+  const ruleFixed = rule.items.filter(i => i.role === 'fixed');
   const aiItems = aiPlan?.items.filter(i => !skip.has(i.id));
-  const p: Plan = aiItems ? { ...rule, items: aiItems, total: totalOf(aiItems, inp) } : rule;
+  const p: Plan = aiItems ? { ...rule, items: [...ruleFixed, ...aiItems], total: totalOf(aiItems, inp) } : rule;
   const improve = async () => {
     setFault(''); setProposed(null);
-    const { system, user } = planPrompt(inp, rule, fixed);
+    const { system, user } = planPrompt(inp, rule, [...fixed, ...rule.items.filter(i => i.role === 'fixed').map(i => ({ title: T(i.id)?.title ?? '', at: i.at!, dur: T(i.id)?.dur ?? 60 }))]);
     const r = await ai.run(signal => ask('plan', 'thinking', system, user, PlanReply, { signal }));
     if (!r) return;
     const v = readAiPlan(r, inp, rule);
@@ -206,9 +215,12 @@ function Checkin() {
     const optional: string[] = [];
     let first: string | null = null;
     for (const it of items) {
-      if (it.role === 'obligation') {
+      if (it.role === 'obligation' || (it.role === 'fixed' && T(it.id)?.template)) {
         const nid = await cloneTemplate(it.id, k, it.at);
         if (nid) plan.push(nid);
+      } else if (it.role === 'fixed') {
+        // A one-off with its time: it keeps its place on the day's list if it had one.
+        if (rawPlan(k).includes(it.id)) plan.push(it.id);
       } else {
         plan.push(it.id);
         if (it.role === 'optional') optional.push(it.id);
@@ -228,7 +240,7 @@ function Checkin() {
     <div class="flow" data-testid="ci-plan">
       <p class="eyebrow">{t('ciStep', { n: 3, of: 3 })}</p>
       <h3>{t('ciPlan')}</h3>
-      <p class="hint">{cutting ? t('ciCutHint') : swapping ? t('ciSwapHint') : t('ciPlanHint')}</p>
+      <p class="hint">{cutting ? t('ciCutHint') : swapping ? t('ciSwapHint') : t('ciPlanHint')}{!cutting && !swapping && items.some(i => i.role === 'fixed') ? ' ' + t('fixedHint') : ''}</p>
       {reviewing && proposed ? (
         <ReviewList plan={proposed} note="" inline onApplied={n => { setReviewing(false); if (n) setProposed(null); }} />
       ) : swapping ? (
@@ -248,6 +260,13 @@ function Checkin() {
             {items.map(it => {
               const x = T(it.id)!;
               const pe = personal(x);
+              if (it.role === 'fixed') return (
+                <li class="role-fixed" data-testid="plan-fixed">
+                  <span class="tag">{t(ROLE_KEY.fixed)}</span>
+                  <span><Title s={withTime(x.title, it.at ?? '')} />{it.leave && <> <span class="leave" data-testid="plan-leave">{t('leaveAt', { t: it.leave })}</span></>}</span>
+                  <span class="due">{x.dur ? fmtMin(x.dur) : '—'}</span>
+                </li>
+              );
               return (
                 <li class={'role-' + it.role}>
                   <span class="tag">{forced.includes(it.id) ? quadName(quad(x)) : t(ROLE_KEY[it.role])}{it.at ? ' · ' + it.at : ''}</span>

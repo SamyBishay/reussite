@@ -25,8 +25,10 @@ Reply with JSON only:
 "split" replaces the step with the steps you list, the first one keeping its id; leave it empty unless a step is too big to start.`);
   const ids = [...inp.carried, ...inp.candidates, ...inp.optional].map(s => s.id).filter((x, i, a) => a.indexOf(x) === i).slice(0, MAX_STEPS);
   const shape = `Today's shape: ${inp.shape.preset} day, starting at ${inp.shape.start}${fixed.length ? '; fixed: ' + fixed.map(f => `${f.at} ${one(f.title)} (${f.dur} min)`).join(', ') : ''}. Work-step limit: ${inp.maxWorkSteps}.`;
-  const roleOf = new Map(rule.items.map(i => [i.id, i.role + (i.at ? ' ' + i.at : '')]));
-  const ruleLines = rule.items.map(i => `${i.id} | ${roleOf.get(i.id)} | ${one(T(i.id)?.title ?? '')}`).join('\n');
+  // Fixed-time items are in the plan whatever it says; the AI hears of them in the shape line.
+  const planned = rule.items.filter(i => i.role !== 'fixed');
+  const roleOf = new Map(planned.map(i => [i.id, i.role + (i.at ? ' ' + i.at : '')]));
+  const ruleLines = planned.map(i => `${i.id} | ${roleOf.get(i.id)} | ${one(T(i.id)?.title ?? '')}`).join('\n');
   const starters = ids.map(id => T(id)).filter(x => x && !x.starter).map(x => x!.id);
   const user = join([
     header(), shape,

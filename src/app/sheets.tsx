@@ -281,11 +281,14 @@ const REPEAT_KINDS = ['never', 'day', 'week', 'month', 'custom'] as const;
 type RepeatKind = (typeof REPEAT_KINDS)[number];
 const kindOf = (r: Repeat | null | undefined): RepeatKind => (!r ? 'never' : r.every === 1 ? r.unit : 'custom');
 
+/** ISO weekdays 1–7 with their short names in the app's language. */
+const weekdayNames = (): [number, string][] => [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
+
 function RepeatField({ value, onChange }: { value: Repeat | null; onChange: (r: Repeat | null) => void }) {
   const kind = kindOf(value);
   const r: Repeat = value ?? { every: 1, unit: 'week', from: 'due' };
   const set = (p: Partial<Repeat>) => onChange({ ...r, ...p });
-  const DOW: [number, string][] = [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
+  const DOW = weekdayNames();
   return (
     <div class="field" data-testid="repeat"><span>{t('repeats')}</span>
       <select value={kind} onChange={e => {
@@ -351,6 +354,7 @@ function TaskSheet({ id }: { id: string }) {
   const [after, setAfter] = useState<string[]>(tk ? (Array.isArray(tk.after) ? tk.after : tk.after ? [String(tk.after)] : []) : []);
   const [repeat, setRepeat] = useState<Repeat | null>(tk?.repeat ?? null);
   const [rule, setRule] = useState(tk?.dueRule ?? null);
+  const [weekdays, setWeekdays] = useState<number[]>(tk?.weekdays ?? []);
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
   if (!tk) return null;
@@ -397,7 +401,13 @@ function TaskSheet({ id }: { id: string }) {
       setIf('link', link, tk.link);
     }
     if (el('prompt')) setIf('prompt', v('prompt').trim() || null, tk.prompt);
-    if (el('at')) { setIf('at', v('at') || null, tk.at); setIf('dur', Number(v('dur')) || null, tk.dur); }
+    if (el('at')) {
+      setIf('at', v('at') || null, tk.at);
+      setIf('dur', Number(v('dur')) || null, tk.dur);
+      // Empty = the default from Settings; 0 = notified at the time itself.
+      setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
+      setIf('weekdays', tk.template && weekdays.length ? [...weekdays].sort() : null, tk.weekdays);
+    }
     setIf('repeat', repeat, tk.repeat);
     setIf('after', after.length ? after : null, Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : null);
     setIf('dueRule', rule, tk.dueRule);
@@ -462,7 +472,7 @@ function TaskSheet({ id }: { id: string }) {
       {tk.prompt && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:12px"><GoLink tk={tk} variant="small" /></div>}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} /></label>
-      <details class="more" open={!!(tk.repeat || tk.at || tk.dueRule || after.length)}>
+      <details class="more" open={!!(tk.repeat || tk.at || tk.dueRule || tk.weekdays?.length || after.length)}>
         <summary>{t('moreFields')}</summary>
         <div class="row2">
           <label class="field"><span>{t('kindField')}</span>
@@ -482,6 +492,13 @@ function TaskSheet({ id }: { id: string }) {
           <label class="field"><span>{t('atField')}</span><input type="time" name="at" defaultValue={tk.at ?? ''} /></label>
           <label class="field"><span>{t('durField')}</span><input type="number" name="dur" min="5" max="720" inputMode="numeric" defaultValue={tk.dur ? String(tk.dur) : ''} /></label>
         </div>
+        <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /><small class="hint">{t('leadHint', { n: settings.value.notifyLead })}</small></label>
+        {tk.template && (
+          <div class="field" data-testid="weekdays"><span>{t('weekdaysField')}</span>
+            <div class="toggles">{weekdayNames().map(([d, name]) => <label class="tog small"><input type="checkbox" checked={weekdays.includes(d)} onChange={e => setWeekdays((e.target as HTMLInputElement).checked ? [...weekdays, d].sort() : weekdays.filter(x => x !== d))} /> {name}</label>)}</div>
+            <p class="hint">{t('weekdaysHint')}</p>
+          </div>
+        )}
         {stayList.length > 0 && (
           <div class="field"><span>{t('beforeLeave')}</span>
             <div class="row2">

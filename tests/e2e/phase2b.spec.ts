@@ -269,6 +269,26 @@ test('a short line adds a step to the Inbox; History lists it with its Undo, and
   await expect(page.getByTestId('receipt')).toHaveCount(0);
 });
 
+test('Undo in History asks first after ten minutes; a step edited since stays', async ({ page }) => {
+  await importSample(page);
+  const t0 = new Date(2026, 9, 26, 10, 0, 0);
+  await page.clock.setFixedTime(t0);
+  await goTab(page, 'home');
+  await say(page, 'call the bank tomorrow');
+  await expect(page.getByTestId('receipt')).toContainText('Added “Call the bank”');
+  await page.clock.setFixedTime(new Date(+t0 + 11 * 60_000));
+  await openMenu(page, 'history');
+  const rows = page.getByTestId('history-row');
+  page.once('dialog', d => void d.dismiss());
+  await page.getByTestId('history-undo').click();
+  await expect(rows.first().getByTestId('history-undo')).toBeVisible();
+  expect((await live(page, 'tasks')).filter(x => x.title === 'Call the bank')).toHaveLength(1);
+  page.once('dialog', d => { expect(d.message()).toContain('more than ten minutes ago'); void d.accept(); });
+  await page.getByTestId('history-undo').click();
+  await expect(rows.first()).toContainText('Undone');
+  expect((await live(page, 'tasks')).filter(x => x.title === 'Call the bank')).toHaveLength(0);
+});
+
 test('History is empty at first, and says what it will hold', async ({ page }) => {
   await page.goto('/');
   await openMenu(page, 'history');

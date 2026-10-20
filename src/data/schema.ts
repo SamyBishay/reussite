@@ -201,11 +201,13 @@ export interface MemoryNote {
 export interface UndoDoc {
   c: Collection;
   id: string;
-  /** Made by this change-set: undone with a tombstone. */
+  /** Made by this change-set: undone with a tombstone, if nothing was written to it since. */
   created?: true;
   /** Removed by this change-set (tombstoned). */
   removed?: true;
   fields?: Record<string, { was: unknown; now: unknown }>;
+  /** The newest clock this change-set wrote on the document: a field with a newer one was written since. */
+  at?: string;
 }
 
 /**

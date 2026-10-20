@@ -58,6 +58,27 @@ describe('undo', () => {
     expect((await tool(tok, 'get_task', { id })).isError).toBe(true);
   });
 
+  it('keeps a step it made that the person wrote to since, or logged time on', async () => {
+    const { app, tok } = await setup();
+    const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Call the bank' } }] });
+    const id = /Created: (t\w+)/.exec(r.text)![1]!;
+    await app.sync();
+    app.device.edit('tasks', id, { note: 'ask about the card' });
+    await app.sync();
+    const u = await tool(tok, 'undo', { id: undoId(r.text) });
+    expect(u.text).toContain(`Left tasks/${id} alone: note changed since`);
+    await app.sync();
+    expect(app.device.get('tasks', id)!._del).toBeUndefined();
+    const r2 = await tool(tok, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Book the dentist' } }] });
+    const id2 = /Created: (t\w+)/.exec(r2.text)![1]!;
+    await app.sync();
+    app.device.add('sessions', 'sx', { taskId: id2, d: TODAY, m: 20, why: null, at: new Date().toISOString(), source: 'typed' });
+    await app.sync();
+    expect((await tool(tok, 'undo', { id: undoId(r2.text) })).text).toContain(`Left tasks/${id2} alone`);
+    await app.sync();
+    expect(app.device.get('tasks', id2)!._del).toBeUndefined();
+  });
+
   it('puts a ticked step back to open, and removes the next occurrence it made', async () => {
     const { app, tok } = await setup();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 't3' }] });

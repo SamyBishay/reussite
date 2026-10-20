@@ -234,6 +234,53 @@ describe('Undo leaves later edits alone', () => {
   });
 });
 
+describe('Undo long after', () => {
+  it('keeps a step it made that was edited or timed since, and says so', async () => {
+    await submitHome('call the bank');
+    await settle();
+    const id = [...tasks.value.values()].find(x => x.title === 'Call the bank')!.id;
+    await update('tasks', id, { note: 'ask about the card' });
+    await undoExchange(only().id);
+    await settle();
+    expect(tasks.value.get(id)).toMatchObject({ title: 'Call the bank', note: 'ask about the card' });
+    await submitHome('call the dentist');
+    await settle();
+    const ex = [...exchanges.value.values()].find(x => x.text === 'call the dentist')!;
+    const d = [...tasks.value.values()].find(x => x.title === 'Call the dentist')!.id;
+    await createDoc('sessions', { taskId: d, d: '2026-10-20', m: 20, why: null, at: new Date().toISOString(), source: 'typed' });
+    await settle();
+    await undoExchange(ex.id);
+    await settle();
+    expect(tasks.value.get(d)).toMatchObject({ status: 'open' });
+  });
+  it('a step made and then edited by a follow-up is still taken back', async () => {
+    await submitHome('call the bank');
+    await settle();
+    const id = [...tasks.value.values()].find(x => x.title === 'Call the bank')!.id;
+    await submitHome('move call the bank to friday');
+    await settle();
+    expect(tasks.value.get(id)!.due).toBeTruthy();
+    expect(only().changes).toHaveLength(2);
+    await undoExchange(only().id);
+    await settle();
+    expect(tasks.value.get(id)).toBeUndefined();
+  });
+  it('never starts a timer again after ten minutes: the step reopens and its time stays', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T10:00:00Z'));
+    await step('s1', 'Call the dentist', { started: new Date(Date.now() - 12 * 60_000).toISOString() });
+    await settle();
+    await submitHome('done call the dentist');
+    await settle();
+    expect([...sessions.value.values()]).toHaveLength(1);
+    vi.setSystemTime(new Date('2026-11-03T10:00:00Z'));
+    await undoExchange(only().id);
+    await settle();
+    expect(tasks.value.get('s1')).toMatchObject({ status: 'open', started: null });
+    expect([...sessions.value.values()]).toHaveLength(1);
+  });
+});
+
 describe('a change-set that is not the parser’s', () => {
   it('with several changes opens the review and writes nothing until it is applied', async () => {
     await step('a', 'Pay the rent');

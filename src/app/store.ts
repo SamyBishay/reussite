@@ -158,17 +158,23 @@ export function recordWrites<T>(fn: () => Promise<T>): Promise<{ result: T; undo
  * Put back what recorded writes replaced. A field changed since is left alone; something the change-set
  * created is tombstoned. Returns how many documents were touched and how many fields were kept.
  */
-export async function applyUndo(undo: UndoDoc[]): Promise<{ restored: number; kept: number }> {
-  const cur = new Map<string, Record<string, unknown>>();
+export async function applyUndo(undo: UndoDoc[], at = Date.now()): Promise<{ restored: number; kept: number }> {
+  const cur = new Map<string, Stored<Record<string, unknown>>>();
   for (const d of undo) {
     const doc = await db.table_(d.c).get(d.id);
-    if (doc && !doc._del) cur.set(d.c + '/' + d.id, fieldsOf(doc as Stored<Record<string, unknown>>));
+    if (doc && !doc._del) cur.set(d.c + '/' + d.id, doc as Stored<Record<string, unknown>>);
   }
+  // A step it made that has sessions logged since, or a project that has steps added since, stays.
+  const made = new Set(undo.filter(d => d.created).map(d => d.c + '/' + d.id));
+  const used = (c: Collection, id: string) =>
+    c === 'tasks' ? [...sessions.value.values()].some(s => s.taskId === id && !made.has('sessions/' + s.id))
+      : c === 'projects' ? [...tasks.value.values()].some(x => x.project === id && !made.has('tasks/' + x.id))
+        : false;
   let restored = 0, kept = 0;
-  for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id))) {
+  for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id), { now: at, used })) {
     if (u.remove) { await removeDoc(u.c, u.id); restored++; }
     if (u.patch) { await update(u.c, u.id, u.patch); restored++; }
-    kept += u.kept?.length ?? 0;
+    kept += (u.kept?.length ?? 0) + (u.inUse ? 1 : 0);
   }
   return { restored, kept };
 }
@@ -176,8 +182,9 @@ export async function applyUndo(undo: UndoDoc[]): Promise<{ restored: number; ke
 /** Create a document; returns its id. Every field gets the same fresh clock. */
 export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
   if (!guard()) return id;
-  await db.table_(c).put(create(id, fields, SCHEMA_VERSION, tick(clock)) as never);
-  recording?.created(c, id);
+  const doc = create(id, fields, SCHEMA_VERSION, tick(clock));
+  await db.table_(c).put(doc as never);
+  recording?.created(c, id, doc as never);
   afterWrite();
   return id;
 }

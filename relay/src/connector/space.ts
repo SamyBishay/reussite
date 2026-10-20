@@ -265,7 +265,7 @@ export class Edits {
     const doc = create(id, fields, SCHEMA_VERSION, tick(this.s.clock, this.now())) as StoredDoc;
     writable(this.s, c).set(id, doc);
     this.touch(c, id);
-    this.log.created(c, id);
+    this.log.created(c, id, doc);
     return id;
   }
 

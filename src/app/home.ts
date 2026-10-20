@@ -128,11 +128,8 @@ export function receiptLine(ex: Exchange): string {
 export async function undoExchange(id: string): Promise<void> {
   const ex = await readExchange(id);
   if (!ex || readOnly.value) return;
-  let kept = 0;
-  for (const cs of [...ex.changes].reverse()) {
-    if (ex.undone.includes(cs)) continue;
-    kept += (await applyUndo(ex.undo[cs] ?? [])).kept;
-  }
+  // All its change-sets at once, so a step one of them made and a later one edited counts as untouched.
+  const { kept } = await applyUndo(ex.changes.filter(cs => !ex.undone.includes(cs)).flatMap(cs => ex.undo[cs] ?? []));
   await update<Exchange>('exchanges', id, { undone: [...ex.changes] });
   const c = homeCard.value;
   if (c && ((c.kind === 'duration' && c.exchange === id) || c.kind === 'review')) homeCard.value = null;

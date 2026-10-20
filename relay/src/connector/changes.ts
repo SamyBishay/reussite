@@ -149,11 +149,18 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
   const { docs } = await decryptJson<{ docs: UndoDoc[] }>(c.s.keys, b64uDecode(row.blob));
   const edits = new Edits(c.s);
   const lines: string[] = [];
-  for (const u of undoWrites(docs, (col, did) => edits.get(col, did))) {
+  const made = new Set(docs.filter(d => d.created).map(d => d.c + '/' + d.id));
+  const used = (col: string, did: string) => {
+    if (col === 'tasks') for (const x of edits.live('sessions')) if (x.taskId === did && !made.has('sessions/' + x.id)) return true;
+    if (col === 'projects') for (const x of edits.live('tasks')) if (x.project === did && !made.has('tasks/' + x.id)) return true;
+    return false;
+  };
+  for (const u of undoWrites(docs, (col, did) => edits.get(col, did), { now: Date.now(), used })) {
     const what = `${u.c}/${u.id}`;
     if (u.remove) { edits.remove(u.c, u.id); lines.push(`Removed ${what} (it was created by the change)`); }
     if (u.patch) { edits.update(u.c, u.id, u.patch); lines.push(`Restored ${what}: ${Object.keys(u.patch).join(', ')}`); }
     if (u.kept) lines.push(`Left ${what} alone: ${u.kept.join(', ')} changed since`);
+    if (u.inUse) lines.push(`Left ${what} alone: it was created by the change, and something made since refers to it`);
   }
   if (!edits.empty) {
     const seq = await edits.flush(c.env);

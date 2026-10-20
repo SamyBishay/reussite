@@ -19,6 +19,7 @@ import { planPrompt } from '../ai/prompts';
 import { useAi, AiAction } from '../ai/ui';
 import { prepareReview, ReviewList } from '../ai/Review';
 import type { Plan as ChangePlan } from '../ai/apply';
+import { OfferChips, offerFieldsFor, type OfferChoice } from '../app/OfferChips';
 
 export function openCheckin() {
   openSheet(<Checkin key={'ci' + Date.now()} />, true);
@@ -79,6 +80,8 @@ function Checkin() {
   const [swapping, setSwapping] = useState<string | null>(null);
   const [forced, setForced] = useState<string[]>([]);
   const [extra, setExtra] = useState<string[]>([]);
+  // The address or person picked for a placed standing obligation, by its id; none keeps the step as the obligation has it.
+  const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const [busy, setBusy] = useState(false);
   // Plan my day (AI): its plan replaces the rule-based one only if it keeps the rules.
   const ai = useAi();
@@ -216,7 +219,7 @@ function Checkin() {
     let first: string | null = null;
     for (const it of items) {
       if (it.role === 'obligation' || (it.role === 'fixed' && T(it.id)?.template)) {
-        const nid = await cloneTemplate(it.id, k, it.at);
+        const nid = await cloneTemplate(it.id, k, it.at, offerFieldsFor(offers[it.id]));
         if (nid) plan.push(nid);
       } else if (it.role === 'fixed') {
         // A one-off with its time: it keeps its place on the day's list if it had one.
@@ -260,14 +263,20 @@ function Checkin() {
             {items.map(it => {
               const x = T(it.id)!;
               const pe = personal(x);
+              // A standing obligation that offers an address or a person: up to three to choose from, optional.
+              const offerRow = x.template && x.offer ? <OfferChips offer={x.offer} value={offers[it.id]} onChange={c => setOffers({ ...offers, [it.id]: c })} /> : null;
               if (it.role === 'fixed') return (
-                <li class="role-fixed" data-testid="plan-fixed">
-                  <span class="tag">{t(ROLE_KEY.fixed)}</span>
-                  <span><Title s={withTime(x.title, it.at ?? '')} />{it.leave && <> <span class="leave" data-testid="plan-leave">{t('leaveAt', { t: it.leave })}</span></>}</span>
-                  <span class="due">{x.dur ? fmtMin(x.dur) : '—'}</span>
-                </li>
+                <>
+                  <li class="role-fixed" data-testid="plan-fixed">
+                    <span class="tag">{t(ROLE_KEY.fixed)}</span>
+                    <span><Title s={withTime(x.title, it.at ?? '')} />{it.leave && <> <span class="leave" data-testid="plan-leave">{t('leaveAt', { t: it.leave })}</span></>}</span>
+                    <span class="due">{x.dur ? fmtMin(x.dur) : '—'}</span>
+                  </li>
+                  {offerRow && <li class="offerrow">{offerRow}</li>}
+                </>
               );
               return (
+                <>
                 <li class={'role-' + it.role}>
                   <span class="tag">{forced.includes(it.id) ? quadName(quad(x)) : t(ROLE_KEY[it.role])}{it.at ? ' · ' + it.at : ''}</span>
                   <span><Title s={x.title} />{it.breakDown && <> <button type="button" class="tag warn linkish" onClick={() => flows.breakDown(x.id)}>{t('breakDownFirst')}</button></>}</span>
@@ -275,6 +284,8 @@ function Checkin() {
                   {cutting && <button class="btn small" type="button" onClick={() => { setSkip(new Set([...skip, it.id])); setForced(forced.filter(f => f !== it.id)); }}>{t('cut')}</button>}
                   {!cutting && <button class="btn small ghost" type="button" onClick={() => setSwapping(it.id)}>{t('swap')}</button>}
                 </li>
+                {offerRow && <li class="offerrow">{offerRow}</li>}
+                </>
               );
             })}
           </ol>

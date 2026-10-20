@@ -131,7 +131,8 @@ export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, d
 /** A done step moved to another day changes its done date. */
 export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, doneAt: k + 'T12:00:00.000Z' });
 
-export async function cloneTemplate(id: string, k = today.value, at?: string) {
+/** `extra` is what a picked offer sets on the copy (title, starter, link, the address or person); it wins over the standing item's own. */
+export async function cloneTemplate(id: string, k = today.value, at?: string, extra: Partial<Task> = {}) {
   const tk = T(id);
   if (!tk) return null;
   // A copy with a time is due that day, or it falls out of the day's fixed times and the calendar.
@@ -139,6 +140,7 @@ export async function cloneTemplate(id: string, k = today.value, at?: string) {
   const nid = await createTask(newTaskDoc(tk.title, tk.suit, tk.project, {
     est: tk.est ?? null, estBy: tk.estBy ?? null, where: whereOf(tk), from: id, note: tk.note || '', starter: tk.starter ?? null,
     app: tk.app ?? null, link: tk.link ?? null, at: time, dur: tk.dur ?? tk.est ?? null, due: time ? k : null, important: true,
+    ...extra,
   }));
   await addToday(nid, true, k);
   return nid;

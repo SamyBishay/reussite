@@ -20,6 +20,7 @@ import { ReviewReply, reviewChangeSet } from '../ai/features';
 import { reviewPrompt } from '../ai/prompts';
 import { useAi, AiAction } from '../ai/ui';
 import { prepareReview, ReviewList } from '../ai/Review';
+import { OfferChips, offerFieldsFor, type OfferChoice } from '../app/OfferChips';
 import type { Plan as ChangePlan } from '../ai/apply';
 
 export function openReview() {
@@ -71,6 +72,8 @@ function Resort({ tk }: { tk: Tk }) {
 function Review() {
   const [i, setI] = useState(0);
   const [later, setLater] = useState<Record<string, string>>({});
+  // The offer picked for each standing obligation before it is given a day (brief §5, Feeding the plan).
+  const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const place = here.value;
   const open = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x, place)).sort(byPriority);
   const next = () => setI(Math.min(STEPS.length - 1, i + 1));
@@ -127,7 +130,8 @@ function Review() {
     case 'rv6': {
       const obl = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place)).sort(byOrder);
       body = <><p class="hint">{t('rv6Hint')}</p><WeekStrip /><ul class="picklist">{obl.map(x => (
-        <li><div><p><Title s={x.title} /></p></div><DaySelect label={t('planItOn')} value="" onPick={k => void cloneTemplate(x.id, k, x.at ?? settings.value.obligationAt)} /></li>
+        <li><div><p><Title s={x.title} /></p><OfferChips offer={x.offer} value={offers[x.id]} onChange={c => setOffers({ ...offers, [x.id]: c })} place={place} /></div>
+          <DaySelect label={t('planItOn')} value="" onPick={k => void cloneTemplate(x.id, k, x.at ?? settings.value.obligationAt, offerFieldsFor(offers[x.id]))} /></li>
       ))}</ul>{!obl.length && <p class="hint">{t('noObligations')}</p>}</>;
       break;
     }

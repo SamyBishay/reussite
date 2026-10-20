@@ -86,6 +86,18 @@ const noteSet = z.object({
 });
 export type NoteSet = z.infer<typeof noteSet>;
 
+// An address an AI suggests (a trip plan, brief §5): always saved as *want to go*, by the AI, with its reason in `note`.
+// `place` is a place's id or name, else Anywhere; `category` is one of the person's category ids, else *other*.
+const addressSet = z.object({
+  name: text(120).pipe(z.string().min(1)),
+  category: text(40).optional(),
+  place: id.optional(),
+  mapsUrl: text(2000).nullable().optional(),
+  street: text(300).nullable().optional(),
+  note: text(600).optional(),
+});
+export type AddressSet = z.infer<typeof addressSet>;
+
 const ref = text(40).optional();
 export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('task.create'), ref, set: taskSet.extend({ title: text(240).pipe(z.string().min(1)) }) }),
@@ -100,6 +112,7 @@ export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('place.update'), id, set: z.object({ name: text(80).optional(), timeZone: text(60).optional() }) }),
   z.object({ op: z.literal('stay.create'), set: z.object({ place: id, from: day, to: day, note: text(300).optional() }) }),
   z.object({ op: z.literal('stay.update'), id, set: z.object({ place: id.optional(), from: day.optional(), to: day.optional(), note: text(300).optional() }) }),
+  z.object({ op: z.literal('address.create'), set: addressSet }),
   z.object({ op: z.literal('decision.create'), ref, set: decisionSet.extend({ title: text(200).pipe(z.string().min(1)) }) }),
   z.object({ op: z.literal('decision.update'), id, set: decisionSet }),
   z.object({ op: z.literal('memory.add'), note, kind: noteSet.shape.kind, text: text(600).pipe(z.string().min(1)) }),

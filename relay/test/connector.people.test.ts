@@ -57,3 +57,13 @@ describe('people and addresses stay out of the connector', () => {
     expect(app.device.get('addresses', 'a1')).toMatchObject({ state: 'been' });
   });
 });
+
+describe('the connector does not take addresses', () => {
+  it('refuses an address.create and writes nothing, whatever else is in the change-set', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Open Maps and walk to the park' } }, { op: 'address.create', set: { name: 'Café Mokka', place: 'Paris', note: 'Open Tue to Sat' } }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain('Nothing was written');
+    expect(r.text).toContain('the connector does not handle addresses');
+    expect((await tool(access, 'query_tasks', { text: 'walk to the park' })).text).not.toContain('walk to the park');
+  });
+});

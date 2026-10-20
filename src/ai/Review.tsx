@@ -4,6 +4,7 @@ import { useState } from 'preact/hooks';
 import { openSheet, closeSheet, suitName } from '../app/ui';
 import { placeName, weekdayNames } from '../app/sheets';
 import { projects, tasks, toast, readOnly } from '../app/store';
+import { categoryLabel } from '../app/AddressSheets';
 import { t, fmtDate, fmtMin, type Key } from '../i18n';
 import { planChanges, applyPlanned, createsNote, isRef, type Plan, type Planned } from './apply';
 import { recordWrites } from '../app/store';
@@ -17,6 +18,7 @@ const FIELD: Record<string, Key> = {
   doneDay: 'fDoneDay', order: 'fOrder', name: 'fName', goal: 'fGoal', smart: 'fSmart', status: 'fStatus', plan: 'fPlan', first: 'fFirst',
   launches: 'fLaunches', timeZone: 'timeZone', place: 'fPlace', from: 'stayFrom', to: 'stayTo', option: 'fOption', items: 'fItems', steps: 'fSteps',
   template: 'fTemplate', weekdays: 'weekdaysField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
+  category: 'addrCategory', mapsUrl: 'addrLink', street: 'addrStreet', state: 'addrState',
   chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
 };
 const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn']);
@@ -32,6 +34,8 @@ function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {
   if (field === 'project' || field === 'projectId') { const s = String(v); return isRef(s) ? refs.get(s) ?? '?' : s === 'inbox' ? t('inbox') : projects.value.get(s)?.name ?? s; }
   if (field === 'where' || field === 'place') { const s = String(v); return isRef(s) ? refs.get(s) ?? '?' : placeName(s); }
   if (field === 'suit') return suitName(v as SuitId, true);
+  if (field === 'category') return categoryLabel(String(v));
+  if (field === 'state') return t(v === 'been' ? 'addrBeen' : 'addrWant');
   if (typeof v === 'boolean') return v ? t('yes') : t('no');
   if (Array.isArray(v)) return v.join(', ');
   if (typeof v === 'object') return Object.values(v as Record<string, unknown>).filter(Boolean).join(' / ') || t('chgNone');
@@ -40,7 +44,7 @@ function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {
 }
 
 const TAG: Record<Planned['kind'], Key | null> = { create: 'chgNew', update: null, done: 'chgDone', drop: 'chgDrop', reorder: 'chgOrder', remember: null };
-const TARGET: Record<Planned['target'], Key | null> = { task: null, project: 'project', day: 'chgDay', place: 'fPlace', stay: 'chgStay', decision: 'chgDecision', memory: null };
+const TARGET: Record<Planned['target'], Key | null> = { task: null, project: 'project', day: 'chgDay', place: 'fPlace', stay: 'chgStay', decision: 'chgDecision', memory: null, address: 'chgAddress' };
 
 function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () => void; refs: Plan['refTitles'] }) {
   const tag = createsNote(it) ? 'chgNew' : TAG[it.kind], target = TARGET[it.target];

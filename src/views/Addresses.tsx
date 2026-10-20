@@ -25,6 +25,7 @@ function AddressRow({ a, showPlace }: { a: A; showPlace: boolean }) {
         <p class="meta">
           {parts.join(' · ')}{parts.length > 0 && ' · '}
           <span class="tag" data-state={a.state}>{a.state === 'been' ? t('addrBeen') : t('addrWant')}</span>
+          {a.by === 'ai' && <> <span class="proposed" title={t('addrProposedHint')} data-testid="address-ai">{t('proposed')}</span></>}
           {v && <span> · {fmtDate(v.day)} · {t(VERDICT_KEY[v.verdict])}</span>}
         </p>
       </div>

@@ -86,7 +86,7 @@ export function normExchange(raw: Record<string, unknown>): Exchange {
     changes: strs(raw.changes),
     undo,
     undone: strs(raw.undone),
-    src: raw.src === 'link' || raw.src === 'inbox' ? raw.src : 'home',
+    src: raw.src === 'link' || raw.src === 'inbox' || raw.src === 'paste' ? raw.src : 'home',
   };
 }
 

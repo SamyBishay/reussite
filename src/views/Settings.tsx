@@ -13,7 +13,8 @@ import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
 import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
-import { categoryName } from '../app/model';
+import { categoryName, addressesOn } from '../app/model';
+import { openTrip } from '../ai/ui';
 import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
@@ -174,12 +175,15 @@ export function StaysEditor() {
     <div class="field" data-testid="stays"><span>{t('stays')}</span>
       <p class="hint">{t('staysHint')}</p>
       {list.map(st => (
+        <>
         <div class="stayrow">
           <select aria-label={t('placeName')} value={st.placeId} onChange={e => void saveStay(st.id, { ...st, placeId: (e.target as HTMLSelectElement).value })}>{ps.map(id => <option value={id}>{placeName(id)}</option>)}</select>
           <input type="date" aria-label={t('stayFrom')} value={st.from} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, from: v }); }} />
           <input type="date" aria-label={t('stayTo')} value={st.to} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, to: v }); }} />
           <button class="btn small ghost" type="button" onClick={() => void removeStay(st.id)} aria-label={t('remove', { what: placeName(st.placeId) })}>×</button>
         </div>
+        {addressesOn() && st.to >= today.value && <div class="stayact"><button class="btn small" type="button" onClick={() => openTrip(st.id)} data-testid="plan-trip">{t('tripBtn')}</button></div>}
+      </>
       ))}
       {ps.length ? (
         <form class="stayrow" onSubmit={add}>

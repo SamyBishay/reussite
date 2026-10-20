@@ -173,7 +173,10 @@ export async function applyUndo(undo: UndoDoc[], at = Date.now()): Promise<{ res
   const used = (c: Collection, id: string) =>
     c === 'tasks' ? [...sessions.value.values()].some(s => s.taskId === id && !made.has('sessions/' + s.id))
       : c === 'projects' ? [...tasks.value.values()].some(x => x.project === id && !made.has('tasks/' + x.id))
-        : false;
+        // An address or a person a step made since feeds stays: taking it away would leave that step pointing at nothing.
+        : c === 'addresses' ? [...tasks.value.values()].some(x => x.addressId === id && !made.has('tasks/' + x.id))
+          : c === 'people' ? [...tasks.value.values()].some(x => x.personId === id && !made.has('tasks/' + x.id))
+            : false;
   let restored = 0, kept = 0;
   for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id), { now: at, used })) {
     if (u.remove) { await removeDoc(u.c, u.id); restored++; }

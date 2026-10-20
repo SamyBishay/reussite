@@ -92,6 +92,8 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
     if (cur) {
       const p: Partial<Address> = {};
       for (const k of Object.keys(fields) as (keyof typeof fields)[]) if ((fields[k] ?? null) !== ((cur[k] as unknown) ?? null)) (p as Record<string, unknown>)[k] = fields[k];
+      // Saving an address an AI suggested confirms it: from then on it is the person's own.
+      if (cur.by === 'ai') p.by = 'me';
       if (Object.keys(p).length) await editAddress(cur.id, p);
     } else await createAddress(fields);
     rememberCategory(cat);

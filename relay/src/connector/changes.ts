@@ -45,6 +45,11 @@ function validate(input: Input): { changes: Change[] } | { errors: string[] } {
   const errors: string[] = [];
   const changes: Change[] = [];
   raw.forEach((c, i) => {
+    // The connector never reads or writes addresses and people (they go to an AI only from the app's own trip pack).
+    if (c && typeof c === 'object' && String((c as { op?: unknown }).op).startsWith('address.')) {
+      errors.push(`Change ${i + 1} (${String((c as { op: unknown }).op)}): the connector does not handle addresses; the person adds them in the app (a trip plan's reply is pasted there).`);
+      return;
+    }
     const r = ChangeSchema.safeParse(c);
     if (r.success) { changes.push(r.data); return; }
     const op = c && typeof c === 'object' && 'op' in c ? String((c as { op: unknown }).op) : '?';

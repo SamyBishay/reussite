@@ -24,6 +24,7 @@ When something in my list should change, end your reply with one change-set: one
 | `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `goal`, `due`, `status`) |
 | `day.update` | `date`, and any of `plan`, `add`, `remove`, `first`, `launches` (`[{"t": "09:30", "k": "start"}]`, `k` is `start` or `restart`) |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (`title`, `problem`, `options`, `chosen`, `why`, `mustBeTrue`, `falsifier`, `reviewOn`, `steps`) |
+| `address.create` | `set`: `name`, `category?`, `place?`, `mapsUrl?` (only a real Maps link), `street?`, `note?` (why, and what you checked). A place to try, saved as *want to go*; only in the app, not through the connector |
 | `memory.add` / `memory.edit` / `memory.remove` | `note`, `text`, `line`, `kind?` (only for what I said, in my words) |
 
 A step's `set` takes: `title` (start with the first action: "Open Mail and reply to…"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` people, leisure, health), `urgent`, `important`, `due`, `est`, `starter`, `app`, `link` (https only), `note`, `after` (ids it waits for), `at` and `dur`.

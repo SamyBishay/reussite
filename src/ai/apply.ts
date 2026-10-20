@@ -4,7 +4,7 @@
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
 import type { Change, ChangeSet, TaskSet } from './changeset';
-import type { Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
+import type { Address, Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
 import { isAllowedLink } from '../domain/links';
@@ -21,6 +21,12 @@ export interface Snapshot {
   stays: Map<string, W<Stay>>;
   /** Only read when a change names a memory note (the connector builds it on first use). */
   memory: Map<string, W<MemoryNote>>;
+  /**
+   * The addresses, to keep a suggested one from doubling one the person has, and the ids of their categories.
+   * Left out by a caller that never reads addresses (the connector): `address.create` then comes to nothing.
+   */
+  addresses?: Map<string, W<Address>>;
+  categories?: string[];
 }
 /** Ids, time and zone come from outside so tests are deterministic. */
 export interface Gen { id: (prefix: string) => string; now: () => string; zone: string }
@@ -48,7 +54,7 @@ export interface LinesDelta { add?: MemoryLine; edit?: MemoryLine; remove?: stri
 export interface Diff { field: string; before: unknown; after: unknown }
 export interface Planned {
   /** What it acts on and how; the review screen shows these. */
-  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory';
+  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory' | 'address';
   /** `remember`: a change to a memory note (a line added, edited or forgotten, or the note's own fields). */
   kind: 'create' | 'update' | 'done' | 'drop' | 'reorder' | 'remember';
   title: string;
@@ -119,6 +125,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
   /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
   const madeNotes = new Map<string, { ref: string; name: string; kind: MemoryNote['kind'] }>();
+  /** Addresses suggested earlier in this change-set, so one named twice is made once. */
+  const madeAddresses: { name: string; placeId: string; mapsUrl: string | null }[] = [];
   const notes = openNotes(s.memory);
   const findNote = (v: string) => findOpenNote(notes, v);
   const items: Planned[] = [];
@@ -339,6 +347,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         items.push({ target: 'stay', kind: cur ? 'update' : 'create', title: s.places.get(placeId)?.name ?? refTitles.get(placeId) ?? '', diffs, ops: [{ t: 'stay', id: cur?.id ?? null, fields }] });
         break;
       }
+      case 'address.create': {
+        const it = addressChange(c.set);
+        if (it) items.push(it);
+        break;
+      }
       case 'decision.create': {
         const { f, ops } = decisionFields(c.set, null, null);
         const fields = { ...normDecision({ status: 'draft', ...f, title: c.set.title } as Record<string, unknown>), by: 'ai' };
@@ -366,6 +379,36 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
   return { items, skipped, skippedAt, refTitles };
+
+  /**
+   * An address an AI suggests (brief §5, Planning a trip): saved as *want to go*, `by: 'ai'`, its reason in the note. Not
+   * made when the person already has one of that name in the place (or anywhere) or with that link, or when this change-set
+   * already suggested it. A place that is not found, or none, is Anywhere; a category the person does not have is *other*.
+   */
+  function addressChange(set: Extract<Change, { op: 'address.create' }>['set']): Planned | undefined {
+    if (!s.addresses) return undefined;
+    const want = set.place?.trim();
+    const placeId = !want || want.toLowerCase() === 'any' ? 'any'
+      : s.places.has(want) ? want
+        : [...s.places.values()].find(p => norm(p.name) === norm(want))?.id ?? 'any';
+    const link = set.mapsUrl && isAllowedLink(set.mapsUrl) ? set.mapsUrl : null;
+    const here = (p: string) => p === placeId || p === 'any' || placeId === 'any';
+    const name = norm(set.name);
+    const dup = (a: { name: string; placeId: string; mapsUrl?: string | null }) => (norm(a.name) === name && here(a.placeId)) || (!!link && a.mapsUrl === link);
+    if ([...s.addresses.values()].some(dup) || madeAddresses.some(dup)) return undefined;
+    const category = set.category && (s.categories ?? []).find(c => c === set.category || norm(c) === norm(set.category!)) || 'other';
+    const fields: Address = { name: set.name, category, placeId, mapsUrl: link, street: set.street || null, state: 'want', visits: [], by: 'ai', note: set.note ?? '' };
+    madeAddresses.push({ name: set.name, placeId, mapsUrl: link });
+    const diffs: Diff[] = [
+      { field: 'place', before: undefined, after: placeId },
+      { field: 'category', before: undefined, after: category },
+      ...(link ? [{ field: 'mapsUrl', before: undefined, after: link }] : []),
+      ...(fields.street ? [{ field: 'street', before: undefined, after: fields.street }] : []),
+      { field: 'state', before: undefined, after: 'want' },
+      ...(fields.note ? [{ field: 'note', before: undefined, after: fields.note }] : []),
+    ];
+    return { target: 'address', kind: 'create', title: set.name, diffs, ops: [{ t: 'create', c: 'addresses', fields: fields as unknown as Record<string, unknown> }] };
+  }
 
   /**
    * A change to memory (brief §10). A note is found by id, then by name or alias; one that several notes

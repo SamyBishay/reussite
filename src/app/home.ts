@@ -109,9 +109,9 @@ export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: 
   return { exchange: id };
 }
 
-/** A change-set that came from outside Home (a one-tap link, or the relay's inbox) and was applied: its own exchange, so History lists it and Undo takes it back. */
-export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox', n: number, undo: UndoDoc[]): Promise<void> {
-  await addTurn({ at: new Date().toISOString(), text: cs.note.slice(0, 200) || t(src === 'link' ? 'arrivedLink' : 'arrivedInbox'), kind: 'changes', n }, { cs: gen.id('c'), undo }, src);
+/** A change-set that came from outside Home (a one-tap link, the relay's inbox, or a reply pasted into "Paste the reply") and was applied: its own exchange, so History lists it and Undo takes it back. */
+export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox' | 'paste', n: number, undo: UndoDoc[]): Promise<void> {
+  await addTurn({ at: new Date().toISOString(), text: cs.note.slice(0, 200) || t(src === 'link' ? 'arrivedLink' : src === 'paste' ? 'arrivedPaste' : 'arrivedInbox'), kind: 'changes', n }, { cs: gen.id('c'), undo }, src);
 }
 
 /** The receipt line of an exchange: what one change did, else how many changes. */

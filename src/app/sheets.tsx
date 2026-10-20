@@ -22,6 +22,7 @@ import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { dueBeforeEnd } from '../domain/places';
 import { SUIT_ORDER } from '../data/settings';
+import { OfferChips, offerFieldsFor, type OfferChoice } from './OfferChips';
 import type { Project, Repeat, Session, Task } from '../data/schema';
 import type { Quadrant } from '../domain/tasks';
 
@@ -758,17 +759,19 @@ export function openPick(kind: 'list' | 'standing', k = today.value) {
 }
 function PickSheet({ kind, k }: { kind: 'list' | 'standing'; k: string }) {
   const [added, setAdded] = useState<string[]>([]);
+  const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const items = kind === 'standing'
     ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x)).sort(byOrder)
     : candidates(k).slice(0, 14);
-  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k) : addToday(id, false, k)); };
+  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k, undefined, offerFieldsFor(offers[id])) : addToday(id, false, k)); };
   return (
     <div>
       <h3>{kind === 'standing' ? t('leisurePeopleTitle') : t('fromList')}</h3>
       <p class="hint">{kind === 'standing' ? t('pickStandingHint') : t('pickListHint')}</p>
       <ul class="picklist">
         {items.length ? items.map(x => (
-          <li><div><p><Title s={x.title} /></p><p class="meta"><Meta tk={x} withQuad={kind !== 'standing'} /></p></div>
+          <li><div><p><Title s={x.title} /></p><p class="meta"><Meta tk={x} withQuad={kind !== 'standing'} /></p>
+            {kind === 'standing' && !added.includes(x.id) && <OfferChips offer={x.offer} value={offers[x.id]} onChange={c => setOffers({ ...offers, [x.id]: c })} />}</div>
             <button class="btn small" type="button" disabled={added.includes(x.id)} onClick={() => add(x.id)}>{added.includes(x.id) ? t('added') : t('add')}</button></li>
         )) : <li><p class="hint">{t('nothingToAdd')}</p></li>}
       </ul>

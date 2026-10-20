@@ -301,7 +301,7 @@ export interface Exchange {
   undo: Record<string, UndoDoc[]>;
   /** The ids (from `changes`) that have been undone. */
   undone: string[];
-  src: 'home' | 'link' | 'inbox';
+  src: 'home' | 'link' | 'inbox' | 'paste';
   [extra: string]: unknown;
 }
 

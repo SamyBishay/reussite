@@ -17,6 +17,7 @@ import { startSync } from './sync';
 import { startFeed } from './feed';
 import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
+import { reloadNewest } from './reload';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
 import { Projects } from '../views/Projects';
@@ -191,7 +192,7 @@ export function App() {
         <main>
           <UpdateBanner />
           <PlaceBanner />
-          {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => location.reload()}>{t('reload')}</button></div>}
+          {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
           {ready.value ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>

@@ -197,6 +197,20 @@ test('a new note can be made by hand; a rename and a kind change are saved', asy
   await expect(page.getByTestId('memory-person')).toHaveCount(0);
 });
 
+test('a field focused the moment a sheet opens keeps its focus (the dialog takes focus only when nothing inside has it)', async ({ page }) => {
+  await open(page);
+  // Typing straight after the tap, before the sheet's own focus step has run: what a fast fill does.
+  const kept = await page.evaluate(async () => {
+    (document.querySelector('[data-testid=memory-new]') as HTMLElement).click();
+    let el: HTMLInputElement | null = null;
+    while (!(el = document.querySelector('[data-testid=memory-new-name]'))) await new Promise(r => setTimeout(r, 0));
+    el.focus();
+    await new Promise(r => setTimeout(r, 400));
+    return document.activeElement === el;
+  });
+  expect(kept).toBe(true);
+});
+
 test('export: one .md bundle, private notes only when ticked, and Copy for one note', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => undefined);
   await page.addInitScript(() => {

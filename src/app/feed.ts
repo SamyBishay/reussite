@@ -99,6 +99,8 @@ export async function uploadFeed(force = false): Promise<void> {
     } while (again);
     await forget();
   } finally { running = false; feedBusy.value = false; }
+  // A call that came in after the last pass (while old feeds were being deleted, or before a stop) is not lost.
+  if (again) { again = false; await uploadFeed(); }
 }
 
 /** An upload a few seconds from now; each call pushes it back. */

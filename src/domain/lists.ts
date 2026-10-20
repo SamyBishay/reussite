@@ -1,6 +1,6 @@
 // Read-side rules on plain data, shared by the app (src/app/model.ts wraps them over its signals)
 // and by the connector in the relay Worker, which has no signals. Pure: nothing here reads a store.
-import type { Day, Decision, Place, Project, Session, Stay, Task } from '../data/schema';
+import type { Day, Decision, MemoryNote, Place, Project, Session, Stay, Task } from '../data/schema';
 import type { Point } from './estimates';
 import { SOURCE_WEIGHT } from './estimates';
 import type { DayKey } from './dates';
@@ -20,6 +20,8 @@ export interface Data {
   decisions: ReadonlyMap<string, WithId<Decision>>;
   places: ReadonlyMap<string, WithId<Place>>;
   stays: ReadonlyMap<string, WithId<Stay>>;
+  /** Memory notes, private ones too (the connector's names for `memory.*` changes; only built when asked for). */
+  memory: ReadonlyMap<string, WithId<MemoryNote>>;
 }
 
 export const listOf = (a: unknown): string[] => (a == null || a === '' ? [] : Array.isArray(a) ? a.map(String) : [String(a)]);

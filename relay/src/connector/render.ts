@@ -1,6 +1,6 @@
 // What the read tools say, as compact plain text an AI can use: the same lines the app's AI
 // context uses (src/domain/lists.ts), plus a few labelled facts. Nothing here writes.
-import type { Planned } from '../../../src/ai/apply';
+import { createsNote, type Planned } from '../../../src/ai/apply';
 import type { Task } from '../../../src/data/schema';
 import { fit, predict, type Model } from '../../../src/domain/estimates';
 import {
@@ -168,9 +168,9 @@ const show = (x: unknown): string => {
 
 /** One planned change as a line, with `before → after` for each field. */
 export function describe(it: Planned, v: View): string {
-  const what = it.target === 'task' ? 'step' : it.target;
+  const what = it.target === 'task' ? 'step' : it.target === 'memory' ? 'memory note' : it.target;
   const name = it.title ? ` "${oneLine(it.title)}"` : '';
-  const head = it.kind === 'create' ? `Add ${what}${name}` : it.kind === 'done' ? `Mark done:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
+  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${what}${name}` : it.kind === 'done' ? `Mark done:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
   const diffs = it.diffs.map(d => {
     const nice = (x: unknown) => (d.field === 'plan' || d.field === 'order' || d.field === 'after') && Array.isArray(x) ? x.map(i => v.tasks.get(String(i))?.title ?? i).join(', ') : show(x);
     return d.before === undefined ? `${d.field} ${nice(d.after)}` : `${d.field} ${nice(d.before)} → ${nice(d.after)}`;

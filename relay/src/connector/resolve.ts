@@ -43,6 +43,24 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
   const project = (v: string) => pick('project', v, d.projects, projects);
   const place = (v: string) => pick('place', v, d.places, places);
 
+  /** A memory note by id, name or alias (private notes are not offered: an AI never sees them). Built only when a change asks. */
+  function note(value: string): string {
+    const notes = d.memory;
+    if (notes.has(value)) return value;
+    const pool: Named[] = [];
+    for (const n of notes.values()) if (!n.private) pool.push({ id: n.id, name: n.name }, ...n.aliases.map(a => ({ id: n.id, name: a })));
+    const f = findByName(value, pool);
+    if ('id' in f) return f.id;
+    if ('many' in f) {
+      const names = new Map(f.many.map(m => [m.id, notes.get(m.id)!.name]));
+      if (names.size === 1) return [...names.keys()][0]!;
+      ambiguous.push({ index: at, text: `"${value}" matches ${names.size} notes; repeat with the id of the one meant:\n${[...names].slice(0, 8).map(([id, name]) => `${id} | ${oneLine(name)}`).join('\n')}` });
+    } else {
+      problems.push({ index: at, text: `No memory note with the id, name or alias "${value}".` });
+    }
+    return value;
+  }
+
   const out = changes.map((c, i): Change => {
     at = i;
     switch (c.op) {
@@ -58,6 +76,8 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
       case 'stay.update': return c;
       case 'decision.create': return { ...c, set: c.set.project ? { ...c.set, project: project(c.set.project) } : c.set };
       case 'decision.update': return { ...c, set: c.set.project ? { ...c.set, project: project(c.set.project) } : c.set };
+      case 'memory.add': case 'memory.edit': case 'memory.remove': case 'memory.note':
+        return c.op === 'memory.add' && c.kind ? c : { ...c, note: note(c.note) }; // a new note is named, not found
       default: return c;
     }
   });

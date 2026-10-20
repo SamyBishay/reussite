@@ -6,6 +6,8 @@ import { parse } from '../../src/data/hlc';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import { newApp, signIn, switchOn, tool } from './connector';
 import { call, url } from './helpers';
+import { View } from '../src/connector/view';
+import { emptyMaps } from '../src/connector/space';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 const day = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
@@ -175,5 +177,60 @@ describe('the connector as a device', () => {
     app.device.add('tasks', 't9', task('Added after the snapshot'));
     await app.sync();
     expect((await tool(tok, 'query_tasks', { text: 'after the snapshot' })).text).toContain('t9 | Added after the snapshot');
+  });
+});
+
+describe('memory changes', () => {
+  const lines = (app: Awaited<ReturnType<typeof setup>>['app'], id: string) => (app.device.get('memory', id)!.lines as { id: string; text: string; by: string }[]);
+  async function withNotes() {
+    const r = await setup();
+    r.app.device.add('memory', 'n1', { kind: 'person', name: 'Ibrahim', aliases: ['Ibra'], lines: [{ id: 'l1', text: 'Likes tea', at: '', by: 'me' }, { id: 'l2', text: 'Works nights', at: '', by: 'me' }], private: false, updated: '2026-10-01T00:00:00.000Z' });
+    r.app.device.add('memory', 'n2', { kind: 'person', name: 'Secret', aliases: [], lines: [{ id: 's1', text: 'Hidden', at: '', by: 'me' }], private: true, updated: '' });
+    await r.app.sync();
+    return r;
+  }
+
+  it('asks for a yes, finds the note by name or alias, and lands after the confirmation', async () => {
+    const { app, tok } = await withNotes();
+    const r = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'ibra', text: 'Plays oud' }] });
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain('needs the person');
+    expect(r.text).toContain('Remember, in the note "Ibrahim"');
+    const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
+    await app.sync();
+    expect(lines(app, 'n1')).toHaveLength(2);
+    const done = await tool(tok, 'apply_changes', { confirm: id });
+    expect(done.isError).toBe(false);
+    await app.sync();
+    expect(lines(app, 'n1').map(l => l.text)).toEqual(['Likes tea', 'Works nights', 'Plays oud']);
+    expect(lines(app, 'n1')[2]!.by).toBe('ai');
+  });
+
+  it('makes a note when given a kind, and undoes the lot', async () => {
+    const { app, tok } = await withNotes();
+    const r = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Alex', kind: 'person', text: 'Moved to Lyon' }, { op: 'memory.remove', note: 'Ibrahim', line: 1 }] });
+    const done = await tool(tok, 'apply_changes', { confirm: /"confirm": "(c\w+)"/.exec(r.text)![1]! });
+    await app.sync();
+    const alex = [...app.device.docs.get('memory')!.values()].find(d => d.name === 'Alex')!;
+    expect(lines(app, 'n1').map(l => l.text)).toEqual(['Works nights']);
+    const u = await tool(tok, 'undo', { id: undoId(done.text) });
+    expect(u.isError).toBe(false);
+    await app.sync();
+    expect(lines(app, 'n1').map(l => l.text)).toEqual(['Likes tea', 'Works nights']);
+    expect(app.device.get('memory', alex.id as string)!._del).toBeDefined();
+  });
+
+  it('does not find a private note, and says nothing about it', async () => {
+    const { tok } = await withNotes();
+    const r = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Secret', text: 'x' }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain('No memory note');
+    const made = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'n2', kind: 'person', text: 'x' }] });
+    expect(made.text).toContain('Nothing to change');
+  });
+
+  it('builds the notes only when a change reads them', () => {
+    const v = new View(emptyMaps());
+    for (const o of [v.snapshot(), v.data]) expect(typeof Object.getOwnPropertyDescriptor(o, 'memory')?.get).toBe('function');
   });
 });

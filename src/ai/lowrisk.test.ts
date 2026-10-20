@@ -14,7 +14,7 @@ const snap = (): Snapshot => {
     tasks: m([task('t1'), task('t2'), task('t3', { status: 'dropped' })]),
     projects: m([{ id: 'p1', name: 'Thesis', suit: 'S', where: 'any', goal: null, goalBy: null, due: null, order: 1, status: 'active' }]),
     days: m([{ id: '2026-10-09', date: '2026-10-09', plan: ['t1'], launches: [], first: null, checkin: null, closed: null, summary: null }]),
-    decisions: new Map(), places: new Map(), stays: new Map(),
+    decisions: new Map(), places: new Map(), stays: new Map(), memory: new Map(),
   };
 };
 const gen = { id: (p: string) => p + 'x', now: () => '2026-10-09T10:00:00.000Z', zone: 'Europe/Paris' };

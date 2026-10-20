@@ -4,10 +4,11 @@
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
 import type { Change, ChangeSet, TaskSet } from './changeset';
-import type { Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch } from '../data/schema';
+import type { Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
 import { isAllowedLink } from '../domain/links';
+import { norm } from '../domain/names';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -18,6 +19,8 @@ export interface Snapshot {
   decisions: Map<string, W<Decision>>;
   places: Map<string, W<Place>>;
   stays: Map<string, W<Stay>>;
+  /** Only read when a change names a memory note (the connector builds it on first use). */
+  memory: Map<string, W<MemoryNote>>;
 }
 /** Ids, time and zone come from outside so tests are deterministic. */
 export interface Gen { id: (prefix: string) => string; now: () => string; zone: string }
@@ -36,14 +39,17 @@ export type Op =
   | { t: 'day'; k: string; patch: Partial<Day> }
   | { t: 'stay'; id: string | null; ref?: string; fields: Stay };
 
-/** What a decision update adds, so two ticked updates of the same decision both land (see mergeDelta). */
-export interface Delta { problem?: Record<string, string>; options?: Option[] }
+/** What a decision or memory update adds, so two ticked updates of the same document both land (see mergeDelta). */
+export interface Delta { problem?: Record<string, string>; options?: Option[]; lines?: LinesDelta }
+/** One change to a memory note's lines, kept as a change (not as the whole list) for the same reason. */
+export interface LinesDelta { add?: MemoryLine; edit?: MemoryLine; remove?: string }
 
 export interface Diff { field: string; before: unknown; after: unknown }
 export interface Planned {
   /** What it acts on and how; the review screen shows these. */
-  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision';
-  kind: 'create' | 'update' | 'done' | 'drop' | 'reorder';
+  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory';
+  /** `remember`: a change to a memory note (a line added, edited or forgotten, or the note's own fields). */
+  kind: 'create' | 'update' | 'done' | 'drop' | 'reorder' | 'remember';
   title: string;
   diffs: Diff[];
   ops: Op[];
@@ -57,6 +63,8 @@ export interface Plan {
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+/** Whether a memory change makes a new note (the review marks it as new). */
+export const createsNote = (it: Planned): boolean => it.target === 'memory' && it.ops[0]?.t === 'create';
 const validZone = (z: string | undefined) => { if (!z) return false; try { new Intl.DateTimeFormat('en', { timeZone: z }); return true; } catch { return false; } };
 
 export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
@@ -73,6 +81,20 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     return r && r.target === target ? asRef(v) : undefined;
   };
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
+  /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
+  const madeNotes = new Map<string, { ref: string; name: string }>();
+  const findNote = (v: string): W<MemoryNote> | 'many' | undefined => {
+    const byId = s.memory.get(v);
+    if (byId) return byId;
+    const want = norm(v);
+    const hits = want ? [...s.memory.values()].filter(n => norm(n.name) === want || n.aliases.some(a => norm(a) === want)) : [];
+    return hits.length > 1 ? 'many' : hits[0];
+  };
+  const lineOf = (n: MemoryNote, want: number | string): MemoryLine | undefined => {
+    if (typeof want === 'number') return n.lines[want - 1];
+    const text = norm(want.replace(/^\d+\.\s+/, ''));
+    return n.lines.find(l => l.id === want) ?? n.lines.find(l => norm(l.text) === text) ?? (/^\d+$/.test(want) ? n.lines[Number(want) - 1] : undefined);
+  };
   const items: Planned[] = [];
   let skipped = cs.bad;
   const skippedAt: number[] = [];
@@ -87,8 +109,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       if (k === 'after') { const a = ((v as string[] | null) ?? []).map(taskId).filter((x): x is string => !!x); o.after = a.length ? a : null; continue; }
       if (k === 'link') { if (v === null || isAllowedLink(v as string)) o.link = (v as string | null) || null; continue; }
       if (k === 'title' && !v) continue;
+      if (k === 'weekdays') { const w = [...new Set((v as number[] | null) ?? [])].sort((a, b) => a - b); o.weekdays = w.length ? w : null; continue; }
       (o as Record<string, unknown>)[k] = v;
     }
+    // A standing obligation with no time or no days would sit unseen: it stays an ordinary step.
+    if (o.template && (!o.at || !o.weekdays?.length)) delete o.template;
     if (o.est != null) o.estBy = 'ai';
     if ('due' in o) o.dueRule = null;
     return o;
@@ -166,6 +191,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const tk = s.tasks.get(c.id);
         if (!tk || tk.status === 'dropped' || tk.template) break;
         const f = cleanTask(c.set);
+        delete f.template; // only a new step becomes a standing obligation
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k === 'estBy' || k === 'dueRule') continue;
@@ -301,10 +327,71 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         items.push({ target: 'decision', kind: 'update', title: d.title, diffs, ops: [...ops, { t: 'update', c: 'decisions', id: d.id, patch: f, delta }] });
         break;
       }
+      case 'memory.add':
+      case 'memory.edit':
+      case 'memory.remove':
+      case 'memory.note': {
+        const it = memoryChange(c);
+        if (it) items.push(it);
+        break;
+      }
     }
     if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
   return { items, skipped, skippedAt, refTitles };
+
+  /**
+   * A change to memory (brief §10). A note is found by id, then by name or alias; one that is private,
+   * or that several notes match, is left alone (private notes are never sent to an AI, so an AI has no
+   * business writing to one). Lines an AI writes are marked `by: 'ai'`. A line is named by its number
+   * (from 1, as shown to the AI), its id, or its exact text.
+   */
+  function memoryChange(c: Extract<Change, { op: `memory.${string}` }>): Planned | undefined {
+    const now = gen.now();
+    const hit = findNote(c.note);
+    if (hit === 'many') return undefined;
+    const item = (note: { name: string }, diffs: Diff[], op: Op): Planned => ({ target: 'memory', kind: 'remember', title: note.name, diffs, ops: [op] });
+    if (c.op === 'memory.add') {
+      const line: MemoryLine = { id: gen.id('l'), text: c.text, at: now, by: 'ai' };
+      const diff: Diff = { field: 'line', before: undefined, after: c.text };
+      if (hit) {
+        if (hit.private || hit.lines.some(l => norm(l.text) === norm(c.text))) return undefined;
+        return item(hit, [diff], { t: 'update', c: 'memory', id: hit.id, patch: { lines: [...hit.lines, line], updated: now }, delta: { lines: { add: line } } });
+      }
+      const made = madeNotes.get(norm(c.note));
+      if (made) return item({ name: made.name }, [diff], { t: 'update', c: 'memory', id: asRef(made.ref), patch: { lines: [line], updated: now }, delta: { lines: { add: line } } });
+      if (!c.kind) return undefined;
+      const ref = 'note ' + norm(c.note);
+      madeNotes.set(norm(c.note), { ref, name: c.note });
+      const fields: MemoryNote = { kind: c.kind, name: c.note, aliases: [], lines: [line], private: false, updated: now };
+      return item(fields, [{ field: 'kind', before: undefined, after: c.kind }, diff], { t: 'create', c: 'memory', ref, fields: fields as unknown as Record<string, unknown> });
+    }
+    if (!hit || hit.private) return undefined;
+    if (c.op === 'memory.note') {
+      const patch: Partial<MemoryNote> = {};
+      const diffs: Diff[] = [];
+      const others = [...s.memory.values()].filter(n => n.id !== hit.id);
+      const taken = (name: string) => others.some(n => norm(n.name) === norm(name) || n.aliases.some(a => norm(a) === norm(name)));
+      const name = c.set.name ?? hit.name;
+      if (name !== hit.name && !taken(name)) { patch.name = name; diffs.push({ field: 'name', before: hit.name, after: name }); }
+      if (c.set.aliases) {
+        const seen = new Set([norm(patch.name ?? hit.name)]);
+        const aliases = c.set.aliases.filter(a => !seen.has(norm(a)) && !!seen.add(norm(a)));
+        if (!same(aliases, hit.aliases)) { patch.aliases = aliases; diffs.push({ field: 'aliases', before: hit.aliases, after: aliases }); }
+      }
+      if (c.set.kind && c.set.kind !== hit.kind) { patch.kind = c.set.kind; diffs.push({ field: 'kind', before: hit.kind, after: c.set.kind }); }
+      if (!diffs.length) return undefined;
+      return item(hit, diffs, { t: 'update', c: 'memory', id: hit.id, patch: { ...patch, updated: now } });
+    }
+    const ln = lineOf(hit, c.line);
+    if (!ln) return undefined;
+    if (c.op === 'memory.remove') {
+      return item(hit, [{ field: 'line', before: ln.text, after: undefined }], { t: 'update', c: 'memory', id: hit.id, patch: { lines: hit.lines.filter(l => l.id !== ln.id), updated: now }, delta: { lines: { remove: ln.id } } });
+    }
+    if (ln.text === c.text) return undefined;
+    const edited: MemoryLine = { ...ln, text: c.text, at: now, by: 'ai' };
+    return item(hit, [{ field: 'line', before: ln.text, after: c.text }], { t: 'update', c: 'memory', id: hit.id, patch: { lines: hit.lines.map(l => (l.id === ln.id ? edited : l)), updated: now }, delta: { lines: { edit: edited } } });
+  }
 
   function projectFields(set: Extract<Change, { op: 'project.update' }>['set'], cur: Project | null): Partial<Project> {
     const f: Partial<Project> = {};
@@ -394,12 +481,20 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
     for (const op of it.ops) {
       switch (op.t) {
         case 'task': { const id = await w.createTask(subst(op.fields) as Task); if (op.ref) ids.set(asRef(op.ref), id); break; }
-        case 'create': { const id = await w.create(op.c, subst(op.fields) as Record<string, unknown>); if (op.ref) ids.set(asRef(op.ref), id); break; }
+        case 'create': {
+          const fields = subst(op.fields) as Record<string, unknown>;
+          const id = await w.create(op.c, fields);
+          if (op.ref) { ids.set(asRef(op.ref), id); wrote.set(op.c + '/' + asRef(op.ref), fields); }
+          break;
+        }
         case 'update': {
           const key = op.c + '/' + op.id, prev = wrote.get(key);
+          // A note made by an earlier change: its id is only known now, and if that change wasn't ticked there is nothing to add to.
+          const id = isRef(op.id) ? ids.get(op.id) : op.id;
+          if (!id) break;
           let p = subst(op.patch) as Record<string, unknown>;
           if (prev && op.delta) p = mergeDelta(prev, p, subst(op.delta) as Delta);
-          await w.update(op.c, op.id, p);
+          await w.update(op.c, id, p);
           wrote.set(key, { ...prev, ...p });
           break;
         }
@@ -438,6 +533,13 @@ export function mergeDelta(prev: Record<string, unknown>, p: Record<string, unkn
       for (const c of COLUMNS) for (const it of o[c]) if (!have[c].some(x => x.id === it.id || x.text.trim().toLowerCase() === it.text.trim().toLowerCase())) have[c].push(it);
     }
     out.options = opts;
+  }
+  if (d.lines && Array.isArray(prev.lines)) {
+    let lines = [...(prev.lines as MemoryLine[])];
+    if (d.lines.add && !lines.some(l => l.id === d.lines!.add!.id)) lines.push(d.lines.add);
+    if (d.lines.edit) lines = lines.map(l => (l.id === d.lines!.edit!.id ? d.lines!.edit! : l));
+    if (d.lines.remove) lines = lines.filter(l => l.id !== d.lines!.remove);
+    out.lines = lines;
   }
   return out;
 }

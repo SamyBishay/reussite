@@ -6,7 +6,8 @@
 // Nothing is written unless the whole change-set is valid, every name is found once, and (for
 // more than one low-risk change) the person said yes.
 import { isLowRisk, planChanges, applyPlanned, type Plan } from '../../../src/ai/apply';
-import { ChangeSchema, type Change, type ChangeSet } from '../../../src/ai/changeset';
+import { ChangeSchema, NOTE_MAX, type Change, type ChangeSet } from '../../../src/ai/changeset';
+import { undoWrites } from '../../../src/ai/undo';
 import { b64uDecode } from '../../../src/sync/bytes';
 import { decryptJson, sealToText } from '../../../src/sync/crypto';
 import type { Env } from '../env';
@@ -66,7 +67,7 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   if (found.ambiguous.length) return err(`${noWrite} Which one is meant?\n${found.ambiguous.map(a => `Change ${a.index + 1}: ${a.text}`).join('\n')}\nRepeat the change with the id of the one meant.`);
   if (found.problems.length) return err(`${noWrite} Not found:\n${found.problems.map(p => `Change ${p.index + 1}: ${p.text}`).join('\n')}`);
 
-  const cs: ChangeSet = { v: 1, note: (input.note ?? '').trim().slice(0, 600), changes: found.changes, bad: 0 };
+  const cs: ChangeSet = { v: 1, note: (input.note ?? '').trim().slice(0, NOTE_MAX), changes: found.changes, bad: 0 };
   const plan = planChanges(cs, c.v.snapshot(), gen(c.v));
   const skipped = plan.skippedAt.map(i => `Change ${i + 1} (${cs.changes[i]!.op}): nothing to change (already so, or it does not apply).`);
   if (!plan.items.length) return { text: `${noWrite} Nothing to change.\n${skipped.join('\n')}` };
@@ -141,8 +142,6 @@ async function commit(c: Ctx, plan: Plan, how: string, notes: string[]): Promise
   };
 }
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
-
 /** Put back what one applied change-set replaced. Fields the person changed since are left alone. */
 export async function undo(c: Ctx, id: string): Promise<Out> {
   const row = await c.env.DB.prepare('SELECT blob FROM connector_undo WHERE id = ?1 AND space = ?2').bind(id, c.s.space).first<{ blob: string }>();
@@ -150,21 +149,11 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
   const { docs } = await decryptJson<{ docs: UndoDoc[] }>(c.s.keys, b64uDecode(row.blob));
   const edits = new Edits(c.s);
   const lines: string[] = [];
-  for (const d of [...docs].reverse()) {
-    const cur = edits.get(d.c, d.id);
-    const what = `${d.c}/${d.id}`;
-    if (d.created) {
-      if (cur) { edits.remove(d.c, d.id); lines.push(`Removed ${what} (it was created by the change)`); }
-      continue;
-    }
-    if (!cur || !d.fields) continue;
-    const back: Record<string, unknown> = {};
-    const kept: string[] = [];
-    for (const [k, f] of Object.entries(d.fields)) {
-      if (same(cur[k], f.now)) back[k] = f.was; else kept.push(k);
-    }
-    if (Object.keys(back).length) { edits.update(d.c, d.id, back); lines.push(`Restored ${what}: ${Object.keys(back).join(', ')}`); }
-    if (kept.length) lines.push(`Left ${what} alone: ${kept.join(', ')} changed since`);
+  for (const u of undoWrites(docs, (col, did) => edits.get(col, did))) {
+    const what = `${u.c}/${u.id}`;
+    if (u.remove) { edits.remove(u.c, u.id); lines.push(`Removed ${what} (it was created by the change)`); }
+    if (u.patch) { edits.update(u.c, u.id, u.patch); lines.push(`Restored ${what}: ${Object.keys(u.patch).join(', ')}`); }
+    if (u.kept) lines.push(`Left ${what} alone: ${u.kept.join(', ')} changed since`);
   }
   if (!edits.empty) {
     const seq = await edits.flush(c.env);

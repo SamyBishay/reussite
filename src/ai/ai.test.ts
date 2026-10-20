@@ -107,7 +107,7 @@ function snap(): Snapshot {
     days: m([{ id: '2026-10-09', date: '2026-10-09', plan: ['t1'], launches: [], first: null, checkin: null, closed: null, summary: null }]),
     decisions: m([{ ...normDecision({ title: 'Stay or move?', options: [{ id: 'o1', name: 'Stay', pros: [{ id: 'i1', text: 'cheap', w: 4 }] }] }), id: 'd1' }]),
     places: m([{ id: 'home', name: 'Paris', timeZone: 'Europe/Paris', order: 0 }]),
-    stays: new Map(),
+    stays: new Map(), memory: new Map(),
   };
 }
 let n = 0;

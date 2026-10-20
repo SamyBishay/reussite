@@ -51,6 +51,22 @@ At minute 0 the same run also prunes: devices with no register or schedule write
 
 CPU of a 36-send tick: `npm run relay:bench:push` (see DECISIONS.md for the numbers).
 
+## In the app
+
+Files: `src/sw.ts` (the service worker), `src/app/push.ts` (state, subscription, triggers), `src/push/reconcile.ts` (the diff), `src/push/notification.ts` (payload and `showNotification` arguments), `src/push/client.ts` (the relay calls), `src/push/support.ts` (what this browser can do), `src/app/NotifySettings.tsx` (Settings → Notifications).
+
+**The service worker** is `src/sw.ts`, built by vite-plugin-pwa `injectManifest`: precache, the navigation fallback, `SKIP_WAITING` for the update banner, and two handlers. `push` always calls `showNotification` (iOS withdraws the permission from a worker that receives a push and shows nothing), so a payload that is missing or not JSON still shows the app's name; the tag is the item id, so a re-sent item replaces its notification. `notificationclick` focuses an open window of the app, else opens `./#today`.
+
+**The payload** is `{title, body, tag, url}` as JSON (title is always "Réussite"), cut to fit 767 bytes, encrypted for the subscription's `p256dh`/`auth`.
+
+**State and keys.** `pushState` is one of hidden (the build has no `VITE_VAPID_PUBLIC_KEY`), install (iOS outside the Home Screen app: the push API is not there until it is installed, so Settings explains the install first), unsupported, norelay, default, granted, denied. The permission prompt is only ever asked from the tap on the switch. The device's `push.id`, `push.secret`, `push.vapid` (the key the subscription was made with), `push.endpoint` (the endpoint last registered), `push.sent` (the diff cache), `push.on`, `push.lastAt`, `push.lastError` and `push.held` are in the `local` table: not synced, not in backups. The relay address is the sync one (`relayUrl`); push works with sync off.
+
+**Reconciling** (`reconcileNow`, never two at once): make sure the subscription exists and was made with this build's VAPID key (else unsubscribe and subscribe again), register the endpoint if the relay has not seen it, run `buildSchedule`, and give `planUpload` the result and the cache. An item whose hash (auth secret, id, time, ttl, plaintext) matches the cache is not encrypted again and goes into `keep`; the rest are encrypted and uploaded; whatever is no longer wanted is simply not named. The write is skipped when nothing changed, except once a day, so the relay's 45-day clock keeps running for a device in use. If the relay answers `unknown_device` it is registered again and everything is re-sent; if it holds fewer items than were sent plus kept, everything is re-sent once. When it runs: at start, when the page becomes visible, when the network returns, and 3 seconds after any change to the tasks, days, decisions, places, stays, sessions or settings (a local write, a merge from sync, a switch).
+
+**Switching off** deletes the device at the relay, unsubscribes, and forgets the id, secret and cache. **The test button** posts one push through the relay; on `gone` (the push service dropped the subscription, the relay deleted the device) the app subscribes again, registers, and sends once more.
+
+**Known limits.** There is no `pushsubscriptionchange` handler: a browser that rotates a subscription is noticed the next time the app opens. An offline stop of a timer leaves the "Still on…?" push on the relay (nothing can cancel it from a closed app). The banner in the app counts a timer as long after midnight UTC; the push counts the next day start (`dayStart`, in the zone of the place): they agree on the 45 minutes / twice the estimate rule, which is the one the tests pin.
+
 ## What the relay can see
 
 The endpoint (which push service, and an opaque token for this browser), the push id and a hash of the secret, the time each notification is to be sent and the TTL and urgency, the size of each (358 bytes for almost all), when it was sent and what the push service answered, the 45-day clock, and IP addresses. Not the text of any notification, nor the keys to read it, nor the space the device belongs to. The push service sees the same ciphertext and the sending times.

@@ -70,7 +70,7 @@ test('Add to calendar downloads an .ics with the day’s launch point when shari
   await page.getByTestId('tab-today').click();
   await page.locator('form.launch-add input[name=time]').fill('23:30');
   await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.locator('.launches .chip')).toContainText('23:30');
+  await expect(page.locator('.launches .chip', { hasText: '23:30' })).toHaveCount(1);
   await page.getByTestId('tab-calendar').click();
   const download = page.waitForEvent('download');
   await page.getByTestId('ics-today').click();

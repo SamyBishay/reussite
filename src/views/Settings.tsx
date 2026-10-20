@@ -16,6 +16,7 @@ import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
 import { ConnectorSettings } from '../app/ConnectorSettings';
+import { CalendarSettings } from '../app/CalendarSettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
 
 const set = (p: Partial<S>) => void saveSettings(p);
@@ -342,6 +343,7 @@ export function Settings() {
       <AiSettings />
       <SyncSettings />
       <ConnectorSettings />
+      <CalendarSettings />
       <Data />
       <section class="set" data-testid="about">
         <h2>{t('about')}</h2>

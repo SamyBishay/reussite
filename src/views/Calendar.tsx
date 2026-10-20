@@ -15,6 +15,7 @@ import { addDays, daysBetween } from '../domain/dates';
 import { monthGrid, weekOf } from '../domain/calendar';
 import { isoDow, occurrences } from '../domain/repeat';
 import { stayOn } from '../domain/places';
+import { addToCalendar } from '../app/addToCalendar';
 
 const stored = (() => { try { return localStorage.getItem('reussite.cal') === 'month' ? 'month' : 'week'; } catch { return 'week'; } })();
 const mode = signal<'week' | 'month'>(stored);
@@ -178,6 +179,10 @@ export function Calendar() {
           <button class="icon-btn" type="button" onClick={() => step(1)} aria-label={t('calNext')}>›</button>
           {a !== td && <button class="btn small ghost" type="button" onClick={() => (anchor.value = null)}>{t('pickToday')}</button>}
         </div>
+      </div>
+      <div class="actions" style="margin-top:8px" data-testid="add-to-calendar" role="group" aria-label={t('addToCalendar')}>
+        <button class="btn small ghost" type="button" data-testid="ics-today" onClick={() => void addToCalendar(td, td)}>{t('addToCalendarToday')}</button>
+        {mode.value === 'week' && <button class="btn small ghost" type="button" data-testid="ics-week" onClick={() => void addToCalendar(week[0]!, week[6]!)}>{t('addToCalendarWeek')}</button>}
       </div>
       <p class="hint">{t('calHint', { n: settings.value.urgencyDays })}</p>
       {mode.value === 'week' ? <div class="weekview">{week.map(k => <WeekDay key={k} k={k} rep={rep} />)}</div> : <Month a={a} />}

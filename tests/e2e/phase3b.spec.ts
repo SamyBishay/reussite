@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { importSample, noSideways } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -57,5 +58,40 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
   // Placed on the day, with its time.
   await expect(page.locator('ul.fixed')).toContainText('19:00');
   await expect(page.locator('ul.fixed')).toContainText('Choir, Hill House 602');
+});
+}
+
+test('Add to calendar downloads an .ics with the day’s launch point when sharing is unavailable', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
+  });
+  await importSample(page);
+  await page.getByTestId('tab-today').click();
+  await page.locator('form.launch-add input[name=time]').fill('23:30');
+  await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.locator('.launches .chip')).toContainText('23:30');
+  await page.getByTestId('tab-calendar').click();
+  const download = page.waitForEvent('download');
+  await page.getByTestId('ics-today').click();
+  const d = await download;
+  expect(d.suggestedFilename()).toMatch(/^reussite-\d{4}-\d{2}-\d{2}\.ics$/);
+  const text = readFileSync((await d.path())!, 'utf8');
+  expect(text.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
+  expect(text).toContain('SUMMARY:▶ Start');
+  expect(text).toContain('TRIGGER:-PT0M');
+  expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/);
+});
+
+for (const width of [320, 375, 430]) {
+test(`the Calendar view and Settings do not scroll sideways at ${width}px with Add to calendar`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 800 });
+  await importSample(page);
+  await page.getByTestId('tab-calendar').click();
+  await expect(page.getByTestId('ics-week')).toBeVisible();
+  await noSideways(page, 'calendar week');
+  await page.goto('/#settings');
+  await expect(page.getByTestId('calendar-settings')).toBeVisible();
+  await noSideways(page, 'settings');
 });
 }

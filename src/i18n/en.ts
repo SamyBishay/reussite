@@ -1112,6 +1112,15 @@ export const en = {
   notifyDecision: 'Decision check',
   notifyDecisionTitle: 'Decision check · {title}',
   notifyStill: 'Still on a step?',
+  // Add to calendar (brief §8)
+  icsFixed: 'Fixed time',
+  addToCalendar: 'Add to calendar',
+  addToCalendarToday: 'Today to calendar',
+  addToCalendarWeek: 'This week to calendar',
+  icsNothing: 'No launch points or fixed-time items in that period, so there is nothing to add.',
+  icsDone: 'Calendar file ready ({n} events).',
+  calendarSection: 'Calendar',
+  calendarExportHint: 'Add to calendar (in the Calendar tab) makes a file of your launch points and fixed-time items for today or the week, each with a reminder at its start, and hands it to your phone’s share sheet or downloads it. Open it with Apple Calendar or a desktop calendar app. It is a copy: later changes in Réussite do not follow.',
 };
 
 export type Strings = typeof en;

@@ -12,4 +12,13 @@ describe('settings defaults', () => {
   it('keeps unknown keys', () => {
     expect(withDefaults({ futureThing: 3 } as never)).toHaveProperty('futureThing', 3);
   });
+  it('notification settings merge: a chosen toggle stays, new types default on', () => {
+    const s = withDefaults({ notify: { launch: false } as never, notifyText: 'titles', notifyLead: 45 });
+    expect(s.notify).toEqual({ launch: false, fixed: true, checkin: true, close: true, decision: true, review: true, still: true });
+    expect(s.notifyText).toBe('titles');
+    expect(s.notifyLead).toBe(45);
+    const d = withDefaults({});
+    expect(d).toMatchObject({ notifyText: 'generic', notifyLead: 30, feedTitles: false });
+    expect(Object.values(d.notify).every(Boolean)).toBe(true);
+  });
 });

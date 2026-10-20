@@ -49,6 +49,27 @@ export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list 
   return out;
 }
 
+/**
+ * Documents received from another device that wrote an older schema, brought up to the current
+ * one with the same migrations. They are partial (only the changed fields), so fields that the
+ * migration would add as defaults are left out: a default can't tell "unset" from "reset", and
+ * readers fill defaults anyway (normDecision). Fields that are present are converted and keep
+ * their clocks. Newer or current documents pass through.
+ */
+export function upgradeEntries<E extends { c: string; d: { _v: number } }>(entries: readonly E[], list = MIGRATIONS, to = SCHEMA_VERSION): E[] {
+  return entries.map(e => {
+    const from = e.d?._v;
+    if (typeof from !== 'number' || from >= to || from < 1) return e;
+    const src = e.d as unknown as Doc;
+    const up = migrateData({ [e.c]: [src] }, from, to, list)[e.c]?.[0] as Doc | undefined;
+    if (!up) return e;
+    const d: Doc = { id: src.id, _v: to, _hlc: {} };
+    for (const k of Object.keys(src)) if (!META.has(k)) { d[k] = up[k]; if (src._hlc?.[k] !== undefined) d._hlc![k] = src._hlc[k]!; }
+    if (src._del !== undefined) d._del = src._del;
+    return { ...e, d: d as unknown as E['d'] };
+  });
+}
+
 export type MigrateResult = { status: 'current' } | { status: 'migrated'; from: number } | { status: 'newer'; found: number };
 
 /**

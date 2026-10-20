@@ -59,3 +59,14 @@ Options and pros and cons for a decision (no weights):
   ]}}
 ]}
 ```
+
+## The one-tap link
+
+This section is for Réussite itself; it is left out of what an AI is given. When the person has a drop address, the AI answers with a link instead of the fenced block: `https://<app>/drop#<space>.<key>.<mode>.<data>`, with no trailing slash after `drop`.
+
+- `space`: the space id, 22 characters of base64url. `key`: the inbox public key (X25519), 43 characters of base64url. Together they are the drop address, shown in Settings, AI. They are not secret.
+- `mode` `z`: `data` is the change-set JSON compressed with deflate-raw, then base64url (padding and the `+/` alphabet are tolerated). Mode `j`: `data` is the JSON itself, percent-encoded, for an AI that cannot compress. The fragment never reaches a server.
+- Over about 8,000 characters of fragment, the AI gives the fenced block instead. The page reads up to 64 KB and refuses a link that expands past 256 KB.
+- Opening it: where the browser holds the same space (sync on, same space id), the page opens the diff-and-tick screen at once. Elsewhere (an iPhone's Safari, whose storage is separate from the Home Screen app's) the page checks the change-set, seals it to the inbox public key (ephemeral X25519, HKDF-SHA256, AES-GCM, the space id as authenticated data), and posts it to the relay's inbox. The person's devices derive the same key pair from the recovery key, fetch the inbox at each sync, and open the diff-and-tick screen for each drop, one at a time. A drop is deleted from the relay once it has been applied or dismissed.
+- Nothing is applied without the person's ticks. The inbox accepts at most 16 KB per drop, 50 waiting drops, and keeps each 30 days.
+

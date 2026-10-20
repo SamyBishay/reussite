@@ -6,6 +6,9 @@ export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
 export type TextSize = 'S' | 'M' | 'L';
 export type Lang = 'en' | 'fr';
+export type NotifyText = 'generic' | 'titles';
+export type NotifyType = 'launch' | 'fixed' | 'checkin' | 'close' | 'decision' | 'review' | 'still';
+export const NOTIFY_TYPES: NotifyType[] = ['launch', 'fixed', 'checkin', 'close', 'decision', 'review', 'still'];
 export type AiProvider = 'none' | 'openai' | 'anthropic';
 
 export interface SuitSetting {
@@ -48,6 +51,14 @@ export interface Settings {
   /** Morning check-in and evening close reminders (notifications arrive in phase 3). */
   morningAt: string;
   eveningAt: string;
+  /** Which kinds of reminder are sent (brief §8). */
+  notify: Record<NotifyType, boolean>;
+  /** What a notification says: times and generic words, or the step's title too. */
+  notifyText: NotifyText;
+  /** Minutes before a fixed-time item to be notified; a step's own `lead` wins. */
+  notifyLead: number;
+  /** Put step titles in the calendar feed (not end-to-end encrypted). */
+  feedTitles: boolean;
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
@@ -59,6 +70,9 @@ export interface Settings {
   aiModels: Record<Exclude<AiProvider, 'none'>, { quick: string; thinking: string }>;
   /** Show the exact request before every call, not only the first of each kind. */
   aiAlwaysShow: boolean;
+  // Sync (brief §6). The key itself is device-local (db.local), never in this synced document.
+  /** The relay's address; the build's VITE_RELAY_URL unless changed. Empty = sync can't be switched on. */
+  relayUrl: string;
   [extra: string]: unknown;
 }
 
@@ -97,6 +111,10 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewTime: '18:00',
   morningAt: '08:30',
   eveningAt: '21:00',
+  notify: { launch: true, fixed: true, checkin: true, close: true, decision: true, review: true, still: true },
+  notifyText: 'generic',
+  notifyLead: 30,
+  feedTitles: false,
   sound: true,
   volume: 0.6,
   aiProvider: 'none',
@@ -106,6 +124,8 @@ export const DEFAULT_SETTINGS: Settings = {
     anthropic: { quick: 'claude-haiku-5-5', thinking: 'claude-sonnet-5-5' },
   },
   aiAlwaysShow: false,
+  // Vite fills this in at build time; the relay (no Vite) reads the settings' shape without it.
+  relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };
 
 /** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */

@@ -1,9 +1,10 @@
 // The rule-based planner (brief §5, METHOD "The plan"). Deterministic, no AI: the same list
 // and the same answers to the check-in always give the same plan.
+import { shiftTime } from './calendar';
 import { addDays, type DayKey } from './dates';
 
 export type Preset = 'normal' | 'afternoon' | 'hour' | 'rest';
-export type Role = 'carried' | 'now' | 'protect' | 'quick' | 'obligation' | 'optional';
+export type Role = 'fixed' | 'carried' | 'now' | 'protect' | 'quick' | 'obligation' | 'optional';
 
 export interface PStep {
   id: string;
@@ -18,6 +19,11 @@ export interface PStep {
 }
 export interface Obligation { id: string; lastDone: DayKey | null; at?: string | null; est: number | null }
 export interface Fixed { at: string; dur: number }
+/**
+ * A fixed-time item dated today, one-off or standing (a `template` with weekdays that match today,
+ * not yet placed). It is listed first, outside the work-step limit, and can't be swapped or cut.
+ */
+export interface Timed { id: string; at: string; lead: number; template?: boolean }
 export interface Shape { start: string; preset: Preset; fixed: Fixed[] }
 
 export interface PlanInput {
@@ -38,9 +44,18 @@ export interface PlanInput {
   laterPool: PStep[];
   /** The usual planned load in minutes, if known. */
   usualLoad: number | null;
+  /** Every fixed-time item dated today, still to do. */
+  timed?: Timed[];
 }
 
-export interface PlanItem { id: string; role: Role; at?: string; breakDown?: boolean }
+export interface PlanItem {
+  id: string;
+  role: Role;
+  at?: string;
+  /** A fixed-time item's leave-by time (at minus its lead), worked out here and never stored. */
+  leave?: string;
+  breakDown?: boolean;
+}
 export interface Launch { t: string; k: 'start' | 'restart' }
 export interface Plan {
   items: PlanItem[];
@@ -65,9 +80,11 @@ export function plan(input: PlanInput): Plan {
   const limit = shape.preset === 'afternoon' ? Math.max(1, input.maxWorkSteps - 1) : Math.max(1, input.maxWorkSteps);
   const soon = addDays(today, 2);
   const dueSoon = (s: PStep) => !!s.due && s.due <= soon;
-  const items: PlanItem[] = [];
+  // Fixed-time items first, by time: they happen whatever the plan is, so no limit applies to them.
+  const items: PlanItem[] = [...(input.timed ?? [])].sort((a, b) => a.at.localeCompare(b.at) || (a.id < b.id ? -1 : 1))
+    .map(f => ({ id: f.id, role: 'fixed' as Role, at: f.at, ...(f.lead > 0 ? { leave: shiftTime(f.at, -f.lead) } : {}) }));
+  const taken = new Set<string>(items.map(i => i.id));
   const work: PStep[] = [];
-  const taken = new Set<string>();
   const add = (s: PStep, role: Role) => { work.push(s); taken.add(s.id); items.push({ id: s.id, role }); };
   let minutes = 0;
   const fits = (s: PStep) => shape.preset !== 'hour' || work.length === 0 || minutes + (s.est ?? 0) <= HOUR_BUDGET;
@@ -88,7 +105,7 @@ export function plan(input: PlanInput): Plan {
     if (protect && !hasProtect && fits(protect)) take(protect, 'protect');
     for (const s of pool) if (s.quad === 3 && work.length < limit && !taken.has(s.id) && fits(s)) take(s, 'quick');
   }
-  for (const it of items) { const s = work.find(w => w.id === it.id)!; if (needsBreakDown(s)) it.breakDown = true; }
+  for (const it of items) { const s = work.find(w => w.id === it.id); if (s && needsBreakDown(s)) it.breakDown = true; }
 
   // One standing obligation, the one done least recently, with a time.
   const ob = [...input.obligations].sort((a, b) => (a.lastDone ?? '') < (b.lastDone ?? '') ? -1 : (a.lastDone ?? '') > (b.lastDone ?? '') ? 1 : 0)[0];
@@ -114,7 +131,7 @@ export function plan(input: PlanInput): Plan {
 /** Rules a plan must keep (used to check plans that come from elsewhere, such as an AI). */
 export function checkPlan(p: Pick<Plan, 'items'>, input: Pick<PlanInput, 'maxWorkSteps' | 'candidates' | 'carried'> & { obligations?: Obligation[] }): string[] {
   const errs: string[] = [];
-  const work = p.items.filter(i => i.role !== 'obligation' && i.role !== 'optional');
+  const work = p.items.filter(i => i.role !== 'obligation' && i.role !== 'optional' && i.role !== 'fixed');
   // Carried steps count by id, whatever role they are given, so relabelling can't stretch the limit.
   const carried = work.filter(i => i.role === 'carried' || input.carried.some(s => s.id === i.id)).length;
   if (work.length > Math.max(input.maxWorkSteps, carried + 1)) errs.push('too many work steps');
@@ -133,7 +150,7 @@ export function totalOf(items: PlanItem[], input: Pick<PlanInput, 'carried' | 'c
   const steps = new Map([...input.carried, ...input.candidates, ...input.optional, ...input.laterPool].map(s => [s.id, s]));
   const t = { est: input.planningMin, lo: input.planningMin, hi: input.planningMin };
   for (const it of items) {
-    if (it.role === 'optional') continue;
+    if (it.role === 'optional' || it.role === 'fixed') continue;
     if (it.role === 'obligation') { const e = input.obligations.find(o => o.id === it.id)?.est ?? 0; t.est += e; t.lo += e; t.hi += e; continue; }
     const s = steps.get(it.id);
     if (!s) continue;

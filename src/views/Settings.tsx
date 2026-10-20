@@ -8,15 +8,20 @@ import changelog from '../../CHANGELOG.md?raw';
 import { t, lang, type Key } from '../i18n';
 import { PRESETS, contrast, AA } from '../app/theme';
 import { SUIT_ORDER, type Settings as S, type ThemeMode, type Celebrations, type TextSize } from '../data/settings';
-import { makeBackup, parseBackup, restoreBackup, saveFile } from '../data/backup';
+import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
+import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
+import { ConnectorSettings } from '../app/ConnectorSettings';
+import { CalendarSettings } from '../app/CalendarSettings';
+import { NotifySettings } from '../app/NotifySettings';
+import { markFull, readBackupFile, syncOn } from '../app/sync';
 
 const set = (p: Partial<S>) => void saveSettings(p);
 const CARD_LIGHT = '#FFFFFF';
-const isoToday = () => new Date().toISOString().slice(0, 10);
 
 function Seg<V extends string>({ value, options, onChange, label }: { value: V; options: [V, Key][]; onChange: (v: V) => void; label: string }) {
   return (
@@ -259,6 +264,7 @@ function ImportSheet() {
     if (!state) return;
     setBusy(true);
     await writeImport(db, state.data);
+    void markFull();
     void navigator.storage?.persist?.().catch(() => undefined);
     closeSheet();
     toast(t('importDone'));
@@ -269,7 +275,7 @@ function ImportSheet() {
       <h3>{t('importTitle')}</h3>
       <p class="hint">{t('importHint')}</p>
       <div class="actions"><label class="btn">{t('chooseFile')}<input type="file" accept="application/json,.json" hidden onChange={choose} data-testid="import-file" /></label></div>
-      {err && <p class="err" style="margin-top:12px">{err}</p>}
+      {err && <><p class="err" style="margin-top:12px">{err}</p><div class="actions"><DiagnosticsButton /></div></>}
       {s && (
         <>
           <div class="counts" data-testid="import-summary">
@@ -291,31 +297,33 @@ function Data() {
   useEffect(() => { navigator.storage?.persisted?.().then(setPersisted, () => setPersisted(null)); }, []);
   // Asked on a tap, never on load: Firefox shows a permission prompt for it.
   const keep = () => navigator.storage.persist().then(setPersisted, () => undefined);
-  const exportBackup = async () => {
-    const b = await makeBackup(db);
-    await saveFile('reussite-backup-' + isoToday() + '.json', JSON.stringify(b));
-    toast(t('backupSaved'));
-  };
+
   const restore = async (e: Event) => {
     const f = (e.target as HTMLInputElement).files?.[0];
     (e.target as HTMLInputElement).value = '';
     if (!f) return;
     try {
-      const file = parseBackup(JSON.parse(await f.text()));
+      const file = parseBackup(await readBackupFile(JSON.parse(await f.text())));
       if (!confirm(t('restoreConfirm'))) return;
       await restoreBackup(db, file);
+      void markFull();
       toast(t('restored'));
-    } catch (x) { toast(t('importError', { msg: (x as Error).message })); }
+    } catch (x) {
+      const m = (x as Error).message;
+      toast(m === 'needs-key' ? t('backupNeedsKey') : /cannot decrypt/.test(m) ? t('backupWrongKey') : t('importError', { msg: m }));
+    }
   };
   return (
     <section class="set" data-testid="data">
       <h2>{t('data')}</h2>
       <div class="actions" style="margin-top:8px">
-        <button class="btn" type="button" onClick={exportBackup}>{t('exportBackup')}</button>
+        <button class="btn" type="button" onClick={() => void saveBackupFile()} data-testid="export-backup">{t('exportBackup')}</button>
+        {syncOn.value && <button class="btn" type="button" onClick={() => void saveBackupFile(true)} data-testid="export-encrypted">{t('backupEncrypted')}</button>}
         <label class="btn">{t('importBackup')}<input type="file" accept="application/json,.json" hidden onChange={restore} /></label>
         <button class="btn" type="button" onClick={() => openSheet(<ImportSheet key={'imp' + Date.now()} />)} data-testid="open-import">{t('importV1')}</button>
       </div>
-      {persisted !== null && <p class="hint" style="margin-top:10px">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
+      {syncOn.value && <p class="hint" style="margin-top:10px">{t('backupEncryptedHint')}</p>}
+      {persisted !== null && <p class="hint" style="margin-top:10px" data-testid="storage">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
       {persisted === false && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
     </section>
   );
@@ -334,12 +342,22 @@ export function Settings() {
       <Appearance />
       <Method />
       <AiSettings />
+      <SyncSettings />
+      <ConnectorSettings />
+      <NotifySettings />
+      <CalendarSettings />
       <Data />
       <section class="set" data-testid="about">
         <h2>{t('about')}</h2>
         <p class="hint">{t('version', { v: __APP_VERSION__ })}</p>
+        <div class="actions"><DiagnosticsButton ghost={false} /></div>
         {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
         <p class="hint">{t('notTherapy')}</p>
+        <div data-testid="privacy"><h3 class="privacy-h">{t('privacyTitle')}</h3>
+          <p>{t('privacyRelay')}</p>
+          <p>{t('privacyAi')}</p>
+          <p>{t('privacyLoss')}</p>
+        </div>
         <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
       </section>
     </div>

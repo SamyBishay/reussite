@@ -18,6 +18,7 @@ import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
 import type { Launch, Task } from '../data/schema';
 import { CommandBox } from '../ai/ui';
+import { SyncCards } from '../app/SyncSettings';
 
 export { openClose };
 
@@ -260,6 +261,7 @@ export function Today() {
     <div>
       <Navigator k={k} />
       <StayNotice />
+      <SyncCards />
       {checks.map(dc => (
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}

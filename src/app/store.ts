@@ -7,10 +7,10 @@ import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay } from '../data/schema';
 import { normDecision } from '../data/normalize';
-import { stayOn } from '../domain/places';
+import { whereNow } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
-import { dayKey } from '../domain/dates';
+import { writeMerged, type Write } from '../data/syncstore';
 import { lang, t } from '../i18n';
 
 export type WithId<T> = T & { id: string };
@@ -43,15 +43,8 @@ export const clockNow = now;
  */
 const where = computed(() => {
   void now.value;
-  const s = settings.value, at = new Date();
-  const zone = (id: string) => places.value.get(id)?.timeZone;
-  let k = dayKey(at, s.dayStart, zone(s.here));
-  let stay = stayOn(stays.value.values(), k);
-  if (stay) {
-    k = dayKey(at, s.dayStart, zone(stay.placeId));
-    stay = stayOn(stays.value.values(), k) ?? stay;
-  }
-  return { today: k, here: stay?.placeId ?? s.here, stay: stay ?? null };
+  const s = settings.value;
+  return whereNow(new Date(), s, id => places.value.get(id)?.timeZone, stays.value.values());
 });
 export const today = computed(() => where.value.today);
 /** The place the person is in now: the planner and reminders follow it. */
@@ -121,12 +114,20 @@ function guard(): boolean {
   return true;
 }
 
+const afterWrites: (() => void)[] = [];
+/** Called after every local write (not after merged ones): sync uses it to push soon, notifications to refresh the schedule. */
+export const onLocalWrite = (f: () => void) => { afterWrites.push(f); };
+const afterWrite = () => { for (const f of afterWrites) f(); };
+/** This device's clock, for sync. */
+export const getClock = () => clock;
+
 export const newId = (p: string) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 /** Create a document; returns its id. Every field gets the same fresh clock. */
 export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
   if (!guard()) return id;
   await db.table_(c).put(create(id, fields, SCHEMA_VERSION, tick(clock)) as never);
+  afterWrite();
   return id;
 }
 
@@ -138,6 +139,7 @@ export async function update<T extends object>(c: Collection, id: string, change
       if (!cur) throw new Error('missing ' + c + '/' + id);
       await db.table_(c).put(patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION) as never);
     });
+    afterWrite();
   } catch (e) {
     console.error(e);
     toast(t('saveFailed'));
@@ -155,7 +157,17 @@ export async function upsert<T extends object>(c: Collection, id: string, fields
 export async function removeDoc(c: Collection, id: string): Promise<void> {
   if (!guard()) return;
   const cur = await db.table_(c).get(id);
-  if (cur) await db.table_(c).put(remove(cur, clock) as never);
+  if (cur) { await db.table_(c).put(remove(cur, clock) as never); afterWrite(); }
+}
+
+/**
+ * Documents received from another device, already merged and carrying their own clocks: put
+ * as they are (sync's only way in, invariant 4). Throws in read-only mode, so a sync round
+ * stops without marking what it pulled as applied.
+ */
+export async function putMerged(writes: Write[]): Promise<void> {
+  if (readOnly.value) throw new Error('read-only');
+  await writeMerged(db, writes);
 }
 
 export const saveSettings = (changes: Partial<Settings>) => upsert('meta', 'settings', changes);

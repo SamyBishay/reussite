@@ -10,6 +10,9 @@ import { OverlayHost } from './sheet';
 import { openPile, openPause, placeIds, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { addPlace, startTask, patchTask } from './actions';
 import { Clock } from './Clock';
+import { startSync } from './sync';
+import { startFeed } from './feed';
+import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
@@ -23,6 +26,7 @@ import { openDecision } from '../flows/decision';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
+import { DropHost, InboxHost } from './Drop';
 
 type View = 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings';
 const VIEWS: View[] = ['today', 'matrix', 'projects', 'calendar', 'log', 'settings'];
@@ -191,7 +195,7 @@ function Toast() {
 }
 
 export function App() {
-  useEffect(() => { void start(); }, []);
+  useEffect(() => { void start().then(() => { void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
     window.addEventListener('hashchange', onHash);
@@ -217,6 +221,8 @@ export function App() {
       <SheetHost />
       <OverlayHost />
       <PreviewHost />
+      <InboxHost />
+      <DropHost />
       <Moment />
       <Toast />
     </>

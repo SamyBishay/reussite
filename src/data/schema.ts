@@ -53,6 +53,10 @@ export interface Task {
   /** A fixed time (HH:MM) and duration (minutes): appointments, an obligation placed on a day. */
   at?: string | null;
   dur?: number | null;
+  /** Minutes before `at` to leave, and to be notified; null = the person's default (`notifyLead`). */
+  lead?: number | null;
+  /** A standing obligation's days (ISO, 1 = Monday … 7 = Sunday): with `at` it is placed on those days by itself. */
+  weekdays?: number[] | null;
   /** A fixed commitment typed at the morning check-in: on the day, not a work step. */
   fixed?: boolean;
   /** "Before I leave": due a number of days before the end of a stay. */

@@ -143,7 +143,7 @@ a.btn{text-decoration:none}
 /* ---------- forms ---------- */
 .field{display:grid;gap:6px;margin-top:14px}
 .field>span{font-size:13px;font-weight:600;color:var(--ink-2)}
-input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;min-height:44px}
+input[type=text],input[type=url],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;min-height:44px}
 textarea{min-height:84px;resize:vertical}
 .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .toggles{display:flex;flex-wrap:wrap;gap:8px}
@@ -398,6 +398,8 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 @media (max-width:480px){.planlist li{grid-template-columns:minmax(0,1fr) auto}.planlist li .tag{grid-column:1 / -1;justify-self:start}}
 .planlist .role-plan{opacity:.75;border-style:dashed}
 .planlist .role-optional{border-style:dashed}
+.planlist .role-fixed{border-color:var(--accent)}
+.planlist .leave{display:block;font-size:13px;color:var(--ink-2);margin-top:2px}
 .planmeta{margin-top:10px;font-size:14px;color:var(--ink-2)}
 .chips-pick.small{gap:6px;margin-top:6px}
 .chips-pick.small button{min-height:36px;padding:5px 11px;font-size:13.5px}
@@ -458,6 +460,7 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 .addplace{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}
 .stayrow{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:6px;margin-top:6px;align-items:center}
 @media (max-width:560px){.stayrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stayrow select{grid-column:1 / -1}}
+.diag{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:12px/1.5 var(--mono,monospace);background:var(--card);border-radius:10px;padding:10px;margin:8px 0 12px;max-height:46vh;overflow:auto}
 .changelog{white-space:pre-wrap;font:13px/1.5 var(--sans);color:var(--ink-2);margin:8px 0 0;overflow-wrap:anywhere}
 input[type=range]{width:100%;accent-color:var(--accent)}
 
@@ -541,3 +544,25 @@ main>.banner{margin-top:12px}
 .summary-form .minifound{color:var(--ink)}
 .row2>*,.row-inline>*,.filters>*,.planlist>*,.stayrow>*,.addplace>*,.fixed-add>*,.stepform>*{min-width:0}
 .frac .btn{font-family:var(--sans)}
+
+/* Sync & devices */
+.mono{font-family:var(--mono)}
+.keygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.2ch,1fr));gap:6px 10px;margin:12px 0;font:600 17px/1.3 var(--mono);letter-spacing:.04em;overflow-wrap:anywhere}
+.keygrid span{min-width:0}
+.qrbox{display:grid;place-items:center;margin:8px 0}
+.qr{width:min(100%,260px);height:auto;aspect-ratio:1;border-radius:10px;border:1px solid var(--line)}
+.warnline{margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);border:1px solid var(--warn);font-size:14.5px}
+.scanner video{width:100%;max-height:50vh;border-radius:12px;background:#000;object-fit:cover}
+.devlist{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.devlist li{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;overflow-wrap:anywhere}
+textarea.mono{letter-spacing:.04em}
+
+/* Connector and the one-tap link */
+.paircode{display:flex;flex-wrap:wrap;gap:4px 20px;margin:2px 0 0;font:700 clamp(26px,9vw,38px)/1.15 var(--mono);letter-spacing:.1em}
+.paircode span{min-width:0}
+.urlbox{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--ground);font-size:14px;overflow-wrap:anywhere;word-break:break-all;user-select:all}
+.steps-list{margin:10px 0 0;padding-left:22px;display:grid;gap:4px}
+.privacy-h{margin:14px 0 4px;font:700 16px/1.3 var(--sans)}
+.drop{position:fixed;inset:0;z-index:50;background:var(--ground);overflow-y:auto;overflow-x:hidden;display:grid;align-content:center;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.drop>div{width:min(460px,100%);display:grid;gap:12px}
+.drop h1{margin:0;font:700 24px/1.25 var(--serif)}

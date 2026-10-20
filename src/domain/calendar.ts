@@ -22,3 +22,22 @@ export function minutesBetween(from: string, to: string): number {
 
 /** "Still on …?": twice the personal estimate, at least 45 minutes (brief §5, timer). */
 export const stillOnAfter = (personalEst: number | null | undefined) => Math.max(45, 2 * (personalEst ?? 0));
+
+/** An HH:MM moved by some minutes, staying within the day (wraps past midnight). */
+export function shiftTime(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const t = (((h ?? 0) * 60 + (m ?? 0) + Math.round(minutes)) % 1440 + 1440) % 1440;
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+}
+
+/**
+ * A fixed-time item as a line: the time goes after the first part of the title
+ * ("Choir, Hill House 602" at 19:00 → "Choir 19:00, Hill House 602"), or at its end.
+ * A title that already carries the time is left alone.
+ */
+export function withTime(title: string, at: string): string {
+  const s = title.trim();
+  if (!at || s.includes(at)) return s;
+  const i = s.indexOf(',');
+  return i < 0 ? s + ' ' + at : s.slice(0, i) + ' ' + at + s.slice(i);
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readChangeSet, type ChangeSet } from './changeset';
-import { applyPlanned, createsNote, isLowRisk, planChanges, type Snapshot, type Writer } from './apply';
+import { applyPlanned, createsNote, isLowRisk, pinLines, planChanges, type Snapshot, type Writer } from './apply';
 import type { MemoryNote, Task } from '../data/schema';
 
 const line = (id: string, text: string, by: 'me' | 'ai' = 'me') => ({ id, text, at: '2026-10-01T00:00:00.000Z', by });
@@ -23,6 +23,7 @@ function memWriter(s: Snapshot) {
     createTask: async () => 'x', drop: async () => undefined, finish: async () => undefined, day: async () => undefined, stay: async () => 'x',
     create: async (c, f) => { const id = 'new' + docs.size; if (c === 'memory') docs.set(id, { ...f }); return id; },
     update: async (c, id, p) => { if (c === 'memory') docs.set(id, { ...docs.get(id), ...p }); },
+    read: async (c, id) => (c === 'memory' ? docs.get(id) : undefined),
   };
   return { w, docs };
 }
@@ -131,10 +132,54 @@ describe('memory operations in the contract', () => {
 
   it('never touches a private note, nor one that two notes both match', () => {
     expect(plan([{ op: 'memory.add', note: 'Secret', text: 'a' }]).items).toHaveLength(0);
-    expect(plan([{ op: 'memory.add', note: 'Secret', kind: 'person', text: 'a' }]).items).toHaveLength(0);
     expect(plan([{ op: 'memory.remove', note: 'n3', line: 1 }]).items).toHaveLength(0);
+    expect(plan([{ op: 'memory.note', note: 'n3', set: { kind: 'topic' } }]).items).toHaveLength(0);
     const twice = snap([note('a', { name: 'Sam', aliases: [] }), note('b', { name: 'Other', aliases: ['sam'] })]);
     expect(plan([{ op: 'memory.add', note: 'Sam', text: 'x' }], twice).items).toHaveLength(0);
+  });
+
+  it('acts as if a private note were not there: a new note may take its name, and so may a rename', () => {
+    // the same answers as for a name no note has, so an AI cannot tell a private note exists
+    const p = plan([{ op: 'memory.add', note: 'Secret', kind: 'person', text: 'a' }]);
+    expect(p.items).toHaveLength(1);
+    expect(createsNote(p.items[0]!)).toBe(true);
+    expect(p.items[0]!.diffs).toEqual(plan([{ op: 'memory.add', note: 'Nobody', kind: 'person', text: 'a' }]).items[0]!.diffs);
+    expect(plan([{ op: 'memory.note', note: 'Ibrahim', set: { name: 'Secret' } }]).items).toHaveLength(1);
+    // with a private and an open note of one name, the open one is meant
+    const two = snap([note('a', { name: 'Sam', aliases: [] }), note('b', { name: 'Sam', aliases: [], private: true })]);
+    expect(plan([{ op: 'memory.add', note: 'Sam', text: 'x' }], two).items[0]!.ops[0]).toMatchObject({ t: 'update', id: 'a' });
+  });
+
+  it('writes line changes on the note as it is when applied, by line id', async () => {
+    const s = snap();
+    const p = plan([
+      { op: 'memory.add', note: 'Ibrahim', text: 'Plays oud' },
+      { op: 'memory.edit', note: 'Ibrahim', line: 2, text: 'Works days now' },
+    ], s);
+    const { w, docs } = memWriter(s);
+    // while the review was open: another device forgot "Likes tea" and added a line
+    docs.set('n1', { ...docs.get('n1')!, lines: [line('l2', 'Works nights'), line('l3', 'Has a cat'), line('l9', 'Has a new job')] });
+    await applyPlanned(p, () => true, w);
+    expect((docs.get('n1')!.lines as { id: string; text: string }[]).map(l => l.id + ' ' + l.text)).toEqual(['l2 Works days now', 'l3 Has a cat', 'l9 Has a new job', expect.stringMatching(/ Plays oud$/)]);
+    // a note forgotten since is left gone
+    const q = plan([{ op: 'memory.add', note: 'Ibrahim', text: 'Plays oud' }], s);
+    const g = memWriter(s);
+    g.docs.delete('n1');
+    expect(await applyPlanned(q, () => true, g.w)).toBe(0);
+    expect(g.docs.has('n1')).toBe(false);
+  });
+
+  it('pins a line named by number or text to its id, for a change-set applied later', () => {
+    const pinned = pinLines(cs([
+      { op: 'memory.edit', note: 'Ibra', line: 2, text: 'Works days now' },
+      { op: 'memory.remove', note: 'Ibrahim', line: 'Has a cat' },
+      { op: 'memory.remove', note: 'Ibrahim', line: 9 },
+      { op: 'memory.add', note: 'Ibrahim', text: 'x' },
+    ]), snap());
+    expect(pinned.changes).toMatchObject([{ note: 'n1', line: 'l2' }, { note: 'n1', line: 'l3' }, { note: 'Ibrahim', line: 9 }, { note: 'Ibrahim' }]);
+    // after "Likes tea" is forgotten, line 2 would be "Has a cat": the pinned change still edits "Works nights"
+    const later = snap([note('n1', { lines: [line('l2', 'Works nights'), line('l3', 'Has a cat')] })]);
+    expect(planChanges(pinned, later, gen).items[0]!.diffs[0]).toEqual({ field: 'line', before: 'Works nights', after: 'Works days now' });
   });
 
   it('renames, re-aliases and re-kinds a note, but not onto another note’s name', () => {

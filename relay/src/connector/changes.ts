@@ -5,7 +5,7 @@
 //
 // Nothing is written unless the whole change-set is valid, every name is found once, and (for
 // more than one low-risk change) the person said yes.
-import { isLowRisk, planChanges, applyPlanned, type Plan } from '../../../src/ai/apply';
+import { isLowRisk, planChanges, applyPlanned, pinLines, type Plan } from '../../../src/ai/apply';
 import { ChangeSchema, NOTE_MAX, type Change, type ChangeSet } from '../../../src/ai/changeset';
 import { undoWrites } from '../../../src/ai/undo';
 import { b64uDecode } from '../../../src/sync/bytes';
@@ -79,7 +79,7 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM connector_pending WHERE space = ?1 AND expires <= ?2').bind(c.s.space, now),
     c.env.DB.prepare('INSERT INTO connector_pending (id, space, blob, expires) VALUES (?1, ?2, ?3, ?4)')
-      .bind(id, c.s.space, await sealToText(c.s.keys, { cs, items: plan.items.length }), now + PENDING_MS),
+      .bind(id, c.s.space, await sealToText(c.s.keys, { cs: pinLines(cs, c.v.snapshot()), items: plan.items.length }), now + PENDING_MS),
   ]);
   return {
     text: [

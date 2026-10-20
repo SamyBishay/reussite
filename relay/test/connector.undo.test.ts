@@ -246,8 +246,25 @@ describe('memory changes', () => {
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Secret', text: 'x' }] });
     expect(r.isError).toBe(true);
     expect(r.text).toContain('No memory note');
-    const made = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'n2', kind: 'person', text: 'x' }] });
-    expect(made.text).toContain('Nothing to change');
+    // with a kind it is a new note, as for any name no note has: the answer does not tell a private note exists
+    const made = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Secret', kind: 'person', text: 'x' }] });
+    const fresh = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Nobody', kind: 'person', text: 'x' }] });
+    const plain = (x: string) => x.replace(/"confirm": "c\w+"/, '');
+    expect(plain(made.text).replace('Secret', 'Nobody')).toBe(plain(fresh.text));
+    expect(made.text).toContain('Remember, in a new note');
+  });
+
+  it('a confirmed line change lands on the line that was shown, even if the lines moved since', async () => {
+    const { app, tok } = await withNotes();
+    const r = await tool(tok, 'apply_changes', { changes: [{ op: 'memory.edit', note: 'Ibrahim', line: 2, text: 'Works days now' }, { op: 'memory.add', note: 'Ibrahim', text: 'Plays oud' }] });
+    expect(r.text).toContain('Works nights');
+    // before the yes, the person forgets line 1 and adds one on their phone
+    app.device.edit('memory', 'n1', { lines: [{ id: 'l2', text: 'Works nights', at: '', by: 'me' }, { id: 'l3', text: 'Has a new job', at: '', by: 'me' }] });
+    await app.sync();
+    const done = await tool(tok, 'apply_changes', { confirm: /"confirm": "(c\w+)"/.exec(r.text)![1]! });
+    expect(done.isError).toBe(false);
+    await app.sync();
+    expect(lines(app, 'n1').map(l => l.text)).toEqual(['Works days now', 'Has a new job', 'Plays oud']);
   });
 
   it('builds the notes only when a change reads them', () => {

@@ -60,6 +60,7 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
       if (Array.isArray(plan) && plan.includes(id)) dayPatch(today, { plan: plan.filter((x: string) => x !== id) });
     },
     async day(k, patch) { dayPatch(k, patch); },
+    async read(c, id) { return e.get(c, id); },
     async stay(id, s: Stay) {
       const sid = id ?? create('stays', s);
       if (id) e.update('stays', id, s as unknown as Record<string, unknown>);

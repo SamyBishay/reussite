@@ -68,6 +68,41 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 export const createsNote = (it: Planned): boolean => it.target === 'memory' && it.ops[0]?.t === 'create';
 const validZone = (z: string | undefined) => { if (!z) return false; try { new Intl.DateTimeFormat('en', { timeZone: z }); return true; } catch { return false; } };
 
+/** The notes a change-set may name: never a private one (an AI is never told one exists, so planning acts as if it didn't). */
+const openNotes = (m: Map<string, W<MemoryNote>>): W<MemoryNote>[] => [...m.values()].filter(n => !n.private);
+/** A note by id, then by name or alias; 'many' when several match. */
+function findOpenNote(notes: W<MemoryNote>[], v: string): W<MemoryNote> | 'many' | undefined {
+  const byId = notes.find(n => n.id === v);
+  if (byId) return byId;
+  const want = norm(v);
+  const hits = want ? notes.filter(n => norm(n.name) === want || n.aliases.some(a => norm(a) === want)) : [];
+  return hits.length > 1 ? 'many' : hits[0];
+}
+/** A line by its number (from 1, as shown to the AI), its id, or its exact text. */
+function lineOf(n: MemoryNote, want: number | string): MemoryLine | undefined {
+  if (typeof want === 'number') return n.lines[want - 1];
+  const text = norm(want.replace(/^\d+\.\s+/, ''));
+  return n.lines.find(l => l.id === want) ?? n.lines.find(l => norm(l.text) === text) ?? (/^\d+$/.test(want) ? n.lines[Number(want) - 1] : undefined);
+}
+
+/**
+ * The change-set with each memory line named by its id instead of its number or text, as `s` has them:
+ * for a change-set kept to be applied later (the connector's confirmation), so a line that moved up
+ * since is not mistaken for another. A line not found is left as it was (planning skips it).
+ */
+export function pinLines(cs: ChangeSet, s: Pick<Snapshot, 'memory'>): ChangeSet {
+  const notes = openNotes(s.memory);
+  return {
+    ...cs,
+    changes: cs.changes.map(c => {
+      if (c.op !== 'memory.edit' && c.op !== 'memory.remove') return c;
+      const hit = findOpenNote(notes, c.note);
+      const ln = hit && hit !== 'many' ? lineOf(hit, c.line) : undefined;
+      return ln ? { ...c, note: hit !== 'many' && hit ? hit.id : c.note, line: ln.id } : c;
+    }),
+  };
+}
+
 export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const refs = new Map<string, { target: string; title: string }>();
   for (const c of cs.changes) {
@@ -84,18 +119,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
   /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
   const madeNotes = new Map<string, { ref: string; name: string; kind: MemoryNote['kind'] }>();
-  const findNote = (v: string): W<MemoryNote> | 'many' | undefined => {
-    const byId = s.memory.get(v);
-    if (byId) return byId;
-    const want = norm(v);
-    const hits = want ? [...s.memory.values()].filter(n => norm(n.name) === want || n.aliases.some(a => norm(a) === want)) : [];
-    return hits.length > 1 ? 'many' : hits[0];
-  };
-  const lineOf = (n: MemoryNote, want: number | string): MemoryLine | undefined => {
-    if (typeof want === 'number') return n.lines[want - 1];
-    const text = norm(want.replace(/^\d+\.\s+/, ''));
-    return n.lines.find(l => l.id === want) ?? n.lines.find(l => norm(l.text) === text) ?? (/^\d+$/.test(want) ? n.lines[Number(want) - 1] : undefined);
-  };
+  const notes = openNotes(s.memory);
+  const findNote = (v: string) => findOpenNote(notes, v);
   const items: Planned[] = [];
   let skipped = cs.bad;
   const skippedAt: number[] = [];
@@ -343,10 +368,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   return { items, skipped, skippedAt, refTitles };
 
   /**
-   * A change to memory (brief §10). A note is found by id, then by name or alias; one that is private,
-   * or that several notes match, is left alone (private notes are never sent to an AI, so an AI has no
-   * business writing to one). Lines an AI writes are marked `by: 'ai'`. A line is named by its number
-   * (from 1, as shown to the AI), its id, or its exact text.
+   * A change to memory (brief §10). A note is found by id, then by name or alias; one that several notes
+   * match is left alone. Private notes are not looked at at all (they are never sent to an AI, so an AI
+   * has no business writing to one, and planning must not tell it one exists): a new note may take a
+   * private note's name. Lines an AI writes are marked `by: 'ai'`. A line is named by its number (from
+   * 1, as shown to the AI), its id, or its exact text; once planned, the write names it by id.
    */
   function memoryChange(c: Extract<Change, { op: `memory.${string}` }>): Planned | undefined {
     const now = gen.now();
@@ -357,7 +383,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       const line: MemoryLine = { id: gen.id('l'), text: c.text, at: now, by: 'ai' };
       const diff: Diff = { field: 'line', before: undefined, after: c.text };
       if (hit) {
-        if (hit.private || hit.lines.some(l => norm(l.text) === norm(c.text))) return undefined;
+        if (hit.lines.some(l => norm(l.text) === norm(c.text))) return undefined;
         return item(hit, [diff], { t: 'update', c: 'memory', id: hit.id, patch: { lines: [...hit.lines, line], updated: now }, delta: { lines: { add: line } } });
       }
       const made = madeNotes.get(norm(c.note));
@@ -371,11 +397,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       const fields: MemoryNote = { kind: c.kind, name: c.note, aliases: [], lines: [line], private: false, updated: now };
       return item(fields, [{ field: 'kind', before: undefined, after: c.kind }, diff], { t: 'create', c: 'memory', ref, fields: fields as unknown as Record<string, unknown> });
     }
-    if (!hit || hit.private) return undefined;
+    if (!hit) return undefined;
     if (c.op === 'memory.note') {
       const patch: Partial<MemoryNote> = {};
       const diffs: Diff[] = [];
-      const others = [...s.memory.values()].filter(n => n.id !== hit.id);
+      const others = notes.filter(n => n.id !== hit.id);
       const taken = (name: string) => others.some(n => norm(n.name) === norm(name) || n.aliases.some(a => norm(a) === norm(name)));
       const name = c.set.name ?? hit.name;
       if (name !== hit.name && !taken(name)) { patch.name = name; diffs.push({ field: 'name', before: hit.name, after: name }); }
@@ -463,6 +489,8 @@ export interface Writer {
   drop(id: string): Promise<void>;
   day(k: string, patch: Partial<Day>): Promise<void>;
   stay(id: string | null, s: Stay): Promise<string>;
+  /** The document as stored now (undefined for none or a tombstone): a note's line changes apply to its lines at the time of writing. */
+  read?(c: Collection, id: string): Promise<Record<string, unknown> | undefined>;
 }
 
 /** Write the ticked changes, in order, resolving refs to the ids just created. Returns how many were applied. */
@@ -504,7 +532,14 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
             break;
           }
           let p = subst(op.patch) as Record<string, unknown>;
-          if (prev && op.delta) p = mergeDelta(prev, p, subst(op.delta) as Delta);
+          const delta = op.delta ? (subst(op.delta) as Delta) : undefined;
+          if (delta?.lines && w.read) {
+            // Lines are changed as a delta on what the note holds now, by line id, not on the copy the plan was made
+            // from: a line added or forgotten since (here or on another device) stays so. A note gone since is left gone.
+            const base = prev ?? (await w.read(op.c, id));
+            if (!base) continue items;
+            p = mergeDelta(base, p, delta);
+          } else if (prev && delta) p = mergeDelta(prev, p, delta);
           await w.update(op.c, id, p);
           wrote.set(key, { ...prev, ...p });
           break;

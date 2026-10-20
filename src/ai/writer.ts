@@ -1,7 +1,8 @@
 // The app's Writer for change-sets: every write goes through store.ts and actions.ts.
-import { createDoc, update, tasks, today, places, projects, days, decisions, stays, memory } from '../app/store';
+import { db, createDoc, update, tasks, today, places, projects, days, decisions, stays, memory } from '../app/store';
 import { createTask, newTaskDoc, finishTask, dropTask, dayPatch, saveStay } from '../app/actions';
 import type { Snapshot, Writer } from './apply';
+import { fieldsOf, type Stored } from '../data/doc';
 
 export const appWriter: Writer = {
   createTask: f => { const { title, suit, project, ...extra } = f; return createTask(newTaskDoc(title, suit ?? null, project ?? null, extra)); },
@@ -11,6 +12,7 @@ export const appWriter: Writer = {
   drop: id => dropTask(id),
   day: (k, patch) => dayPatch(k, patch).then(() => undefined),
   stay: (id, s) => saveStay(id, s),
+  read: async (c, id) => { const d = await db.table_(c).get(id); return d && !d._del ? fieldsOf(d as Stored<Record<string, unknown>>) : undefined; },
 };
 
 export const snapshot = (): Snapshot => ({

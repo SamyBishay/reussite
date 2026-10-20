@@ -12,6 +12,11 @@ export const pairAllLimit = (env: Env) => Number(env.RATE_PAIR_ALL_PER_MIN) || 6
 export const inboxIpLimit = (env: Env) => Number(env.RATE_INBOX_IP_PER_MIN) || 10;
 export const inboxSpaceLimit = (env: Env) => Number(env.RATE_INBOX_SPACE_PER_MIN) || 20;
 
+export const pushNewIpLimit = (env: Env) => Number(env.RATE_PUSH_NEW_IP_PER_MIN) || 5;
+export const pushUpdateLimit = (env: Env) => Number(env.RATE_PUSH_UPDATE_PER_MIN) || 10;
+export const pushScheduleLimit = (env: Env) => Number(env.RATE_PUSH_SCHEDULE_PER_MIN) || 10;
+export const pushSendLimit = (env: Env) => Number(env.RATE_PUSH_SEND_PER_MIN) || 3;
+
 export const clientIp = (req: Request): string => req.headers.get('CF-Connecting-IP') ?? 'local';
 
 /** Count one event under `key` for this minute; false once it is over `limit`. */

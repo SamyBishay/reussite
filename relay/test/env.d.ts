@@ -10,6 +10,14 @@ declare global {
       ALLOWED_ORIGINS: string;
       RELAY_URL: string;
       CONNECTOR_WRAP_KEY: string;
+      VAPID_PUBLIC_KEY: string;
+      VAPID_PRIVATE_KEY?: string;
+      VAPID_SUBJECT: string;
+      PUSH_HOSTS: string;
+      RATE_PUSH_NEW_IP_PER_MIN?: string;
+      RATE_PUSH_UPDATE_PER_MIN?: string;
+      RATE_PUSH_SCHEDULE_PER_MIN?: string;
+      RATE_PUSH_SEND_PER_MIN?: string;
       RATE_SPACE_PER_MIN?: string;
       RATE_IP_PER_MIN?: string;
       RATE_PAIR_IP_PER_MIN?: string;

@@ -1,6 +1,9 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createDoc, db, exchanges, sessions, start, tasks, update } from './store';
+import { createDoc, db, exchanges, sessions, settings, start, tasks, update } from './store';
+import { withDefaults } from '../data/settings';
+import { setKey } from '../ai/ask';
+import { setLocal } from '../data/db';
 import { sheet, closeSheet } from './sheet';
 import { choose, homeCard, openExchange, pruneExchanges, receiptLine, run, saveDuration, submitHome, undoExchange, canUndo, OPEN_MS } from './home';
 import { newTaskFields } from '../domain/effects';
@@ -228,5 +231,68 @@ describe('pruning', () => {
     const gone = (await db.table_('exchanges').get(a))!;
     expect(gone._del).toBeTruthy();
     expect(gone).toMatchObject({ text: '', turns: [], changes: [], undo: {}, undone: [] });
+  });
+});
+
+describe('a line the parser can’t read, with an AI set up', () => {
+  const reply = (cs: object) => vi.fn(async () => new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(cs) }] }), { status: 200 }));
+  const bodyOf = (f: ReturnType<typeof reply>, i = 0) => JSON.parse(String((f.mock.calls[i] as unknown as [string, RequestInit])[1].body));
+  beforeAll(async () => {
+    settings.value = withDefaults({ aiProvider: 'anthropic' });
+    await setKey('anthropic', 'sk-test');
+    await setLocal(db, 'aiSeen', ['home']);
+  });
+  afterEach(() => { vi.unstubAllGlobals(); vi.stubGlobal('window', globalThis); vi.stubGlobal('document', { activeElement: null }); vi.stubGlobal('HTMLElement', class {}); settings.value = withDefaults({ aiProvider: 'anthropic' }); });
+
+  it('shows the answer on the card, keeps it as a turn, and sends it with the follow-up', async () => {
+    const f = reply({ v: 1, changes: [], note: 'Ibrahim works nights.' });
+    vi.stubGlobal('fetch', f);
+    expect(await submitHome('what does Ibrahim have on?')).toBe(true);
+    expect(homeCard.value).toMatchObject({ kind: 'answer', text: 'Ibrahim works nights.' });
+    expect((homeCard.value as { action?: unknown }).action).toBeUndefined();
+    const ex = only();
+    expect(ex.changes).toEqual([]);
+    expect(ex.turns).toMatchObject([{ kind: 'answer', text: 'what does Ibrahim have on?', reply: 'Ibrahim works nights.' }]);
+    expect(canUndo(ex)).toBe(false);
+    await settle();
+    expect(await submitHome('and his sister?')).toBe(true);
+    expect(JSON.parse(JSON.stringify(bodyOf(f, 1))).messages[0].content).toContain('Person: what does Ibrahim have on?\nRéussite: Ibrahim works nights.');
+    await settle();
+    expect(only().turns).toHaveLength(2);
+  });
+  it('applies one added step at once, with Undo; several changes open the review', async () => {
+    vi.stubGlobal('fetch', reply({ v: 1, changes: [{ op: 'task.create', set: { title: 'Open Mail and write to the agency' } }] }));
+    expect(await submitHome('could you please sort out my agency situation soon?')).toBe(true);
+    await settle();
+    expect(titles()).toEqual(['Open Mail and write to the agency']);
+    expect(canUndo(only())).toBe(true);
+    await undoExchange(only().id);
+    await settle();
+    expect(titles()).toEqual([]);
+    for (const x of [...exchanges.value.values()]) await db.table_('exchanges').delete(x.id);
+    const three = ['A', 'B', 'C'].map(x => ({ op: 'task.create', set: { title: 'Open Mail and write ' + x } }));
+    vi.stubGlobal('fetch', reply({ v: 1, changes: three }));
+    expect(await submitHome('could you please sort out my agency situation soon?')).toBe(true);
+    expect(homeCard.value).toMatchObject({ kind: 'review' });
+    expect(titles()).toEqual([]);
+  });
+  it('outside the list: the line, and a button to Ask any AI', async () => {
+    vi.stubGlobal('fetch', reply({ v: 1, changes: [], outside: true, note: 'I only help with your list; your usual AI can help with the weather.' }));
+    expect(await submitHome('what is the weather in Lyon tomorrow?')).toBe(true);
+    expect(homeCard.value).toMatchObject({ kind: 'answer', action: { label: 'Ask any AI' } });
+  });
+  it('one plain sentence and the sheet when the AI fails or the cap is reached; nothing is written', async () => {
+    const f = vi.fn(async () => new Response('nope', { status: 500 }));
+    vi.stubGlobal('fetch', f);
+    expect(await submitHome('what is the weather in Lyon tomorrow?')).toBe(true);
+    expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('problem'), action: { label: 'Add as a step' } });
+    expect(exchanges.value.size).toBe(0);
+    settings.value = withDefaults({ aiProvider: 'anthropic', aiMonthlyCap: 0 });
+    f.mockClear();
+    expect(await submitHome('what is the weather in Lyon tomorrow?')).toBe(true);
+    expect(f).not.toHaveBeenCalled();
+    expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('limit') });
+    (homeCard.value as { action: { run: () => void } }).action.run();
+    expect(sheet.value).not.toBeNull();
   });
 });

@@ -26,7 +26,7 @@ export function History() {
               </div>
               {canUndo(x)
                 ? <button class="btn small" type="button" onClick={() => void undoExchange(x.id)} data-testid="history-undo">{t('undo')}</button>
-                : <span class="tag">{t('undone')}</span>}
+                : x.changes.length ? <span class="tag">{t('undone')}</span> : null}
             </li>
           ))}
         </ul>

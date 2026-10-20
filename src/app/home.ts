@@ -1,7 +1,7 @@
 // Home's logic (brief §5): what happens to a line typed or dictated. The local parser reads it first
 // (src/domain/parse.ts); one low-risk change applies at once with a receipt and Undo, anything else
-// opens the review; a question asks in the card; what the parser can't read goes to the AI when one is
-// set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
+// opens the review; a question asks in the card; what the parser can't read goes to the AI with memory when
+// one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
 import { db, tasks, places, memory, exchanges, today, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, type WithId } from './store';
@@ -10,13 +10,16 @@ import { addSession } from './actions';
 import { openNewTask } from './sheets';
 import { fieldsOf, type Stored } from '../data/doc';
 import { normExchange } from '../data/normalize';
-import type { Exchange, ExchangeTurn, UndoDoc } from '../data/schema';
+import type { Exchange, ExchangeTurn, Task, UndoDoc } from '../data/schema';
 import { parseHome, type HomeParse, type Intent, type ParseContext } from '../domain/parse';
 import { parseMinutes } from '../domain/duration';
 import { norm, type Named } from '../domain/names';
 import { planChanges, applyPlanned, isLowRisk } from '../ai/apply';
 import { appWriter, snapshot, gen } from '../ai/writer';
 import { openChangeReview } from '../ai/Review';
+import { aiOn, askChanges } from '../ai/ask';
+import { homePrompt } from '../ai/context';
+import { openAskAny } from '../ai/ui';
 import type { ChangeSet } from '../ai/changeset';
 import { t, fmtMin } from '../i18n';
 
@@ -78,13 +81,14 @@ let lastWritten: string | null = null;
 async function continuing(): Promise<WithId<Exchange> | null> {
   for (const id of new Set([lastWritten, openExchange(Date.now(), true)?.id])) {
     const ex = id ? await readExchange(id) : null;
-    if (ex && ex.src === 'home' && hasLive(ex) && Date.now() - lastAt(ex) < OPEN_MS) return ex;
+    // Not one whose every change was undone; one with no change yet (an answer) is still open.
+    if (ex && ex.src === 'home' && (hasLive(ex) || !ex.changes.length) && Date.now() - lastAt(ex) < OPEN_MS) return ex;
   }
   return null;
 }
 
 /** Add a turn (and its change-set's Undo records, if any) to the open exchange, or start one. */
-async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }): Promise<{ exchange: string }> {
+export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }): Promise<{ exchange: string }> {
   const ex = await continuing();
   const changes = applied ? { changes: [...(ex?.changes ?? []), applied.cs], undo: { ...(ex?.undo ?? {}), [applied.cs]: applied.undo } } : {};
   if (ex) {
@@ -192,13 +196,36 @@ export async function choose(card: Extract<HomeCard, { kind: 'pick' }>, pick: Na
 }
 
 /**
- * Where a line the parser can't read goes (brief §5): to the AI with memory when one is set up
- * (step 7 of phase 2b: `aiOn`, `askChanges('home', …)`, an answer shown with `showAnswer`, a change-set
- * run through `run` below), otherwise to the task sheet, filled with what was read.
+ * Where a line the parser can't read goes (brief §5): to the AI with memory when one is set up, otherwise
+ * to the task sheet, filled with what was read.
  */
-export async function routeUnknown(_text: string, p: Extract<HomeParse, { kind: 'unknown' }>): Promise<boolean> {
+export async function routeUnknown(text: string, p: Extract<HomeParse, { kind: 'unknown' }>): Promise<boolean> {
   if (p.reason === 'empty') return false;
-  openNewTask(p.prefill);
+  if (!aiOn.value) { openNewTask(p.prefill); return true; }
+  return askHome(text, p.prefill);
+}
+
+/**
+ * Ask the AI about a line, with the earlier turns of the open exchange (the last ten minutes). Its reply is a
+ * change-set: changes go through `run` (one low-risk change at once, else the review), no change means an
+ * answer for the card, and "outside" sends the person to their usual AI with the question ready. A failure is
+ * one plain sentence and a button to the sheet; nothing is written.
+ */
+async function askHome(text: string, prefill: Partial<Task>): Promise<boolean> {
+  const turns = (await continuing())?.turns ?? [];
+  const { system, user, notes } = homePrompt(text, turns);
+  const asking = { kind: 'answer' as const, text: t('homeAsking'), at: Date.now() };
+  homeCard.value = asking;
+  const r = await askChanges('home', 'quick', system, user, { notes });
+  if (homeCard.value === asking) homeCard.value = null;
+  if (r.ok) return run(text, r.cs, 'changes', '');
+  if (r.error === 'cancelled') return false;
+  if (r.error !== 'empty') {
+    showAnswer(r.message, { label: t('homeAddAsStep'), run: () => { dismissCard(); openNewTask(prefill); } });
+    return true;
+  }
+  showAnswer(r.message, r.outside ? { label: t('askAnyAi'), run: () => { dismissCard(); openAskAny({ kind: 'today' }, text); } } : undefined);
+  await addTurn({ at: new Date().toISOString(), text, kind: 'answer', reply: r.message });
   return true;
 }
 

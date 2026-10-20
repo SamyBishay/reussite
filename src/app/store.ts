@@ -7,11 +7,10 @@ import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay } from '../data/schema';
 import { normDecision } from '../data/normalize';
-import { stayOn } from '../domain/places';
+import { whereNow } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { writeMerged, type Write } from '../data/syncstore';
-import { dayKey } from '../domain/dates';
 import { lang, t } from '../i18n';
 
 export type WithId<T> = T & { id: string };
@@ -44,15 +43,8 @@ export const clockNow = now;
  */
 const where = computed(() => {
   void now.value;
-  const s = settings.value, at = new Date();
-  const zone = (id: string) => places.value.get(id)?.timeZone;
-  let k = dayKey(at, s.dayStart, zone(s.here));
-  let stay = stayOn(stays.value.values(), k);
-  if (stay) {
-    k = dayKey(at, s.dayStart, zone(stay.placeId));
-    stay = stayOn(stays.value.values(), k) ?? stay;
-  }
-  return { today: k, here: stay?.placeId ?? s.here, stay: stay ?? null };
+  const s = settings.value;
+  return whereNow(new Date(), s, id => places.value.get(id)?.timeZone, stays.value.values());
 });
 export const today = computed(() => where.value.today);
 /** The place the person is in now: the planner and reminders follow it. */

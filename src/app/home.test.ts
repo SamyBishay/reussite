@@ -250,6 +250,7 @@ describe('a line the parser can’t read, with an AI set up', () => {
     expect(await submitHome('what does Ibrahim have on?')).toBe(true);
     expect(homeCard.value).toMatchObject({ kind: 'answer', text: 'Ibrahim works nights.' });
     expect((homeCard.value as { action?: unknown }).action).toBeUndefined();
+    await settle();
     const ex = only();
     expect(ex.changes).toEqual([]);
     expect(ex.turns).toMatchObject([{ kind: 'answer', text: 'what does Ibrahim have on?', reply: 'Ibrahim works nights.' }]);

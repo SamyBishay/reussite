@@ -10,6 +10,7 @@ import { cleanMethod, contractOf, methodSummaryOf } from './method';
 import { decisionLines, oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
 import { pickNotes, noteBlock, type Note } from '../domain/memory';
+import { preferencesPack, preferencesSystem } from '../domain/preferences';
 import { lang } from '../i18n';
 import { DEFAULT_SETTINGS } from '../data/settings';
 import type { Decision, ExchangeTurn, Project } from '../data/schema';
@@ -64,9 +65,9 @@ export function memoryFor(message: string, steps: { title: string; project?: str
   };
 }
 
-/** The stable part of every system prompt (the method, the profile, the language) and the feature's own part. */
+/** The stable part of every system prompt (the method, the profile, the person's preferences, the language) and the feature's own part. */
 export function systemPrompt(contract: string, l = lang.value): { stable: string; rest: string } {
-  const stable = [`You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.`, method(l), profileText(), answerIn(l)].filter(Boolean).join('\n\n');
+  const stable = [`You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.`, method(l), profileText(), preferencesSystem(settings.value.aiPreferences), answerIn(l)].filter(Boolean).join('\n\n');
   return { stable, rest: `# Your task\n\n${contract.trim()}` };
 }
 
@@ -154,6 +155,7 @@ export function contextPack(s: Scope, question: string, l = lang.value, drop?: s
   return [
     'I use Réussite, a planning app built on a CBT method for adults with ADHD. Help me with the question at the end, following the method.',
     '## The method, in short\n\n' + methodSummary(l),
+    preferencesPack(settings.value.aiPreferences),
     '## My data\n\n' + [header(), projectLines(), placeLines(), (s.kind === 'decision' ? '' : STEP_HEADER + '\n\n') + scope, calibrationLine(apps)].filter(Boolean).join('\n\n'),
     picked.length && `## What I have told Réussite about me and my people\n\nNote id | kind | name | aliases, then numbered lines. ${MEMORY_USE}\n\n` + picked.map(noteBlock).join('\n\n'),
     '## How to propose changes\n\n' + changesetContract(),

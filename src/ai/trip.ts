@@ -7,6 +7,7 @@ import { header, projectLines, calibrationLine, stepLines, methodSummary, change
 import { lang } from '../i18n';
 import { agenda } from '../domain/agenda';
 import { pickNotes, noteBlock } from '../domain/memory';
+import { preferencesPack } from '../domain/preferences';
 import { oneLine as one } from '../domain/lists';
 import { tripData, tripInstructions, tripDays } from '../domain/trip';
 import type { Stay } from '../data/schema';
@@ -60,6 +61,7 @@ export function tripPack(stayId: string, question: string, o: TripOptions = {}):
   const text = [
     'I use Réussite, a planning app built on a CBT method for adults with ADHD. Help me plan a trip, following the method.',
     '## The method, in short\n\n' + methodSummary(l),
+    preferencesPack(settings.value.aiPreferences),
     '## My data\n\n' + [header(), projectLines(), data, calibrationLine(steps.map(x => x.app))].filter(Boolean).join('\n\n'),
     picked.length && `## What I have told Réussite about me and my people\n\nNote id | kind | name | aliases, then numbered lines. ${MEMORY_USE}\n\n` + picked.map(noteBlock).join('\n\n'),
     '## How to propose changes\n\n' + changesetContract(),

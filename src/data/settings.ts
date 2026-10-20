@@ -1,6 +1,7 @@
 // Settings are data (brief §7): one synced document, `meta/settings`. An update adds
 // defaults for new keys and never overwrites what the person chose.
 import type { SuitId } from './schema';
+import { DEFAULT_PREFERENCES } from '../domain/preferences';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
@@ -85,6 +86,8 @@ export interface Settings {
   memoryBudget: number;
   /** A limit on the AI's cost in a month on this device, in US dollars; null = none. */
   aiMonthlyCap: number | null;
+  /** How an AI should work with the person: their own text, in every request and pack (docs/ai/preferences.md). Empty = nothing sent. */
+  aiPreferences: string;
   // Sync (brief §6). The key itself is device-local (db.local), never in this synced document.
   /** The relay's address; the build's VITE_RELAY_URL unless changed. Empty = sync can't be switched on. */
   relayUrl: string;
@@ -146,6 +149,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiAlwaysShow: false,
   memoryBudget: 3000,
   aiMonthlyCap: null,
+  aiPreferences: DEFAULT_PREFERENCES,
   // Vite fills this in at build time; the relay (no Vite) reads the settings' shape without it.
   relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };

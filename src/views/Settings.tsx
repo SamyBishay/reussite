@@ -12,6 +12,7 @@ import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { ZONES } from '../domain/zones';
 import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
 import { categoryName, addressesOn } from '../app/model';
 import { openTrip } from '../ai/ui';
@@ -119,7 +120,6 @@ function NumberField({ label, value, min, max, onSave }: { label: string; value:
   );
 }
 
-const ZONES: string[] = (() => { try { return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf('timeZone'); } catch { return []; } })();
 
 function PlacesEditor() {
   const ps = placeIds().map(id => places.value.get(id)!);

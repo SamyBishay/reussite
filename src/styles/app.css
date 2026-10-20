@@ -625,3 +625,23 @@ textarea.mono{letter-spacing:.04em}
 .verdicts button{font-family:var(--sans)}
 .hint.ask{color:var(--ink);font-weight:600}
 .feeds{color:var(--ink-3)}
+
+/* ---------- first-run onboarding ---------- */
+.app.onboard{max-width:560px;padding-block:24px 40px;min-height:100dvh;align-content:start}
+.ob .bigchoices .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ob-actions .btn{flex:1 1 auto;justify-content:center}
+.ob-skip{display:block;margin:14px 0 0;min-height:44px;padding:8px 0;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-align:left}
+.ob-pair-link{margin-top:14px;justify-content:center;text-align:center}
+.ob-notherapy{margin-top:18px}
+.obplace{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:8px}
+.obplace select{grid-column:1 / -1}
+.obplace .btn{min-width:44px;justify-content:center;padding-inline:10px}
+.obsuit{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;margin-top:8px}
+.obsuit input:first-child{text-align:center;font-size:20px;padding-inline:4px}
+.presets{display:grid;gap:8px;margin-top:6px}
+.btn.preset{justify-content:flex-start}
+.btn.preset[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.preset .dots{display:inline-flex;gap:3px;flex:none}
+.preset .dots i{width:14px;height:14px;border-radius:50%;display:block}
+.ob details.more>summary{min-height:44px}
+.ob .btn.small{min-height:44px}

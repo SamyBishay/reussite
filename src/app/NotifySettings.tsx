@@ -15,36 +15,26 @@ const TYPE_LABEL: Record<NotifyType, Key> = {
 
 const failure = (code: string) => (code === 'network' ? t('syncNetwork') : t('notifyFailed', { code }));
 
-export function NotifySettings() {
-  const [testing, setTesting] = useState(false);
+/**
+ * The permission part: what this browser can do (install first on iPhone, unsupported, no relay, refused), the switch
+ * and the last error. The prompt comes from the tap on the switch, never on load. Settings and onboarding both use it.
+ */
+export function NotifySwitch() {
   // What the switch shows while switching on or off is in progress (permission prompt, subscribing).
   const [pending, setPending] = useState<boolean | null>(null);
   const st = pushState.value;
   if (st === 'hidden') return null;
-  const s = settings.value;
   const on = pushOn.value && st === 'granted';
   const ready = st === 'default' || st === 'granted';
-
   const flip = (e: Event) => {
     const want = (e.target as HTMLInputElement).checked;
     // Straight from the tap: the browser asks for permission only for a user gesture.
     setPending(want);
     void (want ? enablePush() : disablePush()).finally(() => setPending(null));
   };
-  const setType = (k: NotifyType, v: boolean) => void saveSettings({ notify: { ...s.notify, [k]: v } });
-  const test = async () => {
-    setTesting(true);
-    const r = await sendTest();
-    setTesting(false);
-    toast(r === 'sent' ? t('notifyTestSent') : t('notifyTestFailed', { code: pushError.value ?? 'error' }));
-  };
-  const when = pushLastAt.value ? new Date(pushLastAt.value).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '';
   const err = pushError.value;
-
   return (
-    <section class="set" data-testid="notify">
-      <h2>{t('notifySection')}</h2>
-      <p class="hint">{t('notifyIntro')}</p>
+    <>
       {st === 'install' && <div data-testid="notify-install"><p><b>{t('notifyInstall')}</b></p><p>{t('notifyInstallBody')}</p></div>}
       {st === 'unsupported' && <p data-testid="notify-unsupported">{t('notifyUnsupported')}</p>}
       {st === 'norelay' && <p data-testid="notify-norelay">{t('notifyNoRelay')}</p>}
@@ -55,6 +45,30 @@ export function NotifySettings() {
         </div>
       )}
       {err && ready && <p class="err" role="alert" data-testid="notify-error">{failure(err)}</p>}
+    </>
+  );
+}
+
+export function NotifySettings() {
+  const [testing, setTesting] = useState(false);
+  const st = pushState.value;
+  if (st === 'hidden') return null;
+  const s = settings.value;
+  const on = pushOn.value && st === 'granted';
+
+  const setType = (k: NotifyType, v: boolean) => void saveSettings({ notify: { ...s.notify, [k]: v } });
+  const test = async () => {
+    setTesting(true);
+    const r = await sendTest();
+    setTesting(false);
+    toast(r === 'sent' ? t('notifyTestSent') : t('notifyTestFailed', { code: pushError.value ?? 'error' }));
+  };
+  const when = pushLastAt.value ? new Date(pushLastAt.value).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '';
+  return (
+    <section class="set" data-testid="notify">
+      <h2>{t('notifySection')}</h2>
+      <p class="hint">{t('notifyIntro')}</p>
+      <NotifySwitch />
       {on && (
         <>
           <p class="hint" data-testid="notify-held">{t('notifyHeld', { n: pushHeld.value })}{when ? ' ' + t('notifyLastUpload', { when }) : ''}</p>

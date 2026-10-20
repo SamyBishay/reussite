@@ -1,10 +1,11 @@
 // Settings → AI (brief §10): provider, base URL, the two model slots, the key (device-local
 // only), "Test the connection" and "Always show what's sent".
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
 import { settings, saveSettings, toast } from '../app/store';
 import { t } from '../i18n';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
+import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import { ask, getKey, setKey, forgetSeen, spent, loadSpent } from './ask';
 import { monthTokens } from './prices';
 import { dropMemoryLine } from './context';
@@ -63,21 +64,55 @@ function Spend() {
   );
 }
 
+/** The key for a provider: device-local only. Used here and in onboarding. */
+export function KeyField({ p, onHas }: { p: Exclude<AiProvider, 'none'>; onHas?: (has: boolean) => void }) {
+  const [hasKey, setHasKey] = useState(false);
+  const [draft, setDraft] = useState('');
+  const has = (b: boolean) => { setHasKey(b); onHas?.(b); };
+  // A typed key belongs to its provider: switching providers clears it (not on the first run, when a fast typist may already have started).
+  const shown = useRef(p);
+  useEffect(() => { if (shown.current !== p) { shown.current = p; setDraft(''); } void getKey(p).then(k => has(!!k)); }, [p]);
+  const save = async (e: Event) => {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    await setKey(p, draft);
+    setDraft(''); has(true);
+    toast(t('aiKeySaved'));
+  };
+  return (
+    <>
+      <form class="field" onSubmit={save}><span>{t('aiKey')}</span>
+        <div class="addplace">
+          <input type="password" value={draft} placeholder={hasKey ? t('aiKeyReplace') : t('aiKeyPh')} aria-label={t('aiKey')} autocomplete="off" onInput={e => setDraft((e.target as HTMLInputElement).value)} data-testid="ai-key" />
+          <button class="btn" type="submit" disabled={!draft.trim()} data-testid="ai-key-save">{t('aiKeySave')}</button>
+        </div>
+        <small class="hint">{hasKey ? t('aiKeyStored') : t('aiKeyNone')} {t('aiKeyLocal')}</small>
+      </form>
+      {hasKey && <div class="actions"><button class="btn ghost" type="button" onClick={async () => { await setKey(p, ''); has(false); }}>{t('aiKeyRemove')}</button></div>}
+    </>
+  );
+}
+
+/** The person's lines for an AI (docs/ai/preferences.md): in every request and pack. Used here and in onboarding. */
+export function PreferencesEditor({ value, onSave, testid = 'ai-prefs' }: { value: string; onSave: (v: string) => void; testid?: string }) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <div class="field" data-testid={testid + '-field'}><span>{t('aiPrefsTitle')}</span>
+      <p class="hint" style="margin:0">{t('aiPrefsHint')}</p>
+      <textarea rows={8} value={text} aria-label={t('aiPrefsTitle')} data-testid={testid} spellcheck={false}
+        onInput={e => setText((e.target as HTMLTextAreaElement).value)} onChange={e => onSave((e.target as HTMLTextAreaElement).value)} />
+      <div class="actions"><button class="btn small ghost" type="button" onClick={() => { setText(DEFAULT_PREFERENCES); onSave(DEFAULT_PREFERENCES); toast(t('aiPrefsReset')); }} data-testid={testid + '-reset'}>{t('aiPrefsResetBtn')}</button></div>
+    </div>
+  );
+}
+
 export function AiSettings() {
   const s = settings.value;
   const p = s.aiProvider;
   const [hasKey, setHasKey] = useState(false);
-  const [draft, setDraft] = useState('');
   const [test, setTest] = useState<{ busy: boolean; msg: string; ok: boolean } | null>(null);
-  useEffect(() => { setTest(null); if (p !== 'none') void getKey(p).then(k => setHasKey(!!k)); }, [p]);
-  const saveKey = async (e: Event) => {
-    e.preventDefault();
-    if (p === 'none' || !draft.trim()) return;
-    await setKey(p, draft);
-    setDraft(''); setHasKey(true);
-    toast(t('aiKeySaved'));
-  };
-  const removeKey = async () => { if (p === 'none') return; await setKey(p, ''); setHasKey(false); };
+  useEffect(() => { setTest(null); if (p === 'none') setHasKey(false); }, [p]);
   const runTest = async () => {
     setTest({ busy: true, msg: '', ok: false });
     const r = await ask('test', 'quick', 'Reply with exactly this JSON and nothing else: {"ok": true}', 'Connection test.', TEST_SCHEMA, { noPreview: true, maxTokens: 2000 });
@@ -111,20 +146,14 @@ export function AiSettings() {
             <label class="field"><span>{t('aiThinking')}</span><input type="text" value={models.thinking} onChange={e => setModel('thinking', (e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} /></label>
           </div>
           <p class="hint">{t('aiModelsHint')}</p>
-          <form class="field" onSubmit={saveKey}><span>{t('aiKey')}</span>
-            <div class="addplace">
-              <input type="password" value={draft} placeholder={hasKey ? t('aiKeyReplace') : t('aiKeyPh')} aria-label={t('aiKey')} autocomplete="off" onInput={e => setDraft((e.target as HTMLInputElement).value)} data-testid="ai-key" />
-              <button class="btn" type="submit" disabled={!draft.trim()} data-testid="ai-key-save">{t('aiKeySave')}</button>
-            </div>
-            <small class="hint">{hasKey ? t('aiKeyStored') : t('aiKeyNone')} {t('aiKeyLocal')}</small>
-          </form>
+          {p !== 'none' && <KeyField p={p} onHas={setHasKey} />}
           <div class="actions">
             <button class="btn" type="button" disabled={!hasKey || test?.busy} onClick={runTest} data-testid="ai-test">{test?.busy ? t('aiTesting') : t('aiTest')}</button>
-            {hasKey && <button class="btn ghost" type="button" onClick={removeKey}>{t('aiKeyRemove')}</button>}
           </div>
           {test && !test.busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:8px">{test.msg}</p>}
         </>
       )}
+      <PreferencesEditor value={s.aiPreferences} onSave={v => set({ aiPreferences: v })} />
       <div class="toggles" style="margin-top:14px">
         <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
       </div>

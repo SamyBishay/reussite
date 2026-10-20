@@ -85,6 +85,34 @@ describe('memory in prompts', () => {
     expect((ra.body.system as { text: string }[])[0]!.text).toBe((rb.body.system as { text: string }[])[0]!.text);
     expect(systemText(a)).toBe(ra.system);
   });
+  it('puts the preferences in the stable part of every feature, before the language line, and drops them when emptied', () => {
+    setMemory(profile);
+    settings.value = withDefaults({ aiPreferences: '- Be brief.\n- No emojis.' });
+    const all = [commandPrompt('add milk'), homePrompt('what is next?'), stuckPrompt('t1', 'start'), breakDownPrompt('t1'), reviewPrompt('p1')].map(x => x.system);
+    for (const x of all) {
+      expect(x.stable).toContain('- Be brief.\n- No emojis.');
+      expect(x.stable).toBe(all[0]!.stable);
+      expect(x.stable).toMatch(/- No emojis\.\n\nAnswer in English\.$/);
+      expect(x.rest).not.toContain('No emojis');
+    }
+    // The default is the template; an installation that never chose has it.
+    settings.value = withDefaults(undefined);
+    expect(commandPrompt('add milk').system.stable).toContain('One question at a time');
+    settings.value = withDefaults({ aiPreferences: '' });
+    const none = commandPrompt('add milk').system.stable;
+    expect(none).not.toContain('How the person wants an AI');
+    expect(none).toMatch(/\n\nAnswer in English\.$/);
+  });
+  it('puts the preferences in the Ask any AI pack and shows them in what is sent', () => {
+    settings.value = withDefaults({ aiPreferences: '- Be brief.' });
+    expect(contextPack({ kind: 'matrix' }, 'What first?')).toContain('## How I want you to work with me\n\n- Be brief.');
+    settings.value = withDefaults({ aiPreferences: '' });
+    expect(contextPack({ kind: 'matrix' }, 'What first?')).not.toContain('How I want you to work');
+    // "Show me what's sent" prints the request as it is built, system part included.
+    settings.value = withDefaults({ aiPreferences: '- Be brief.' });
+    const sys = commandPrompt('add milk').system;
+    expect(buildRequest(cfg('anthropic'), 'quick', sys, 'u').system).toContain('- Be brief.');
+  });
   it('is byte-identical whatever order the notes were stored in', () => {
     const p2 = note('n9', { kind: 'profile', name: 'Work', lines: [line('l1', 'Teaches Tuesdays')] });
     setMemory(profile, p2);

@@ -5,7 +5,8 @@ export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:4174', trace: 'retain-on-failure' },
+  // Every test starts as a device that has been through onboarding (its record in localStorage); tests of onboarding itself ask for a new one.
+  use: { baseURL: 'http://localhost:4174', trace: 'retain-on-failure', storageState: { cookies: [], origins: [{ origin: 'http://localhost:4174', localStorage: [{ name: 'reussite.onboarded', value: '1' }] }] } },
   // The app is built for a relay on this computer; the relay (Worker + local D1, no Cloudflare account) starts beside it.
   webServer: [
     { command: `VITE_RELAY_URL=http://localhost:8787 VITE_VAPID_PUBLIC_KEY=${E2E_VAPID.publicKey} npm run build && npx vite preview --port 4174 --strictPort`, url: 'http://localhost:4174', reuseExistingServer: false, timeout: 120_000 },

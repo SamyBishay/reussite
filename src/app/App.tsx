@@ -36,6 +36,8 @@ import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
+import { decideOnboarding, onboarding } from './onboarding';
+import { Onboarding } from '../flows/onboarding';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
@@ -176,7 +178,7 @@ const BARE: View[] = ['home', 'memory', 'history', 'addresses'];
 const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses };
 
 export function App() {
-  useEffect(() => { void start().then(() => { void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
@@ -186,6 +188,16 @@ export function App() {
   void lang.value;
   const V = SCREENS[view.value];
   const bare = BARE.includes(view.value);
+  // A new device starts here, with no tabs and no masthead, until the person finishes or skips.
+  if (ready.value && onboarding.value === 'show') return (
+    <>
+      <div class="app bare onboard"><main><Onboarding /></main></div>
+      <SheetHost />
+      <OverlayHost />
+      <PreviewHost />
+      <Toast />
+    </>
+  );
   return (
     <>
       <div class={'app' + (bare ? ' bare' : '')}>
@@ -196,7 +208,7 @@ export function App() {
           <UpdateBanner />
           <PlaceBanner />
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
-          {ready.value ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
+          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>
       </div>

@@ -83,6 +83,12 @@ describe('the trip pack', () => {
     expect(t).toContain('Plan this trip for me.');
   });
 
+  it('carries the person\'s AI preferences, and leaves the section out when they were emptied', () => {
+    settings.value = withDefaults({ aiPreferences: '- Be brief.' });
+    expect(pack().text).toContain('## How I want you to work with me\n\n- Be brief.');
+    settings.value = withDefaults({ aiPreferences: '' });
+    expect(pack().text).not.toContain('How I want you to work');
+  });
   it('is null for a stay that is gone', () => {
     expect(tripPack('nope', '')).toBeNull();
   });

@@ -1,10 +1,36 @@
-// History: the past exchanges typed on Home, each with its Undo. Built in a later step.
-import { t } from '../i18n';
+// History: what was typed on Home (or came by a link) in the last 90 days, newest first, one line each,
+// with Undo where there is something left to undo.
+import { exchanges, clockNow } from '../app/store';
+import { KEEP_DAYS, canUndo, lastAt, receiptLine, undoExchange } from '../app/home';
+import { t, locale } from '../i18n';
+
+const when = (iso: string) => {
+  const d = new Date(iso);
+  return isNaN(+d) ? '' : d.toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
 
 export function History() {
+  const cut = clockNow.value - KEEP_DAYS * 86_400_000;
+  const list = [...exchanges.value.values()].filter(x => lastAt(x) >= cut).sort((a, b) => lastAt(b) - lastAt(a));
   return (
     <div data-testid="history">
       <h2 class="sec" style="margin-top:0">{t('historyTitle')}</h2>
+      <p class="hint">{t('historyIntro')}</p>
+      {list.length ? (
+        <ul class="picklist history">
+          {list.map(x => (
+            <li data-testid="history-row">
+              <div>
+                <span class="h-text">{x.text}</span>
+                <small class="hint">{when(x.turns[x.turns.length - 1]?.at ?? x.at)} · {receiptLine(x)}</small>
+              </div>
+              {canUndo(x)
+                ? <button class="btn small" type="button" onClick={() => void undoExchange(x.id)} data-testid="history-undo">{t('undo')}</button>
+                : <span class="tag">{t('undone')}</span>}
+            </li>
+          ))}
+        </ul>
+      ) : <p class="hint" data-testid="history-empty">{t('historyEmpty')}</p>}
     </div>
   );
 }

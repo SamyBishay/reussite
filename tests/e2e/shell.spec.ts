@@ -54,16 +54,19 @@ test('a sheet covers the tab bar', async ({ page }) => {
   expect(covered).toBe(true);
 });
 
-test('the on-screen keyboard hides the tab bar while a text field has focus', async ({ page, isMobile }) => {
+test('the on-screen keyboard hides the tab bar while Home’s input has focus, and the input stays in view', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'a phone-only rule: a desktop keeps the bar');
   await importSample(page);
+  await goTab(page, 'home');
   await expect(page.getByTestId('tabbar')).toBeVisible();
-  await page.getByPlaceholder(/The app and the first action/).focus();
+  await page.getByTestId('home-input').focus();
   await expect(page.getByTestId('tabbar')).toBeHidden();
   await expect(page.locator('body')).toHaveClass(/kb/);
-  await page.getByPlaceholder(/The app and the first action/).blur();
+  await expect(page.getByTestId('home-input')).toBeInViewport();
+  await page.getByTestId('home-input').blur();
   await expect(page.getByTestId('tabbar')).toBeVisible();
   // A button or a date field is not a keyboard.
+  await goTab(page, 'today');
   await page.getByTestId('details').first().click();
   await expect(page.getByTestId('tabbar')).toBeVisible();
 });
@@ -71,7 +74,8 @@ test('the on-screen keyboard hides the tab bar while a text field has focus', as
 test('a desktop keeps the tab bar while typing', async ({ page, isMobile }) => {
   test.skip(isMobile, 'desktop only');
   await importSample(page);
-  await page.getByPlaceholder(/The app and the first action/).focus();
+  await goTab(page, 'home');
+  await page.getByTestId('home-input').focus();
   await expect(page.getByTestId('tabbar')).toBeVisible();
 });
 

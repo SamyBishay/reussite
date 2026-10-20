@@ -3,7 +3,7 @@ import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
-import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc } from './model';
+import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc, greetingNow } from './model';
 import { applyTheme } from './theme';
 import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
@@ -32,6 +32,7 @@ import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { DropHost, InboxHost } from './Drop';
+import { pruneExchanges } from './home';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
@@ -118,7 +119,8 @@ function Runbar() {
           <button class="btn small ghost" type="button" onClick={() => void patchTask(r.id, { stillAt: new Date().toISOString() })}>{t('stillGoing')}</button></div></div></div>
     );
   }
-  if (r && view.value !== 'today') return (
+  // Home's greeting is the running step (clock, Pause, Done), so the bar would say it twice; a fixed-time item taking over leaves it.
+  if (r && view.value !== 'today' && !(view.value === 'home' && greetingNow.value.kind === 'running')) return (
     <div id="runbar"><div class="runbar"><Clock tk={r} /><span class="rt"><Title s={r.title} /></span><button class="btn small" type="button" onClick={() => openPause(r.id)}>{t('pause')}</button></div></div>
   );
   if (!r && view.value !== 'today' && view.value !== 'settings' && view.value !== 'home') {
@@ -170,7 +172,7 @@ const BARE: View[] = ['home', 'memory', 'history'];
 const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History };
 
 export function App() {
-  useEffect(() => { void start().then(() => { void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(() => { void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };

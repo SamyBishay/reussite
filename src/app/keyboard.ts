@@ -6,8 +6,11 @@ const NOT_TEXT = new Set(['checkbox', 'radio', 'button', 'submit', 'reset', 'ran
 const isText = (el: Element | null): boolean =>
   el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !NOT_TEXT.has(el.type)) || (el instanceof HTMLElement && el.isContentEditable);
 
+/** A phone or tablet: no hover, or a coarse pointer. */
+export const isTouch = () => matchMedia('(hover: none), (pointer: coarse)').matches;
+
 export function startKeyboard() {
-  if (!matchMedia('(hover: none), (pointer: coarse)').matches) return;
+  if (!isTouch()) return;
   const vv = window.visualViewport;
   let focus = false, seen = false, pressing = false;
   const covered = () => (vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0);

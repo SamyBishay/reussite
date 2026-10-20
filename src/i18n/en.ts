@@ -1294,6 +1294,15 @@ export const en = {
   memExportSave: 'Save the file',
   memExportCopy: 'Copy',
   memExportCopied: 'Memory copied.',
+  // Addresses and people (phase 4): the default category names, until the person edits them in Settings.
+  addressCat_food: 'Food',
+  addressCat_cafe: 'Café & bar',
+  addressCat_shopping: 'Shopping',
+  addressCat_sight: 'Sight',
+  addressCat_museum: 'Museum',
+  addressCat_park: 'Park & public space',
+  addressCat_outing: 'Outing',
+  addressCat_other: 'Other',
 };
 
 export type Strings = typeof en;

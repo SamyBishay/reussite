@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -12,6 +12,7 @@ export type By = 'me' | 'ai';
 export type Where = string;
 export type DayKey = string; // YYYY-MM-DD
 export type Status = 'open' | 'done' | 'dropped';
+export type Offer = 'address' | 'person';
 
 export interface Task {
   title: string;
@@ -68,6 +69,15 @@ export interface Task {
   laterOffers?: number;
   /** When the person last said "still going" to the long-timer question. */
   stillAt?: string | null;
+  // v2, phase 4
+  /** The address or the person this step feeds: its done day sets the person's `lastSeen`, and asks for the address's visit note. */
+  addressId?: string | null;
+  personId?: string | null;
+  /**
+   * On a standing obligation: what the planner offers when it places it. `address` for leisure and going out
+   * (up to three addresses in the current place), `person` for seeing people. Empty or missing: nothing is offered.
+   */
+  offer?: Offer | null;
   [extra: string]: unknown;
 }
 
@@ -197,6 +207,57 @@ export interface MemoryNote {
   [extra: string]: unknown;
 }
 
+/** Did the person want to go back? The note after a visit and one of these (brief §5, Addresses). */
+export type Verdict = 'again' | 'maybe' | 'not-again';
+export const VERDICTS: readonly Verdict[] = ['again', 'maybe', 'not-again'];
+export type AddressState = 'want' | 'been';
+
+/** One visit to an address: the day, how it was, and whether to go back. `stepId` is the step that took the person there, if any. */
+export interface Visit {
+  id: string;
+  day: DayKey;
+  note: string;
+  verdict: Verdict;
+  stepId?: string | null;
+  [extra: string]: unknown;
+}
+
+/**
+ * A good address (brief §5, Addresses and people), per place. `category` is an id from the settings list
+ * `addressCategories`. `mapsUrl` opens the Maps app. `by` says who put it on the list (an AI's suggestion
+ * from a trip plan has its reason in `note`). The visits are an array, so they merge whole like any array.
+ */
+export interface Address {
+  name: string;
+  category: string;
+  /** A place id, or 'any'. */
+  placeId: Where;
+  mapsUrl: string | null;
+  /** The street address, if the person typed or imported one. */
+  street?: string | null;
+  state: AddressState;
+  visits: Visit[];
+  by: By;
+  note: string;
+  [extra: string]: unknown;
+}
+
+/**
+ * Someone the person sees (brief §5): only what the plan needs. There is no home-address field, ever: these
+ * people didn't sign up. `reach` is one link that opens WhatsApp, Messages, Mail or the phone. `lastSeen` is
+ * set when a step linked to them is done, and shown as a date, never as overdue. Never sent to an AI unless
+ * ticked for that request.
+ */
+export interface Person {
+  name: string;
+  /** A place id, or 'any'. */
+  placeId: Where;
+  reach: string | null;
+  note: string;
+  lastSeen: DayKey | null;
+  [extra: string]: unknown;
+}
+
 /** What one edit replaced, kept so it can be put back (Undo). */
 export interface UndoDoc {
   c: Collection;
@@ -244,5 +305,5 @@ export interface Exchange {
   [extra: string]: unknown;
 }
 
-export const COLLECTIONS = ['tasks', 'sessions', 'projects', 'days', 'decisions', 'places', 'stays', 'memory', 'exchanges', 'meta'] as const;
+export const COLLECTIONS = ['tasks', 'sessions', 'projects', 'days', 'decisions', 'places', 'stays', 'memory', 'exchanges', 'addresses', 'people', 'meta'] as const;
 export type Collection = (typeof COLLECTIONS)[number];

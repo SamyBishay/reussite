@@ -41,6 +41,10 @@ describe('repeats, projects and stays', () => {
     expect(nextOccurrence(r, '2026-10-19', [r, base('t2', { prev: 't1' })])).toEqual({ existing: 't2' });
     expect(nextOccurrence(base('t3'), '2026-10-19', [])).toBeNull();
   });
+  it('a repeating step that feeds a person or an address keeps feeding them', () => {
+    const r = base('t1', { repeat: { every: 1, unit: 'week', from: 'due' }, due: '2026-10-19', personId: 'pe1', addressId: 'a1', offer: 'person' });
+    expect(nextOccurrence(r, '2026-10-19', [r])).toMatchObject({ fields: { personId: 'pe1', addressId: 'a1' } });
+  });
   it('completes a project when its real steps are all done', () => {
     const p = new Map([['p1', { status: 'active' as const }]]);
     const t = (status: Task['status']) => ({ project: 'p1', template: false, status });

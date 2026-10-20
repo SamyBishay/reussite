@@ -72,7 +72,7 @@ export function importV1(file: unknown, deviceZone = Intl.DateTimeFormat().resol
 
   // Built in the first v2 schema, then brought up to date by the same migrations as stored data.
   const mk = (id: string, fields: Doc) => create(id, fields, 1, ZERO);
-  const out: Required<V2Data> = { tasks: [], sessions: [], projects: [], days: [], decisions: [], places: [], stays: [], memory: [], exchanges: [], meta: [] };
+  const out: Required<V2Data> = { tasks: [], sessions: [], projects: [], days: [], decisions: [], places: [], stays: [], memory: [], exchanges: [], addresses: [], people: [], meta: [] };
   const where = new Set<string>();
   let spentMismatch = 0;
 

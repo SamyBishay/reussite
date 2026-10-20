@@ -1,8 +1,11 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
-import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, type WithId } from './store';
+import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, type T as Tk } from './model';
 import { projects } from './store';
-import type { Day, Launch, Place, Project, Session, SessionSource, Stay, Task } from '../data/schema';
+import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
+import { fieldsOf } from '../data/doc';
+import { normAddress } from '../data/normalize';
+import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
@@ -47,7 +50,8 @@ export async function stopTimer(tk: Tk, why: string | null, resume: string | nul
 /** A timer started yesterday and stopped today belongs to the day it started. */
 const sessionDay = (tk: Tk) => (tk.started && tk.started.slice(0, 10) < today.value && Date.now() - Date.parse(tk.started) < 36e5 * 30 ? addDays(today.value, -1) : today.value);
 
-export interface Finished { last: boolean; projectDone: string | null; nextId: string | null }
+/** `addressId`: the address whose after-visit screen to show (a step that feeds it was just done and no visit came from it yet). */
+export interface Finished { last: boolean; projectDone: string | null; nextId: string | null; addressId: string | null }
 
 /**
  * Mark a step done, today or on another day. With a running timer, its time is saved
@@ -62,7 +66,8 @@ export async function finishTask(tk: Tk, typed: number | null, day = today.value
   await patchTask(tk.id, patch);
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
-  return { last: wasLast && day === k, projectDone, nextId };
+  if (tk.personId) await seeStepPerson(tk.personId, day);
+  return { last: wasLast && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
 }
 
 /** A project whose real steps are all done moves to the Completed shelf. */
@@ -239,4 +244,57 @@ export const removeStay = (id: string) => removeDoc('stays', id);
 export async function syncDueRules(stayId: string, s: Pick<Stay, 'to'> | undefined = stays.value.get(stayId)) {
   if (!s) return;
   for (const x of dueRulePatches(stayId, s, tasks.value.values())) await patchTask(x.id, { due: x.due });
+}
+
+// ---------- addresses and people (phase 4) ----------
+type AddressFields = Pick<Address, 'name'> & Partial<Omit<Address, 'name'>>;
+
+/** A new address; its id. Unset fields get their defaults (state *want to go*, category *other*, by the person). */
+export const createAddress = (a: AddressFields): Promise<string> =>
+  createDoc<Address>('addresses', { category: 'other', placeId: 'any', mapsUrl: null, street: null, state: 'want', visits: [], by: 'me', note: '', ...a, name: a.name.trim() });
+export const editAddress = (id: string, p: Partial<Address>) => update<Address>('addresses', id, p);
+/** Remove an address (a tombstone; its visits go with it). */
+export const removeAddress = (id: string) => removeDoc('addresses', id);
+
+/** The address as stored now, not as the screen last saw it, so two quick edits don't overwrite each other. */
+async function currentAddress(id: string): Promise<Address | null> {
+  const d = await db.table_('addresses').get(id);
+  return d && !d._del ? normAddress(fieldsOf(d) as Record<string, unknown>) : null;
+}
+
+/**
+ * Record a visit: the day (default today), how it was, whether to go back, and the step that took the person
+ * there if any. The address becomes *been*. Returns the visit's id, or null when the address is gone.
+ * A second visit from the same step replaces the first (the after-visit screen opened twice writes one).
+ */
+export async function recordVisit(addressId: string, v: { note?: string; verdict: Verdict; day?: string; stepId?: string | null }): Promise<string | null> {
+  const cur = await currentAddress(addressId);
+  if (!cur) return null;
+  const same = v.stepId ? cur.visits.find(x => x.stepId === v.stepId) : undefined;
+  const visit: Visit = { id: same?.id ?? newId('v'), day: v.day ?? today.value, note: (v.note ?? '').trim(), verdict: v.verdict, stepId: v.stepId ?? null };
+  await update<Address>('addresses', addressId, { visits: same ? cur.visits.map(x => (x === same ? visit : x)) : [...cur.visits, visit], state: 'been' });
+  return visit.id;
+}
+/** Edit or remove one visit (an empty `patch` is not allowed; to remove pass `null`). */
+export async function editVisit(addressId: string, visitId: string, patch: Partial<Pick<Visit, 'day' | 'note' | 'verdict'>> | null): Promise<void> {
+  const cur = await currentAddress(addressId);
+  if (!cur) return;
+  const visits = patch ? cur.visits.map(x => (x.id === visitId ? { ...x, ...patch } : x)) : cur.visits.filter(x => x.id !== visitId);
+  await update<Address>('addresses', addressId, { visits });
+}
+
+type PersonFields = Pick<Person, 'name'> & Partial<Omit<Person, 'name'>>;
+export const createPerson = (p: PersonFields): Promise<string> =>
+  createDoc<Person>('people', { placeId: 'any', reach: null, note: '', lastSeen: null, ...p, name: p.name.trim() });
+export const editPerson = (id: string, p: Partial<Person>) => update<Person>('people', id, p);
+export const removePerson = (id: string) => removeDoc('people', id);
+/** Set when the person was last seen (a date); `null` clears it. */
+export const setLastSeen = (id: string, day: string | null) => update<Person>('people', id, { lastSeen: day });
+
+/** A step that feeds a person was done on `day`: their last seen becomes that day, never an earlier one than it already is. */
+async function seeStepPerson(personId: string, day: string): Promise<void> {
+  const p = people.value.get(personId);
+  if (!p) return;
+  const next = seenAfter(p.lastSeen, day);
+  if (next !== p.lastSeen) await setLastSeen(personId, next);
 }

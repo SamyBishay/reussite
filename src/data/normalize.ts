@@ -1,7 +1,7 @@
 // Read any stored decision as the v2 shape (brief §9). v1 decisions had a free-text problem
 // and items as [text, weight]; both still read. Unknown fields are kept.
 import { normItems, COLUMNS, type Option } from '../domain/decision';
-import { MEMORY_KINDS, type Decision, type Exchange, type ExchangeTurn, type MemoryKind, type MemoryLine, type MemoryNote, type Problem, type UndoDoc } from './schema';
+import { MEMORY_KINDS, VERDICTS, type Address, type Decision, type Person, type Verdict, type Visit, type Exchange, type ExchangeTurn, type MemoryKind, type MemoryLine, type MemoryNote, type Problem, type UndoDoc } from './schema';
 
 const PROBLEM_KEYS: (keyof Problem)[] = ['what', 'should', 'gap', 'constraints', 'deadline', 'control'];
 const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
@@ -87,5 +87,43 @@ export function normExchange(raw: Record<string, unknown>): Exchange {
     undo,
     undone: strs(raw.undone),
     src: raw.src === 'link' || raw.src === 'inbox' ? raw.src : 'home',
+  };
+}
+
+const optStr = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v : null);
+
+/** Read any stored address with every field filled. A visit without an id gets a stable one from its position. */
+export function normAddress(raw: Record<string, unknown>): Address {
+  const visits: Visit[] = (Array.isArray(raw.visits) ? raw.visits : []).filter(isObj).map((v, i) => ({
+    ...v,
+    id: str(v.id) || 'v' + i,
+    day: str(v.day),
+    note: str(v.note),
+    verdict: (VERDICTS as readonly unknown[]).includes(v.verdict) ? (v.verdict as Verdict) : 'maybe',
+    stepId: optStr(v.stepId),
+  }));
+  return {
+    ...raw,
+    name: str(raw.name),
+    category: str(raw.category) || 'other',
+    placeId: str(raw.placeId) || 'any',
+    mapsUrl: optStr(raw.mapsUrl),
+    street: optStr(raw.street),
+    state: raw.state === 'been' ? 'been' : 'want',
+    visits,
+    by: raw.by === 'ai' ? 'ai' : 'me',
+    note: str(raw.note),
+  };
+}
+
+/** Read any stored person with every field filled. */
+export function normPerson(raw: Record<string, unknown>): Person {
+  return {
+    ...raw,
+    name: str(raw.name),
+    placeId: str(raw.placeId) || 'any',
+    reach: optStr(raw.reach),
+    note: str(raw.note),
+    lastSeen: optStr(raw.lastSeen),
   };
 }

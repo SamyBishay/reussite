@@ -46,7 +46,7 @@ export function finishEffects(tk: Pick<Task, 'started' | 'est' | 'est0'>, o: { t
   return { patch, session };
 }
 
-const KEEP: (keyof Task)[] = ['title', 'starter', 'est', 'estBy', 'project', 'where', 'app', 'link', 'prompt', 'suit', 'important', 'kind', 'repeat', 'at', 'dur', 'note'];
+const KEEP: (keyof Task)[] = ['title', 'starter', 'est', 'estBy', 'project', 'where', 'app', 'link', 'prompt', 'suit', 'important', 'kind', 'repeat', 'at', 'dur', 'note', 'addressId', 'personId'];
 
 /**
  * The next occurrence of a repeating step done or skipped on `day`: its fields, or null when the

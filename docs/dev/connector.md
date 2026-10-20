@@ -59,6 +59,8 @@ All answers are plain text, compact lines `id | title | Q1 | due | estimate | pr
 
 Server instructions (sent at initialisation): what Réussite is; call `get_method` before planning or a decision; call `read_memory` when the person names someone, a place or a matter; a new fact goes through `apply_changes` as `memory.add`, in their words, and a memory change always waits for their yes; never change the list without the person's yes except one low-risk change; one `apply_changes` for a quick edit; titles work for ids; no weights.
 
+**Addresses and people are not read.** Schema 4 adds the `addresses` and `people` collections to the space (they are in the hot part, so the connector loads them like everything else), but `View` builds neither and no tool or change names them: nothing an AI asks can return an address, a person, a link or a note of theirs (`relay/test/connector.people.test.ts` seeds both and checks every read tool). The one write that touches them is ticking a step that feeds a person (`personId`): `finish` sets the person's `lastSeen` to the day, as ticking it by hand does, and says nothing about them in the receipt.
+
 **Memory is private by construction.** `read_memory` filters out every note with `private: true` before it matches anything, so no id, name, alias or word in a line of a private note finds it, and nothing in an answer says one exists (a miss says only that nothing matches). `apply_changes` leaves them out the same way (step 2 above). The note format is the app's (`noteBlock`): one function writes it for the app's prompts and for this tool.
 
 ### `apply_changes`

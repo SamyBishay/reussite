@@ -3,7 +3,7 @@
 // snapshot is written as two blobs:
 //
 //   hot   open steps, steps done or due in the last ~30 days, their sessions, the days from the last
-//         30 days on, every project, decision, place, stay, memory note and setting, exchanges written
+//         30 days on, every project, decision, place, stay, memory note, address, person and setting, exchanges written
 //         in the 2 days before the cut or since, and anything else whose clocks changed in the last 30 days. Plus an index of the cold ids and a digest of the cold
 //         documents (`ColdDigest`), so the common questions never open the cold part.
 //   cold  everything else.
@@ -91,7 +91,7 @@ export function split(all: DocSet, cut: Cut, o: { closure?: boolean } = {}): Spl
   }
   for (const d of days) put('days', d, hotDay(d));
   for (const d of list('sessions')) put('sessions', d, touchedSince(d, min) || str(d.d) >= from || hotTasks.has(str(d.taskId)));
-  for (const c of ['projects', 'decisions', 'places', 'stays', 'memory', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
+  for (const c of ['projects', 'decisions', 'places', 'stays', 'memory', 'addresses', 'people', 'meta']) for (const d of c === 'decisions' ? decisions : list(c)) put(c, d, touchedSince(d, min) || !d._del);
   // Home's history: only what was written just before the cut or since (EXCHANGE_MARGIN_MS).
   for (const d of list('exchanges')) put('exchanges', d, touchedSince(d, exMin));
   return { hot, cold };

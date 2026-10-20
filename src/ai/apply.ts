@@ -33,7 +33,8 @@ export const isRef = (v: unknown): v is string => typeof v === 'string' && v.sta
 export type Op =
   | { t: 'task'; ref?: string; fields: Partial<Task> & { title: string } }
   | { t: 'create'; c: Collection; ref?: string; fields: Record<string, unknown> }
-  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta }
+  /** `ifMissing`: for a change to something made earlier in the change-set, the fields to make it with if that change wasn't ticked. */
+  | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta; ifMissing?: Record<string, unknown> }
   | { t: 'finish'; id: string; day: string }
   | { t: 'drop'; id: string }
   | { t: 'day'; k: string; patch: Partial<Day> }
@@ -82,7 +83,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   };
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
   /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
-  const madeNotes = new Map<string, { ref: string; name: string }>();
+  const madeNotes = new Map<string, { ref: string; name: string; kind: MemoryNote['kind'] }>();
   const findNote = (v: string): W<MemoryNote> | 'many' | undefined => {
     const byId = s.memory.get(v);
     if (byId) return byId;
@@ -360,10 +361,13 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         return item(hit, [diff], { t: 'update', c: 'memory', id: hit.id, patch: { lines: [...hit.lines, line], updated: now }, delta: { lines: { add: line } } });
       }
       const made = madeNotes.get(norm(c.note));
-      if (made) return item({ name: made.name }, [diff], { t: 'update', c: 'memory', id: asRef(made.ref), patch: { lines: [line], updated: now }, delta: { lines: { add: line } } });
+      if (made) {
+        const fields: MemoryNote = { kind: made.kind, name: made.name, aliases: [], lines: [line], private: false, updated: now };
+        return item(fields, [diff], { t: 'update', c: 'memory', id: asRef(made.ref), patch: { lines: [line], updated: now }, delta: { lines: { add: line } }, ifMissing: fields as unknown as Record<string, unknown> });
+      }
       if (!c.kind) return undefined;
       const ref = 'note ' + norm(c.note);
-      madeNotes.set(norm(c.note), { ref, name: c.note });
+      madeNotes.set(norm(c.note), { ref, name: c.note, kind: c.kind });
       const fields: MemoryNote = { kind: c.kind, name: c.note, aliases: [], lines: [line], private: false, updated: now };
       return item(fields, [{ field: 'kind', before: undefined, after: c.kind }, diff], { t: 'create', c: 'memory', ref, fields: fields as unknown as Record<string, unknown> });
     }
@@ -477,7 +481,7 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
   // Each update was planned against the same snapshot; later ones build on what earlier ones wrote.
   const wrote = new Map<string, Record<string, unknown>>();
   let n = 0;
-  for (const [i, it] of plan.items.entries()) {
+  items: for (const [i, it] of plan.items.entries()) {
     if (!ticked(i)) continue;
     for (const op of it.ops) {
       switch (op.t) {
@@ -490,9 +494,15 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
         }
         case 'update': {
           const key = op.c + '/' + op.id, prev = wrote.get(key);
-          // A note made by an earlier change: its id is only known now, and if that change wasn't ticked there is nothing to add to.
+          // Something made by an earlier change: its id is only known now. If that change wasn't ticked, this one
+          // makes it (a ticked line is not lost); with nothing to make it from, it is not applied and not counted.
           const id = isRef(op.id) ? ids.get(op.id) : op.id;
-          if (!id) break;
+          if (!id) {
+            if (!op.ifMissing) continue items;
+            ids.set(op.id, await w.create(op.c, op.ifMissing));
+            wrote.set(key, op.ifMissing);
+            break;
+          }
           let p = subst(op.patch) as Record<string, unknown>;
           if (prev && op.delta) p = mergeDelta(prev, p, subst(op.delta) as Delta);
           await w.update(op.c, id, p);

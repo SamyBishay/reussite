@@ -71,7 +71,7 @@ describe('memory operations in the contract', () => {
     expect(createsNote(plan([{ op: 'memory.add', note: 'Ibrahim', kind: 'person', text: 'Plays oud' }]).items[0]!)).toBe(false);
   });
 
-  it('puts two lines for one new note into that note, and drops the second when the first is unticked', async () => {
+  it('puts two lines for one new note into that note; with the first unticked, the second makes the note', async () => {
     const s = snap();
     const p = plan([
       { op: 'memory.add', note: 'Alex', kind: 'person', text: 'Moved to Lyon' },
@@ -83,8 +83,20 @@ describe('memory operations in the contract', () => {
     const made = [...both.docs.values()].find(d => d.name === 'Alex')!;
     expect((made.lines as { text: string }[]).map(l => l.text)).toEqual(['Moved to Lyon', 'Has a bike']);
     const second = memWriter(s);
-    await applyPlanned(p, i => i === 1, second.w);
-    expect([...second.docs.values()].some(d => d.name === 'Alex')).toBe(false);
+    expect(await applyPlanned(p, i => i === 1, second.w)).toBe(1);
+    const alone = [...second.docs.values()].find(d => d.name === 'Alex')!;
+    expect(alone).toMatchObject({ kind: 'person', private: false });
+    expect((alone.lines as { text: string }[]).map(l => l.text)).toEqual(['Has a bike']);
+    // a third line joins the note the second made
+    const three = plan([
+      { op: 'memory.add', note: 'Alex', kind: 'person', text: 'Moved to Lyon' },
+      { op: 'memory.add', note: 'alex', text: 'Has a bike' },
+      { op: 'memory.add', note: 'alex', text: 'Plays chess' },
+    ], s);
+    const third = memWriter(s);
+    expect(await applyPlanned(three, i => i > 0, third.w)).toBe(2);
+    expect([...third.docs.values()].filter(d => d.name === 'Alex')).toHaveLength(1);
+    expect(([...third.docs.values()].find(d => d.name === 'Alex')!.lines as { text: string }[]).map(l => l.text)).toEqual(['Has a bike', 'Plays chess']);
   });
 
   it('edits and removes a line by number, id or exact text; the rest stay', async () => {

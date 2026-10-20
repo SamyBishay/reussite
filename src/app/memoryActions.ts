@@ -3,8 +3,8 @@
 // (`recordWrites` keeps the text it replaced: "Forget deletes, it never softens").
 import { db, memory, createDoc, update, removeDoc, newId } from './store';
 import { fieldsOf } from '../data/doc';
-import { normNote } from '../data/normalize';
-import type { MemoryKind, MemoryLine, MemoryNote } from '../data/schema';
+import { normExchange, normNote } from '../data/normalize';
+import type { Exchange, MemoryKind, MemoryLine, MemoryNote } from '../data/schema';
 import { norm } from '../domain/names';
 import type { MergePlan } from '../domain/memoryMd';
 
@@ -60,17 +60,37 @@ export async function editLine(id: string, lineId: string, text: string): Promis
   await edit(id, { lines: cur.lines.map(l => (l.id === lineId ? { ...l, text: t, by: 'me' as const } : l)) });
 }
 
-/** Forget one line: it is gone from the note (the old text is not kept anywhere in the app). */
-export async function forgetLine(id: string, lineId: string): Promise<void> {
-  const cur = await current(id);
-  if (cur) await edit(id, { lines: cur.lines.filter(l => l.id !== lineId) });
+/**
+ * Forget leaves no copy in History: an exchange whose Undo holds this note (the lines before and after
+ * an AI's change) loses those records, and what was typed and answered in it is emptied (the turns keep
+ * their kind and count, so History still says what came of it). Its other records stay undoable.
+ */
+async function scrubExchanges(id: string): Promise<void> {
+  const mine = (u: { c: string; id: string }) => u.c === 'memory' && u.id === id;
+  for (const d of await db.table_('exchanges').toArray()) {
+    if (d._del) continue;
+    const ex = normExchange(fieldsOf(d) as Record<string, unknown>);
+    if (!Object.values(ex.undo).some(list => list.some(mine))) continue;
+    const undo = Object.fromEntries(Object.entries(ex.undo).map(([cs, list]) => [cs, list.filter(u => !mine(u))]));
+    const turns = ex.turns.map(({ reply: _, ...x }) => ({ ...x, text: '' }));
+    await update<Exchange>('exchanges', d.id, { text: '', turns, undo });
+  }
 }
 
-/** Forget a whole note: its text is emptied first, then the document is tombstoned (a tombstone keeps every field). */
+/** Forget one line: it is gone from the note, and from History's copies (the old text is not kept anywhere in the app). */
+export async function forgetLine(id: string, lineId: string): Promise<void> {
+  const cur = await current(id);
+  if (!cur) return;
+  await edit(id, { lines: cur.lines.filter(l => l.id !== lineId) });
+  await scrubExchanges(id);
+}
+
+/** Forget a whole note: its text is emptied first, then the document is tombstoned (a tombstone keeps every field), and History's copies go. */
 export async function forgetNote(id: string): Promise<void> {
   if (!(await current(id))) return;
   await update<MemoryNote>('memory', id, { name: '', aliases: [], lines: [], description: '', private: false, updated: stamp() });
   await removeDoc('memory', id);
+  await scrubExchanges(id);
 }
 
 /** Write what an import's plan says: new notes, and the lines and aliases a matched note gains. */

@@ -1218,6 +1218,7 @@ export const en = {
   undoneOk: 'Undone.',
   undoOldConfirm: 'Undo what this did more than ten minutes ago?',
   undoneKept: { one: 'Undone. {n} edit you made since was left alone.', other: 'Undone. {n} edits you made since were left alone.' } as P,
+  historyForgotten: 'Forgotten from Memory',
   historyIntro: 'What you typed on Home or applied from an AI’s link, and what came of it, for the last 90 days. Undo puts back what a line changed, and leaves alone anything you edited since.',
   historyFromLink: 'AI link',
   historyFromInbox: 'AI link, sent through the relay',

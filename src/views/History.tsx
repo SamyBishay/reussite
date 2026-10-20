@@ -30,7 +30,7 @@ export function History() {
           {list.map(x => (
             <li data-testid="history-row">
               <div>
-                <span class="h-text">{x.text}</span>
+                <span class="h-text">{x.text || t('historyForgotten')}</span>
                 <small class="hint">{when(x.turns[x.turns.length - 1]?.at ?? x.at)} · {receiptLine(x)}{x.src !== 'home' && <> · <span data-testid="history-src">{t(x.src === 'link' ? 'historyFromLink' : 'historyFromInbox')}</span></>}</small>
               </div>
               {canUndo(x)

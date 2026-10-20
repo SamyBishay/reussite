@@ -208,11 +208,24 @@ export interface UndoDoc {
   fields?: Record<string, { was: unknown; now: unknown }>;
 }
 
+/**
+ * One line the person typed or dictated on Home (or a link brought), and what came of it. `kind` is
+ * one of (Home writes a turn only when something came of it, so there is never a half-finished one):
+ *  - `add`, `standing`, `done`, `move`, `drop`: the local parser read it and a change-set was applied
+ *    (a drop after the review). `reply` is the title of the step it names; `n` how many changes were written.
+ *  - `changes`: a change-set that is not one of those was applied (a reply from an AI, a link). `reply` is its
+ *    note, if any; `n` how many changes.
+ *  - `answer`: an AI answered about the list, the memory or the method and changed nothing. `reply` is the answer.
+ *  - `duration`: the person said how long a step they had just ticked done took; the session joined the
+ *    Undo of the change-set before it. `text` is what they said, `reply` the step.
+ * Strings stay as written (a new kind is read as a plain turn by older devices).
+ */
 export interface ExchangeTurn {
   at: string;
   text: string;
   reply?: string;
   kind: string;
+  n?: number;
 }
 
 /** What the person typed on Home (or a link brought) and what came of it; Home's history, kept 90 days. */

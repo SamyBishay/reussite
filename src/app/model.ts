@@ -1,12 +1,14 @@
 // Read-side helpers, ported from v1. They read the signals, so views that call them re-render.
 import { computed } from '@preact/signals';
-import { tasks, sessions, projects, days, settings, today, pagePlace, here, decisions, type WithId } from './store';
+import { tasks, sessions, projects, days, settings, today, pagePlace, here, decisions, places, stays, clockNow, type WithId } from './store';
 import type { Task, Day, Session } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { addDays } from '../domain/dates';
+import { agenda } from '../domain/agenda';
+import { greeting } from '../domain/greeting';
 
 export type T = WithId<Task>;
 
@@ -83,3 +85,22 @@ export const decisionsToCheck = (k = today.value) => L.decisionsToCheck(decision
 export const hereNow = () => here.value;
 
 export const yesterdayOpen = (k = today.value) => L.yesterdayOpen({ days: days.value, tasks: tasks.value }, k, addDays(k, -1));
+
+/** Tomorrow's first step: the one chosen when the day was closed, else the first open step on its list. */
+export function tomorrowFirst(k = today.value): { id: string; title: string } | null {
+  const tk = addDays(k, 1);
+  const chosen = T(dayDoc(tk)?.first?.id ?? '');
+  const tt = isOpen(chosen) ? chosen : planOf(tk).map(id => T(id)).find(isOpen);
+  return tt ? { id: tt.id, title: tt.title } : null;
+}
+
+/** What Home's greeting says now (src/domain/greeting.ts); follows the clock, so a fixed-time item takes over on time. */
+export const greetingNow = computed(() => {
+  const now = clockNow.value, k = today.value;
+  const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
+  const plan = planOf(k);
+  return greeting({
+    now, fixed: agenda(data, settings.value, addDays(k, -1), addDays(k, 1)).filter(e => e.kind === 'fixed'),
+    running: running()?.id ?? null, closed: !!dayDoc(k)?.closed, planned: plan.length, next: plan.find(id => isOpen(T(id))) ?? null, tomorrow: tomorrowFirst(k),
+  });
+});

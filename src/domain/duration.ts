@@ -28,3 +28,17 @@ export function splitWheel(m: number): { h: number; m: number } {
   return { h: Math.floor(v / 60), m: v % 60 };
 }
 const roundTo5 = (m: number) => Math.max(0, Math.round(m / 5) * 5);
+
+/**
+ * A length typed or dictated as an answer to "how long did it take?": "20", "20 min", "1h", "1 h 30",
+ * "1h30", "90 minutes", "une heure", "45 minutes". Null for anything else, so a new line is not mistaken for one.
+ */
+export function parseMinutes(text: string): number | null {
+  const s = text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim().replace(/[.!]+$/, '');
+  let m: RegExpExecArray | null;
+  let v: number | null = null;
+  if ((m = /^(\d{1,3})\s*(?:m|mn|min|mins|minute|minutes)?$/.exec(s))) v = Number(m[1]);
+  else if ((m = /^(?:(\d{1,2})|an?|one|une?)\s*(?:h|hr|hrs|hour|hours|heure|heures)(?:\s*(?:and\s*)?(\d{1,2})\s*(?:m|mn|min|mins|minutes?)?)?$/.exec(s))) v = (m[1] ? Number(m[1]) : 1) * 60 + Number(m[2] ?? 0);
+  else if (/^(?:half an hour|an? half[- ]hour|une demi[- ]heure|demi[- ]heure)$/.test(s)) v = 30;
+  return v && v > 0 && v <= 16 * 60 ? v : null;
+}

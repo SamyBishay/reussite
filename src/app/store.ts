@@ -114,9 +114,10 @@ function guard(): boolean {
   return true;
 }
 
-let afterWrite: (() => void) | undefined;
-/** Called after every local write (not after merged ones): sync uses it to push soon. */
-export const onLocalWrite = (f: () => void) => { afterWrite = f; };
+const afterWrites: (() => void)[] = [];
+/** Called after every local write (not after merged ones): sync uses it to push soon, notifications to refresh the schedule. */
+export const onLocalWrite = (f: () => void) => { afterWrites.push(f); };
+const afterWrite = () => { for (const f of afterWrites) f(); };
 /** This device's clock, for sync. */
 export const getClock = () => clock;
 
@@ -126,7 +127,7 @@ export const newId = (p: string) => p + Date.now().toString(36) + Math.random().
 export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
   if (!guard()) return id;
   await db.table_(c).put(create(id, fields, SCHEMA_VERSION, tick(clock)) as never);
-  afterWrite?.();
+  afterWrite();
   return id;
 }
 
@@ -138,7 +139,7 @@ export async function update<T extends object>(c: Collection, id: string, change
       if (!cur) throw new Error('missing ' + c + '/' + id);
       await db.table_(c).put(patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION) as never);
     });
-    afterWrite?.();
+    afterWrite();
   } catch (e) {
     console.error(e);
     toast(t('saveFailed'));
@@ -156,7 +157,7 @@ export async function upsert<T extends object>(c: Collection, id: string, fields
 export async function removeDoc(c: Collection, id: string): Promise<void> {
   if (!guard()) return;
   const cur = await db.table_(c).get(id);
-  if (cur) { await db.table_(c).put(remove(cur, clock) as never); afterWrite?.(); }
+  if (cur) { await db.table_(c).put(remove(cur, clock) as never); afterWrite(); }
 }
 
 /**

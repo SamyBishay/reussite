@@ -27,6 +27,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 - `src/views/` — one file per tab or screen: Home, Today, Matrix, Projects, Calendar (with the Log), Settings, Memory, History; see `docs/dev/home.md`.
 - `src/flows/` — guided flows, one question per screen: check-in and planner, break it down, I'm stuck, decisions, weekly review, the close-of-day show.
 - `src/i18n/` — `en.ts` and `fr.ts`; every UI string lives there. `fr.ts` may lag behind: missing keys fall back to English and are translated in one batch at the end of each phase (the i18n test lists them).
+- `docs/ai/` — the AI kit: `skills/<name>.md` (today, decide) are plain prompts to paste into any chatbot, `skills/<name>/SKILL.md` the same as Claude skills; `preferences.md`, the short `CHANGESET.md`. Update them with `docs/METHOD.en.md` and `docs/CHANGESET.md`. `README.md` is for friends; `CUSTOMIZING.md` is for forks (update it with `docs/dev/infra.md` when a var, secret or build setting changes).
 - `tests/e2e/` — Playwright; `tests/private/` — checks against the real export (never committed data).
 
 ## Invariants

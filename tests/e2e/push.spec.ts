@@ -78,7 +78,7 @@ test('Delete everywhere also removes the notifications and calendar feed from th
 });
 
 test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push the device can read', async ({ page }) => {
-  test.slow();
+  test.setTimeout(240_000); // it waits for a minute 40 to 100 s away, after a setup that is slower under load
   const hour = new Date().getHours();
   test.skip(hour < 5 || hour >= 23, 'the day starts at 05:00 and the test sets a time within the next minutes');
   await importSample(page);

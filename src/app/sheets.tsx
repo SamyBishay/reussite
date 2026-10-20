@@ -2,7 +2,7 @@
 // moving a step, pause, swap, pick, suit piles.
 import { useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { settings, projects, today, places, toast, stays, clockNow, update } from './store';
+import { settings, projects, today, places, toast, stays, clockNow, update, hereZone } from './store';
 import { T, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
@@ -17,7 +17,8 @@ import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../doma
 import { addDays, daysBetween } from '../domain/dates';
 import { isAllowedLink } from '../domain/links';
 import { moveTo, firstCalmDay } from '../domain/moves';
-import { stillOnAfter, minutesBetween } from '../domain/calendar';
+import { stillOnDue, minutesBetween } from '../domain/calendar';
+import { validZone } from '../domain/zone';
 import { dueBeforeEnd } from '../domain/places';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Repeat, Session, Task } from '../data/schema';
@@ -55,13 +56,10 @@ export async function complete(tk: Tk, typed: number | null, day = today.value, 
 }
 
 // ---------- the long timer ("Still on …?") ----------
-/** A timer past twice the personal estimate (at least 45 min), or past the start of the next day. */
+/** A timer past twice the personal estimate (at least 45 min), or past the start of the next day (the push uses the same rule: `stillOnDue`). */
 export function isLong(tk: Tk, now = clockNow.value): boolean {
   if (!tk.started) return false;
-  const from = Date.parse(tk.stillAt || tk.started);
-  const mins = (now - from) / 60000;
-  const crossed = tk.started.slice(0, 10) !== new Date(now).toISOString().slice(0, 10) && (now - Date.parse(tk.started)) / 36e5 > 4;
-  return mins >= stillOnAfter(personal(tk)?.value ?? tk.est) || (!tk.stillAt && crossed);
+  return now >= stillOnDue(Date.parse(tk.started), Date.parse(tk.stillAt ?? '') || 0, personal(tk)?.value ?? tk.est, settings.value.dayStart, validZone(hereZone.value));
 }
 
 export function openStillOn(id: string, then: 'ask' | 'pause' | 'done') {

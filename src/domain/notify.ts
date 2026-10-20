@@ -4,8 +4,8 @@
 import type { Session } from '../data/schema';
 import type { Settings, NotifyType } from '../data/settings';
 import { agenda, type AgendaData, type AgendaEvent, type AgendaSettings } from './agenda';
-import { stillOnAfter, withTime } from './calendar';
-import { addDays, dayKey } from './dates';
+import { stillOnDue, withTime } from './calendar';
+import { addDays } from './dates';
 import { fit, predict } from './estimates';
 import { estPointsOf, isOpen } from './lists';
 import { whereNow } from './places';
@@ -86,13 +86,8 @@ function stillItems(data: NotifyState, s: NotifySettings, today: string, zone: s
   const out: ScheduleItem[] = [];
   for (const t of running) {
     const started = Date.parse(t.started!);
-    const last = Math.max(started, Date.parse(t.stillAt ?? '') || 0);
     const est = predict(model, { est: t.est, app: t.app, project: t.project, suit: t.suit, estBy: t.estBy })?.value ?? t.est;
-    let at = last + stillOnAfter(est) * 60_000;
-    if (!t.stillAt) {
-      const nextStart = atOnDay(addDays(dayKey(new Date(started), s.dayStart, zone), 1), s.dayStart, s.dayStart, zone);
-      at = Math.min(at, Math.max(nextStart, started + 4 * 3_600_000));
-    }
+    const at = stillOnDue(started, Date.parse(t.stillAt ?? '') || 0, est, s.dayStart, zone);
     if (at <= now || at - started > STILL_GIVE_UP_H * 3_600_000) continue;
     out.push({ id: 'still:' + t.id, type: 'still', at, ttl: TTL.still, text: titles ? tr('stillOn', { title: clip(t.title) }) : tr('notifyStill') });
   }

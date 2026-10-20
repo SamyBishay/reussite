@@ -39,6 +39,13 @@ beforeAll(async () => {
   d.add('sessions', 's1', { taskId: 't5', d: day(-3), m: 14, why: 'done', at: '2026-10-16T10:00:00.000Z', source: 'timer' });
   d.add('days', TODAY, { date: TODAY, plan: ['t1', 't3'], launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }], first: null, checkin: null, closed: null, summary: null });
   d.add('days', day(-1), { date: day(-1), plan: ['t2', 't4'], launches: [], first: null, checkin: null, closed: null, summary: null });
+  const line = (id: string, text: string) => ({ id, text, at: '2026-10-01T00:00:00.000Z', by: 'me' });
+  d.add('memory', 'm0', { kind: 'profile', name: 'Me', aliases: [], lines: [line('l1', 'Works best in the morning')], private: false, updated: '2026-10-02T00:00:00.000Z' });
+  d.add('memory', 'm1', { kind: 'person', name: 'Ibrahim', aliases: ['Ibra'], lines: [line('l1', 'Likes tea'), line('l2', 'Works nights')], private: false, updated: '2026-10-03T00:00:00.000Z' });
+  d.add('memory', 'm2', { kind: 'place', name: 'Hill House', aliases: [], lines: [line('l1', 'Room 602 is the choir room')], private: false, updated: '2026-10-04T00:00:00.000Z' });
+  d.add('memory', 'm3', { kind: 'person', name: 'Zelda Secret', aliases: ['Zed'], lines: [line('l1', 'Hidden fact about tea')], private: true, updated: '2026-10-05T00:00:00.000Z' });
+  d.add('tasks', 't7', task('Send Ibrahim the rehearsal dates', { project: 'p2' }));
+  d.add('tasks', 't8', task('Ibrahim birthday gift', { status: 'done', doneDay: day(-2), est0: 10 }));
   d.add('decisions', 'd1', { title: 'Stay or move?', problem: { what: 'Rent went up' }, options: [{ id: 'o1', name: 'Stay', pros: [{ id: 'i1', text: 'cheap', w: 4 }], cons: [], prosNot: [], consNot: [] }], status: 'draft', chosen: null, taskIds: ['t2'] });
   await app.sync();
   access = (await signIn((await switchOn(app)).body.code)).access;
@@ -121,6 +128,58 @@ describe('reading', () => {
     const fr = await tool(access, 'get_method', { language: 'fr' });
     expect(fr.text).not.toBe(en.text);
     expect(fr.text.length).toBeGreaterThan(2000);
+  });
+});
+
+describe('read_memory', () => {
+  it('with nothing asked: the profile in full and the index of the other notes, no private note', async () => {
+    const r = await tool(access, 'read_memory');
+    expect(r.isError).toBe(false);
+    expect(r.text).toContain('m0 | profile | Me | -\n1. Works best in the morning');
+    expect(r.text).toContain('m1 | person | Ibrahim | Ibra');
+    expect(r.text).toContain('m2 | place | Hill House | -');
+    expect(r.text).not.toContain('Likes tea'); // the index lists, it does not read
+    expect(r.text).not.toMatch(/Zelda|Zed|Hidden|m3/);
+  });
+
+  it('by name or by alias: the note in the app\'s format, with its open steps only', async () => {
+    for (const who of ['Ibrahim', 'ibra', 'm1', "Ibrahim's week"]) {
+      const r = await tool(access, 'read_memory', { name: who });
+      expect(r.isError).toBe(false);
+      expect(r.text).toContain('m1 | person | Ibrahim | Ibra\n1. Likes tea\n2. Works nights');
+      expect(r.text).toContain('t7 | Send Ibrahim the rehearsal dates');
+      expect(r.text).not.toContain('birthday gift'); // done
+      expect(r.text).not.toContain('Hill House');
+    }
+  });
+
+  it('by query: the notes named in it, or with all its words in a line', async () => {
+    expect((await tool(access, 'read_memory', { query: 'what does ibrahim have on this week?' })).text).toContain('1. Likes tea');
+    const byLine = await tool(access, 'read_memory', { query: 'choir room' });
+    expect(byLine.text).toContain('m2 | place | Hill House | -\n1. Room 602 is the choir room');
+  });
+
+  it('never a private note: not by id, name, alias, a word in a line, or a query, and no hint that it exists', async () => {
+    for (const a of [{ name: 'Zelda Secret' }, { name: 'm3' }, { name: 'zed' }, { name: 'Zelda' }, { query: 'Zed said hello' }, { query: 'hidden fact' }]) {
+      const r = await tool(access, 'read_memory', a);
+      expect(r.isError).toBe(false);
+      expect(r.text).not.toMatch(/Zelda|Zed\b|Hidden|m3/);
+      expect(r.text).toContain('No memory note matches');
+      expect(r.text).toContain('m1 | person | Ibrahim'); // the index of what can be asked for
+    }
+    // the same word in a line of a note that may be read still finds that note, not the private one
+    const tea = await tool(access, 'read_memory', { query: 'tea' });
+    expect(tea.text).toContain('1. Likes tea');
+    expect(tea.text).not.toContain('Hidden');
+  });
+
+  it('a memory change comes back as a diff and a confirmation id, and writes nothing', async () => {
+    const before = await batches();
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'memory.add', note: 'Ibra', text: 'Plays oud' }] });
+    expect(r.isError).toBe(false);
+    expect(r.text).toMatch(/"confirm": "c\w+"/);
+    expect(r.text).toContain('Remember, in the note "Ibrahim"');
+    expect(await batches()).toBe(before);
   });
 });
 

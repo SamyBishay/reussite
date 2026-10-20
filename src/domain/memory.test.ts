@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { normNote } from '../data/normalize';
-import { noteLines, notesMatching, pickNotes, tokensOf, type Note } from './memory';
+import { noteBlock, noteHead, noteLines, notesMatching, pickNotes, tokensOf, type Note } from './memory';
 
 let n = 0;
 const note = (name: string, extra: Record<string, unknown> = {}): Note => ({ ...normNote({ name, ...extra }), id: 'n' + n++ });
 const lines = (...texts: string[]) => texts.map((text, i) => ({ id: 'l' + i, text, at: '2026-10-01T10:00:00Z', by: 'me' }));
+
+describe('the note format, written the same by the app’s prompts and the connector', () => {
+  it('is id | kind | name | aliases, then the lines numbered from 1 on one line each', () => {
+    const x = { ...note('Ibrahim', { kind: 'person', aliases: ['Ibra', 'Brahim'], lines: lines('Likes tea', 'Works\n  nights') }), id: 'n9' };
+    expect(noteHead(x)).toBe('n9 | person | Ibrahim | Ibra, Brahim');
+    expect(noteBlock(x)).toBe('n9 | person | Ibrahim | Ibra, Brahim\n1. Likes tea\n2. Works nights');
+    expect(noteHead({ ...x, aliases: [] })).toBe('n9 | person | Ibrahim | -');
+  });
+});
 
 describe('notesMatching', () => {
   const ibrahim = note('Ibrahim', { kind: 'person', aliases: ['Ibra', 'Brahim'] });

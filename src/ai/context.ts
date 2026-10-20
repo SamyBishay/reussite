@@ -9,7 +9,7 @@ import { T, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } 
 import { cleanMethod, contractOf, methodSummaryOf } from './method';
 import { decisionLines, oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
-import { pickNotes, noteLines, type Note } from '../domain/memory';
+import { pickNotes, noteBlock, type Note } from '../domain/memory';
 import { lang } from '../i18n';
 import { DEFAULT_SETTINGS } from '../data/settings';
 import type { Decision, ExchangeTurn, Project } from '../data/schema';
@@ -34,9 +34,6 @@ const LANG_NAME = { en: 'English', fr: 'French' } as const;
 export const answerIn = (l = lang.value) => `Answer in ${LANG_NAME[l]}.`;
 
 // ---------- memory ----------
-const noteHead = (n: Note) => [n.id, n.kind, one(n.name), n.aliases.length ? n.aliases.map(one).join(', ') : '-'].join(' | ');
-/** A note as an AI reads it: `id | kind | name | aliases`, then its lines numbered from 1 (how an edit names a line). */
-export const noteBlock = (n: Note): string => noteHead(n) + '\n' + noteLines(n).map(l => l.replace(/\s+/g, ' ').trim()).join('\n');
 const byId = (a: Note, b: Note) => (a.id < b.id ? -1 : 1);
 
 /** The profile, written the same way every time (by id) so the prefix it sits in stays byte-identical; empty without one. Never a private note. */

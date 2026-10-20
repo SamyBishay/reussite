@@ -13,7 +13,7 @@ AI app ──OAuth 2.1 + DCR──▶ /oauth/register, /authorize (pairing code)
 ```
 
 - `@cloudflare/workers-oauth-provider` (pinned) sits in front of the Worker. It owns `/oauth/*`, the discovery documents (`/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource/mcp`) and token checks; storage is the KV namespace `OAUTH_KV`. Everything else goes to `handle` in `relay/src/index.ts`.
-- `/mcp` is built with `createMcpHandler` from `agents/mcp/server` (stateless, no Durable Objects) over `@modelcontextprotocol/server` 2.x, which is what that version of the Agents SDK takes. A server with its nine tools is built for every request; that costs about 1 ms.
+- `/mcp` is built with `createMcpHandler` from `agents/mcp/server` (stateless, no Durable Objects) over `@modelcontextprotocol/server` 2.x, which is what that version of the Agents SDK takes. A server with its ten tools is built for every request; that costs about 1 ms.
 - Tool input is validated by zod schemas; change-sets by the app's own `ChangeSchema` (`src/ai/changeset.ts`) and planned by the app's own `planChanges` (`src/ai/apply.ts`). What a write means (`finishEffects`, `newTaskFields`, `nextOccurrence`, `projectCompletes`, `dueRulePatches`) is in `src/domain/effects.ts`, shared with `src/app/actions.ts`; the read rules are in `src/domain/lists.ts`, shared with `src/app/model.ts`. The Worker has no copy of the data model, merge, change-set schema or validation.
 
 ## Switching on and off (app → relay)
@@ -52,11 +52,14 @@ All answers are plain text, compact lines `id | title | Q1 | due | estimate | pr
 | `get_task` | `id` (an id or a title) | The step with its fields and its work sessions. |
 | `get_project` | `id` (an id or a name) | Goal, SMART fields, counts, at most 50 open steps. |
 | `get_decision` | `id` (an id or a title) | Problem, options with their four columns, the choice, its steps. |
+| `read_memory` | `name?` a note id, name or alias, or words that contain one; `query?` free words | What the person told Réussite. Nothing: the profile in full, then the index of the other notes (`id \| kind \| name \| aliases`, newest first, at most 60). A name: the matching notes (by id, name, alias, then a whole-word name in the text, then a unique prefix) and a query: the notes named in it or with all its words in one line; each note as the app's AI reads it (`noteBlock`, `src/domain/memory.ts`: the head, then the lines numbered from 1) and the open steps that name it (`queryText`, at most 10). At most 8 notes. No match: one sentence and the index. |
 | `get_method` | `language?` `en` or `fr` | `METHOD.<lang>.md` and `CHANGESET.md` in short form (bundled as text modules). Needs no list. |
 | `apply_changes` | `changes?` (the change-set's list), `note?`, `v?`, `confirm?` | See below. |
 | `undo` | `id` | See below. |
 
-Server instructions (sent at initialisation): what Réussite is; call `get_method` before planning or a decision; never change the list without the person's yes except one low-risk change; one `apply_changes` for a quick edit; titles work for ids; no weights.
+Server instructions (sent at initialisation): what Réussite is; call `get_method` before planning or a decision; call `read_memory` when the person names someone, a place or a matter; a new fact goes through `apply_changes` as `memory.add`, in their words, and a memory change always waits for their yes; never change the list without the person's yes except one low-risk change; one `apply_changes` for a quick edit; titles work for ids; no weights.
+
+**Memory is private by construction.** `read_memory` filters out every note with `private: true` before it matches anything, so no id, name, alias or word in a line of a private note finds it, and nothing in an answer says one exists (a miss says only that nothing matches). `apply_changes` leaves them out the same way (step 2 above). The note format is the app's (`noteBlock`): one function writes it for the app's prompts and for this tool.
 
 ### `apply_changes`
 
@@ -76,7 +79,7 @@ AI-originated fields carry `by: "ai"` / `src: "ai"` as in the app. Weights are n
 
 Reverts one applied change-set by its undo id. Each document the change-set touched remembers, per field, the value it replaced and the value it wrote (encrypted with the space key, kept 30 days). Undo writes the old values back as **new** changes with fresh clocks, so they reach the app at its next sync. A field the person changed since (its current value isn't the one the change-set wrote) is left alone and named. A document the change-set created is undone with a tombstone (`_del`), never a hard delete. An undo id works once.
 
-The revert itself is `undoWrites` in `src/ai/undo.ts`, the same function the app's Undo uses (`applyUndo` in `src/app/store.ts`); the records are `UndoDoc` (`src/data/schema.ts`), made by `UndoLog`. **Memory:** a change to a memory note records the note's `lines` before and after, so an undo record in `connector_undo` (30 days, encrypted with the space key like the rest) can hold text the person has since forgotten. It is deleted with the record: when used, after 30 days, or when the connector is switched off.
+The revert itself is `undoWrites` in `src/ai/undo.ts`, the same function the app's Undo uses (`applyUndo` in `src/app/store.ts`); the records are `UndoDoc` (`src/data/schema.ts`), made by `UndoLog`. **Memory:** a change to a memory note records the note's `lines` before and after, so an undo record in `connector_undo` (30 days, encrypted with the space key like the rest) can hold text the person has since forgotten. It is deleted with the record: when used, after 30 days, or when the connector is switched off. A memory line the person forgets in the app is gone from the notes at once, but a record made by the connector before that may still hold its text for up to 30 days; switching the connector off removes them now.
 
 ## The connector as a device
 
@@ -94,6 +97,7 @@ A snapshot is in two parts, hot and cold (docs/dev/sync.md, "Hot and cold"). Hot
 
 | call | reads |
 | --- | --- |
+| `read_memory` | hot only (every live note is in the hot part; so are the open steps it lists) |
 | `today`, `get_day` (a date in the hot window, 30 days back and all the future), `query_tasks` for open steps, `get_project`, `get_decision`, `get_task` by id for an open or recent step, `apply_changes` and `undo` on open or recent things | hot only |
 | `query_tasks` with `status` done, dropped or all; `get_day` for an older date; `get_task` by an id or title that isn't in hot; `apply_changes` naming a step that isn't in hot or a day or step that exists only in cold | hot, then cold |
 
@@ -112,6 +116,8 @@ The free plan gives a request 10 ms of CPU. One call used to decrypt, gunzip and
 | clocks on the wire as one base clock a document | 5.2 | 6.8 | 21.4 | 27.3 |
 | hot part only (the tool's own time also fell by memoising the view: it built an Intl formatter for every line it printed) | 2.7 | 2.3 | 6.1 | 9.2 |
 | warm isolate, the cache holds the merged list | 0.3 | 1.1 | 0.3 | 2.6 |
+
+**Memory.** Notes are always in the hot part, so a space with 150 notes of 8 lines (`BENCH_MEMORY`, the default of `npm run relay:bench`) reads about 1.2 ms slower on a cold isolate for every call, `read_memory` or not, and the notes are built into maps only by a call that reads them (`View.memory` is a getter). Measured on a laptop, median ms, cold isolate with no cache, read plus tool (today's list: 281 steps, 110 sessions): `today` 3.1, `read_memory` 2.8, `read_memory` by name with its steps 3.4, `read_memory` by a query that reads every line 4.2; warm isolate 0.4, 0.9 and 1.6. On the heavy list: `today` 10.1 (8.6 without memory), `read_memory` 6.3, by name 9.1, by query 10.8. The tool's own work is 0.3 ms with no arguments, 0.7 by name and 2.6 by query; the rest is the read.
 
 What is left: on the heavy list the hot part is 583 steps and 485 sessions, 480 KB of JSON in 100 KB. Reading it is gunzip 1.3 ms, UTF-8 and `JSON.parse` 1.6 ms, rebuilding each document's `_hlc` 1.9 ms, the tail of 8 batches 0.8 ms; AES-GCM is 0.1 ms. So parsing and rebuilding dominate, not crypto. The tool's own work is 0.2 to 2 ms, the MCP layer 1.2 ms on top. The first call of a fresh process is slower (cold code: 8 to 15 ms at today's size, 20 to 35 at the heavy one). Rewriting the hot part (`compact`) costs 2.6 ms for today's list and 17 ms for the heavy one, mostly gzip, which is why the connector leaves it to the apps above 600 documents.
 

@@ -46,7 +46,7 @@ describe('the connector end to end', () => {
 
     const list = await rpc(access, 'tools/list');
     expect(list.body.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(
-      ['apply_changes', 'get_day', 'get_decision', 'get_method', 'get_project', 'get_task', 'query_tasks', 'today', 'undo'],
+      ['apply_changes', 'get_day', 'get_decision', 'get_method', 'get_project', 'get_task', 'query_tasks', 'read_memory', 'today', 'undo'],
     );
 
     const today = await tool(access, 'today');

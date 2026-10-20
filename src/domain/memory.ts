@@ -4,6 +4,7 @@
 // never picked. Pure: shared by the app's prompts and the connector's read_memory.
 import type { MemoryNote } from '../data/schema';
 import { norm } from './names';
+import { oneLine } from './lists';
 
 export type Note = MemoryNote & { id: string };
 
@@ -12,6 +13,14 @@ export const tokensOf = (text: string): number => Math.ceil(text.length / 4);
 
 /** A note's lines as shown to an AI, numbered from 1: the number is how a line is named in an edit. */
 export const noteLines = (note: Pick<MemoryNote, 'lines'>): string[] => note.lines.map((l, i) => `${i + 1}. ${l.text}`);
+
+/** `id | kind | name | aliases`: a note's line in an index. */
+export const noteHead = (n: Note) => [n.id, n.kind, oneLine(n.name), n.aliases.length ? n.aliases.map(oneLine).join(', ') : '-'].join(' | ');
+/**
+ * A note as an AI reads it: `id | kind | name | aliases`, then its lines numbered from 1 (how an edit names a line).
+ * The one format: the app's prompts and the connector's read_memory both write it.
+ */
+export const noteBlock = (n: Note): string => noteHead(n) + '\n' + noteLines(n).map(l => l.replace(/\s+/g, ' ').trim()).join('\n');
 
 /** What a note costs when sent: its name, aliases and numbered lines. */
 export const noteTokens = (note: MemoryNote): number => tokensOf([note.name, ...note.aliases, ...noteLines(note)].join('\n'));

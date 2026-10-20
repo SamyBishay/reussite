@@ -13,7 +13,7 @@ import { FakeDevice } from '../../src/sync/testing';
 import { syntheticSpace, type Docs } from '../bench/synthetic';
 import { cacheGet, cacheSize, setCacheEnabled } from '../src/connector/cache';
 import { buildSpace, COMPACT_TAIL, emptyMaps } from '../src/connector/space';
-import { dayText, projectText, queryText, taskText } from '../src/connector/render';
+import { dayText, memoryText, projectText, queryText, taskText } from '../src/connector/render';
 import { View } from '../src/connector/view';
 import { decodeSnapshot } from '../../src/sync/wire';
 import { BASE, call, url } from './helpers';
@@ -123,6 +123,17 @@ describe('the connector reads hot only for the common calls', () => {
       expect(d).toContain('Decision d0');
       expect((await tool(access, 'get_task', { id: docs.tasks!.find(t => t.status === 'open')!.id })).isError).toBe(false);
       expect((await tool(access, 'get_day', { date: day(-5) })).text).toBe(dayText(v, day(-5)));
+    });
+  });
+
+  it('read_memory answers from the hot part alone, as a read of the whole list would', async () => {
+    const v = expected();
+    const named = [...v.memory.values()].find(n => !n.private && n.kind !== 'profile')!;
+    const hidden = [...v.memory.values()].find(n => n.private)!;
+    await withoutCold(async () => {
+      expect((await tool(access, 'read_memory')).text).toBe(memoryText(v, {}));
+      expect((await tool(access, 'read_memory', { name: named.name })).text).toBe(memoryText(v, { name: named.name }));
+      expect((await tool(access, 'read_memory', { name: hidden.name })).text).not.toContain(hidden.lines[0]!.text);
     });
   });
 

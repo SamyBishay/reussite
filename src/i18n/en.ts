@@ -449,6 +449,7 @@ export const en = {
   linkField: 'Link',
   linkRefused: 'That kind of link can’t be opened from Réussite. Use https:// or an app’s own link.',
   atField: 'Fixed time',
+  setTimeHint: 'Set {t} as the time',
   durField: 'Lasts (min)',
   leadField: 'Leave early by (min)',
   leadHint: 'You’re notified this long before the time. Empty: {n} min.',

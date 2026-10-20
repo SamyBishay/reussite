@@ -4,7 +4,7 @@ import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
 import { T, planOf, dayDoc, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
-import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
+import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { Clock } from '../app/Clock';
 import { openCheckin } from '../flows/checkin';
@@ -148,6 +148,15 @@ function QuickAdd({ k }: { k: string }) {
     const id = await createTask(newTaskDoc(title, suit, 'inbox', { est, estBy: est ? 'me' : null }));
     await addToday(id, false, k);
   };
+  // The whole task sheet for a new step; nothing is written until Save there.
+  const details = (e: Event) => {
+    const f = (e.currentTarget as HTMLElement).closest('form')!;
+    const est = Number((f.elements.namedItem('est') as HTMLInputElement).value) || null;
+    const prefill: Partial<Task> = { title: (f.elements.namedItem('title') as HTMLInputElement).value.trim(), suit: (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'] };
+    if (est) { prefill.est = est; prefill.estBy = 'me'; }
+    f.reset();
+    openNewTask(prefill, id => void addToday(id, false, k));
+  };
   return (
     <form class="quick" onSubmit={submit}>
       <label class="field" style="margin:0"><span>{t('newStep')}</span><input type="text" name="title" placeholder={t('newStepPlaceholder')} autocomplete="off" required /></label>
@@ -157,6 +166,7 @@ function QuickAdd({ k }: { k: string }) {
         <button class="btn primary" type="submit">{t('add')}</button>
       </div>
       <p class="hint">{t('estimateHint')}</p>
+      <div><button class="btn small ghost" type="button" data-testid="quick-details" onClick={details}>{t('details')}</button></div>
     </form>
   );
 }

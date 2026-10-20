@@ -28,6 +28,8 @@ async function addChoir(page: Page) {
 for (const width of [320, 375, 430]) {
 test(`a standing item with weekdays leads the plan with its time and leave-by line at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
+  // The first card breathes (a looping animation); WebKit then never sees the tall sheet's buttons as still.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await addChoir(page);
   // It is now a standing obligation: open it again to give it days and a lead.
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();

@@ -42,6 +42,8 @@ import { HEAVY, TODAY, syntheticSpace, type Sizes } from './synthetic';
 const BUDGET_MS = 7;
 /** Notes in the space (8 lines each): a heavy user's memory. */
 const MEMORY = Number(process.env.BENCH_MEMORY ?? 150);
+/** Exchanges in the space over 90 days (ten lines a day on Home): what History holds. */
+const EXCHANGES = Number(process.env.BENCH_EXCHANGES ?? 900);
 const RUNS = 25;
 const TAIL = Number(process.env.BENCH_TAIL) || 8;
 const NOW = Date.parse('2026-10-19T09:30:00Z');
@@ -164,8 +166,8 @@ function fresh(file: string, name: string, n = 7): number[] {
 
 export async function main() {
   if (process.env.BENCH_CHILD) return child(process.env.BENCH_CHILD);
-  const sizes = { ...(process.env.BENCH_SIZE === 'today' ? TODAY : HEAVY), memory: MEMORY };
-  console.log(`Synthetic space: ${sizes.tasks} tasks, ${sizes.sessions} sessions, ${sizes.days} days, ${sizes.projects} projects, ${sizes.decisions} decisions; ${sizes.memory} memory notes; ${TAIL} batches after the snapshot`);
+  const sizes = { ...(process.env.BENCH_SIZE === 'today' ? TODAY : HEAVY), memory: MEMORY, exchanges: EXCHANGES };
+  console.log(`Synthetic space: ${sizes.tasks} tasks, ${sizes.sessions} sessions, ${sizes.days} days, ${sizes.projects} projects, ${sizes.decisions} decisions; ${sizes.memory} memory notes; ${sizes.exchanges} exchanges; ${TAIL} batches after the snapshot`);
   const p = await prepare(sizes);
   const { keys, rows } = p;
   const persisted = { wall: 0, counter: 0 };

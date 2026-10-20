@@ -89,9 +89,18 @@ export function syntheticSpace(sizes: Sizes = HEAVY, today = '2026-10-19', node 
       lines: Array.from({ length: 8 }, (_, j) => ({ id: `l${j}`, text: words(8), at: new Date(now).toISOString(), by: j % 4 ? 'me' : 'ai' })),
     }, SCHEMA_VERSION, at()) as unknown as StoredDoc);
   }
+  // Home's history: a line or two typed, what came of it, and its Undo records (a step made, a step's fields, now and then a note's lines).
   for (let i = 0; i < (sizes.exchanges ?? 0); i++) {
-    const day = addDays(today, -Math.floor((i * 95) / (sizes.exchanges ?? 1)));
-    docs.exchanges!.push(create('e' + i, { at: day + 'T10:00:00.000Z', text: words(6), turns: [], changes: ['c' + i], undo: { ['c' + i]: [{ c: 'tasks', id: 't0', created: true }] }, undone: [], src: 'home' }, SCHEMA_VERSION, format(Date.parse(day + 'T10:00:00Z'), 0, node)) as unknown as StoredDoc);
+    const day = addDays(today, -Math.floor((i * 90) / (sizes.exchanges ?? 1)));
+    const at = day + 'T10:00:00.000Z';
+    const cs = ['c' + i + 'a', ...(i % 3 ? [] : ['c' + i + 'b'])];
+    const undo: Record<string, unknown[]> = {};
+    for (const c of cs) undo[c] = [
+      i % 2 ? { c: 'tasks', id: 't' + (i % 50), created: true, at: format(Date.parse(at), 0, node) } : { c: 'tasks', id: 't' + (i % 50), fields: { status: { was: 'open', now: 'done' }, doneDay: { was: null, now: day }, doneAt: { was: null, now: at } }, at: format(Date.parse(at), 0, node) },
+      ...(i % 10 === 0 ? [{ c: 'memory', id: 'm' + (i % 20), fields: { lines: { was: Array.from({ length: 7 }, (_, j) => ({ id: `l${j}`, text: words(8), at, by: 'me' })), now: Array.from({ length: 8 }, (_, j) => ({ id: `l${j}`, text: words(8), at, by: 'me' })) } } }] : []),
+    ];
+    const turns = cs.map(() => ({ at, text: words(7), kind: i % 2 ? 'add' : 'done', reply: words(4), n: 1 }));
+    docs.exchanges!.push(create('e' + i, { at, text: turns[0]!.text, turns, changes: cs, undo, undone: [], src: 'home' }, SCHEMA_VERSION, format(Date.parse(day + 'T10:00:00Z'), 0, node)) as unknown as StoredDoc);
   }
   return docs;
 }

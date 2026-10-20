@@ -7,7 +7,7 @@ import { openFromText } from '../../src/sync/crypto';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import type { Collection } from '../../src/data/schema';
 import { buildSnapshot } from '../../src/sync/engine';
-import { dayOf } from '../../src/sync/parts';
+import { dayOf, EXCHANGE_MARGIN_MS } from '../../src/sync/parts';
 import { syncOnce } from '../../src/sync/run';
 import { FakeDevice } from '../../src/sync/testing';
 import { syntheticSpace, type Docs } from '../bench/synthetic';
@@ -419,7 +419,7 @@ describe("the isolate's cache", () => {
 void b64uDecode; void SCHEMA_VERSION;
 
 describe('memory notes and exchanges in the two parts', () => {
-  it('a hot-only read holds every live note and the last 30 days of exchanges, and the View reads them', async () => {
+  it('a hot-only read holds every live note and the exchanges of the two days before the cut, and the View reads them', async () => {
     const hotBlob = (await rows("SELECT blob FROM snapshots WHERE space = ?1 AND kind = 'hot' ORDER BY part", space())).map(r => r.blob).join('');
     const s = await buildSpace(space(), app.keys, hotBlob, [], { wall: 0, counter: 0 });
     expect(s.newer).toBe(false);
@@ -430,8 +430,8 @@ describe('memory notes and exchanges in the two parts', () => {
     const note = [...v.memory.values()][0]!;
     expect(note.lines.length).toBe(8);
     expect(typeof note.private).toBe('boolean');
-    const from = day(-30);
-    const recent = [...whole.exchanges.values()].filter(e => e.at.slice(0, 10) >= from);
+    const edge = s.split!.cut.wall - EXCHANGE_MARGIN_MS;
+    const recent = [...whole.exchanges.values()].filter(e => Date.parse(e.at) >= edge);
     expect(recent.length).toBeGreaterThan(0);
     expect(recent.length).toBeLessThan(whole.exchanges.size);
     expect([...v.exchanges.keys()].sort()).toEqual(recent.map(e => e.id).sort());

@@ -7,7 +7,7 @@ import { RelayError, type Pulled, type RelayClient } from './client';
 import { NewerFormatError } from './crypto';
 import { applyIncoming, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
 import type { ChangeDoc, Cut, StoredDoc } from './protocol';
-import { buildParts, touchesCold } from './parts';
+import { buildParts, lateExchanges, touchesCold } from './parts';
 
 /** What a device remembers between rounds. Keep it in the `local` table, never in synced data. */
 export interface SyncState {
@@ -19,6 +19,8 @@ export interface SyncState {
   snapshotSeq: number;
   /** Where the relay's hot and cold parts were cut, as this device last saw or wrote it; unset for a whole snapshot or none. */
   cut?: Cut;
+  /** Exchange writes made long before they were pushed went up: the next snapshot rewrites both parts (src/sync/parts.ts, `lateExchanges`). */
+  owesFull?: true;
 }
 export const INITIAL_STATE: SyncState = { seq: 0, watermark: '', snapshotSeq: 0 };
 
@@ -125,7 +127,8 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   const out = collectOutgoing(everything, node, state.watermark, { imported: state.watermark === '', all: opts.full });
   // An edit to a document the cold part holds too leaves a reader with only the hot part looking at a stub:
   // snapshot as soon as our own batch has come back, rather than after 8 more.
-  const urgent = !!state.cut && out.docs.length > 0 && touchesCold(out.docs, everything, state.cut);
+  const late = out.docs.length > 0 && lateExchanges(out.docs, (opts.now ?? Date.now)());
+  const urgent = late || (!!state.cut && out.docs.length > 0 && touchesCold(out.docs, everything, state.cut));
   // A new space comes into being with its first write, so a first device with nothing yet still makes one.
   if (result.emptySpace && !out.docs.length) {
     await client.push({ v: SCHEMA_VERSION, device: node, docs: [] });
@@ -145,7 +148,7 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
         else throw e;
       }
     }
-    state = { ...state, watermark: out.watermark };
+    state = { ...state, watermark: out.watermark, ...(late ? { owesFull: true as const } : {}) };
     await store.saveState(state);
   }
 
@@ -156,11 +159,11 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
 
   // Now and then, a snapshot so new devices start fast and the relay can drop old batches. Two parts
   // (src/sync/parts.ts): the hot one every time, the cold one when the cut is old or unknown.
-  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY) || (urgent && state.seq > state.snapshotSeq)) {
+  if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY) || (urgent && state.seq > state.snapshotSeq) || (state.owesFull && state.seq > 0)) {
     try {
       const all = await store.all();
       const now = (opts.now ?? Date.now)();
-      let parts = buildParts(all, state.seq, { now, prev: state.cut });
+      let parts = buildParts(all, state.seq, { now, prev: state.cut, full: !!state.owesFull });
       try {
         await client.putSnapshotParts(parts);
       } catch (e) {
@@ -168,7 +171,8 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
         parts = buildParts(all, state.seq, { now, full: true }); // the relay holds no cold part to build on
         await client.putSnapshotParts(parts);
       }
-      state = { ...state, snapshotSeq: state.seq, cut: parts.cut };
+      const { owesFull: _, ...rest } = state;
+      state = { ...rest, snapshotSeq: state.seq, cut: parts.cut };
       await store.saveState(state);
       result.snapshot = true;
     } catch (e) {

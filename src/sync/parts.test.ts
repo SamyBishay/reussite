@@ -5,7 +5,7 @@ import { SCHEMA_VERSION } from '../data/schema';
 import { estPointsOf, type TaskW } from '../domain/lists';
 import { HEAVY, syntheticSpace, TODAY, type Docs } from '../../relay/bench/synthetic';
 import type { StoredDoc } from './protocol';
-import { buildParts, FULL_EVERY_MS, hotFrom, inCold, split, touchesCold } from './parts';
+import { buildParts, EXCHANGE_MARGIN_MS, FULL_EVERY_MS, hotFrom, inCold, lateExchanges, split, touchesCold } from './parts';
 import { decodeSnapshot, encodeSnapshot } from './wire';
 
 const NOW = Date.parse('2026-10-19T12:00:00Z');
@@ -180,8 +180,11 @@ describe('memory notes and exchanges', () => {
   const clock = createClock('phone0001');
   const exchange = (day: string) => all.exchanges!.find(e => String(e.at).startsWith(day))!;
   const from = hotFrom(cut);
-  const recent = all.exchanges!.find(e => String(e.at).slice(0, 10) >= from)!;
-  const older = all.exchanges!.find(e => String(e.at).slice(0, 10) < from)!;
+  const edge = format(cut.wall - EXCHANGE_MARGIN_MS, 0, '');
+  const newest = (e: StoredDoc) => Object.values(e._hlc).reduce((a, b) => (a > b ? a : b));
+  const recent = all.exchanges!.find(e => newest(e) >= edge)!;
+  // within the 30 days other documents stay hot for, but older than the exchanges' margin
+  const older = all.exchanges!.find(e => newest(e) < edge && String(e.at).slice(0, 10) >= from)!;
 
   it('keeps every live note hot, however old its clocks', () => {
     const { hot, cold } = split(all, cut);
@@ -198,11 +201,12 @@ describe('memory notes and exchanges', () => {
     expect(ids(hot, 'memory').has(b!.id)).toBe(true);
   });
 
-  it('puts exchanges of the last 30 days in hot and older ones in cold', () => {
+  it('puts exchanges written in the two days before the cut, or since, in hot, and the rest in cold', () => {
     expect(recent && older).toBeTruthy();
     const { hot, cold } = split(all, cut);
+    expect(ids(hot, 'exchanges').size).toBeLessThan(all.exchanges!.filter(e => String(e.at).slice(0, 10) >= from).length / 5);
     for (const e of all.exchanges!) {
-      const isHot = String(e.at).slice(0, 10) >= from;
+      const isHot = newest(e) >= edge;
       expect(ids(hot, 'exchanges').has(e.id), e.id).toBe(isHot);
       expect(ids(cold, 'exchanges').has(e.id), e.id).toBe(!isHot);
     }
@@ -232,11 +236,23 @@ describe('memory notes and exchanges', () => {
       return touchesCold([{ c, d }], { ...all, [c]: all[c]!.map(x => (x.id === doc.id ? next : x)) }, cut);
     };
     expect(push('exchanges', recent, { undone: ['c'] })).toBe(false);
-    expect(push('exchanges', older, { undone: ['c'] })).toBe(true);
+    expect(push('exchanges', older, { undone: ['c'] })).toBe(true); // an Undo: the app snapshots at once, the exchange touched lately is hot
+    const after = { ...cut, wall: cut.wall };
+    const undone = patch(older, { undone: ['c'] }, clock, SCHEMA_VERSION) as unknown as StoredDoc;
+    expect(ids(split({ ...all, exchanges: all.exchanges!.map(e => (e.id === older.id ? undone : e)) }, after).hot, 'exchanges').has(older.id)).toBe(true);
     expect(push('memory', all.memory![3]!, { aliases: ['x'] })).toBe(false);
     const gone = { ...all.memory![4]!, _del: format(NOW - 60 * DAY, 0, 'phone0001') } as StoredDoc;
     const docs = { ...all, memory: all.memory!.map(m => (m.id === gone.id ? gone : m)) };
     const revived = patch(gone, { name: 'Back' }, clock, SCHEMA_VERSION) as unknown as StoredDoc;
     expect(touchesCold([{ c: 'memory', d: { id: gone.id, _v: SCHEMA_VERSION, _hlc: { name: revived._hlc.name! }, name: 'Back' } as StoredDoc }], { ...docs, memory: docs.memory!.map(m => (m.id === gone.id ? revived : m)) }, cut)).toBe(true);
+  });
+});
+
+describe('exchange writes pushed late', () => {
+  const ex = (wall: number) => ({ c: 'exchanges', d: { id: 'e1', _v: SCHEMA_VERSION, _hlc: { undone: format(wall, 0, 'p') }, undone: [] } as unknown as StoredDoc });
+  it('are those made more than a day before the push', () => {
+    expect(lateExchanges([ex(NOW - 60_000)], NOW)).toBe(false);
+    expect(lateExchanges([ex(NOW - 3 * DAY)], NOW)).toBe(true);
+    expect(lateExchanges([{ ...ex(NOW - 3 * DAY), c: 'tasks' }], NOW)).toBe(false);
   });
 });

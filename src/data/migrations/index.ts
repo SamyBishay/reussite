@@ -36,8 +36,15 @@ const v2: Migration = data => ({
   }),
 });
 
+/**
+ * 2 → 3 (phase 2b): the `memory` and `exchanges` collections arrive. Nothing stored changes: the
+ * new collections start empty, and the bump is what keeps a device on schema 2 from reading a
+ * schema 3 batch (it goes read-only instead of skipping the notes).
+ */
+const v3: Migration = data => data;
+
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2];
+export const MIGRATIONS: Migration[] = [v2, v3];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;

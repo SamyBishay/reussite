@@ -5,8 +5,8 @@ import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
 import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
-import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay } from '../data/schema';
-import { normDecision } from '../data/normalize';
+import { SCHEMA_VERSION, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange } from '../data/schema';
+import { normDecision, normExchange, normNote } from '../data/normalize';
 import { whereNow } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
@@ -25,6 +25,8 @@ export const days = signal(new Map<string, WithId<Day>>());
 export const decisions = signal(new Map<string, WithId<Decision>>());
 export const places = signal(new Map<string, WithId<Place>>());
 export const stays = signal(new Map<string, WithId<Stay>>());
+export const memory = signal(new Map<string, WithId<MemoryNote>>());
+export const exchanges = signal(new Map<string, WithId<Exchange>>());
 export const settings = signal<Settings>(withDefaults(undefined));
 export const ready = signal(false);
 /** Data written by a newer version: look but don't touch, and ask to reload. */
@@ -70,7 +72,8 @@ const live = <T>(c: Collection) => (docs: Stored<Record<string, unknown>>[]) => 
   for (const d of docs) {
     if (d._del) continue;
     const f = fieldsOf(d);
-    m.set(d.id, { ...((c === 'decisions' ? normDecision(f) : f) as T), id: d.id });
+    const norm = c === 'decisions' ? normDecision : c === 'memory' ? normNote : c === 'exchanges' ? normExchange : null;
+    m.set(d.id, { ...((norm ? norm(f) : f) as T), id: d.id });
   }
   return m;
 };
@@ -92,6 +95,8 @@ export async function start(): Promise<void> {
     ['decisions', v => (decisions.value = v)],
     ['places', v => (places.value = v)],
     ['stays', v => (stays.value = v)],
+    ['memory', v => (memory.value = v)],
+    ['exchanges', v => (exchanges.value = v)],
   ];
   const first: Promise<void>[] = [];
   for (const [c, set] of subs) {

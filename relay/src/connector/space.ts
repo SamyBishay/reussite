@@ -10,7 +10,7 @@ import { decodeBatch, decodeSnapshot, encodeBatch, encodeSnapshot } from '../../
 import { applyIncoming, collectOutgoing, SYNCED_COLLECTIONS, type DocSet } from '../../../src/sync/engine';
 import { create, merge, patch, remove } from '../../../src/data/doc';
 import { createClock, format, receive, tick, type Clock } from '../../../src/data/hlc';
-import { COLLECTIONS, SCHEMA_VERSION, type Collection } from '../../../src/data/schema';
+import { COLLECTIONS, SCHEMA_VERSION, type Collection, type UndoDoc } from '../../../src/data/schema';
 import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES, type ChangeBatch, type ChangeDoc, type ColdDigest, type Cut, type Snapshot, type StoredDoc } from '../../../src/sync/protocol';
 import { buildParts, hotFrom, inCold } from '../../../src/sync/parts';
 import type { Env } from '../env';
@@ -18,6 +18,7 @@ import { appendBatch, spaceSlot, storeSnapshot, type SnapshotWrite } from '../sy
 import { CONNECTOR_DEVICE } from './admin';
 import { cacheGet, remember, type Entry } from './cache';
 
+export type { UndoDoc };
 export type Maps = Record<Collection, Map<string, StoredDoc>>;
 export const emptyMaps = (): Maps => Object.fromEntries(COLLECTIONS.map(c => [c, new Map()])) as unknown as Maps;
 
@@ -381,14 +382,3 @@ export async function sealHot(s: Loaded, upto: number): Promise<string> {
 
 /** Compaction writes the hot part uncompressed: gzip of the whole hot part costs more CPU than the call has left (relay/bench). */
 const COMPACT_PLAIN = false;
-
-/** What one edit replaced, kept so `undo` can put it back. */
-export interface UndoDoc {
-  c: Collection;
-  id: string;
-  /** Made by this change-set: undone with a tombstone. */
-  created?: true;
-  /** Removed by this change-set (tombstoned). */
-  removed?: true;
-  fields?: Record<string, { was: unknown; now: unknown }>;
-}

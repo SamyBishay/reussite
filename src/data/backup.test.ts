@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ReussiteDb } from './db';
 import { makeBackup, parseBackup, restoreBackup } from './backup';
 import { create } from './doc';
+import { SCHEMA_VERSION } from './schema';
 
 describe('backup', () => {
   it('round-trips through JSON, deletions included', async () => {
@@ -15,6 +16,25 @@ describe('backup', () => {
     expect(counts.tasks).toBe(2);
     expect((await b.tasks.get('t2'))!._del).toBeDefined();
     expect(await b.backups.count()).toBe(1);
+  });
+  it('carries memory notes and exchanges, and restoring an older backup keeps the ones here', async () => {
+    const a = new ReussiteDb('bk-m-a');
+    await a.memory.put(create<Record<string, unknown>>('m1', { kind: 'person', name: 'Ibrahim', lines: [{ id: 'l0', text: 'Moves in March', at: '2026-10-01T10:00:00Z', by: 'me' }], futureField: 7 }, SCHEMA_VERSION, '0000000000001:0000:a'));
+    await a.exchanges.put({ ...create<Record<string, unknown>>('e1', { at: '2026-10-02T10:00:00Z', text: 'hi', undo: { c1: [{ c: 'tasks', id: 't1', created: true }] } }, SCHEMA_VERSION, '0000000000001:0000:a'), _del: '0000000000002:0000:a' });
+    const file = parseBackup(JSON.parse(JSON.stringify(await makeBackup(a))));
+    expect(file.schema).toBe(SCHEMA_VERSION);
+    const b = new ReussiteDb('bk-m-b');
+    const counts = await restoreBackup(b, file);
+    expect(counts).toMatchObject({ memory: 1, exchanges: 1 });
+    expect(await b.memory.get('m1')).toEqual(await a.memory.get('m1'));
+    expect((await b.exchanges.get('e1'))!._del).toBeDefined();
+
+    // a backup from before schema 3 has no such collections: restoring it leaves what is here
+    const old = parseBackup({ format: 'reussite-backup', schema: 2, exported: '2026-10-01T00:00:00Z', data: { tasks: [create<Record<string, unknown>>('t9', { title: 'Old' }, 2, '0000000000001:0000:z')] } });
+    expect(await restoreBackup(b, old)).toMatchObject({ tasks: 1, memory: 0, exchanges: 0 });
+    expect(await b.memory.get('m1')).toMatchObject({ name: 'Ibrahim', futureField: 7 });
+    expect((await b.exchanges.get('e1'))!._del).toBeDefined();
+    expect(await b.tasks.get('t9')).toBeDefined();
   });
   it('refuses other files and newer versions', () => {
     expect(() => parseBackup({ tasks: {} })).toThrow();

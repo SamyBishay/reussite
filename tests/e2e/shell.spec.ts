@@ -171,3 +171,21 @@ test('every tab label fits at 320px in French', async ({ page }) => {
   const fit = await page.locator('.tabbar .tab span').evaluateAll(els => els.map(l => [l.textContent, l.scrollWidth, l.clientWidth]));
   for (const [name, sw, cw] of fit) expect(sw, String(name)).toBeLessThanOrEqual(cw as number);
 });
+
+test('Home, Memory and History do not scroll sideways at 320px in French', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await importSample(page);
+  await goTab(page, 'settings');
+  await page.getByRole('button', { name: 'Français' }).click();
+  await goTab(page, 'home');
+  await expect(page.getByTestId('tab-home')).toContainText('Accueil');
+  await noSideways(page, 'Accueil');
+  await openMenu(page, 'memory');
+  await expect(page.getByTestId('memory')).toBeVisible();
+  await noSideways(page, 'Mémoire');
+  await page.getByTestId('memory-import').click();
+  await noSideways(page, 'Mémoire, importer');
+  await page.keyboard.press('Escape');
+  await openMenu(page, 'history');
+  await noSideways(page, 'Historique');
+});

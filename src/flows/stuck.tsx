@@ -58,8 +58,8 @@ function Stuck({ id: given }: { id?: string }) {
   const second = (tk.stalls || 0) >= 2;
   // The AI only fills the field: the person accepts it by restarting, or edits it first.
   const suggest = async () => {
-    const { system, user } = stuckPrompt(tk.id, friction);
-    const r = await ai.run(signal => askAi('stuck', 'quick', system, user, StuckReply, { signal }));
+    const { system, user, notes } = stuckPrompt(tk.id, friction);
+    const r = await ai.run(signal => askAi('stuck', 'quick', system, user, StuckReply, { signal, notes }));
     if (r) { setSmaller(r.starter); setAiNote(r.note); }
   };
   const restart = async () => {

@@ -30,6 +30,7 @@ export function PreviewHost() {
           <dt>{t('aiModel')}</dt><dd>{r.model}</dd>
           <dt>{t('aiHeaders')}</dt><dd>{Object.entries(r.headers).map(([k, v]) => k + ': ' + v).join('\n')}</dd>
         </dl>
+        {p.notes && <p class="hint" data-testid="ai-notes">{t('aiNotesSent')}: {p.notes.length ? p.notes.join(', ') : t('aiNotesNone')}</p>}
         <details class="more"><summary>{t('aiSystem')} ({r.system.length.toLocaleString()})</summary><pre class="ai-pre">{r.system}</pre></details>
         <p class="field-label">{t('aiUser')}</p>
         <pre class="ai-pre" data-testid="ai-user">{r.user}</pre>
@@ -69,8 +70,8 @@ export function CommandBox({ scope }: { scope: Scope }) {
     if (!q || busy) return;
     setBusy(true); setErr(null);
     ctl.current = new AbortController();
-    const { system, user } = commandPrompt(q);
-    const r = await askChanges('command', 'quick', system, user, { signal: ctl.current.signal });
+    const { system, user, notes } = commandPrompt(q);
+    const r = await askChanges('command', 'quick', system, user, { signal: ctl.current.signal, notes });
     setBusy(false);
     if (!r.ok) { if (r.error !== 'cancelled') setErr(r); return; }
     if (openChangeReview(r.cs, { request: q, onApplied: n => { if (n) setText(''); } })) setErr(null);

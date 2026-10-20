@@ -3,12 +3,13 @@
 // AI is asked for estimates.
 import { projects, type WithId } from '../app/store';
 import { T } from '../app/model';
-import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, MAX_STEPS } from './context';
+import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
 import type { Plan, PlanInput } from '../domain/planner';
 import type { Decision } from '../data/schema';
 import type { DecisionAsk } from './features';
 
-type P = { system: string; user: string };
+/** `notes`: the names of the memory notes in the request (the profile is in the system prompt), for "Show me what's sent". */
+type P = { system: { stable: string; rest: string }; user: string; notes: string[] };
 const one = (s: string) => s.replace(/\s+/g, ' ').trim();
 const join = (xs: (string | number | false | null | undefined)[]) => xs.filter(x => typeof x === 'string' && x).join('\n\n');
 
@@ -30,6 +31,7 @@ Reply with JSON only:
   const roleOf = new Map(planned.map(i => [i.id, i.role + (i.at ? ' ' + i.at : '')]));
   const ruleLines = planned.map(i => `${i.id} | ${roleOf.get(i.id)} | ${one(T(i.id)?.title ?? '')}`).join('\n');
   const starters = ids.map(id => T(id)).filter(x => x && !x.starter).map(x => x!.id);
+  const memo = memoryFor('', ids.map(id => T(id)).filter(x => !!x).map(x => x!));
   const user = join([
     header(), shape,
     `Carried from yesterday: ${inp.carried.map(s => s.id).join(', ') || '(none)'}`,
@@ -38,8 +40,9 @@ Reply with JSON only:
     'The rule-based plan (id | role | title):\n' + ruleLines,
     starters.length && 'Steps with no starter yet: ' + starters.join(', '),
     calibrationLine(ids.map(id => T(id)?.app)),
+    memo.text,
   ]);
-  return { system, user };
+  return { system, user, notes: memo.names };
 }
 
 // ---------- 3. Break it down ----------
@@ -49,6 +52,7 @@ export function breakDownPrompt(id: string): P {
   const system = systemPrompt(`Break the step below into 2 to 6 smaller steps, in order: each waits for the one before. The first step is the one to start now.
 ${STEP_RULES}
 Reply with JSON only: {"steps": [${STEP_JSON}], "note": "one sentence"}`);
+  const memo = memoryFor('', [tk]);
   const user = join([
     header(),
     STEP_HEADER + '\n' + stepLine(tk),
@@ -56,8 +60,9 @@ Reply with JSON only: {"steps": [${STEP_JSON}], "note": "one sentence"}`);
     tk.starter ? 'Its starter now: ' + one(tk.starter) : '',
     tk.note ? 'Its note: ' + one(tk.note).slice(0, 400) : '',
     calibrationLine([tk.app]),
+    memo.text,
   ]);
-  return { system, user };
+  return { system, user, notes: memo.names };
 }
 
 // ---------- 4. Decision help ----------
@@ -70,35 +75,42 @@ const DECISION_TASK: Record<DecisionAsk, string> = {
 
 export function decisionPrompt(d: WithId<Decision>, what: DecisionAsk, extra = ''): P {
   const system = systemPrompt(DECISION_TASK[what] + '\nNever propose weights: they are the person\'s.');
+  const scope = scopeLines({ kind: 'decision', id: d.id });
+  const memo = memoryFor(scope + '\n' + extra);
   const user = join([
     header(),
-    scopeLines({ kind: 'decision', id: d.id }),
+    scope,
     what === 'items' && extra ? 'Option to fill: ' + one(extra) : '',
     what === 'problem' && extra ? 'Their description:\n' + extra.trim() : '',
     what === 'steps' ? calibrationLine() : '',
+    memo.text,
   ]);
-  return { system, user };
+  return { system, user, notes: memo.names };
 }
 
 // ---------- 5. Stuck ----------
 export function stuckPrompt(id: string, friction: string): P {
   const tk = T(id)!;
   const system = systemPrompt(`The person is stuck on this step (${friction === 'start' ? 'can\'t start' : friction === 'restart' ? 'can\'t get back into it' : 'keeps drifting off'}). Propose one smaller starter: a first move under 2 minutes, physical and concrete, that cannot fail. Reply with JSON only: {"starter": "...", "note": "one short sentence"}`);
+  const memo = memoryFor('', [tk]);
   const user = join([
     header(),
     STEP_HEADER + '\n' + stepLine(tk),
     tk.starter ? 'Starter that didn\'t work: ' + one(tk.starter) : 'No starter yet.',
     tk.resume ? 'Where they stopped: ' + one(tk.resume) : '',
     tk.app ? 'App or place: ' + one(tk.app) : '',
+    memo.text,
   ]);
-  return { system, user };
+  return { system, user, notes: memo.names };
 }
 
 // ---------- 6. Sunday review help ----------
 export function reviewPrompt(projectId: string): P {
   const system = systemPrompt(`It is the weekly review. For the project below, propose a one-sentence goal, its SMART lines, and the next 1 to 3 steps if the project has no clear next step. Keep what the person already wrote unless it is vague. ${STEP_RULES}
 Reply with JSON only: {"goal": "...", "smart": {"specific": "", "measurable": "", "attainable": "", "relevant": "", "dated": ""}, "next": [${STEP_JSON}], "note": "one sentence"}`);
-  const user = join([header(), scopeLines({ kind: 'project', id: projectId }), calibrationLine()]);
-  return { system, user };
+  const scope = scopeLines({ kind: 'project', id: projectId });
+  const memo = memoryFor(scope);
+  const user = join([header(), scope, calibrationLine(), memo.text]);
+  return { system, user, notes: memo.names };
 }
 

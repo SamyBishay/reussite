@@ -1,15 +1,18 @@
 // What an AI is told (brief §10): the method, the feature's contract, the person's language,
-// and compact lines for a few relevant steps (at most 25), never the whole list.
+// the person's memory (the profile always, other notes when the request is about them), and compact
+// lines for a few relevant steps (at most 25), never the whole list.
 import methodEn from '../../docs/METHOD.en.md?raw';
 import methodFr from '../../docs/METHOD.fr.md?raw';
 import changesetDoc from '../../docs/CHANGESET.md?raw';
-import { tasks, projects, places, decisions, settings, today, here, type WithId } from '../app/store';
+import { tasks, projects, places, decisions, memory, settings, today, here, type WithId } from '../app/store';
 import { T, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } from '../app/model';
 import { cleanMethod, contractOf, methodSummaryOf } from './method';
 import { decisionLines, oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
+import { pickNotes, noteLines, type Note } from '../domain/memory';
 import { lang } from '../i18n';
-import type { Decision, Project } from '../data/schema';
+import { DEFAULT_SETTINGS } from '../data/settings';
+import type { Decision, ExchangeTurn, Project } from '../data/schema';
 
 export const MAX_STEPS = 25;
 
@@ -30,9 +33,44 @@ export const dropInstruction = (base: string): string =>
 const LANG_NAME = { en: 'English', fr: 'French' } as const;
 export const answerIn = (l = lang.value) => `Answer in ${LANG_NAME[l]}.`;
 
-/** System prompt: the method, then the feature's output contract, then the language. */
-export function systemPrompt(contract: string, l = lang.value): string {
-  return `You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.\n\n${method(l)}\n\n# Your task\n\n${contract.trim()}\n\n${answerIn(l)}`;
+// ---------- memory ----------
+const noteHead = (n: Note) => [n.id, n.kind, one(n.name), n.aliases.length ? n.aliases.map(one).join(', ') : '-'].join(' | ');
+/** A note as an AI reads it: `id | kind | name | aliases`, then its lines numbered from 1 (how an edit names a line). */
+export const noteBlock = (n: Note): string => noteHead(n) + '\n' + noteLines(n).map(l => l.replace(/\s+/g, ' ').trim()).join('\n');
+const byId = (a: Note, b: Note) => (a.id < b.id ? -1 : 1);
+
+/** The profile, written the same way every time (by id) so the prefix it sits in stays byte-identical; empty without one. Never a private note. */
+function profileText(): string {
+  const ps = [...memory.value.values()].filter(n => n.kind === 'profile' && !n.private).sort(byId);
+  return ps.length ? 'About the person, in their own words (note id | kind | name | aliases, then numbered lines):\n\n' + ps.map(noteBlock).join('\n\n') : '';
+}
+
+const MEMORY_USE = 'It is what the person told Réussite in their own words: use it to understand them, never to draw conclusions about their health, character or anyone\'s private life.';
+
+/** What memory goes with one request: the text for the user message (empty if none) and the names of every note sent, profile included. */
+export interface Memo { text: string; names: string[] }
+
+/**
+ * The notes for a request, within the `memoryBudget` setting: the profile (sent in the system prompt) and the
+ * notes whose name or alias is in `message` or in the steps involved. Private notes are never picked.
+ */
+export function memoryFor(message: string, steps: { title: string; project?: string; note?: string }[] = []): Memo {
+  const budget = settings.value.memoryBudget;
+  const picked = pickNotes({
+    notes: memory.value.values(), message, tasks: steps, projects: projects.value.values(),
+    budgetTokens: Number.isFinite(budget) && budget >= 0 ? budget : DEFAULT_SETTINGS.memoryBudget,
+  });
+  const rest = picked.filter(n => n.kind !== 'profile');
+  return {
+    text: rest.length ? `Memory (note id | kind | name | aliases, then numbered lines). ${MEMORY_USE}\n\n` + rest.map(noteBlock).join('\n\n') : '',
+    names: picked.map(n => n.name),
+  };
+}
+
+/** The stable part of every system prompt (the method, the profile, the language) and the feature's own part. */
+export function systemPrompt(contract: string, l = lang.value): { stable: string; rest: string } {
+  const stable = [`You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.`, method(l), profileText(), answerIn(l)].filter(Boolean).join('\n\n');
+  return { stable, rest: `# Your task\n\n${contract.trim()}` };
 }
 
 const projName = (id: string) => (id === 'inbox' ? 'Inbox' : projects.value.get(id)?.name ?? id);
@@ -113,27 +151,55 @@ export function scopeLines(s: Scope): string {
 /** "Ask any AI": everything a chatbot needs, ready to paste. */
 export function contextPack(s: Scope, question: string, l = lang.value, drop?: string | null): string {
   const apps = s.kind === 'project' ? [...tasks.value.values()].filter(x => x.project === s.id).map(x => x.app) : [];
+  const scope = scopeLines(s);
+  // The profile and the notes the question or the steps name, as in a request (the same budget); never a private note.
+  const picked = pickNotes({ notes: memory.value.values(), message: question + '\n' + scope, projects: projects.value.values(), budgetTokens: settings.value.memoryBudget });
   return [
     'I use Réussite, a planning app built on a CBT method for adults with ADHD. Help me with the question at the end, following the method.',
     '## The method, in short\n\n' + methodSummary(l),
-    '## My data\n\n' + [header(), projectLines(), placeLines(), (s.kind === 'decision' ? '' : STEP_HEADER + '\n\n') + scopeLines(s), calibrationLine(apps)].filter(Boolean).join('\n\n'),
+    '## My data\n\n' + [header(), projectLines(), placeLines(), (s.kind === 'decision' ? '' : STEP_HEADER + '\n\n') + scope, calibrationLine(apps)].filter(Boolean).join('\n\n'),
+    picked.length && `## What I have told Réussite about me and my people\n\nNote id | kind | name | aliases, then numbered lines. ${MEMORY_USE}\n\n` + picked.map(noteBlock).join('\n\n'),
     '## How to propose changes\n\n' + changesetContract(),
     '## My question\n\n' + question.trim(),
     `${answerIn(l)} ` + (drop
       ? `If you propose changes, end your reply with the change-set. ${dropInstruction(drop)} Never include weights.`
       : 'If you propose changes, end your reply with one fenced code block labelled reussite that holds the change-set. Never include weights.'),
-  ].join('\n\n');
+  ].filter(Boolean).join('\n\n');
 }
 
 /** The one sentence to paste once into an AI's custom instructions or memory. */
 export const dropMemoryLine = (base: string): string => `About my Réussite list: whenever you propose changes to it, answer like this. ${dropInstruction(base)}`;
 
-/** The command box: the request plus the steps it most likely means. */
-export function commandPrompt(text: string): { system: string; user: string } {
+const MEMORY_RULE = 'Memory lines record only what the person said, in their words. Never write a conclusion about their health, character or anyone\'s private life.';
+const OUT_OF_SCOPE = 'You only help with the person\'s list, their memory notes and the method. For anything else (the weather, general knowledge, writing, other apps) return no changes, give one short line in "note" saying that and that their usual AI can help with it, and set "outside": true.';
+const ANSWER_IN_NOTE = 'To answer a question about their list, their memory or the method, return no changes and put the answer in "note": short, plain, no preamble.';
+
+/** The list as an AI needs it for one request: today's list, the steps the words point at, the memory they name. */
+function listContext(message: string, request: string) {
   const plan = planOf(today.value).map(id => T(id)!).filter(x => x.status === 'open');
-  const rel = relevantSteps(text).filter(x => !plan.includes(x));
+  const rel = relevantSteps(message).filter(x => !plan.includes(x));
   const steps = [...plan, ...rel].slice(0, MAX_STEPS);
-  const system = systemPrompt(`Turn the person's request into a change-set. Reply with the change-set JSON only, no prose. Use ids from the lines you are given; never invent ids except as "ref" for things you create. If the request is unclear, return no changes and say why in "note".\n\n${changesetContract()}`);
-  const user = [header(), projectLines(), placeLines(), `Today's list: ${plan.map(x => x.id).join(', ') || '(empty)'}`, STEP_HEADER + '\n' + stepLines(steps), calibrationLine(steps.map(x => x.app)), 'Request:\n' + text.trim()].filter(Boolean).join('\n\n');
-  return { system, user };
+  const memo = memoryFor(message, steps);
+  const user = [header(), projectLines(), placeLines(), `Today's list: ${plan.map(x => x.id).join(', ') || '(empty)'}`, STEP_HEADER + '\n' + stepLines(steps), calibrationLine(steps.map(x => x.app)), memo.text, request].filter(Boolean).join('\n\n');
+  return { user, notes: memo.names };
+}
+
+/** The command box: the request plus the steps it most likely means and the memory it names. */
+export function commandPrompt(text: string): { system: { stable: string; rest: string }; user: string; notes: string[] } {
+  const system = systemPrompt(`Turn the person's request into a change-set. Reply with the change-set JSON only, no prose. Use ids from the lines you are given; never invent ids except as "ref" for things you create. If the request is unclear, return no changes and say why in "note". ${MEMORY_RULE}\n\n${changesetContract()}`);
+  return { system, ...listContext(text, 'Request:\n' + text.trim()) };
+}
+
+/**
+ * Home's box (brief §5): a line the local parser couldn't read, with what was said in the last ten minutes. The
+ * reply is a change-set; with no changes its `note` is the answer, or, with `outside`, the one line that sends
+ * the person to their usual AI.
+ */
+export function homePrompt(text: string, turns: Pick<ExchangeTurn, 'text' | 'reply' | 'n'>[] = []): { system: { stable: string; rest: string }; user: string; notes: string[] } {
+  const system = systemPrompt(`The person typed this in Réussite's box. Reply with the change-set JSON only, no prose. If it asks for a change, give the changes, using ids from the lines you are given and never inventing ids except as "ref" for things you create. ${ANSWER_IN_NOTE} If it is unclear, return no changes and ask one question in "note". ${OUT_OF_SCOPE} ${MEMORY_RULE}\n\n${changesetContract()}`);
+  const before = turns.slice(-6).map(x => `Person: ${one(x.text).slice(0, 300)}\n` + (x.reply ? `Réussite: ${one(x.reply).slice(0, 500)}` : x.n ? `Réussite: made ${x.n} change${x.n > 1 ? 's' : ''}` : 'Réussite: (no reply)'));
+  // Earlier turns count for the matching too: "and his sister?" still means the note named before.
+  const message = [text, ...turns.slice(-6).map(x => x.text + ' ' + (x.reply ?? ''))].join('\n');
+  const request = (before.length ? 'Earlier in this conversation:\n' + before.join('\n') + '\n\n' : '') + 'Message:\n' + text.trim();
+  return { system, ...listContext(message, request) };
 }

@@ -194,8 +194,8 @@ function ProjectAi({ id }: { id: string }) {
   const [rv, setRv] = useState<{ plan: ChangePlan; note: string } | null>(null);
   const [v, setV] = useState(0);
   const go = async () => {
-    const { system, user } = reviewPrompt(id);
-    const r = await ai.run(signal => ask('review', 'thinking', system, user, ReviewReply, { signal }));
+    const { system, user, notes } = reviewPrompt(id);
+    const r = await ai.run(signal => ask('review', 'thinking', system, user, ReviewReply, { signal, notes }));
     if (!r) return;
     const p = projects.value.get(id);
     const cs = reviewChangeSet(r, { id, where: p?.where });

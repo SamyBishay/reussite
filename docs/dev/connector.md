@@ -64,8 +64,9 @@ The input is the contract in `docs/CHANGESET.md` (version 1, same operations). S
 
 1. Every change is checked with `ChangeSchema`. Any error → nothing is written and **all** errors come back (`Change 2 (task.update): set.due: YYYY-MM-DD`).
 2. Titles become ids wherever an id is expected (`task.update/done/drop` ids, `task.reorder`, `day.update`, `set.after`, `set.project`, `set.where`, project and place ids). An id or a ref made in the same change-set is left alone; otherwise the title is matched exactly, then by a unique prefix, ignoring case, accents and punctuation. Several matches → the candidates come back as lines and nothing is written. No match → "No step with the id or title …", nothing written.
+   A memory note (`note` of `memory.*`) is found the same way by id, name or alias, private notes left out; `memory.add` with a `kind` names a new note instead and is not looked up. Notes are read only when a change asks.
 3. The set is planned with `planChanges`. Changes that come to nothing (already so) are listed, not written.
-4. **One low-risk change** (`isLowRisk` in `src/ai/apply.ts`: a single change that adds a step, ticks one done, or moves one date, meaning only `due`, or `due` and `at`) is applied at once: one encrypted batch under the device `connector`, a receipt of what changed, the ids created, and an **undo id** (`u…`).
+4. **One low-risk change** (`isLowRisk` in `src/ai/apply.ts`: a single change that adds a step, ticks one done, or moves one date, meaning only `due`, or `due` and `at`) is applied at once (a memory change never is, and a new standing obligation, one `task.create` with `template`, `weekdays` and `at`, is): one encrypted batch under the device `connector`, a receipt of what changed, the ids created, and an **undo id** (`u…`).
 5. **Anything else** is not written. The answer is the diff (`before → after`) and a **confirmation id** (`c…`), stored encrypted for one hour. Calling `apply_changes` again with only `{"confirm": "c…"}` applies it. If the list changed meanwhile so the plan is no longer the same size, the confirmation is dropped and a fresh one is asked for.
 6. "R: choir Monday 19:00, Hill House 602" is one call: `{"op": "task.create", "set": {"title": "Choir, Hill House 602", "project": "Choir", "due": "2026-10-26", "at": "19:00", "dur": 90}}`.
 
@@ -74,6 +75,8 @@ AI-originated fields carry `by: "ai"` / `src: "ai"` as in the app. Weights are n
 ### `undo`
 
 Reverts one applied change-set by its undo id. Each document the change-set touched remembers, per field, the value it replaced and the value it wrote (encrypted with the space key, kept 30 days). Undo writes the old values back as **new** changes with fresh clocks, so they reach the app at its next sync. A field the person changed since (its current value isn't the one the change-set wrote) is left alone and named. A document the change-set created is undone with a tombstone (`_del`), never a hard delete. An undo id works once.
+
+The revert itself is `undoWrites` in `src/ai/undo.ts`, the same function the app's Undo uses (`applyUndo` in `src/app/store.ts`); the records are `UndoDoc` (`src/data/schema.ts`), made by `UndoLog`. **Memory:** a change to a memory note records the note's `lines` before and after, so an undo record in `connector_undo` (30 days, encrypted with the space key like the rest) can hold text the person has since forgotten. It is deleted with the record: when used, after 30 days, or when the connector is switched off.
 
 ## The connector as a device
 

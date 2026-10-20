@@ -280,7 +280,7 @@ type RepeatKind = (typeof REPEAT_KINDS)[number];
 const kindOf = (r: Repeat | null | undefined): RepeatKind => (!r ? 'never' : r.every === 1 ? r.unit : 'custom');
 
 /** ISO weekdays 1–7 with their short names in the app's language. */
-const weekdayNames = (): [number, string][] => [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
+export const weekdayNames = (): [number, string][] => [1, 2, 3, 4, 5, 6, 7].map(d => [d, new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'short', timeZone: 'UTC' })]);
 
 function RepeatField({ value, onChange }: { value: Repeat | null; onChange: (r: Repeat | null) => void }) {
   const kind = kindOf(value);

@@ -134,6 +134,40 @@ test('Ask any AI, then Paste the reply: only ticked changes are applied', async 
   await expect(page.locator('.matrix')).not.toContainText('thank the agency');
 });
 
+const standing = JSON.stringify({ v: 1, changes: [
+  { op: 'task.create', set: { title: 'Choir, Hill House 602', template: true, weekdays: [1], at: '19:00', dur: 90, lead: 30 } },
+  { op: 'memory.add', note: 'Choir', kind: 'topic', text: 'Rehearsal is at Hill House 602' },
+] });
+const notes = (page: Page) => page.evaluate(() => new Promise<{ name: string; lines: { text: string; by: string }[] }[]>((res, rej) => {
+  const open = indexedDB.open('reussite');
+  open.onerror = () => rej(open.error);
+  open.onsuccess = () => {
+    const all = open.result.transaction('memory').objectStore('memory').getAll();
+    all.onsuccess = () => res(all.result);
+  };
+}));
+
+for (const w of [320, 375, 430]) {
+  test(`a pasted standing obligation and memory line: memory sits under Remember, at ${w}px`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 800 });
+    await importSample(page);
+    await page.getByTestId('ask-any').click();
+    await sheet(page).getByRole('button', { name: 'Paste the reply' }).click();
+    await page.getByTestId('paste-text').fill('```reussite\n' + standing + '\n```');
+    await page.getByTestId('paste-go').click();
+    await expect(page.getByTestId('chg')).toHaveCount(2);
+    await expect(page.getByTestId('remember')).toContainText('Rehearsal is at Hill House 602');
+    await expect(page.getByTestId('remember')).toContainText('new');
+    await expect(page.getByTestId('review')).toContainText('Mon');
+    await noSideways(page, 'review with memory');
+    await page.getByTestId('apply-changes').click();
+    await expect(sheet(page)).toBeHidden();
+    const saved = await notes(page);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ name: 'Choir', lines: [{ text: 'Rehearsal is at Hill House 602', by: 'ai' }] });
+  });
+}
+
 for (const w of [320, 375, 430]) {
   test(`AI screens don't scroll sideways at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });

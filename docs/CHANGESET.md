@@ -1,6 +1,6 @@
 # Réussite change-set, version 1
 
-A change-set is one JSON object: `{"v": 1, "note": "…", "changes": [ … ]}`. Réussite shows each change as before → after with a checkbox; only ticked changes are written. `note` is optional: one short line for the person (say there what was unclear).
+A change-set is one JSON object: `{"v": 1, "note": "…", "changes": [ … ]}`. Réussite shows each change as before → after with a checkbox; only ticked changes are written. `note` is optional: one short line for the person (say there what was unclear), up to 1,000 characters.
 
 Use the ids from the lines you were given (`t…` steps, `p…` projects, places, `d…` decisions). To refer to something you create in the same change-set, give it `"ref": "any-name"` and use that name as its id later. Dates are `YYYY-MM-DD`, times `HH:MM`, estimates in minutes. Leave out any field you don't change. **Never give weights**: the person weighs pros and cons themselves.
 
@@ -19,8 +19,14 @@ Use the ids from the lines you were given (`t…` steps, `p…` projects, places
 | `place.create` / `place.update` | `ref?` or `id`, `set`: `name`, `timeZone` (IANA, e.g. `Europe/Paris`) |
 | `stay.create` / `stay.update` | `id` for updates, `set`: `place` (id or name), `from`, `to`, `note?` |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (create needs `title`) |
+| `memory.add` | `note`, `kind?`, `text` (a new line in the note; `kind` makes the note if there is none of that name) |
+| `memory.edit` | `note`, `line`, `text` (replace a line) |
+| `memory.remove` | `note`, `line` (forget a line) |
+| `memory.note` | `note`, `set`: `name`, `aliases` (the whole list), `kind` |
 
-**Step `set`**: `title` (start with the concrete first action: "Open Mail and reply to…"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` life: people, leisure, health), `urgent`, `important` (true/false), `due`, `est`, `starter` (the smallest first action), `app`, `link` (https only), `note`, `where` (place id or `any`), `after` (step ids it waits for), `at` and `dur` (a fixed time and duration).
+**Step `set`**: `title` (start with the concrete first action: "Open Mail and reply to…"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` life: people, leisure, health), `urgent`, `important` (true/false), `due`, `est`, `starter` (the smallest first action), `app`, `link` (https only), `note`, `where` (place id or `any`), `after` (step ids it waits for), `at` and `dur` (a fixed time and duration), and for a standing obligation that repeats every week: `template` (true), `weekdays` (1 = Monday … 7 = Sunday) and `at`, with `lead` (minutes of notice before it; leave it out for the person's usual). A `template` without `at` and `weekdays` is ignored. `template` is read only when a step is created.
+
+**Memory**: short notes about people, places and ongoing matters, in the person's words. `note` is a note's id, name or alias; `kind` is `profile`, `person`, `place`, `area` or `topic`. `line` is a line's number in the context you were given (from 1) or its exact text. Write a line only for what the person said, in their words, never a conclusion about their health, character or anyone's private life. Private notes are not shown to you and cannot be changed. Memory changes always wait for the person's yes, under Remember.
 
 **Project `set`**: `name`, `suit`, `where`, `goal` (one sentence), `smart` (`specific`, `measurable`, `attainable`, `relevant`, `dated`), `due`, `status` (`active`, `paused`, `done`, `dropped`).
 
@@ -57,6 +63,17 @@ Options and pros and cons for a decision (no weights):
     {"name": "Stay one more year", "pros": ["No moving costs"], "prosNot": ["Relief of not deciding now"]},
     {"name": "Move in spring", "cons": ["Two months of searching"]}
   ]}}
+]}
+```
+
+A standing obligation (every Monday at 19:00, a reminder before it starts) and a memory line, in one change-set:
+
+```reussite
+{"v": 1, "changes": [
+  {"op": "task.create", "set": {"title": "Choir, Hill House 602", "template": true, "weekdays": [1], "at": "19:00", "dur": 90, "lead": 30}},
+  {"op": "memory.add", "note": "Choir", "kind": "topic", "text": "Rehearsal is on Mondays at Hill House 602"},
+  {"op": "memory.edit", "note": "Ibrahim", "line": 2, "text": "Works days now"},
+  {"op": "memory.remove", "note": "Ibrahim", "line": "Has a cat"}
 ]}
 ```
 

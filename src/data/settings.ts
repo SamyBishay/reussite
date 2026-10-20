@@ -70,6 +70,10 @@ export interface Settings {
   aiModels: Record<Exclude<AiProvider, 'none'>, { quick: string; thinking: string }>;
   /** Show the exact request before every call, not only the first of each kind. */
   aiAlwaysShow: boolean;
+  /** How much of the memory goes with a request, in tokens (about 4 characters each). The profile counts first. */
+  memoryBudget: number;
+  /** A limit on the AI's cost in a month on this device, in US dollars; null = none. */
+  aiMonthlyCap: number | null;
   // Sync (brief §6). The key itself is device-local (db.local), never in this synced document.
   /** The relay's address; the build's VITE_RELAY_URL unless changed. Empty = sync can't be switched on. */
   relayUrl: string;
@@ -124,6 +128,8 @@ export const DEFAULT_SETTINGS: Settings = {
     anthropic: { quick: 'claude-haiku-5-5', thinking: 'claude-sonnet-5-5' },
   },
   aiAlwaysShow: false,
+  memoryBudget: 3000,
+  aiMonthlyCap: null,
   // Vite fills this in at build time; the relay (no Vite) reads the settings' shape without it.
   relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };

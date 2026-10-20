@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { settings, saveSettings, toast } from '../app/store';
 import { t } from '../i18n';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
-import { ask, getKey, setKey, forgetSeen } from './ask';
+import { ask, getKey, setKey, forgetSeen, spent, loadSpent } from './ask';
+import { monthTokens } from './prices';
 import { dropMemoryLine } from './context';
 import { dropBase, syncOn } from '../app/sync';
 
@@ -32,6 +33,32 @@ function DropAddress() {
             <div class="actions"><button class="btn" type="button" onClick={copy} data-testid="drop-copy">{t('dropCopy')}</button></div>
           </>
         )}
+    </div>
+  );
+}
+
+/** This month's use on this device, and the limit. */
+function Spend() {
+  const s = settings.value, m = spent.value;
+  useEffect(() => { void loadSpent(); }, []);
+  const usd = m ? (m.usd < 1 ? m.usd.toFixed(3) : m.usd.toFixed(2)) : '0';
+  return (
+    <div data-testid="ai-spend" style="margin-top:14px"><p class="field-label">{t('aiSpendTitle')}</p>
+      <p class="hint" style="margin:0" data-testid="ai-spend-line">
+        {m && m.calls ? t('aiSpendTokens', { n: m.calls, tokens: monthTokens(m).toLocaleString() }) : t('aiSpendNone')}
+        {m && m.priced ? ' ' + t('aiSpendUsd', { usd: '$' + usd }) : ''}
+      </p>
+      {m && m.calls > m.priced && m.priced > 0 && <small class="hint">{t('aiSpendPartial')}</small>}
+      <label class="field"><span>{t('aiCapLabel')}</span>
+        <input type="number" inputMode="decimal" min="0" step="0.5" value={s.aiMonthlyCap ?? ''} placeholder={t('aiCapPh')} data-testid="ai-cap"
+          onChange={e => { const v = parseFloat((e.target as HTMLInputElement).value); set({ aiMonthlyCap: v > 0 ? v : null }); }} />
+        <small class="hint">{t('aiCapHint')}</small>
+      </label>
+      <label class="field"><span>{t('aiMemBudget')}</span>
+        <input type="number" inputMode="numeric" min="0" step="500" value={s.memoryBudget} data-testid="ai-membudget"
+          onChange={e => { const v = parseInt((e.target as HTMLInputElement).value, 10); set({ memoryBudget: v >= 0 ? v : DEFAULT_SETTINGS.memoryBudget }); }} />
+        <small class="hint">{t('aiMemBudgetHint')}</small>
+      </label>
     </div>
   );
 }
@@ -102,6 +129,7 @@ export function AiSettings() {
         <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
       </div>
       <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>
+      {p !== 'none' && <Spend />}
       <DropAddress />
     </section>
   );

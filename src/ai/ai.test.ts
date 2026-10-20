@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildRequest, send, classify, masked, ANTHROPIC_URL, type AiConfig } from './adapters';
 import { extractJson } from './json';
+import { addUsage, capReached, dollars, emptyMonth, monthTokens } from './prices';
 import { parseChangeSet, readChangeSet, type ChangeSet } from './changeset';
 import { planChanges, applyPlanned, type Snapshot, type Writer } from './apply';
 import { normDecision } from '../data/normalize';
@@ -53,6 +54,61 @@ describe('adapters', () => {
     expect(await send(r, reply(200, { error: { code: 429, message: 'Rate limit exceeded' } }) as never)).toMatchObject({ error: 'rateLimit' });
     expect(await send(r, reply(200, 'not json') as never)).toMatchObject({ error: 'invalid' });
     expect(classify(500, '')).toBe('server');
+  });
+});
+
+describe('prompt caching and usage', () => {
+  const sys = { stable: 'STABLE', rest: 'REST' };
+  it('marks the stable block for caching with Anthropic, and leaves a plain string alone', () => {
+    const r = buildRequest(cfg('anthropic'), 'quick', sys, 'USER');
+    expect(r.body.system).toEqual([{ type: 'text', text: 'STABLE', cache_control: { type: 'ephemeral' } }, { type: 'text', text: 'REST' }]);
+    expect(r.body.messages).toEqual([{ role: 'user', content: 'USER' }]);
+    expect(r.system).toBe('STABLE\n\nREST');
+    expect(JSON.stringify(buildRequest(cfg('anthropic'), 'quick', 'SYS', 'USER').body)).not.toContain('cache_control');
+  });
+  it('marks it through OpenRouter for anthropic/* models only', () => {
+    const c = { ...cfg('openai'), models: { quick: 'anthropic/claude-haiku-5.5', thinking: 'openai/gpt-x' } };
+    expect(buildRequest(c, 'quick', sys, 'U').body.messages).toEqual([
+      { role: 'system', content: [{ type: 'text', text: 'STABLE', cache_control: { type: 'ephemeral' } }, { type: 'text', text: 'REST' }] }, { role: 'user', content: 'U' },
+    ]);
+    // Another model, or another server: one string, the stable part first.
+    expect((buildRequest(c, 'thinking', sys, 'U').body.messages as { content: unknown }[])[0]!.content).toBe('STABLE\n\nREST');
+    expect((buildRequest({ ...c, baseUrl: 'https://llm.example/v1' }, 'quick', sys, 'U').body.messages as { content: unknown }[])[0]!.content).toBe('STABLE\n\nREST');
+  });
+  it('reads Anthropic usage: input_tokens leaves out what the cache read or wrote', async () => {
+    const f = reply(200, { content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 40, output_tokens: 7, cache_creation_input_tokens: 1200, cache_read_input_tokens: 3000 } });
+    expect(await send(buildRequest(cfg('anthropic'), 'quick', 's', 'u'), f as never)).toEqual({ ok: true, text: 'ok', usage: { input: 40, output: 7, cacheRead: 3000, cacheWrite: 1200 } });
+  });
+  it('reads OpenAI-shape usage, with the dollars OpenRouter reports', async () => {
+    const f = reply(200, { choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 4240, completion_tokens: 7, cost: 0.0042, prompt_tokens_details: { cached_tokens: 3000, cache_write_tokens: 1200 } } });
+    expect(await send(buildRequest(cfg('openai'), 'quick', 's', 'u'), f as never)).toEqual({ ok: true, text: 'ok', usage: { input: 40, output: 7, cacheRead: 3000, cacheWrite: 1200, cost: 0.0042 } });
+    // No usage object, no cost, no cache details: what is there is read, the rest is zero.
+    const g = reply(200, { choices: [{ message: { content: 'ok' } }], usage: { prompt_tokens: 10, completion_tokens: 2 } });
+    expect(await send(buildRequest(cfg('openai'), 'quick', 's', 'u'), g as never)).toEqual({ ok: true, text: 'ok', usage: { input: 10, output: 2, cacheRead: 0, cacheWrite: 0 } });
+  });
+});
+
+describe('what a call cost', () => {
+  const u = { input: 1000, output: 500, cacheRead: 10_000, cacheWrite: 2000 };
+  it('prefers the dollars the provider reported', () => {
+    expect(dollars('openai', 'anthropic/claude-haiku-5.5', { ...u, cost: 0.123 })).toBe(0.123);
+    expect(dollars('openai', 'anything', u)).toBeUndefined();
+  });
+  it('prices Anthropic\'s own models from the table, and nothing else', () => {
+    // Haiku 5.5: $0.10 in, $0.50 out, $0.01 cache read, $0.125 cache write, per million tokens.
+    expect(dollars('anthropic', 'claude-haiku-5-5', u)).toBeCloseTo((1000 * 0.1 + 500 * 0.5 + 10_000 * 0.01 + 2000 * 0.125) / 1e6, 10);
+    expect(dollars('anthropic', 'claude-sonnet-5-5', { input: 1_000_000, output: 1_000_000, cacheRead: 0, cacheWrite: 0 })).toBe(12);
+    expect(dollars('anthropic', 'claude-haiku-5-5', { ...u, input: 150_000 })).toBeUndefined(); // over the 100K tier
+    expect(dollars('anthropic', 'claude-some-other', u)).toBeUndefined();
+  });
+  it('adds up a month and stops at the cap', () => {
+    let m = addUsage(emptyMonth(), u, 0.02);
+    m = addUsage(m, u, undefined);
+    expect(m).toMatchObject({ calls: 2, priced: 1, usd: 0.02, input: 2000, cacheRead: 20_000 });
+    expect(monthTokens(m)).toBe(2 * (1000 + 500 + 10_000 + 2000));
+    expect(capReached(m, null)).toBe(false);
+    expect(capReached(m, 0.03)).toBe(false);
+    expect(capReached(m, 0.02)).toBe(true);
   });
 });
 

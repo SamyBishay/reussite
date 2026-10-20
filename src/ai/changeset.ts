@@ -113,6 +113,8 @@ export type Change = z.infer<typeof ChangeSchema>;
 export const ChangeSetSchema = z.object({
   v: z.union([z.literal(1), z.literal('1').transform(() => 1 as const)]).optional(),
   note: z.string().optional(),
+  /** Home's box only: the request is not about the list, the memory or the method. Read when there are no changes. */
+  outside: z.boolean().optional(),
   changes: z.array(z.unknown()).max(80),
 });
 export type ChangeSetRaw = z.infer<typeof ChangeSetSchema>;

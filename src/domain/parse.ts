@@ -324,7 +324,8 @@ function findTarget(q: string, pool: Named[]): Target {
   return all.length > 1 ? { many: all.slice(0, 5) } : null;
 }
 
-const DONE_PRE = /^(?:done|finished|fait|fini|finie|termine|terminee|j'ai fini|j'ai fait|c'est fait|[✓✔☑])\s*[:\-]?\s*(.+)$/u;
+// The keyword is a word of its own: "finish the essay" and "terminer le rapport" are things to do, not done.
+const DONE_PRE = /^(?:(?:done|finished|fait|fini|finie|termine|terminee|j'ai fini|j'ai fait|c'est fait)(?:\s*[:\-]\s*|\s+)|[✓✔☑]\s*[:\-]?\s*)(.+)$/u;
 const DONE_SUF = /^(.+?)\s+(?:done|finished|fait|fini|finie|termine|terminee)$/u;
 const DROP = /^(?:drop|abandon|scrap|supprime|supprimer|abandonne|abandonner)\s+(.+)$/u;
 const MOVE = /^(?:move|push|postpone|reschedule|defer|reporter|reporte|deplacer|deplace|repousser|repousse|decaler|decale)\s+(.+)$/u;
@@ -351,7 +352,10 @@ function whenOnly(text: string, ctx: ParseContext): { due: DayKey; at?: string }
 /** Done, move or drop: the target and what to do, or why not; 'no' when the line is none of these. */
 function command(text: string, f: string, ctx: ParseContext): HomeParse | 'no' {
   const pool = targets(ctx);
+  const standing = ctx.tasks.filter(t => t.status === 'open' && t.template).map(t => ({ id: t.id, name: t.title }));
   const aim = (intent: 'done' | 'move' | 'drop', q: string, change: (id: string) => ChangeSet['changes'][number]): HomeParse => {
+    // A line that also names a standing obligation may mean it, which the parser leaves alone: never a guess at another step.
+    if (findTarget(q, standing)) return { kind: 'unknown', reason: 'nomatch', prefill: draft(text) };
     const r = findTarget(q, pool);
     if (!r) return { kind: 'unknown', reason: 'nomatch', prefill: draft(text) };
     if ('many' in r) return { kind: 'pick', intent, candidates: r.many };

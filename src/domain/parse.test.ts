@@ -317,6 +317,31 @@ describe('done, move and drop', () => {
   });
 });
 
+describe('names and done keywords are whole words', () => {
+  const c = { ...ctx, tasks: [...ctx.tasks, { id: 't8', title: 'Choir dues', status: 'open' }, { id: 't9', title: 'Essay draft', status: 'open' }] };
+  it('a line that names a standing obligation never ticks another step that starts the same', () => {
+    expect(run('done choir', c)).toMatchObject({ kind: 'unknown', reason: 'nomatch' });
+    expect(run('done choir dues', c)).toMatchObject({ kind: 'changes', intent: 'done', title: 'Choir dues' });
+  });
+  it('a start of a word is not a match', () => {
+    expect(run('done ess', c)).toMatchObject({ kind: 'unknown', reason: 'nomatch' });
+    expect(run('done essay', c)).toMatchObject({ kind: 'changes', title: 'Essay draft' });
+  });
+  it.each([
+    ['finish the essay', 'Finish the essay'],
+    ['finished: essay', null],
+    ['terminer le rapport', 'Terminer le rapport'],
+    ['finir le rapport', 'Finir le rapport'],
+    ['faites le ménage', 'Faites le ménage'],
+    ['fini essay', null],
+    ['✓essay', null],
+  ])('%s', (text, add) => {
+    const r = run(text, c);
+    if (add) expect(r).toMatchObject({ kind: 'changes', intent: 'add', title: add });
+    else expect(r).toMatchObject({ kind: 'changes', intent: 'done', title: 'Essay draft' });
+  });
+});
+
 describe('what is not for the parser', () => {
   it.each([
     ['what does Ibrahim have on', 'question'],

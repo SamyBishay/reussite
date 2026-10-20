@@ -314,10 +314,11 @@ describe('titles instead of ids', () => {
     expect(await nBatches(x)).toBe(before);
   });
 
-  it('an exact title beats a longer one that starts the same way; a unique prefix is enough', async () => {
+  it('an exact title beats a longer one that starts the same way; a unique prefix of whole words is enough', async () => {
     const { tok } = await small();
     expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'call' }] })).text).toContain('Mark done: "Call"');
-    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dent' }] })).text).toContain('Mark done: "Dentist appointment"');
+    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dentist' }] })).text).toContain('Mark done: "Dentist appointment"');
+    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dent' }] })).isError).toBe(true);
     const none = await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Nothing like it' }] });
     expect(none.isError).toBe(true);
     expect(none.text).toContain('No step with the id or title "Nothing like it"');

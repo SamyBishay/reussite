@@ -7,10 +7,12 @@ describe('names', () => {
   it('norm drops case, accents and punctuation', () => {
     expect(norm('  Épargne,  d’été! ')).toBe('epargne d ete');
   });
-  it('finds exactly, then by a unique prefix, ignoring accents', () => {
+  it('finds exactly, then by a unique prefix of whole words, ignoring accents', () => {
     expect(findByName('call the agency', pool)).toEqual({ id: 'a' });
     expect(findByName('epargne', pool)).toEqual({ id: 'c' });
-    expect(findByName('Call the d', pool)).toEqual({ id: 'b' });
+    expect(findByName('Call the', [...pool.slice(1), { id: 'd', name: 'Call them back' }])).toEqual({ id: 'b' });
+    expect(findByName('Call the d', pool)).toEqual({ none: true });
+    expect(findByName('Épar', pool)).toEqual({ none: true });
   });
   it('reports several matches and none', () => {
     expect(findByName('call', pool)).toEqual({ many: [pool[0], pool[1]] });

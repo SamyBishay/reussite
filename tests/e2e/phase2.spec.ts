@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, goTab } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -269,7 +269,7 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
 
 test('Decision help drafts the problem, options and items, and never weights', async ({ page }) => {
   const { answer } = await aiSession(page);
-  await page.getByTestId('tab-log').click();
+  await goTab(page, 'projects');
   await page.getByTestId('new-decision').click();
   answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up 8% in January', should: 'Rent under a third of income', gap: '60 a month short' } });
   await page.getByTestId('ai-dw-describe').fill('My rent goes up and I’m not sure whether to move.');
@@ -374,7 +374,7 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'stuck with an AI starter');
     await page.keyboard.press('Escape');
     answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up', should: 'Less than a third of income', constraints: 'Lease ends in June' } });
-    await page.getByTestId('tab-log').click();
+    await goTab(page, 'projects');
     await page.getByTestId('new-decision').click();
     await page.getByTestId('ai-dw-describe').fill('Rent goes up.');
     await page.getByTestId('ai-dw-problem').click();
@@ -397,6 +397,6 @@ test('the built page breaks none of its own Content-Security-Policy', async ({ p
   const blocked: string[] = [];
   page.on('console', m => { if (/Content-Security-Policy/i.test(m.text())) blocked.push(m.text()); });
   await importSample(page);
-  for (const tab of ['matrix', 'projects', 'calendar', 'settings', 'today']) await page.getByTestId('tab-' + tab).click();
+  for (const tab of ['matrix', 'projects', 'calendar', 'log', 'settings', 'today'] as const) await goTab(page, tab);
   expect(blocked).toEqual([]);
 });

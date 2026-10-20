@@ -32,7 +32,7 @@ export default defineConfig(({ mode }) => {
           name: 'Réussite',
           short_name: 'Réussite',
           description: 'A planning app built on a CBT method for adult ADHD.',
-          start_url: './#today',
+          start_url: './#home',
           scope: './',
           display: 'standalone',
           background_color: '#F2F1F6',

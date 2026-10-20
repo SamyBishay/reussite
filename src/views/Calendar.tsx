@@ -1,5 +1,6 @@
 // The Calendar tab (brief §5, Calendar view): Réussite's own data on dates, never an hourly grid.
 // Month: compact markers per day. Week: an agenda, stacked on phones, columns on wide screens.
+// Log: done steps by day (the old Log tab), a mode of this tab.
 import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { tasks, projects, decisions, stays, places, settings, today } from '../app/store';
@@ -10,6 +11,8 @@ import { Title } from '../app/ui';
 import { dayView } from './Today';
 import { openReview } from '../flows/review';
 import { openDecisionPage } from '../flows/decision';
+import { calMode as mode, setCalMode as setMode } from '../app/nav';
+import { Log } from './Log';
 import { t, fmtDate, fmtMin, lang } from '../i18n';
 import { addDays, daysBetween } from '../domain/dates';
 import { monthGrid, weekOf } from '../domain/calendar';
@@ -17,10 +20,7 @@ import { isoDow, occurrences } from '../domain/repeat';
 import { stayOn } from '../domain/places';
 import { addToCalendar } from '../app/addToCalendar';
 
-const stored = (() => { try { return localStorage.getItem('reussite.cal') === 'month' ? 'month' : 'week'; } catch { return 'week'; } })();
-const mode = signal<'week' | 'month'>(stored);
 const anchor = signal<string | null>(null);
-const setMode = (m: 'week' | 'month') => { mode.value = m; try { localStorage.setItem('reussite.cal', m); } catch { /* fine */ } };
 
 function openDay(k: string) {
   dayView.value = k === today.value ? null : k;
@@ -158,6 +158,13 @@ export function Calendar() {
   void lang.value;
   const week = weekOf(a);
   const rep = mode.value === 'week' ? repeatMarkers(week[0]!, week[6]!) : new Map();
+  const seg = (
+    <div class="seg" role="group" aria-label={t('calView')}>
+      <button type="button" aria-pressed={mode.value === 'week'} onClick={() => setMode('week')}>{t('calWeek')}</button>
+      <button type="button" aria-pressed={mode.value === 'month'} onClick={() => setMode('month')}>{t('calMonth')}</button>
+      <button type="button" aria-pressed={mode.value === 'log'} onClick={() => setMode('log')} data-testid="cal-log">{t('tabLog')}</button>
+    </div>
+  );
   const step = (n: number) => {
     if (mode.value === 'week') anchor.value = addDays(a, 7 * n);
     else { const [y, m] = a.split('-').map(Number); const d = new Date(Date.UTC(y!, m! - 1 + n, 1)); anchor.value = d.toISOString().slice(0, 10); }
@@ -166,13 +173,11 @@ export function Calendar() {
   const title = mode.value === 'week'
     ? fmtDate(week[0]!, { day: 'numeric', month: 'short' }) + ' – ' + fmtDate(week[6]!, { day: 'numeric', month: 'short' })
     : fmtDate(a.slice(0, 8) + '01', { month: 'long', year: 'numeric' });
+  if (mode.value === 'log') return <div data-testid="calendar"><div class="calbar">{seg}</div><div data-testid="log"><Log /></div></div>;
   return (
     <div data-testid="calendar">
       <div class="calbar">
-        <div class="seg" role="group" aria-label={t('calView')}>
-          <button type="button" aria-pressed={mode.value === 'week'} onClick={() => setMode('week')}>{t('calWeek')}</button>
-          <button type="button" aria-pressed={mode.value === 'month'} onClick={() => setMode('month')}>{t('calMonth')}</button>
-        </div>
+        {seg}
         <div class="calnav">
           <button class="icon-btn" type="button" onClick={() => step(-1)} aria-label={t('calPrev')}>‹</button>
           <b>{title}</b>

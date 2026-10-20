@@ -8,7 +8,7 @@ import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
 import { SmartEditor, smartFilled } from '../app/smart';
-import { openDecision, openDecisionPage } from '../flows/decision';
+import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
 import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
@@ -157,6 +157,31 @@ function NewProject() {
   );
 }
 
+const GROUP_KEY = { check: 'decToCheck', open: 'decOpen', decided: 'decDecided', closed: 'decClosed' } as const;
+
+/** Every decision, grouped: to check, open, decided, closed. Steps that are decisions open theirs from the Matrix. */
+function Decisions() {
+  const groups = decisionGroups();
+  return (
+    <section data-testid="decisions">
+      <h2 class="sec">{t('decisions')} <button type="button" class="btn small" onClick={() => void openDecision(null)} data-testid="new-decision">{t('newDecision')}</button></h2>
+      {(['check', 'open', 'decided', 'closed'] as const).map(g => groups[g].length > 0 && (
+        <>
+          <h3 class="subsec">{t(GROUP_KEY[g])}</h3>
+          <ul class="decs">{groups[g].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).map(d => (
+            <li>
+              <button type="button" class="linklike" onClick={() => openDecisionPage(d.id, g === 'check')}><b>{d.title || t('untitledDecision')}</b></button>
+              <p class="meta">{d.date && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{d.chosen ? t('chosen', { what: d.chosen }) : t('dst_' + d.status as Key)}</p>
+              {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{d.reviewOn && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
+            </li>
+          ))}</ul>
+        </>
+      ))}
+      {!Object.values(groups).some(g => g.length) && <p class="hint">{t('noDecisions')}</p>}
+    </section>
+  );
+}
+
 /** Finished projects stay browsable, their cards stacked like a finished foundation. */
 function Shelf({ done, by }: { done: P[]; by: Map<string, T[]> }) {
   if (!done.length) return null;
@@ -205,6 +230,7 @@ export function Projects() {
           <div class="projs"><ProjectCard p={(projects.value.get('inbox') as P) ?? ({ id: 'inbox', name: t('inbox') } as P)} ts={inbox.filter(x => !x.fixed && x.src !== 'plan')} /></div>
         </section>
       )}
+      <Decisions />
       <NewProject />
       <Shelf done={[...projects.value.values()].filter(p => p.status === 'done')} by={by} />
       <p class="hint" style="margin-top:10px">{t('placePageNote', { place: placeName(page) })}</p>

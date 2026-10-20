@@ -10,6 +10,7 @@ import { t, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
 import { CommandBox } from '../ai/ui';
+import { openDecision } from '../flows/decision';
 
 /** "On this page" or "Everything", shared by Matrix and Projects; remembered per device. */
 const initialScope = (() => { try { return localStorage.getItem('reussite.scope') === 'all' ? 'all' : 'here'; } catch { return 'here'; } })();
@@ -59,6 +60,7 @@ function Item({ tk, planned }: { tk: T; planned: boolean }) {
       </button>
       <span class="ictrls">
         <DueChip tk={tk} />
+        {tk.kind === 'decision' && <button type="button" class="icon-btn sm" onClick={() => void openDecision(null, { taskId: tk.id })} aria-label={t('openDecision')} data-testid="matrix-decision">⚖</button>}
         <button type="button" class="icon-btn sm" onClick={() => openMove(tk.id)} aria-label={t('moveTo')} data-testid="move-btn">⇄</button>
       </span>
     </div>

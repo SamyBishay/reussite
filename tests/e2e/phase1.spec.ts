@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, goTab } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -7,12 +7,12 @@ const sheet = (page: Page) => page.getByTestId('sheet');
 test('the tab bar never scrolls vertically', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
-  const r = await page.locator('.tabs').evaluate(el => [el.scrollHeight, el.clientHeight]);
+  const r = await page.locator('.tabbar').evaluate(el => [el.scrollHeight, el.clientHeight]);
   expect(r[0]).toBeLessThanOrEqual(r[1]!);
 });
 
 test('a place can be added from the place switcher on a fresh start', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/#today');
   await page.getByTestId('place-pill').click();
   await sheet(page).getByPlaceholder('Name of the new place').fill('Lyon');
   await sheet(page).getByTestId('add-place').click();
@@ -66,7 +66,7 @@ test('calendar week view: plan a step on a day, or make it due', async ({ page }
 
 test('a stay switches the current place on its first day', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('tab-settings').click();
+  await goTab(page, 'settings');
   const stays = page.getByTestId('stays');
   const form = stays.locator('form');
   await form.locator('select').selectOption({ label: 'Away' });
@@ -105,7 +105,7 @@ test('a repeating step comes back once when done', async ({ page }) => {
 });
 
 test('a whole decision by hand: problem, options, balances, scores, choice, steps', async ({ page }) => {
-  await page.goto('/#log');
+  await page.goto('/#projects');
   await page.getByTestId('new-decision').click();
   await page.getByTestId('dw-title').fill('Train or plane?');
   await page.getByTestId('dw-title').blur();
@@ -197,7 +197,7 @@ for (const width of [320, 375, 430]) {
     await check('tomorrow');
     await page.getByRole('button', { name: 'Back to today' }).click();
     // Decisions: the wizard's balance screen and a decision page.
-    await page.getByTestId('tab-log').click();
+    await goTab(page, 'projects');
     await page.getByTestId('new-decision').click();
     await check('decision problem');
     await page.getByTestId('dw-next').click();

@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { deflateRawSync } from 'node:zlib';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, goTab } from './helpers';
 import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
@@ -61,7 +61,7 @@ test('sync: set up on one device, join on another by typing the key, edits trave
   // data imported after set-up is sent too
   await importSample(pa);
   await expect(pa.getByTestId('key-card')).toBeVisible();
-  await pa.getByTestId('tab-settings').click();
+  await goTab(pa, 'settings');
   await expect(pa.getByTestId('sync-status')).toContainText('Synced at');
   await addPlace(pa, 'Cabin');
 
@@ -92,7 +92,7 @@ test('sync: set up on one device, join on another by typing the key, edits trave
   await pa.getByTestId('key-card-saved').click();
   await expect(pa.getByTestId('key-card')).toBeHidden();
   // the persistence line is there
-  await pa.getByTestId('tab-settings').click();
+  await goTab(pa, 'settings');
   await expect(pa.getByTestId('data')).toContainText('Storage');
   await a.ctx.close(); await b.ctx.close();
 });

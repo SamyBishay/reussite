@@ -8,12 +8,16 @@ export const en = {
   hmin: '{h} h {m}',
   hours: '{h} h',
   // tabs
+  tabHome: 'Home',
   tabToday: 'Today',
   tabMatrix: 'Matrix',
   tabProjects: 'Projects',
   tabLog: 'Log',
   tabSettings: 'Settings',
   views: 'Views',
+  menu: 'Menu',
+  memoryTitle: 'Memory',
+  historyTitle: 'History',
   // masthead and places
   inPlace: 'In {place}',
   inPlaceLabel: 'You are in {place}. Switch place.',

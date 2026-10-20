@@ -4,24 +4,7 @@
 // accents and punctuation. More than one match returns the candidates and writes nothing.
 import type { Change } from '../../../src/ai/changeset';
 import { oneLine, stepLine, type Data } from '../../../src/domain/lists';
-
-export const norm = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-
-export interface Named { id: string; name: string }
-export type Found = { id: string } | { none: true } | { many: Named[] };
-
-/** Exact match first, then a unique prefix. `pool` are the things that may be meant. */
-export function findByName(value: string, pool: Named[]): Found {
-  const want = norm(value);
-  if (!want) return { none: true };
-  const exact = pool.filter(p => norm(p.name) === want);
-  if (exact.length === 1) return { id: exact[0]!.id };
-  if (exact.length > 1) return { many: exact };
-  const pre = pool.filter(p => norm(p.name).startsWith(want));
-  if (pre.length === 1) return { id: pre[0]!.id };
-  if (pre.length > 1) return { many: pre };
-  return { none: true };
-}
+import { findByName, type Named } from '../../../src/domain/names';
 
 export interface Problem { index: number; text: string }
 export interface Resolved { changes: Change[]; problems: Problem[]; ambiguous: Problem[] }

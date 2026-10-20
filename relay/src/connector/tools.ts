@@ -13,7 +13,7 @@ import type { Env } from '../env';
 import { applyChanges, undo, type Ctx, type Out } from './changes';
 import { cacheGet, remember } from './cache';
 import { dayText, lines, projectText, queryText, taskText } from './render';
-import { findByName } from './resolve';
+import { findByName } from '../../../src/domain/names';
 import { compact, loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
 import { View } from './view';
 import { unwrap } from './wrap';

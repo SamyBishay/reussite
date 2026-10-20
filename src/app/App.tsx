@@ -12,6 +12,7 @@ import { addPlace, startTask, patchTask } from './actions';
 import { Clock } from './Clock';
 import { startSync } from './sync';
 import { startFeed } from './feed';
+import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
@@ -194,7 +195,7 @@ function Toast() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(() => { void startFeed(); return startSync(); }); }, []);
+  useEffect(() => { void start().then(() => { void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
     window.addEventListener('hashchange', onHash);

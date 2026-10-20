@@ -34,8 +34,8 @@
     // The relay's public address, no trailing slash: the connector's OAuth issuer and `/mcp` URL.
     "RELAY_URL": "https://d1-reussite.rudolphem.workers.dev",
     // Web Push (docs/dev/push.md). The public key pairs with the secret VAPID_PRIVATE_KEY and is also the app's
-    // VITE_VAPID_PUBLIC_KEY. Placeholder until the pair is made with scripts/vapid-keygen.mjs.
-    "VAPID_PUBLIC_KEY": "REPLACE_WITH_VAPID_PUBLIC_KEY",
+    // VITE_VAPID_PUBLIC_KEY (.env.production). The pair was made with scripts/vapid-keygen.mjs.
+    "VAPID_PUBLIC_KEY": "BLLTssPj46tNFuuUXJngbmSQb7vLkwXgo3-ma6Oh4aZoH5zaikMHY-qWV3xQZr5rKYWyC0zy0b5sfAEo4iRDY4Y",
     // The relay's own address: the VAPID token's `sub`, so no personal contact reaches a push service.
     "VAPID_SUBJECT": "https://d1-reussite.rudolphem.workers.dev",
     // The hosts a push endpoint may have (blocks the relay being aimed elsewhere): Firefox, Chrome/Android, Safari/iOS, Edge.

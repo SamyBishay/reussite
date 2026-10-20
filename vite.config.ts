@@ -43,9 +43,13 @@ export default defineConfig(({ mode }) => {
             { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
         },
-        workbox: {
+        // The worker is src/sw.ts (precache, navigation fallback, push); it is still served as /sw.js.
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
+        injectManifest: {
           globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,ico}'],
-          navigateFallback: 'index.html',
+          rollupFormat: 'iife',
         },
       }),
     ],

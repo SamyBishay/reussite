@@ -17,6 +17,7 @@ import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
 import { ConnectorSettings } from '../app/ConnectorSettings';
 import { CalendarSettings } from '../app/CalendarSettings';
+import { NotifySettings } from '../app/NotifySettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
 
 const set = (p: Partial<S>) => void saveSettings(p);
@@ -343,6 +344,7 @@ export function Settings() {
       <AiSettings />
       <SyncSettings />
       <ConnectorSettings />
+      <NotifySettings />
       <CalendarSettings />
       <Data />
       <section class="set" data-testid="about">

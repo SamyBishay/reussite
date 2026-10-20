@@ -87,7 +87,7 @@ Limits: a batch blob is at most 1 MiB, each part of a snapshot 4 MiB (stored in 
 
 ## What the relay can see
 
-The space id, a hash of the auth secret, the size, time and device id of every blob (and which of hot, cold or whole a snapshot row is, and its `upto`; not the cut, the index or the digest, which are inside), the device list (names are encrypted), and IP addresses. Not the contents of anything. The inbox holds sealed boxes it can't open. (While the connector is on, it also holds the key: see [connector.md](connector.md).) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
+The space id, a hash of the auth secret, the size, time and device id of every blob (and which of hot, cold or whole a snapshot row is, and its `upto`; not the cut, the index or the digest, which are inside), the device list (names are encrypted), and IP addresses. Not the contents of anything. The inbox holds sealed boxes it can't open. Push and the calendar feed are not part of sync and have no link to a space, but they live on the same relay: for push, each device's push-service address (an opaque endpoint), the times its notifications are to be sent, their size and when they were sent, and not their text (encrypted on the device for that browser); for the feed, the calendar text, which has generic titles unless the person chose to include step titles (see [push.md](push.md), [feed.md](feed.md)). (While the connector is on, it also holds the key: see [connector.md](connector.md).) The relay never decrypts for sync, which keeps each request far under the free plan's 10 ms of CPU.
 
 ## Using it from the app
 
@@ -96,7 +96,7 @@ The space id, a hash of the auth secret, the size, time and device id of every b
 ## In the app
 
 - `src/data/syncstore.ts`: the `SyncStore` over Dexie (`writeMerged`, `dexieSyncStore`). State is `local['sync.state']`.
-- `src/app/store.ts`: `putMerged(writes)` is the only way incoming documents are written (it throws in read-only mode); `onLocalWrite(f)` calls `f` after each local write; `getClock()`.
+- `src/app/store.ts`: `putMerged(writes)` is the only way incoming documents are written (it throws in read-only mode); `onLocalWrite(f)` registers a listener (several are allowed; sync and push each add one) called after each local write; `getClock()`.
 - `src/app/sync.ts`: keys and flags in `local` (`sync.key`, `sync.keySaved`, `sync.full`, `sync.lastAt`, `sync.lastError`…), `startSync`, `syncNow` (one round at a time, backoff), `requestSync` (2 s debounce), `markFull` (after an import or restore), set-up / join / turn off / delete, backups, and the `sync` diagnostics section.
 - `src/app/SyncSettings.tsx`, `src/app/qr.tsx`: Settings → Sync & devices, the guided flows, the cards on Today, QR drawing and scanning.
 - Old-schema documents are upgraded by `upgradeEntries` (migrations) before merging; `SyncStore.upgrade` is optional. A round with `stopIfGone` stops when the relay has no space for a device that had pulled before (deleted elsewhere); `full` pushes every field.

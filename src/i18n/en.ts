@@ -1075,7 +1075,7 @@ export const en = {
   syncTurnOffConnector: 'The connector is on. It stays on for your other devices until you switch it off, and you can’t from here once sync is off. Switch it off first if you don’t want that.',
   // About → Privacy (phase 3)
   privacyTitle: 'Privacy',
-  privacyRelay: 'What the relay can see: your list as scrambled blobs, their sizes and when they arrive, IP addresses, the push address of each device, the calendar feed only if you switch it on (with generic titles unless you include step titles), and your whole list while the connector is on. It never sees what is inside a scrambled blob.',
+  privacyRelay: 'What the relay can see: your list as scrambled blobs, their sizes and when they arrive, IP addresses, the push address of each device and the times its notifications are to be sent (their text is scrambled on your device, so the relay cannot read it), the calendar feed only if you switch it on (with generic titles unless you include step titles), and your whole list while the connector is on. It never sees what is inside a scrambled blob.',
   privacyAi: 'What an AI provider sees: exactly what each request sends, which you can read first with “Show me what’s sent”. People you saved are included only if you tick them.',
   privacyLoss: 'If you lose every device and the recovery key, the list is gone for good. Nobody can recover it, including whoever runs the relay.',
   // One-tap link (phase 3)

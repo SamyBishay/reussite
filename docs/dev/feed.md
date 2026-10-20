@@ -10,11 +10,11 @@ Launch points and fixed-time items from 7 days back to 45 days ahead, no reminde
 
 ## Identity
 
-The device makes a feed id (`fid`, 24 random bytes = 192 bits, base64url) and a write secret (32 bytes), and keeps both in `local` (`feed.id`, `feed.secret`, `feed.on`, `feed.hash`, `feed.old`); never synced, so there is one feed per device. The first write for a `fid` stores `SHA-256(secret)` (trust on first use). The `fid` is the only thing that keeps reading private. No link to a space, so "Delete everywhere" does not reach feeds; the device deletes its own when the feed is switched off or regenerated (a delete that fails is retried at later uploads from `feed.old`). Rows are not pruned by time yet.
+The device makes a feed id (`fid`, 24 random bytes = 192 bits, base64url) and a write secret (32 bytes), and keeps both in `local` (`feed.id`, `feed.secret`, `feed.on`, `feed.hash`, `feed.at`, `feed.old`); never synced, so there is one feed per device. The first write for a `fid` stores `SHA-256(secret)` (trust on first use). The `fid` is the only thing that keeps reading private. No link to a space, so "Delete everywhere" cannot reach other devices' feeds; it does switch off this device's feed and delete its row. A device deletes its own feed when it is switched off or regenerated too (a delete that fails is retried at later uploads from `feed.old`). Other devices' rows expire: the relay's hourly prune (`relay/src/tick.ts`) deletes a feed not written for 60 days.
 
 ## When the app uploads
 
-At start, when the page becomes visible, and 4 seconds after any change to the data or settings (an `effect` on the store's signals). A hash of the text without its `DTSTAMP` lines is kept after each successful upload; an unchanged hash sends nothing.
+At start, when the page becomes visible, and 4 seconds after any change to the data or settings (an `effect` on the store's signals). A hash of the text without its `DTSTAMP` lines is kept after each successful upload; an unchanged hash sends nothing, except that a feed is written again when its last write is over a week old (`FEED_REFRESH_MS`), so the 60-day prune never reaches a feed in use.
 
 ## Relay endpoints
 

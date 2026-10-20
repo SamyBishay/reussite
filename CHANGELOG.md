@@ -1,6 +1,14 @@
 # What's new
 
 ## 2.0 — in progress
+- Notifications: Settings → Notifications can remind you at the right minute, even when Réussite is closed: when to start, when to restart, when to leave, the morning check-in, closing the day, the weekly review, a decision to check, and "Still on…?" when a timer runs long. On an iPhone, add Réussite to the Home Screen first. Each notification is scrambled on your device; by default it says only "Start" or "Leave now", and you can choose to include titles. Reminders are renewed each time you open the app, so if you don't open it for about two weeks they run out.
+- Fixed times with a lead time and weekdays: a standing item such as a weekly rehearsal can have an hour, a "leave early by" time and the days it happens. It appears in your plan on those days by itself, and you're told when to leave even if you hadn't planned the day.
+- The plan now lists fixed-time items first, with the time, the place and "Leave at…", and Swap and Cut never remove them.
+- Add to calendar: in the Calendar tab, send today's or the week's launch points and fixed-time items to your calendar app as a file, each with a reminder at its start.
+- Calendar feed: Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others), so today's launch points and fixed-time items show up there and stay up to date. By default it carries no step titles; including them is your choice, and the relay can then read them. Make a new address at any time and the old one stops working.
+- Delete everywhere now also switches off this device's notifications and calendar feed. The relay forgets a feed that is not renewed for 60 days.
+- "Still on…?" now uses the same rule in the app and in the notification: after twice your usual time for the step (at least 45 minutes), or when the next day starts where you are.
+- Settings → About's privacy note now covers notifications (the relay sees each device's push address and when notifications are due, not their text) and the calendar feed.
 - Sync between your devices, if you want it: Settings → Sync & devices. Réussite makes a recovery key (letters and a QR code); another device joins by scanning it or typing it. Your list is scrambled on your device before it is sent, so only your devices can read it. It catches up when you open the app, and a couple of seconds after you change something.
 - Keep the recovery key somewhere safe. If you lose every device and the key, the list is gone, and nobody can get it back. A card on Today stays until you say you saved it.
 - Sync & devices shows when it last synced, your devices (you can name this one), the recovery key on request, and lets you turn sync off (your list stays) or delete the synced copy.

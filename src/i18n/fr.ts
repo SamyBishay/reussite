@@ -1047,7 +1047,7 @@ export const fr: Partial<Strings> = {
   connectorNotUsed: 'pas encore utilisé',
   syncTurnOffConnector: 'Le connecteur est activé. Il le reste pour vos autres appareils jusqu’à ce que vous le désactiviez, et vous ne pourrez plus le faire d’ici une fois la synchronisation désactivée. Désactivez-le d’abord si vous ne le souhaitez pas.',
   privacyTitle: 'Confidentialité',
-  privacyRelay: 'Ce que le relais peut voir : votre liste sous forme de blocs brouillés, leur taille et leur heure d’arrivée, les adresses IP, l’adresse de notification de chaque appareil, le flux de calendrier seulement si vous l’activez, et toute votre liste tant que le connecteur est activé. Il ne voit jamais l’intérieur d’un bloc brouillé.',
+  privacyRelay: 'Ce que le relais peut voir : votre liste sous forme de blocs brouillés, leur taille et leur heure d’arrivée, les adresses IP, l’adresse de notification de chaque appareil et les heures auxquelles ses notifications doivent partir (leur texte est brouillé sur votre appareil, le relais ne peut pas le lire), le flux de calendrier seulement si vous l’activez (avec des titres génériques, sauf si vous incluez les titres des étapes), et toute votre liste tant que le connecteur est activé. Il ne voit jamais l’intérieur d’un bloc brouillé.',
   privacyAi: 'Ce que voit un fournisseur d’IA : exactement ce que contient chaque requête, que vous pouvez lire d’abord avec « Montrer ce qui est envoyé ». Les personnes enregistrées n’y figurent que si vous les cochez.',
   privacyLoss: 'Si vous perdez tous vos appareils et la clé de récupération, la liste est perdue pour de bon. Personne ne peut la récupérer, pas même celui qui fait tourner le relais.',
   dropSection: 'Lien en un geste',

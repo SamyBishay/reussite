@@ -6,7 +6,7 @@ Files: `src/push/protocol.ts` (shared types and limits), `src/push/encrypt.ts` (
 
 ## Identity
 
-The device makes a random 16-byte push id (`pid`) and a random 32-byte push secret, and keeps both in `local` (never synced). The first write for a `pid` stores `SHA-256(secret)`; from then on the Bearer secret is required (trust on first use, as for a space). Push has nothing in common with sync: no space id, no key, so the relay cannot tell which space a subscription belongs to. The cost: "Delete everywhere" cannot reach other devices' push rows. They are forgotten after 45 days without a schedule write, and the push service will refuse them sooner if the subscription is gone (404/410 deletes the row).
+The device makes a random 16-byte push id (`pid`) and a random 32-byte push secret, and keeps both in `local` (never synced). The first write for a `pid` stores `SHA-256(secret)`; from then on the Bearer secret is required (trust on first use, as for a space). Push has nothing in common with sync: no space id, no key, so the relay cannot tell which space a subscription belongs to. The cost: "Delete everywhere" cannot reach other devices' push rows; it does switch off this device's notifications and delete its row. The others are forgotten after 45 days without a schedule write, and the push service will refuse them sooner if the subscription is gone (404/410 deletes the row).
 
 ## Encryption
 
@@ -47,7 +47,7 @@ Errors are `{error: code}` as in sync, plus `bad_endpoint`, `unknown_device` (40
 
 About 38 subrequests against a limit of 50; whatever is over 36 waits for the next minute. Outcomes: 2xx delivered; 404/410 the subscription is gone, so the device is deleted; 429, 5xx or no answer is retried on the next ticks while the item is within its TTL, and given up after 3 sends; any other 4xx (a refused payload, a rejected token) drops the item and keeps the device. An item past its TTL is never sent. With no VAPID keys set a tick does nothing and leaves everything for later.
 
-At minute 0 the same run also prunes: devices with no register or schedule write for 45 days (and their items), items past their TTL, items of no device. The app writes the schedule every time it is opened or the list changes, so a device in use is never pruned; one not opened for about two weeks runs dry anyway, because the window is 14 days (iOS has no background work for a closed app, so nothing can refill it).
+At minute 0 the same run also prunes: devices with no register or schedule write for 45 days (and their items), items past their TTL, items of no device, and calendar feeds not written for 60 days ([feed.md](feed.md)). The app writes the schedule every time it is opened or the list changes, so a device in use is never pruned; one not opened for about two weeks runs dry anyway, because the window is 14 days (iOS has no background work for a closed app, so nothing can refill it).
 
 CPU of a 36-send tick: `npm run relay:bench:push` (see DECISIONS.md for the numbers).
 
@@ -65,7 +65,7 @@ Files: `src/sw.ts` (the service worker), `src/app/push.ts` (state, subscription,
 
 **Switching off** deletes the device at the relay, unsubscribes, and forgets the id, secret and cache. **The test button** posts one push through the relay; on `gone` (the push service dropped the subscription, the relay deleted the device) the app subscribes again, registers, and sends once more.
 
-**Known limits.** There is no `pushsubscriptionchange` handler: a browser that rotates a subscription is noticed the next time the app opens. An offline stop of a timer leaves the "Still on…?" push on the relay (nothing can cancel it from a closed app). The banner in the app counts a timer as long after midnight UTC; the push counts the next day start (`dayStart`, in the zone of the place): they agree on the 45 minutes / twice the estimate rule, which is the one the tests pin.
+**Known limits.** There is no `pushsubscriptionchange` handler: re-registering from the worker would need it to reach the push secret and the relay address in the database and run the whole client, for a case that is rare and heals by itself, so a browser that rotates a subscription is noticed the next time the app opens (until then the relay's push is refused and the row is deleted on 404/410). An offline stop of a timer leaves the "Still on…?" push on the relay (nothing can cancel it from a closed app). The banner in the app and the push use the one rule `stillOnDue` (`src/domain/calendar.ts`): twice the personal estimate (at least 45 minutes) from the start or the last "still going", or the next `dayStart` in the place's zone, whichever comes first; `src/app/push.parity.test.ts` pins both, including the day boundary.
 
 ## What the relay can see
 

@@ -35,6 +35,8 @@ describe('one low-risk change', () => {
     expect(low([{ op: 'day.update', date: '2026-10-09', add: ['t2'] }])).toBe(false);
     expect(low([{ op: 'task.done', id: 't1' }, { op: 'task.done', id: 't2' }])).toBe(false);
     expect(low([{ op: 'task.update', id: 'nope', set: { due: '2026-10-16' } }])).toBe(false);
+    // a decision is a step too, but one that opens the review
+    expect(low([{ op: 'task.create', set: { title: 'Choose a flat', kind: 'decision' } }])).toBe(false);
   });
   it('says which changes came to nothing', () => {
     const c = cs([{ op: 'task.drop', id: 't1' }, { op: 'task.update', id: 'nope', set: { due: '2026-10-10' } }, { op: 'task.drop', id: 't3' }]);

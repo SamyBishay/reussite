@@ -4,7 +4,7 @@
 // one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
-import { db, tasks, places, memory, exchanges, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, type WithId } from './store';
+import { db, tasks, places, memory, exchanges, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
 import { T } from './model';
 import { addSession } from './actions';
 import { openNewTask } from './sheets';
@@ -71,18 +71,23 @@ export function openExchange(now = clockNow.value, homeOnly = false): WithId<Exc
   }
   return best;
 }
-/** Read from the database, not the signal, which lags a write by a moment. */
-async function readExchange(id: string): Promise<WithId<Exchange> | null> {
+/** Read from the database, not the signal, which lags a write by a moment. `mine`: every field was last written by this device. */
+async function readExchange(id: string): Promise<(WithId<Exchange> & { mine: boolean }) | null> {
   const d = await db.table_('exchanges').get(id);
-  return d && !d._del ? { ...normExchange(fieldsOf(d as Stored<Record<string, unknown>>)), id } : null;
+  if (!d || d._del) return null;
+  const node = ':' + getClock().node;
+  return { ...normExchange(fieldsOf(d as Stored<Record<string, unknown>>)), id, mine: Object.values(d._hlc).every(h => h.endsWith(node)) };
 }
 let lastWritten: string | null = null;
-/** The exchange a new turn joins: the newest of this device's with a turn in the last ten minutes and something not undone. */
+/**
+ * The exchange a new turn joins: the newest of this device's with a turn in the last ten minutes and something not undone.
+ * Never one another device wrote to: two devices adding turns before they sync would each write the whole `changes` and `undo`, and one would lose the other's.
+ */
 async function continuing(): Promise<WithId<Exchange> | null> {
   for (const id of new Set([lastWritten, openExchange(Date.now(), true)?.id])) {
     const ex = id ? await readExchange(id) : null;
     // Not one whose every change was undone; one with no change yet (an answer) is still open.
-    if (ex && ex.src === 'home' && (hasLive(ex) || !ex.changes.length) && Date.now() - lastAt(ex) < OPEN_MS) return ex;
+    if (ex?.mine && ex.src === 'home' && (hasLive(ex) || !ex.changes.length) && Date.now() - lastAt(ex) < OPEN_MS) { const { mine: _, ...rest } = ex; return rest; }
   }
   return null;
 }

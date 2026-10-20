@@ -108,6 +108,18 @@ describe('a line typed on Home', () => {
     expect(titles()).toEqual(['Water the plants']);
   });
 
+  it('a follow-up never joins an exchange another device wrote to', async () => {
+    await submitHome('call the bank');
+    await settle();
+    // another device added a turn to it (it arrived by sync, with that device's clocks)
+    const d = (await db.table_('exchanges').toArray())[0]!;
+    await db.table_('exchanges').put({ ...d, _hlc: { ...d._hlc, turns: d._hlc.turns!.replace(/:[^:]+$/, ':otherdev') } } as never);
+    await settle();
+    await submitHome('book the dentist');
+    await settle();
+    expect([...exchanges.value.values()]).toHaveLength(2);
+  });
+
   it('done on a step asks how long it took; the time joins the same Undo', async () => {
     await step('s1', 'Call the dentist');
     await step('s2', 'Pay the rent');

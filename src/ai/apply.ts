@@ -467,13 +467,15 @@ function decisionDiffs(cur: Decision | null, f: Partial<Decision>): Diff[] {
 }
 
 /**
- * One low-risk change (brief §2, §10): a single change that adds a step, ticks one done, or moves
- * one date. It may be applied at once, with Undo; anything else waits for a yes.
+ * One low-risk change (brief §2, §10): a single change that adds a step (not a decision), ticks one
+ * done, or moves one date. It may be applied at once, with Undo; anything else waits for a yes.
  */
 export function isLowRisk(cs: Pick<ChangeSet, 'changes' | 'bad'>, plan: Pick<Plan, 'items'>): boolean {
   if (cs.changes.length !== 1 || cs.bad || plan.items.length !== 1) return false;
   const it = plan.items[0]!;
   if (it.target !== 'task') return false;
+  const first = cs.changes[0]!;
+  if (first.op === 'task.create' && first.set.kind === 'decision') return false; // a decision opens the review (brief §10)
   if (it.kind === 'create' || it.kind === 'done') return true;
   if (it.kind !== 'update') return false;
   const fields = it.diffs.map(d => d.field);

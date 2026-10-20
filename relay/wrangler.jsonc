@@ -32,8 +32,18 @@
     // The app in production, and its preview URLs (`<branch or version>-reussite.…`).
     "ALLOWED_ORIGINS": "https://reussite.rudolphem.workers.dev,https://*-reussite.rudolphem.workers.dev",
     // The relay's public address, no trailing slash: the connector's OAuth issuer and `/mcp` URL.
-    "RELAY_URL": "https://d1-reussite.rudolphem.workers.dev"
-  }
+    "RELAY_URL": "https://d1-reussite.rudolphem.workers.dev",
+    // Web Push (docs/dev/push.md). The public key pairs with the secret VAPID_PRIVATE_KEY and is also the app's
+    // VITE_VAPID_PUBLIC_KEY. Placeholder until the pair is made with scripts/vapid-keygen.mjs.
+    "VAPID_PUBLIC_KEY": "REPLACE_WITH_VAPID_PUBLIC_KEY",
+    // The relay's own address: the VAPID token's `sub`, so no personal contact reaches a push service.
+    "VAPID_SUBJECT": "https://d1-reussite.rudolphem.workers.dev",
+    // The hosts a push endpoint may have (blocks the relay being aimed elsewhere): Firefox, Chrome/Android, Safari/iOS, Edge.
+    "PUSH_HOSTS": "updates.push.services.mozilla.com,fcm.googleapis.com,*.push.apple.com,*.notify.windows.com"
+  },
+  // Free plan: 5 cron triggers. Every minute: send due notifications; at minute 0 also prune.
+  "triggers": { "crons": ["* * * * *"] }
   // Secrets, set with `wrangler secret put` (never in this file). Locally: relay/.dev.vars (see .dev.vars.example).
   //   CONNECTOR_WRAP_KEY  base64 of 32 random bytes; wraps the space keys the connector holds.
+  //   VAPID_PRIVATE_KEY   the private half of the VAPID pair (base64url, 32 bytes), from scripts/vapid-keygen.mjs.
 }

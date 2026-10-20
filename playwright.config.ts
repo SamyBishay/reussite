@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { E2E_VAPID } from './tests/e2e/vapid';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -7,9 +8,11 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:4174', trace: 'retain-on-failure' },
   // The app is built for a relay on this computer; the relay (Worker + local D1, no Cloudflare account) starts beside it.
   webServer: [
-    { command: 'VITE_RELAY_URL=http://localhost:8787 npm run build && npx vite preview --port 4174 --strictPort', url: 'http://localhost:4174', reuseExistingServer: false, timeout: 120_000 },
+    { command: `VITE_RELAY_URL=http://localhost:8787 VITE_VAPID_PUBLIC_KEY=${E2E_VAPID.publicKey} npm run build && npx vite preview --port 4174 --strictPort`, url: 'http://localhost:4174', reuseExistingServer: false, timeout: 120_000 },
     // The connector needs its wrap secret: a throwaway for these tests (32 bytes, base64), and the relay's own address.
-    { command: 'npm run relay:migrate && npm run relay:dev -- --var CONNECTOR_WRAP_KEY:ZTJlLXRlc3Qtd3JhcC1rZXktbm90LXNlY3JldC0wMDE= --var RELAY_URL:http://localhost:8787', url: 'http://localhost:8787/health', reuseExistingServer: false, timeout: 120_000, env: { WRANGLER_SEND_METRICS: 'false' } },
+    // Push needs a VAPID pair (a throwaway too, the app is built with its public half) and a push-host list that
+    // allows only this computer, where the tests' push stub listens (http, any port): no real push service is reachable.
+    { command: `npm run relay:migrate && npm run relay:dev -- --var CONNECTOR_WRAP_KEY:ZTJlLXRlc3Qtd3JhcC1rZXktbm90LXNlY3JldC0wMDE= --var RELAY_URL:http://localhost:8787 --var VAPID_PUBLIC_KEY:${E2E_VAPID.publicKey} --var VAPID_PRIVATE_KEY:${E2E_VAPID.privateKey} --var VAPID_SUBJECT:http://localhost:8787 --var 'PUSH_HOSTS:localhost:*,127.0.0.1:*'`, url: 'http://localhost:8787/health', reuseExistingServer: false, timeout: 120_000, env: { WRANGLER_SEND_METRICS: 'false' } },
   ],
   projects: [
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

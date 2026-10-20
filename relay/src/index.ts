@@ -1,8 +1,9 @@
 // The relay Worker. The OAuth library sits in front (connector sign-in: /oauth/*, the metadata
 // documents, and the protected /mcp route); everything else reaches `handle`, which routes
 // /v1/spaces/* to the sync and connector-switch handlers, with CORS, and serves /authorize.
-// Push and the calendar feed are added as further routes in `handle`; each is a function
-// (req, env, ctx) => Response in its own file, tried before the 404 at the bottom.
+// Push (/v1/push/*) is routed the same way; the calendar feed is added as a further route in
+// `handle`, a function (req, env) => Response in its own file, tried before the 404 at the
+// bottom. The cron (`scheduled`) sends the push notifications that are due (src/tick.ts).
 import { handleAuthorize } from './connector/authorize';
 import { handleConnector } from './connector/admin';
 import { mcpHandler } from './connector/mcp';
@@ -11,9 +12,12 @@ import { corsHeaders, originAllowed } from './cors';
 import type { Env } from './env';
 import { fail } from './http';
 import { handleInbox } from './inbox';
+import { handlePush, type Deps } from './push';
 import { handleSync } from './sync';
+import { runTick } from './tick';
 
 const SYNC_ROUTE = /^\/v1\/spaces\/([^/]+)(?:\/(batches|changes|snapshot|devices|inbox)(?:\/([^/]+))?)?$/;
+const PUSH_ROUTE = /^\/v1\/push\/([^/]+)(?:\/(schedule|send))?$/;
 const CONNECTOR_ROUTE = /^\/v1\/spaces\/([^/]+)\/connector(?:\/(code))?$/;
 
 function withCors(res: Response, origin: string | null): Response {
@@ -23,15 +27,17 @@ function withCors(res: Response, origin: string | null): Response {
   return out;
 }
 
-export async function handle(req: Request, env: Env): Promise<Response> {
+export async function handle(req: Request, env: Env, deps?: Deps): Promise<Response> {
   const url = new URL(req.url);
   const sync = SYNC_ROUTE.exec(url.pathname);
   const connector = CONNECTOR_ROUTE.exec(url.pathname);
-  if (sync || connector) {
+  const push = PUSH_ROUTE.exec(url.pathname);
+  if (sync || connector || push) {
     // A browser sends Origin; only the app's origins may talk to the relay. Other clients send none.
     const origin = req.headers.get('Origin');
     if (origin && !originAllowed(origin, env)) return fail('origin_not_allowed', 403);
     if (req.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
+    if (push) return withCors(await handlePush(req, env, push[1]!, push[2] ?? '', deps), origin);
     if (connector) return withCors(await handleConnector(req, env, connector[1]!, connector[2] ?? ''), origin);
     if (sync![2] === 'inbox') return withCors(await handleInbox(req, env, sync![1]!, sync![3]), origin);
     return withCors(await handleSync(req, env, sync![1]!, sync![2] ?? '', sync![3]), origin);
@@ -43,4 +49,8 @@ export async function handle(req: Request, env: Env): Promise<Response> {
 
 const handlers = { apiHandler: mcpHandler, defaultHandler: { fetch: (req: Request, env: Env) => handle(req, env) } };
 
-export default { fetch: (req: Request, env: Env, ctx: ExecutionContext) => oauthProvider(env, handlers).fetch(req, env, ctx) } satisfies ExportedHandler<Env>;
+export default {
+  fetch: (req: Request, env: Env, ctx: ExecutionContext) => oauthProvider(env, handlers).fetch(req, env, ctx),
+  // Cron: every minute (wrangler.jsonc, triggers.crons).
+  scheduled: (controller: ScheduledController, env: Env, ctx: ExecutionContext) => { ctx.waitUntil(runTick(env, controller.scheduledTime)); },
+} satisfies ExportedHandler<Env>;

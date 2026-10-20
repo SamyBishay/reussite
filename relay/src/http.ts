@@ -1,10 +1,11 @@
 // Small response helpers.
+import type { PushErrorCode } from '../../src/push/protocol';
 import type { ErrorCode } from '../../src/sync/protocol';
 
 export const json = (data: unknown, status = 200, headers?: Record<string, string>): Response =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers } });
 
-export const fail = (error: ErrorCode, status: number, headers?: Record<string, string>): Response => json({ error }, status, headers);
+export const fail = (error: ErrorCode | PushErrorCode, status: number, headers?: Record<string, string>): Response => json({ error }, status, headers);
 
 /** Read a JSON body of at most `max` characters. Returns null when it's too big, not JSON, or not an object. */
 export async function readJson(req: Request, max: number): Promise<Record<string, unknown> | 'too_large' | null> {

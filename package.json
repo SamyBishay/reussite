@@ -19,7 +19,8 @@
     "relay:migrate": "npm --prefix relay run migrate:local",
     "relay:test": "npm --prefix relay test",
     "relay:typecheck": "npm --prefix relay run typecheck",
-    "relay:bench": "npm --prefix relay run bench"
+    "relay:bench": "npm --prefix relay run bench",
+    "relay:bench:push": "npm --prefix relay run bench:push"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible-mono": "^5.3.0",

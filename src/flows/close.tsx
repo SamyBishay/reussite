@@ -9,7 +9,7 @@ import { closeDay } from '../app/actions';
 import { overlay, openSheet, closeSheet } from '../app/sheet';
 import { rankOf } from '../app/sheets';
 import { Title, Suit } from '../app/ui';
-import { soundCard, soundChord, bigMoment } from '../app/celebrate';
+import { soundCard, soundChord, bigMoment, bigMomentNear } from '../app/celebrate';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { addDays } from '../domain/dates';
 import { SUIT_ORDER } from '../data/settings';
@@ -94,6 +94,7 @@ function Show() {
   const skip = useRef(false);
 
   useEffect(() => {
+    bigMomentNear(); // St George ends the show: fetch his pictures while the cards are dealt
     const el = grid.current;
     if (!el) return;
     const nodes = [...el.querySelectorAll<HTMLElement>('.tcard')];

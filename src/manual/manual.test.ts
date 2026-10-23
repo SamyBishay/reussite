@@ -37,7 +37,8 @@ describe('the manual', () => {
   });
   it('keeps the evidence placeholders and the not-therapy line', () => {
     const text = pagesOf('en').map(s => readFileSync(`${dir('en')}/${s}.md`, 'utf8')).join('\n');
-    expect(text).toContain('[evidence: E-xx]');
+    expect(text).toContain('`[E?]`'); // the same placeholder as docs/METHOD.*.md
+    expect(text).not.toContain('E-xx');
     expect(text).toContain('**Research says:**');
     expect(text).toContain('**Practice says:**');
     expect(text).toContain('doesn\'t replace therapy');

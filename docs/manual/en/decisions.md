@@ -17,14 +17,14 @@ In **Projects**, tap **+ New decision**. Or turn a step into a decision from its
 
 You weigh the items yourself. An AI never sets weights.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible. [evidence: E-xx]
+**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible. `[E?]`
 
 ## Checking it later
 
 On the date you chose, Home shows "Check your decision". Did what would show it's wrong happen? If yes, **Reopen it** and start again with the new fact. If not, close it or check again later.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** a decision with a date to check is easier to let go of. [evidence: E-xx]
+**Practice says:** a decision with a date to check is easier to let go of. `[E?]`

@@ -33,4 +33,4 @@ These pages are short and written in plain words. You can read them in any order
 
 ## About the "Research says" and "Practice says" lines
 
-Each rule of the method has two short lines. **Research says** is what studies show. **Practice says** is what the method's practice holds. For now most of them are marked **untested**: that means nobody has checked yet, not that the rule is wrong. The marks like `[evidence: E-xx]` will become real references when the evidence files arrive.
+Each rule of the method has two short lines. **Research says** is what studies show. **Practice says** is what the method's practice holds. For now most of them are marked **untested**: that means nobody has checked yet, not that the rule is wrong. The marks like `[E?]` will become real references when the evidence files arrive.

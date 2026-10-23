@@ -19,9 +19,9 @@ A far date isn't urgent however important. Neither is anything you can't act on 
 
 If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date. When is it due?"
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** most of what feels urgent is only loud. A date is what makes it urgent. [evidence: E-xx]
+**Practice says:** most of what feels urgent is only loud. A date is what makes it urgent. `[E?]`
 
 ## Moving, filtering and searching
 
@@ -34,9 +34,9 @@ If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date
 
 A step has a title, written as the **first action**: the app or place, then what to do there ("Open Mail and reply to…"). It also has a starter, an estimate, an optional due date, a project and a suit. Under **More** you will find the kind (a step or a decision), "Waits for", the app and link, repeats and a fixed time.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** a title that names the app and the action is a step you can start. "Taxes" is not. [evidence: E-xx]
+**Practice says:** a title that names the app and the action is a step you can start. "Taxes" is not. `[E?]`
 
 ## Repeating steps and standing items
 

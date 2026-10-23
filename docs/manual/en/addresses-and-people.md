@@ -39,9 +39,9 @@ In a step's details, **Goes to** links the step to an address or a person. Marki
 
 On a standing obligation (leisure, going out, seeing people), the field **The planner offers** can be Nothing, Addresses or People. When the plan places that obligation, the check-in, the weekly review and the day's "Leisure & people" offer up to three. Pick one and the step gets its title, starter and link. Or **Keep it as it is**. Places you'd go back to come first, then the ones you want to go to.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** leisure, going out and seeing people are obligations to your mental health, so they are scheduled like any step. Having the choice made ahead of time makes them easier to do. [evidence: E-xx]
+**Practice says:** leisure, going out and seeing people are obligations to your mental health, so they are scheduled like any step. Having the choice made ahead of time makes them easier to do. `[E?]`
 
 ## Import from Google Maps
 

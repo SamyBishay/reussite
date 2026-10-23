@@ -38,6 +38,6 @@ The last screen offers **Plan my first day**. It starts the morning check-in. Se
 
 Starting is the hard part. Every step in Réussite has a small first action, so the jump from not doing to doing is as small as it can be.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** once work has begun it usually goes fine. What fails is the jump into it, and the jump back in after a break. [evidence: E-xx]
+**Practice says:** once work has begun it usually goes fine. What fails is the jump into it, and the jump back in after a break. `[E?]`

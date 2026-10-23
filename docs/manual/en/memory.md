@@ -29,6 +29,6 @@ Mark a note **Private: never sent to an AI**. Then no AI sees it: not the AI in 
 - **Import** reads the memory files of Claude Code, or a file of claude.ai's memory, or text you paste. Nothing is replaced: only lines you don't have yet are added. You see a summary before anything is written.
 - **Export** makes one Markdown file with a block per note, to give to any AI. Private notes stay out unless you tick the box.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** write it down, so it doesn't compete in your head. [evidence: E-xx]
+**Practice says:** write it down, so it doesn't compete in your head. `[E?]`

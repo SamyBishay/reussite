@@ -24,9 +24,9 @@ What the plan contains:
 
 Réussite adds up the estimates and shows what the day will probably take for you.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour. [evidence: E-xx]
+**Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour. `[E?]`
 
 ## Launch points
 
@@ -52,9 +52,9 @@ Tap **I'm stuck** when it won't start. Réussite asks which friction it is:
 
 Then it shows the starter, or helps you write a smaller one. If the same step stalls twice, it probably hides a decision or missing information. Réussite asks you to turn it into a question to someone, or a decision.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** when you are stuck, don't re-plan the day. Find the friction and make the first action smaller. [evidence: E-xx]
+**Practice says:** when you are stuck, don't re-plan the day. Find the friction and make the first action smaller. `[E?]`
 
 ## Break it down
 
@@ -81,6 +81,6 @@ Once a week (Sunday by default), Home offers **Start the review**. It takes abou
 
 It ends with how your estimates compared with reality.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** a regular look at everything keeps the daily list small. [evidence: E-xx]
+**Practice says:** a regular look at everything keeps the daily list small. `[E?]`

@@ -8,9 +8,9 @@ A project groups steps toward a goal. Projects are listed under the four suits. 
 
 Give every active project a **SMART** goal: specific, measurable, attainable, relevant and dated. Open the project and fill in the five lines. The card shows "SMART 3/5" until all are there. If an AI proposed a goal, it stays "proposed" until you confirm or rewrite it.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** a goal you can't tell is finished isn't a goal. [evidence: E-xx]
+**Practice says:** a goal you can't tell is finished isn't a goal. `[E?]`
 
 ## The next step
 

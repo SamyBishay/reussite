@@ -6,7 +6,7 @@ For friends, in plain words. One short page per topic, in English (`docs/manual/
 
 `src/manual/pages.ts` lists them in reading order; `index.md` is the contents. A new page is a new file with the same name in `en/` (and `fr/`) plus a line in `PAGES` and a link from the index. `src/manual/manual.test.ts` checks that every file is listed, every link goes to a page, every picture is one the screenshot spec takes and that all the pictures exist.
 
-Each rule or feature of the method has two lines, **Research says** and **Practice says**. Until the evidence files arrive, each carries the placeholder `[evidence: E-xx]` and says "untested": a status, never a verdict. Search for `E-xx` to find them all when the files come. Say only what the app does; the buttons are named as `src/i18n/en.ts` names them.
+Each rule or feature of the method has two lines, **Research says** and **Practice says**. Until the evidence files arrive, each carries the placeholder `[E?]` (the one `docs/METHOD.en.md` uses) and says "untested": a status, never a verdict. Search for `[E?]` to find them all when the files come. Say only what the app does; the buttons are named as `src/i18n/en.ts` names them.
 
 Supported Markdown (`src/manual/markdown.ts`): headings, paragraphs, bullet and numbered lists, quotes, rules, code, **bold**, *italic*, `code`, links and pictures. No HTML, no tables. A link is a page (`daily-loop.md`) or a link whose scheme is in `ALLOWED_SCHEMES`; anything else is shown as plain text. A picture is `![what it shows](shot:name)`.
 

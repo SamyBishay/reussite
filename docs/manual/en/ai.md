@@ -53,8 +53,8 @@ The connector lets an AI app (such as Claude) read your list and edit it while y
 
 One small change (adding a step, ticking one done, moving a date) goes straight in, with an undo. Anything else waits for your yes in the chat. **Switch off** signs every AI app out at once. Notes you marked Private are never readable by it.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** an AI is useful when it follows the method, asks one question at a time and says what it did. [evidence: E-xx]
+**Practice says:** an AI is useful when it follows the method, asks one question at a time and says what it did. `[E?]`
 
 See also [Privacy](privacy.md).

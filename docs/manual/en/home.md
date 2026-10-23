@@ -50,6 +50,6 @@ The menu icon at the top of Home holds what has no tab: **Settings**, **Places**
 
 The bar at the bottom has five places: Home, Today, Matrix, Projects and Calendar. It shows only words, never counts.
 
-**Research says:** untested here. [evidence: E-xx]
+**Research says:** untested here. `[E?]`
 
-**Practice says:** the fewer choices on the screen where you start, the easier it is to start. [evidence: E-xx]
+**Practice says:** the fewer choices on the screen where you start, the easier it is to start. `[E?]`

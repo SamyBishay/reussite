@@ -9,7 +9,7 @@ const opts = (o: Partial<CalViewOptions> = {}): CalViewOptions => ({ today: '202
 const on = (evs: ReturnType<typeof calViewEvents>, k: string) => evs.filter(e => e.day === k && e.kind !== 'review');
 
 describe('the calendar’s events', () => {
-  it('puts a step with a time on the grid at its time and length, and everything else in the all-day row', () => {
+  it('puts a step with a time on the grid at its time and length, a planned card at its projected time, and what is due in the all-day row', () => {
     const d = data({
       tasks: [
         task('dent', { title: 'Call the dentist about the crown', at: '09:15', due: '2026-10-22', dur: 45 }),
@@ -24,7 +24,9 @@ describe('the calendar’s events', () => {
     expect(evs.find(e => e.taskId === 'over')).toMatchObject({ time: '10:00', endTime: '11:00' }); // no length: an hour
     const plan = evs.find(e => e.taskId === 'plan')!, due = evs.find(e => e.taskId === 'due')!;
     expect(plan).toMatchObject({ kind: 'plan', title: 'Mail landlord', movable: true });
-    expect(plan.time).toBeUndefined();
+    // A planned card has a projected time: after the fixed items here (they hold 09:15 to 11:00), at the default start's order.
+    expect(plan).toMatchObject({ time: '11:00', endTime: '11:30', projected: true });
+    expect(due.time).toBeUndefined();
     expect(due).toMatchObject({ kind: 'due', title: 'electricity bill' });
     // Short name, never the title; a step's own label wins.
     expect(evs.map(e => e.title)).not.toContain('Pay the electricity bill');

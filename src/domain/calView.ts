@@ -2,7 +2,7 @@
 // items sit on the hour grid at their time and length; everything else that belongs to a day with no time (the
 // day's planned cards, the steps due, cards played, decision checks, project due dates, the review, a stay) is an
 // all-day event and never gets a slot on the grid. Pure: data in, events out; the app maps them onto its library.
-import type { Address, Day, Decision, Place, Project, Stay, SuitId, Task } from '../data/schema';
+import type { Address, Day, Decision, Place, Project, Session, Stay, SuitId, Task } from '../data/schema';
 import { addDays, type DayKey } from './dates';
 import { DEFAULT_FIXED_MINUTES } from './ics';
 import { shortLabel } from './label';
@@ -11,6 +11,7 @@ import { fixedOn, isOpen, rawPlan, whereOf } from './lists';
 import { inArea, type Half } from './areas';
 import { locationOf } from './calItems';
 import { isoDow, occurrences } from './repeat';
+import { makeScheduler, type Slot } from './schedule';
 
 type WithId<T> = T & { id: string };
 
@@ -22,6 +23,8 @@ export interface CalViewData {
   places: ReadonlyMap<string, WithId<Place>>;
   stays: ReadonlyMap<string, WithId<Stay>>;
   addresses: ReadonlyMap<string, WithId<Address>>;
+  /** For the projected times: where done cards really were and the personal pace. */
+  sessions?: ReadonlyMap<string, WithId<Session>>;
 }
 
 export interface CalViewOptions {
@@ -32,6 +35,10 @@ export interface CalViewOptions {
   onPage: (t: WithId<Task>) => boolean;
   /** Narrowed to one area: its steps and Anywhere's, and the half days spent there. Every step on the calendar follows it. */
   area?: string | null;
+  /** For the projected times of planned cards (schedule.ts): the clock now, the zone the grid reads in, the default start. */
+  now?: number;
+  zone?: string;
+  launchStart?: string;
 }
 
 export type CalViewKind = 'fixed' | 'plan' | 'due' | 'done' | 'check' | 'project' | 'review' | 'repeat' | 'stay' | 'half';
@@ -46,7 +53,7 @@ export interface CalViewEvent {
   date: DayKey;
   /** A stay: its last date (inclusive). */
   endDate?: DayKey;
-  /** Fixed-time items: HH:MM on `date`, and the end on the same date (never past 23:59). */
+  /** Fixed-time items, and planned or done cards that have a time: HH:MM on `date`, and the end on the same date (never past 23:59). */
   time?: string;
   endTime?: string;
   taskId?: string;
@@ -61,6 +68,10 @@ export interface CalViewEvent {
   /** A half day spent in an area: `title` is the area's name. */
   half?: Half;
   done?: boolean;
+  /** Planned cards (and done ones) have a time on the grid: `time`/`endTime` of a card not yet done are a projection, not a fixed time. */
+  projected?: boolean;
+  /** "If there's room": a later step allotted to the day. */
+  optional?: boolean;
   /** Can be dragged: planned and due steps, cards played, and fixed-time steps not yet done. */
   movable: boolean;
 }
@@ -113,6 +124,13 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
   }
 
   const lists = { days: data.days, tasks: data.tasks };
+  const schedule = makeScheduler(data, { today: o.today, dayStart: o.dayStart, launchStart: o.launchStart, now: o.now ?? Date.now() });
+  /** The time a card has on its day, if it has one: done ones where they were, the rest where the plan puts them. */
+  const timeOf = (slot: Slot | undefined, k: DayKey, extra: Partial<CalViewEvent> = {}): Partial<CalViewEvent> => {
+    if (!slot) return {};
+    const time = toClock(slot.start), end = toClock(Math.max(slot.end, slot.start + 5));
+    return { date: gridSlot(k, time, o.dayStart).date, time, endTime: end, projected: slot.state !== 'done', ...extra };
+  };
   for (let k = from; k <= to; k = addDays(k, 1)) {
     const timed = fixedOn(lists, k).filter(t => !waiting(t));
     for (const t of timed) {
@@ -121,6 +139,7 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
       const done = t.status === 'done';
       out.push(task('fixed', t, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, t.dur ?? t.est), done, movable: !done }));
     }
+    const slots = new Map(schedule(k, o.zone).slots.map(sl => [sl.id, sl]));
     const timedIds = new Set(timed.filter(t => HHMM.test(t.at ?? '')).map(t => t.id));
 
     const planned = new Set<string>();
@@ -128,8 +147,15 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
       const t = data.tasks.get(id);
       if (!t || t.status === 'dropped' || t.template || t.at || planned.has(id) || waiting(t)) continue;
       planned.add(id);
-      if (t.status === 'done') out.push(task('done', t, k, { id: `done:${t.id}:${k}`, done: true, movable: true }));
-      else out.push(task('plan', t, k, { movable: true }));
+      if (t.status === 'done') out.push(task('done', t, k, { id: `done:${t.id}:${k}`, done: true, movable: true, ...timeOf(slots.get(t.id), k) }));
+      else out.push(task('plan', t, k, { movable: true, ...timeOf(slots.get(t.id), k) }));
+    }
+    // Later steps allotted to the day come last, only if there is room.
+    for (const sl of slots.values()) {
+      const t = data.tasks.get(sl.id);
+      if (!sl.optional || !t || planned.has(t.id)) continue;
+      planned.add(t.id);
+      out.push(task('plan', t, k, { movable: true, optional: true, ...timeOf(sl, k) }));
     }
     for (const t of data.tasks.values()) {
       if (!isOpen(t) || t.due !== k || planned.has(t.id) || t.at || !o.onPage(t) || waiting(t)) continue;
@@ -138,7 +164,7 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
     if (k <= o.today) {
       for (const t of data.tasks.values()) {
         if (t.status !== 'done' || t.template || t.doneDay !== k || planned.has(t.id) || timedIds.has(t.id)) continue;
-        out.push(task('done', t, k, { done: true, movable: true }));
+        out.push(task('done', t, k, { done: true, movable: true, ...timeOf(slots.get(t.id), k) }));
       }
     }
     for (const d of data.decisions.values()) if (d.status === 'decided' && d.reviewOn === k) out.push({ id: `check:${d.id}:${k}`, kind: 'check', day: k, date: k, decisionId: d.id, title: d.title, movable: false });

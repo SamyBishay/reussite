@@ -82,9 +82,9 @@ test('Add to calendar downloads an .ics with the day’s planned steps and no la
   expect(d.suggestedFilename()).toMatch(/^reussite-\d{4}-\d{2}-\d{2}\.ics$/);
   const text = readFileSync((await d.path())!, 'utf8');
   expect(text.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
-  // Planned cards are all-day events; launch points stay in the app.
-  expect(text).toContain('DTSTART;VALUE=DATE:');
-  expect(text).not.toMatch(/▶|Start|23:30|233000/);
+  // Planned cards are events at the times they are laid out (or, with no room left in the day, all-day ones); launch points stay in the app.
+  expect(text).toMatch(/UID:plan:t\d/);
+  expect(text).not.toMatch(/▶|Start/);
   expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/);
 });
 

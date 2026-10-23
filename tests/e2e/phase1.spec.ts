@@ -311,7 +311,7 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   // Both are read in one frame: the grid scrolls to its first position by itself (smoothly) after it is drawn, and two
   // separate measures taken while it moves differ by however far it went between them.
   const gap = await page.evaluate(() => {
-    const ev = document.querySelector('.sx__time-grid-event')!.getBoundingClientRect().y;
+    const ev = document.querySelector('.sx__time-grid-event.k-fixed')!.getBoundingClientRect().y;
     const hour = [...document.querySelectorAll('.sx__week-grid__hour')].find(h => h.textContent?.includes('17:00'))!.getBoundingClientRect().y;
     return Math.abs(ev - hour);
   });

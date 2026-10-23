@@ -1,8 +1,10 @@
 // Rewards (brief §5, "what we take from games"): only real completions get feedback, every
 // time, at once, in proportion. No random variety: the pitch only rises with the day's count.
 // The completed-step effect takes 0.6 s at most and never blocks the next tap.
-import { settings } from './store';
-import { playStGeorge, type Words } from './stgeorge';
+import { effect } from '@preact/signals';
+import { settings, today } from './store';
+import { T, planOf, rawPlan } from './model';
+import { playStGeorge, preloadStGeorge, type Words } from './stgeorge';
 
 type Kind = 'step' | 'last' | 'project' | 'decision';
 
@@ -69,6 +71,24 @@ export function bigMoment(words: Words): boolean {
   const c = settings.value.celebrations;
   if (c === 'off' || typeof document === 'undefined') return false;
   return playStGeorge(words, c === 'lively' && !motionOff() ? 'lively' : 'still');
+}
+
+/** Fetch St George's pictures ahead of a big moment (nothing when celebrations are off). */
+export function bigMomentNear() {
+  if (settings.value.celebrations !== 'off') void preloadStGeorge();
+}
+
+/**
+ * Watch for the day's last card coming: once today's list has one open card left (or none), the pictures are
+ * fetched, so the celebration has them when the card is done. Started once, by the app.
+ */
+export function watchBigMoments(): () => void {
+  return effect(() => {
+    const k = today.value;
+    if (!rawPlan(k).length) return;
+    const left = planOf(k).filter(id => { const x = T(id); return x?.status === 'open' && !x.fixed; }).length;
+    if (left <= 1) bigMomentNear();
+  });
 }
 
 function flyCard(suit: string, glyph: string): HTMLElement {

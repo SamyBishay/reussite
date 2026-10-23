@@ -714,6 +714,12 @@ body > .row,body > li{list-style:none}
   .tabbar-in{max-width:720px}
 }
 .ob-mark{display:block;margin:var(--s5) 0 var(--s5)}
+/* The mark: the light painting's heart on the light ground, the dark one's on the dark (src/app/Mark.tsx). */
+.mark img{display:block;height:100%;width:auto}
+.mark .mark-d{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mark .mark-l{display:none}:root:not([data-theme="light"]) .mark .mark-d{display:block}}
+:root[data-theme="dark"] .mark .mark-l{display:none}
+:root[data-theme="dark"] .mark .mark-d{display:block}
 /* The rings: an empty state's mark, and the running timer's progress beside its clock. */
 .rings{display:block;flex:none}
 .emptystate{display:grid;justify-items:start;gap:var(--s3);margin-top:var(--s5)}

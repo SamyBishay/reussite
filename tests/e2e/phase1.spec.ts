@@ -224,6 +224,31 @@ test('an ordinary Done never brings St George; the day’s last card does', asyn
   expect(seen).toBe(true);
 });
 
+test('St George’s pictures are fetched when one card is left, and the fight is drawn with them', async ({ page }) => {
+  await importSample(page);
+  const sg = page.getByTestId('stgeorge');
+  let fetched = false;
+  page.on('response', r => { if (/\/assets\/knight-[\w-]+\.webp$/.test(r.url()) && r.ok()) fetched = true; });
+  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already done' });
+  for (let i = 0; i < 12 && !fetched && await doneBtn.count() > 0; i++) {
+    await doneBtn.click();
+    await page.getByRole('button', { name: 'I didn’t time it' }).click();
+    await page.waitForTimeout(300);
+  }
+  expect(fetched).toBe(true);
+  await page.waitForTimeout(500); // decoded
+  await doneBtn.click();
+  await page.getByRole('button', { name: 'I didn’t time it' }).click();
+  await expect(sg).toBeVisible();
+  await expect(sg).not.toHaveClass(/bare/);
+  expect(await sg.locator('img').count()).toBeGreaterThanOrEqual(6);
+  const props = await sg.evaluate(el => [...new Set(el.getAnimations({ subtree: true }).flatMap(a => ((a.effect as KeyframeEffect).getKeyframes()).flatMap(k => Object.keys(k).filter(x => !['offset', 'easing', 'composite', 'computedOffset'].includes(x)))))]);
+  expect(props.every(p => p === 'transform' || p === 'opacity'), props.join()).toBe(true);
+  await noSideways(page, 'stgeorge');
+  await page.keyboard.press('Escape');
+  await expect(sg).toHaveCount(0, { timeout: 1000 });
+});
+
 test('personal estimates wait for five timed steps', async ({ page }) => {
   await importSample(page);
   await page.locator('.row:not(.done)').getByTestId('details').first().click();

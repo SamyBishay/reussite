@@ -30,6 +30,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 - `src/manual/` — the manual's viewer (`Manual.tsx`, lazy, opened from Settings → About), its small Markdown reader (`markdown.ts`) and the page order (`pages.ts`); the pages are `docs/manual/<language>/*.md` (English and French) and the pictures `public/manual/shots/`, made by `tests/manual/manual.spec.ts`; see `docs/dev/manual.md`. Update the pages when behaviour changes, and re-run `npm run manual:shots` when a screen does.
 - `src/i18n/` — `en.ts` and `fr.ts`; every UI string lives there. `fr.ts` may lag behind: missing keys fall back to English and are translated in one batch at the end of each phase (the i18n test lists them).
 - `docs/ai/` — the AI kit: `skills/<name>.md` (today, decide) are plain prompts to paste into any chatbot, `skills/<name>/SKILL.md` the same as Claude skills; `preferences.md`, the short `CHANGESET.md`. Update them with `docs/METHOD.en.md` and `docs/CHANGESET.md`. `README.md` is for friends; `CUSTOMIZING.md` is for forks (update it with `docs/dev/infra.md` when a var, secret or build setting changes).
+- `src/assets/dove/`, `scripts/dove/` — the pictures cut out of Hilma af Klint's The Dove (the celebration in `src/app/stgeorge.ts`, the onboarding mark) and the scripts and masks that make them and the icons; see `docs/dev/dove.md`.
 - `tests/e2e/` — Playwright; `tests/manual/` — the manual's screenshots (their own config); `tests/private/` — checks against the real export (never committed data).
 
 ## Invariants

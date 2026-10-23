@@ -1479,7 +1479,7 @@ export const fr: Partial<Strings> = {
   bdInOrder: 'Dans cet ordre',
   bdAnyOrder: 'Dans n’importe quel ordre',
   bdOrderHint: 'Dans cet ordre, chaque étape attend la précédente et elles restent dans une seule carte. Dans n’importe quel ordre, ce sont des étapes séparées.',
-  paintingsCredit: 'Couleurs et motifs inspirés de Hilma af Klint, La Colombe (1915).',
+  paintingsCredit: 'Le cœur, le chevalier, le dragon et les couleurs sont de Hilma af Klint, découpés dans La Colombe (1915, domaine public).',
   labelField: 'Nom court',
   labelHint: 'Ce que les calendriers montrent pour cette étape. Laissez vide pour utiliser celui fait à partir du titre.',
   timeChip: 'Heure',

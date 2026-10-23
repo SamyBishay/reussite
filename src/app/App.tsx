@@ -15,6 +15,7 @@ import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
 import { startSync } from './sync';
 import { startFeed } from './feed';
+import { watchBigMoments } from './celebrate';
 import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
 import { reloadNewest } from './reload';
@@ -189,7 +190,7 @@ function openLinkedTask() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) openLinkedTask(); };

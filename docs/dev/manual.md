@@ -1,10 +1,10 @@
 # The manual
 
-For friends, in plain words. One short page per topic, in English (`docs/manual/en/`) and, in a later step, French (`docs/manual/fr/`). The pages are Markdown files, read on GitHub and in the app: Settings → About → **Read the manual** opens them in a sheet. Brief §15.
+For friends, in plain words. One short page per topic, in English (`docs/manual/en/`) and French (`docs/manual/fr/`). The pages are Markdown files, read on GitHub and in the app: Settings → About → **Read the manual** opens them in a sheet. Brief §15.
 
 ## The pages
 
-`src/manual/pages.ts` lists them in reading order; `index.md` is the contents. A new page is a new file with the same name in `en/` (and `fr/`) plus a line in `PAGES` and a link from the index. `src/manual/manual.test.ts` checks that every file is listed, every link goes to a page, every picture is one the screenshot spec takes and that all the pictures exist.
+`src/manual/pages.ts` lists them in reading order; `index.md` is the contents. A new page is a new file with the same name in `en/` and `fr/` (the test fails if one is missing or if the links and pictures differ) plus a line in `PAGES` and a link from the index. `src/manual/manual.test.ts` checks that every file is listed, every link goes to a page, every picture is one the screenshot spec takes and that all the pictures exist.
 
 Each rule or feature of the method has two lines, **Research says** and **Practice says**. Until the evidence files arrive, each carries the placeholder `[E?]` (the one `docs/METHOD.en.md` uses) and says "untested": a status, never a verdict. Search for `[E?]` to find them all when the files come. Say only what the app does; the buttons are named as `src/i18n/en.ts` names them.
 
@@ -25,4 +25,8 @@ Supported Markdown (`src/manual/markdown.ts`): headings, paragraphs, bullet and 
 
 To add a picture: take it in the spec with `shot(page, 'name')`, run the script, and use `![…](shot:name)` in the page. The test fails if a page names a picture the spec doesn't take. `MANUAL_SHOTS_DIR` changes where they go.
 
-The viewer's own tests are `tests/e2e/manualview.spec.ts` (opens, language fallback, dark picture, links, nothing sideways at 320, 375 and 430 px) and `src/manual/markdown.test.ts`.
+The viewer's own tests are `tests/e2e/manualview.spec.ts` (opens, French, dark picture, links, nothing sideways at 320, 375 and 430 px, and in French at 320 px) and `src/manual/markdown.test.ts`.
+
+## The French pages
+
+`docs/manual/fr/` has the same file names, links and `shot:` pictures as `en/` (a test checks it). It speaks as the app does: vouvoiement, addresses are « bonnes adresses » and people « proches », and a button is named exactly as `src/i18n/fr.ts` names it (the starter is « démarreur »). The viewer does not add French typography to a page, so the files carry it: a narrow no-break space (U+202F) before `;` `:` `!` `?` and inside « », and a no-break space between a number and `h`, `min`, `%`. A test fails on an ordinary space there. If a page is ever missing in French, the viewer shows the English one with a line saying so.

@@ -29,13 +29,16 @@ test('a dark look gets the dark picture', async ({ page }) => {
   await expect.poll(async () => (await loaded(page))[0]).toEqual(['manual/shots/en-dark/matrix.png', true]);
 });
 
-test('in French, a page that has no French yet is shown in English, with a line saying so', async ({ page }) => {
+test('in French, the manual is in French, with the French pictures', async ({ page }) => {
   await page.goto('/#settings');
   await page.getByRole('button', { name: 'Français' }).click();
   await page.getByTestId('open-manual').click();
-  await expect(sheet(page).locator('article')).toHaveAttribute('lang', 'en');
-  await expect(sheet(page).locator('article')).toContainText('The Réussite manual');
-  await expect(sheet(page).locator('article > p.hint').first()).toBeVisible();
+  await expect(sheet(page).locator('article')).toHaveAttribute('lang', 'fr');
+  await expect(sheet(page).locator('article h2')).toContainText('Le manuel de Réussite');
+  await expect(sheet(page).locator('article > p.hint')).toHaveCount(0);
+  await sheet(page).getByRole('link', { name: /La matrice/ }).click();
+  await expect(sheet(page).locator('article[data-page=matrix] h2')).toHaveText('La matrice');
+  await expect.poll(async () => (await loaded(page))[0]).toEqual(['manual/shots/fr-light/matrix.png', true]);
 });
 
 test('links: a page stays in the sheet, anything else must be an allowed link', async ({ page }) => {
@@ -46,6 +49,24 @@ test('links: a page stays in the sheet, anything else must be an allowed link', 
   await sheet(page).getByRole('link', { name: 'Getting started' }).click();
   await expect(page).toHaveURL(/#settings$/);
   await expect(sheet(page).locator('article[data-page=getting-started]')).toBeVisible();
+});
+
+test('the French manual does not scroll sideways at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto('/#settings');
+  await page.getByRole('button', { name: 'Français' }).click();
+  await page.getByTestId('open-manual').click();
+  await expect(sheet(page).getByTestId('manual')).toBeVisible();
+  await noSideways(page, 'sommaire');
+  for (const link of ['Prise en main', 'La boucle du jour', 'Adresses et proches', 'Synchronisation et appareil perdu', 'Confidentialité']) {
+    await sheet(page).locator('article[data-page=index]').getByRole('link', { name: link }).first().click();
+    await expect(sheet(page).locator('article:not([data-page=index])')).toBeVisible();
+    await page.locator('.manual img.shot').evaluateAll(els => els.forEach(e => e.scrollIntoView()));
+    await expect.poll(async () => (await loaded(page)).every(([, ok]) => ok)).toBe(true);
+    await page.locator('.manual').evaluate(el => el.closest('.sheet')?.scrollTo(0, 0));
+    await noSideways(page, link);
+    await sheet(page).getByTestId('manual-contents').click();
+  }
 });
 
 for (const width of [320, 375, 430]) {

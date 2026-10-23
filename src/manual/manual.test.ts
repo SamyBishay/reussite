@@ -32,6 +32,18 @@ describe('the manual', () => {
       }
     });
   }
+  it('has a French page for every English one, with the same links and pictures', () => {
+    expect(pagesOf('fr').sort()).toEqual([...PAGES].sort());
+    const refs = (l: string, slug: string) => walk(inlines(parseMarkdown(readFileSync(`${dir(l)}/${slug}.md`, 'utf8'))))
+      .flatMap(x => (x.t === 'a' ? [x.href] : x.t === 'img' ? [x.src] : []));
+    for (const slug of PAGES) expect(refs('fr', slug), slug).toEqual(refs('en', slug));
+  });
+  it('writes French typography into the pages: a narrow no-break space before ; : ! ? and inside « »', () => {
+    for (const slug of pagesOf('fr')) {
+      const text = readFileSync(`${dir('fr')}/${slug}.md`, 'utf8').replace(/`[^`]*`/g, '').replace(/\]\([^)]*\)/g, ']');
+      expect(text.match(/[^\s\d][ \u00a0]+[;:!?»]|«[ \u00a0]|[^\s\u202f\d(\[*«][;!?](?=\s|$)/g), slug).toBeNull();
+    }
+  });
   it('has every screenshot, in both languages and both themes', () => {
     for (const l of LANGS) for (const th of THEMES) for (const s of SHOTS) expect(existsSync(`public/manual/shots/${l}-${th}/${s}.png`), `${l}-${th}/${s}`).toBe(true);
   });
@@ -39,6 +51,10 @@ describe('the manual', () => {
     const text = pagesOf('en').map(s => readFileSync(`${dir('en')}/${s}.md`, 'utf8')).join('\n');
     expect(text).toContain('`[E?]`'); // the same placeholder as docs/METHOD.*.md
     expect(text).not.toContain('E-xx');
+    const fr = pagesOf('fr').map(s => readFileSync(`${dir('fr')}/${s}.md`, 'utf8')).join('\n');
+    expect(fr).toContain('`[E?]`');
+    expect(fr).toContain('**La recherche dit');
+    expect(fr).toContain('**La pratique dit');
     expect(text).toContain('**Research says:**');
     expect(text).toContain('**Practice says:**');
     expect(text).toContain('doesn\'t replace therapy');

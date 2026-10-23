@@ -12,6 +12,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 | `npm run e2e` | end-to-end tests, Firefox (the main desktop browser) |
 | `npm run e2e:android` | end-to-end tests, Chrome on Android emulation |
 | `npm run e2e:webkit` | end-to-end tests, WebKit and iPhone emulation, in Playwright's container (podman) |
+| `npm run manual:shots` | the manual's screenshots (`public/manual/shots`), not part of `e2e`; see `docs/dev/manual.md` |
 | `npm run build` | production build into `dist/` |
 | `npm run check:import`, `npm run check:app` | run the importer and the app on the real export in `private/`; they print counts only |
 
@@ -26,9 +27,10 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 - `src/sw.ts` — the service worker (vite-plugin-pwa `injectManifest`): precache, update banner, `push` and `notificationclick`. Its own `tsconfig.sw.json` (WebWorker lib).
 - `src/views/` — one file per tab or screen: Home, Today, Matrix, Projects, Calendar (with the Log), Settings, Memory, History, Addresses; see `docs/dev/home.md`.
 - `src/flows/` — guided flows, one question per screen: first-run onboarding (`onboarding.tsx`; when it shows is `src/app/onboarding.ts`, see `docs/dev/onboarding.md`), check-in and planner, break it down, I'm stuck, decisions, weekly review, the close-of-day show.
+- `src/manual/` — the manual's viewer (`Manual.tsx`, lazy, opened from Settings → About), its small Markdown reader (`markdown.ts`) and the page order (`pages.ts`); the pages are `docs/manual/<language>/*.md` (English now, French later) and the pictures `public/manual/shots/`, made by `tests/manual/manual.spec.ts`; see `docs/dev/manual.md`. Update the pages when behaviour changes, and re-run `npm run manual:shots` when a screen does.
 - `src/i18n/` — `en.ts` and `fr.ts`; every UI string lives there. `fr.ts` may lag behind: missing keys fall back to English and are translated in one batch at the end of each phase (the i18n test lists them).
 - `docs/ai/` — the AI kit: `skills/<name>.md` (today, decide) are plain prompts to paste into any chatbot, `skills/<name>/SKILL.md` the same as Claude skills; `preferences.md`, the short `CHANGESET.md`. Update them with `docs/METHOD.en.md` and `docs/CHANGESET.md`. `README.md` is for friends; `CUSTOMIZING.md` is for forks (update it with `docs/dev/infra.md` when a var, secret or build setting changes).
-- `tests/e2e/` — Playwright; `tests/private/` — checks against the real export (never committed data).
+- `tests/e2e/` — Playwright; `tests/manual/` — the manual's screenshots (their own config); `tests/private/` — checks against the real export (never committed data).
 
 ## Invariants
 

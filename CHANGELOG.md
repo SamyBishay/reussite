@@ -1,6 +1,7 @@
 # What's new
 
 ## 2.0 — in progress
+- The manual: short pages in plain words, with pictures of the app, in Settings → About → Read the manual. It follows your language and your look, and reads offline. For now the pages are in English.
 - A new device now starts with a short set-up, one question per screen: language, your places, the four suits, the look, Addresses & people, an AI (or none), how an AI should work with you, sync, reminders and your recovery key. Every question can be skipped with the defaults, and it ends by offering to plan your first day. A device that already has a list never sees it, and one that joins your other device skips the questions your list already answers.
 - Settings → AI has a new box, "How an AI should work with you": a few lines of your own (one question at a time, facts about progress and no praise of character, no guilt, push back on avoidance, how long answers should be) that go with every AI request and into the text Ask any AI copies. "Show me what's sent" shows them; empty them to send nothing.
 - Home is now where you start. It greets you with only your next step. When something has a fixed time, it takes over shortly before you need to leave and says "leave at…". Under it, one box: type or dictate "call the bank tomorrow", "dentist Friday 14h", "done the report", "move the photos to Monday" or "drop the games", in English or French.

@@ -20,7 +20,7 @@ Your data stays on your devices. If you turn sync on, it is encrypted on your de
 
 ## Learn more
 
-The manual will be in `docs/manual/` (coming). The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md). If you want to use your own AI, see [`docs/ai/`](docs/ai/): a plain prompt for the morning check-in works in any chatbot.
+The manual is in [`docs/manual/en/`](docs/manual/en/index.md), and in the app under Settings → About. The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md). If you want to use your own AI, see [`docs/ai/`](docs/ai/): a plain prompt for the morning check-in works in any chatbot.
 
 ## For developers
 

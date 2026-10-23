@@ -39,6 +39,8 @@
 .sxhost .sx__time-grid-event .sx__time-grid-event-location,.sxhost .sx__time-grid-event-location{font-weight:400;color:var(--ink-3);font-size:12px}
 .sxhost .sx__event.is-done{opacity:.7}
 .sxhost .sx__event.is-done .sx__date-grid-event-text,.sxhost .sx__event.is-done .sx__month-grid-event-title,.sxhost .sx__event.is-done .sx__list-event-title{text-decoration:line-through;color:var(--ink-3)}
+.sxhost .sx__event.is-projected{border:1.5px dashed var(--ink-3);background:transparent;box-sizing:border-box}
+.sxhost .sx__event.is-optional{opacity:.6}
 .sxhost .sx__event.k-repeat{opacity:.55;font-weight:400}
 .sxhost .sx__event.k-half{font-weight:600;font-size:11.5px}
 .sxhost .sx__event.k-stay{background:var(--sea-soft);color:var(--sea-deep);font-weight:600}
@@ -52,7 +54,7 @@
 
 /* Agenda: all-day events have no clock times to show. */
 .sxhost .sx__list-day-header{background:var(--accent-soft);color:var(--ink-2)}
-.sxhost .sx__list-event:not(.k-fixed) .sx__list-event-times,.sxhost .sx__event:not(.k-fixed) .sx__list-event-times{display:none}
+.sxhost .sx__list-event:not(.is-timed) .sx__list-event-times,.sxhost .sx__event:not(.is-timed) .sx__list-event-times{display:none}
 .sxhost .sx__list-event-title{font-weight:600}
 
 /* No sliding between periods: the bar's arrows jump, and a slide would pass the page's edge. */

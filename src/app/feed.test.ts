@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { choir, day, state, settings as agendaSettings, tr } from '../domain/agenda.fixture';
 import type { IcsTranslate } from '../domain/ics';
+import type { FeedDetail } from '../domain/calItems';
 import { withDefaults } from '../data/settings';
 import { getLocal } from '../data/db';
 import { FEED_REFRESH_MS, feedHash, feedId, feedOff, feedOn, feedText, regenerateFeed, uploadFeed } from './feed';
@@ -9,20 +10,21 @@ import { db, days, settings, tasks } from './store';
 
 const itr = tr as unknown as IcsTranslate;
 const world = state({ tasks: [choir()], days: [day('2026-10-26', { launches: [] })] });
-const text = (titles: boolean, now = Date.parse('2026-10-20T08:00:00Z')) => feedText(world, agendaSettings(), '2026-10-20', titles, itr, now);
+const text = (detail: FeedDetail, now = Date.parse('2026-10-20T08:00:00Z')) => feedText(world, agendaSettings(), '2026-10-20', detail, itr, now);
 
 describe('the feed text', () => {
   it('has no step title unless asked, and no reminders', () => {
-    const generic = text(false);
+    const generic = text('times');
     expect(generic).toContain('BEGIN:VEVENT');
     expect(generic).not.toContain('Choir');
     expect(generic).not.toContain('Hill House');
     expect(generic).not.toContain('VALARM');
-    expect(text(true)).toContain('Choir');
+    expect(text('labels')).toContain('SUMMARY:Choir Hill House 602');
+    expect(text('labels')).not.toContain('LOCATION');
   });
 
   it('covers a week back to 45 days ahead', () => {
-    const t = feedText(world, agendaSettings(), '2026-10-20', false, itr, 0);
+    const t = feedText(world, agendaSettings(), '2026-10-20', 'times', itr, 0);
     // Mondays in range: Oct 19 and 26, Nov 2, 9, 16, 23, 30; not Oct 12 or Dec 7.
     const starts = [...t.matchAll(/DTSTART;TZID=[^:]+:(\d{8})/g)].map(m => m[1]);
     expect(starts).toContain('20261019');
@@ -32,10 +34,10 @@ describe('the feed text', () => {
   });
 
   it('hashes the same when only DTSTAMP differs, and differently when the content does', async () => {
-    const a = text(false, Date.parse('2026-10-20T08:00:00Z')), b = text(false, Date.parse('2026-10-20T09:30:00Z'));
+    const a = text('times', Date.parse('2026-10-20T08:00:00Z')), b = text('times', Date.parse('2026-10-20T09:30:00Z'));
     expect(a).not.toBe(b);
     expect(await feedHash(a)).toBe(await feedHash(b));
-    expect(await feedHash(a)).not.toBe(await feedHash(text(true)));
+    expect(await feedHash(a)).not.toBe(await feedHash(text('labels')));
   });
 });
 
@@ -52,7 +54,7 @@ describe('uploading', () => {
     days.value = new Map();
   });
 
-  it('sends generic titles, skips an unchanged text, sends step titles when asked, and a new address replaces the old', async () => {
+  it('sends generic titles, skips an unchanged text, sends short names when asked, and a new address replaces the old', async () => {
     await feedOn();
     const first = calls.at(-1)!;
     expect(first.method).toBe('PUT');
@@ -63,7 +65,7 @@ describe('uploading', () => {
     await uploadFeed();
     expect(calls.length).toBe(n); // same text apart from DTSTAMP: nothing sent
 
-    settings.value = withDefaults({ relayUrl: 'http://localhost:8787', feedTitles: true });
+    settings.value = withDefaults({ relayUrl: 'http://localhost:8787', feedDetail: 'labels' });
     await uploadFeed();
     expect(calls.at(-1)!.body).toContain('Choir');
 

@@ -2,6 +2,7 @@
 // defaults for new keys and never overwrites what the person chose.
 import type { SuitId } from './schema';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
+import type { FeedDetail } from '../domain/calItems';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
@@ -64,8 +65,12 @@ export interface Settings {
   notifyText: NotifyText;
   /** Minutes before a fixed-time item to be notified; a step's own `lead` wins. */
   notifyLead: number;
-  /** Put step titles in the calendar feed (not end-to-end encrypted). */
-  feedTitles: boolean;
+  /**
+   * How much the calendar feed says: `times` (generic words), `labels` (steps' short names), `full` (short names,
+   * places and notes). Not end-to-end encrypted. Settings saved before this one carried `feedTitles`; that value stays
+   * in the document and `withDefaults` reads it as `labels` (true) or `times` (false) until the person chooses.
+   */
+  feedDetail: FeedDetail;
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
@@ -135,7 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notify: { launch: true, fixed: true, checkin: true, close: true, decision: true, review: true, still: true },
   notifyText: 'generic',
   notifyLead: 30,
-  feedTitles: false,
+  feedDetail: 'times',
   sound: true,
   volume: 0.6,
   addressesPeople: true,
@@ -161,6 +166,8 @@ export function withDefaults(saved: Partial<Settings> | undefined): Settings {
     const d = (DEFAULT_SETTINGS as Record<string, unknown>)[k];
     out[k] = isPlainObject(d) && isPlainObject(v) ? { ...d, ...v } : v;
   }
+  // The feed's old on/off switch for titles becomes a level, until the person picks one (the old key is kept as it was).
+  if (saved && saved.feedDetail === undefined && saved.feedTitles === true) out.feedDetail = 'labels';
   return out as Settings;
 }
 

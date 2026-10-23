@@ -38,35 +38,12 @@ UID:fixed:choir:2026-10-19@reussite.local
 DTSTAMP:20261019T080000Z
 DTSTART;TZID=Europe/Paris:20261019T190000
 DTEND;TZID=Europe/Paris:20261019T203000
-SUMMARY:Choir\, Hill House 602
-DESCRIPTION:leave at 18:30
+SUMMARY:Choir Hill House 602
+DESCRIPTION:Choir\, Hill House 602\nleave at 18:30
+URL:https://app.example/#task/choir
 BEGIN:VALARM
 ACTION:DISPLAY
-DESCRIPTION:Choir\, Hill House 602
-TRIGGER:-PT0M
-END:VALARM
-END:VEVENT
-BEGIN:VEVENT
-UID:launch:2026-10-20:0@reussite.local
-DTSTAMP:20261019T080000Z
-DTSTART;TZID=Europe/Paris:20261020T083000
-DTEND;TZID=Europe/Paris:20261020T083500
-SUMMARY:▶ Start
-BEGIN:VALARM
-ACTION:DISPLAY
-DESCRIPTION:▶ Start
-TRIGGER:-PT0M
-END:VALARM
-END:VEVENT
-BEGIN:VEVENT
-UID:launch:2026-10-20:1@reussite.local
-DTSTAMP:20261019T080000Z
-DTSTART;TZID=Europe/Paris:20261020T140000
-DTEND;TZID=Europe/Paris:20261020T140500
-SUMMARY:↻ Restart · Taxes
-BEGIN:VALARM
-ACTION:DISPLAY
-DESCRIPTION:↻ Restart · Taxes
+DESCRIPTION:Choir Hill House 602
 TRIGGER:-PT0M
 END:VALARM
 END:VEVENT
@@ -75,13 +52,13 @@ UID:fixed:visit:2026-10-22@reussite.local
 DTSTAMP:20261019T080000Z
 DTSTART;TZID=Europe/Paris:20261022T091500
 DTEND;TZID=Europe/Paris:20261022T100000
-SUMMARY:Dentist\, Dr. Martin\; 2nd floor — é🙂 with a long title that 
- has to be folded somewhere past the limit
-DESCRIPTION:leave at 08:45
+SUMMARY:Dentist Dr Martin 2nd floor
+DESCRIPTION:Dentist\, Dr. Martin\; 2nd floor — é🙂 with a long title t
+ hat has to be folded somewhere past the limit\nleave at 08:45
+URL:https://app.example/#task/visit
 BEGIN:VALARM
 ACTION:DISPLAY
-DESCRIPTION:Dentist\, Dr. Martin\; 2nd floor — é🙂 with a long title t
- hat has to be folded somewhere past the limit
+DESCRIPTION:Dentist Dr Martin 2nd floor
 TRIGGER:-PT0M
 END:VALARM
 END:VEVENT
@@ -90,12 +67,23 @@ UID:fixed:choir:2026-10-26@reussite.local
 DTSTAMP:20261019T080000Z
 DTSTART;TZID=Africa/Cairo:20261026T190000
 DTEND;TZID=Africa/Cairo:20261026T203000
-SUMMARY:Choir\, Hill House 602
-DESCRIPTION:leave at 18:30
+SUMMARY:Choir Hill House 602
+DESCRIPTION:Choir\, Hill House 602\nleave at 18:30
+URL:https://app.example/#task/choir
 BEGIN:VALARM
 ACTION:DISPLAY
-DESCRIPTION:Choir\, Hill House 602
+DESCRIPTION:Choir Hill House 602
 TRIGGER:-PT0M
 END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:plan:letter:2026-10-20@reussite.local
+DTSTAMP:20261019T080000Z
+DTSTART;VALUE=DATE:20261020
+DTEND;VALUE=DATE:20261021
+SUMMARY:CAF letter
+DESCRIPTION:Reply to the CAF letter\nCase 4471
+URL:https://app.example/#task/letter
+TRANSP:TRANSPARENT
 END:VEVENT
 END:VCALENDAR

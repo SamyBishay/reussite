@@ -6,7 +6,17 @@ Files: `src/app/feed.ts` (build, hash, upload, switch), `src/app/CalendarSetting
 
 ## Content
 
-Launch points and fixed-time items from 7 days back to 45 days ahead, no reminders (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job). Titles are generic ("▶ Start", "Fixed time") unless the synced setting `feedTitles` is on; the plain warning next to the switch says that titles in the feed are not end-to-end encrypted and the relay can read them.
+Fixed-time items from 7 days back to 45 days ahead, and the open planned cards (a day's list) and due steps from today to 45 days ahead as all-day events (`VALUE=DATE`, one each, transparent; `allDayItems` in `src/domain/calItems.ts`). Launch points, the check-in, the close and the review are not in the feed or in Add to calendar: they stay in Today, the planner and the notifications. No reminders in the feed (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job).
+
+What an event says is the synced setting `feedDetail`, three levels (`calItems.ts` builds the words, `ics.ts` only formats them):
+
+| Level | SUMMARY | Also |
+| --- | --- | --- |
+| `times` | "Fixed time", "Planned step", "Step due" | nothing |
+| `labels` | the step's short name (`shortLabel`) | nothing |
+| `full` | the short name | LOCATION: the linked address's street address (else its name), else the name of the place or area the step is set to ("Anywhere" gives none); DESCRIPTION: the full title, the leave-by line (fixed-time items with a lead), the note, the link; URL: `<app address>#task/<id>`, which opens the step's sheet (`taskFromHash` in `nav.ts`) |
+
+`feedDetail` replaces the old `feedTitles` switch: until the person picks a level, `withDefaults` reads `feedTitles: true` as `labels` and anything else as `times`; the old key is left in the document. No migration is needed (settings are filled in on read). The warning that this is not end-to-end encrypted shows on `labels` and `full`. Add to calendar (the one-off file) always uses `full`.
 
 ## Identity
 
@@ -28,4 +38,4 @@ At start, when the page becomes visible, and 4 seconds after any change to the d
 
 ## What the relay can see
 
-The calendar text: with generic titles, when something starts and where in time zone names, and nothing of what it is; with `feedTitles`, the titles too. Who asks for it (IP addresses, the calendar app's user agent).
+The calendar text: at `times`, when something starts and where in time zone names, and nothing of what it is; at `labels`, the steps' short names too; at `full`, also their places and addresses, titles, notes, links and the link that opens each in the app. Who asks for it (IP addresses, the calendar app's user agent).

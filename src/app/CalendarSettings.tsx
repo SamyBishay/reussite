@@ -3,7 +3,11 @@ import { useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { saveSettings, settings, toast, readOnly } from './store';
 import { relayBase } from './sync';
+import { FEED_DETAILS, type FeedDetail } from '../domain/calItems';
 import { feedBusy, feedError, feedId, feedLinks, feedOff, feedOn, regenerateFeed } from './feed';
+
+const DETAIL_LABEL = { times: 'feedDetailTimes', labels: 'feedDetailLabels', full: 'feedDetailFull' } as const;
+const DETAIL_HINT = { times: 'feedDetailTimesHint', labels: 'feedDetailLabelsHint', full: 'feedDetailFullHint' } as const;
 
 function Feed() {
   const [ask, setAsk] = useState(false);
@@ -35,11 +39,14 @@ function Feed() {
             </div>
           )}
           {feedError.value && <p class="err" role="status" data-testid="feed-error">{feedError.value}</p>}
-          <label class="tog">
-            <input type="checkbox" checked={s.feedTitles} data-testid="feed-titles" disabled={readOnly.value}
-              onChange={e => void saveSettings({ feedTitles: (e.target as HTMLInputElement).checked })} /> {t('feedTitlesSwitch')}
+          <label class="field"><span>{t('feedDetailLabel')}</span>
+            <select value={s.feedDetail} data-testid="feed-detail" disabled={readOnly.value}
+              onChange={e => void saveSettings({ feedDetail: (e.target as HTMLSelectElement).value as FeedDetail })}>
+              {FEED_DETAILS.map(d => <option value={d}>{t(DETAIL_LABEL[d])}</option>)}
+            </select>
           </label>
-          <p class="warnline" data-testid="feed-titles-warn">{t('feedTitlesWarn')}</p>
+          <p class="hint" data-testid="feed-detail-hint">{t(DETAIL_HINT[s.feedDetail] ?? 'feedDetailTimesHint')}</p>
+          {s.feedDetail !== 'times' && <p class="warnline" data-testid="feed-titles-warn">{t('feedDetailWarn')}</p>}
           <p class="hint">{t('feedRefresh')}</p>
           {ask ? (
             <div role="group">

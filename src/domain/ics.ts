@@ -1,15 +1,14 @@
-// iCalendar (RFC 5545) for Add to calendar and, later, the feed (brief §8). Pure: events in, text out.
-// Launch points become 5-minute events, fixed-time obligations last their duration; each carries
-// its zone as a TZID with a generated VTIMEZONE, so the time stays right across daylight-saving
-// changes and when a stay moves the day to another zone. The other agenda kinds are not exported.
+// iCalendar (RFC 5545) for Add to calendar and the feed (brief §8, §16). Pure: events in, text out. A fixed-time
+// item is an event at its time and for its duration, with its zone as a TZID and a generated VTIMEZONE, so the time
+// stays right across daylight-saving changes and when a stay moves the day to another zone. A planned card or a
+// step due is an all-day event (VALUE=DATE). Launch points, the check-in, the close and the review are not exported:
+// the calendar is for things at a time and things on a day, and reminders are the notifications' job.
 import type { AgendaEvent } from './agenda';
-import { partsIn } from './dates';
+import { addDays, partsIn } from './dates';
 import { offsetAt } from './zone';
 
 const MIN = 60_000;
 const DAY = 86_400_000;
-/** How long a launch point lasts. */
-export const LAUNCH_MINUTES = 5;
 /** How long an obligation lasts when it has no duration. */
 export const DEFAULT_FIXED_MINUTES = 60;
 /** The domain that makes event ids into globally unique UIDs. */
@@ -18,34 +17,23 @@ export const UID_DOMAIN = 'reussite.local';
 const ZONE_MARGIN_DAYS = 14;
 
 /** The words a title can use; the app passes its `t`. */
-export type IcsKey = 'notifyStart' | 'notifyRestart' | 'notifyStartTitle' | 'notifyRestartTitle' | 'notifyLeaveBy' | 'icsFixed';
+export type IcsKey = 'notifyLeaveBy' | 'icsFixed' | 'icsPlanned' | 'icsDue';
 export type IcsTranslate = (key: IcsKey, vars?: Record<string, string | number>) => string;
 
-/** What an event is called, and optionally a longer note. */
-export type IcsTitles = (e: AgendaEvent, zone: string) => { summary: string; description?: string };
+/** What a fixed-time event says: its name, and optionally where, a longer text and the link that opens it. */
+export interface IcsText { summary: string; description?: string; location?: string; url?: string }
+export type IcsTitles = (e: AgendaEvent, zone: string) => IcsText;
 
-/** The export's titles: the real step titles and the launch point's note, with the leave-by time. */
-export const realTitles = (tr: IcsTranslate): IcsTitles => (e, zone) => {
-  if (e.kind === 'launch') {
-    const restart = e.launch?.k === 'restart', note = e.launch?.note;
-    return { summary: note ? tr(restart ? 'notifyRestartTitle' : 'notifyStartTitle', { title: note }) : tr(restart ? 'notifyRestart' : 'notifyStart') };
-  }
-  const lead = e.lead ?? 0;
-  return {
-    summary: e.title || tr('icsFixed'),
-    ...(lead > 0 ? { description: tr('notifyLeaveBy', { t: clockIn(e.at - lead * MIN, zone) }) } : {}),
-  };
-};
-/** The feed's titles: they say what kind of thing it is and nothing of what it is about. */
-export const genericTitles = (tr: IcsTranslate): IcsTitles => e => ({
-  summary: e.kind === 'launch' ? tr(e.launch?.k === 'restart' ? 'notifyRestart' : 'notifyStart') : tr('icsFixed'),
-});
+/** An event on a whole day: a planned card or a step due. `day` is its date; the end is the next day (exclusive). */
+export interface IcsAllDay extends IcsText { id: string; day: string }
 
 export interface IcsOptions {
   /** DTSTAMP and the calendar's "now", epoch milliseconds (passed in so the output is reproducible). */
   now: number;
   titles: IcsTitles;
-  /** A VALARM at the start of each event: on for the export, off for the feed. */
+  /** All-day events (VALUE=DATE), after the timed ones. */
+  allDay?: readonly IcsAllDay[];
+  /** A VALARM at the start of each timed event: on for the export, off for the feed. */
   withAlarms: boolean;
   /** The zone name for events whose zone is the device's (`zone` undefined). */
   deviceZone?: string;
@@ -54,7 +42,8 @@ export interface IcsOptions {
 }
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
-const clockIn = (at: number, zone: string) => { const p = partsIn(new Date(at), zone); return pad(p.hh) + ':' + pad(p.mm); };
+/** `19:00`: the clock reading in a zone. */
+export const clockIn = (at: number, zone: string) => { const p = partsIn(new Date(at), zone); return pad(p.hh) + ':' + pad(p.mm); };
 /** `20261025T030000`: the clock reading in a zone. */
 function local(at: number, zone: string): string {
   const p = partsIn(new Date(at), zone);
@@ -124,10 +113,18 @@ function vtimezone(zone: string, from: number, to: number): string[] {
   return lines;
 }
 
-/** Whether an agenda event is exported at all: launch points and obligations. */
-export const exported = (e: AgendaEvent) => e.kind === 'launch' || e.kind === 'fixed';
+/** Whether an agenda event is exported at all: only fixed-time items (launch points stay in the app). */
+export const exported = (e: AgendaEvent) => e.kind === 'fixed';
 
-/** The calendar text for these events (others are skipped): CRLF line endings, folded lines. */
+const dateOnly = (k: string) => k.replace(/-/g, '');
+const textLines = (x: IcsText) => [
+  'SUMMARY:' + escapeText(x.summary),
+  ...(x.location ? ['LOCATION:' + escapeText(x.location)] : []),
+  ...(x.description ? ['DESCRIPTION:' + escapeText(x.description)] : []),
+  ...(x.url ? ['URL:' + x.url] : []),
+];
+
+/** The calendar text for these events (others are skipped) and the all-day events: CRLF line endings, folded lines. */
 export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string {
   const device = opts.deviceZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const evs = events.filter(exported);
@@ -136,20 +133,31 @@ export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string
   const body: string[] = [];
   for (const e of evs) {
     const zone = zoneOf(e);
-    const minutes = e.kind === 'launch' ? LAUNCH_MINUTES : e.dur && e.dur > 0 ? Math.round(e.dur) : DEFAULT_FIXED_MINUTES;
+    const minutes = e.dur && e.dur > 0 ? Math.round(e.dur) : DEFAULT_FIXED_MINUTES;
     const end = e.at + minutes * MIN;
     const s = span.get(zone);
     span.set(zone, s ? [Math.min(s[0], e.at), Math.max(s[1], end)] : [e.at, end]);
-    const { summary, description } = opts.titles(e, zone);
+    const text = opts.titles(e, zone);
     body.push(
       'BEGIN:VEVENT',
       'UID:' + e.id + '@' + UID_DOMAIN,
       'DTSTAMP:' + utc(opts.now),
       `DTSTART;TZID=${zone}:${local(e.at, zone)}`,
       `DTEND;TZID=${zone}:${local(end, zone)}`,
-      'SUMMARY:' + escapeText(summary),
-      ...(description ? ['DESCRIPTION:' + escapeText(description)] : []),
-      ...(opts.withAlarms ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
+      ...textLines(text),
+      ...(opts.withAlarms ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(text.summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
+      'END:VEVENT',
+    );
+  }
+  for (const a of opts.allDay ?? []) {
+    body.push(
+      'BEGIN:VEVENT',
+      'UID:' + a.id + '@' + UID_DOMAIN,
+      'DTSTAMP:' + utc(opts.now),
+      'DTSTART;VALUE=DATE:' + dateOnly(a.day),
+      'DTEND;VALUE=DATE:' + dateOnly(addDays(a.day, 1)),
+      ...textLines(a),
+      'TRANSP:TRANSPARENT',
       'END:VEVENT',
     );
   }

@@ -2,16 +2,17 @@
 // text itself (the same agenda the Add to calendar file reads, without reminders, a week back
 // to 45 days ahead) and uploads it to the relay, which serves it at an address only this device
 // knows. Ids and the write secret live in `local`: a feed belongs to one device, never synced.
-// Step titles stay out of the text unless the person asked for them (`feedTitles`).
+// What the text says of a step is the person's choice (`feedDetail`): nothing, its short name, or the name with its place and notes.
 import { effect, signal } from '@preact/signals';
 import { getLocal, setLocal } from '../data/db';
 import { addDays } from '../domain/dates';
-import { agenda, type AgendaData, type AgendaSettings } from '../domain/agenda';
-import { exported, genericTitles, icsFor, realTitles, type IcsTranslate } from '../domain/ics';
+import { agenda, type AgendaSettings } from '../domain/agenda';
+import { allDayEvents, allDayItems, fixedTitles, type CalData, type FeedDetail } from '../domain/calItems';
+import { clockIn, exported, icsFor, type IcsTranslate } from '../domain/ics';
 import { b64uEncode } from '../sync/bytes';
 import { feedPath, feedUrl, FEED_ID, MAX_FEED_BYTES } from '../feed/protocol';
 import { t } from '../i18n';
-import { days, db, decisions, places, settings, stays, tasks, today } from './store';
+import { addresses, days, db, decisions, places, projects, settings, stays, tasks, today } from './store';
 import { relayBase } from './sync';
 
 export const FEED_PAST_DAYS = 7;
@@ -30,10 +31,21 @@ export const feedId = signal<string | null>(null);
 export const feedError = signal<string | null>(null);
 export const feedBusy = signal(false);
 
-/** The calendar text for the feed window around `day`. Real titles only if `titles`. */
-export function feedText(data: AgendaData, s: AgendaSettings, day: string, titles: boolean, tr: IcsTranslate, now: number): string {
-  const events = agenda(data, s, addDays(day, -FEED_PAST_DAYS), addDays(day, FEED_AHEAD_DAYS)).filter(exported);
-  return icsFor(events, { now, titles: titles ? realTitles(tr) : genericTitles(tr), withAlarms: false, name: 'Réussite' });
+/** The app's own address, for the link that opens a step. */
+export const appAddress = () => (typeof location === 'undefined' ? '' : location.origin + location.pathname);
+
+/** The data the exports read, from the store. */
+export const calData = (): CalData => ({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, addresses: addresses.value, projects: projects.value });
+
+/**
+ * The calendar text for the feed window around `day`: fixed-time items at their times, and the open planned and due
+ * steps of `day` and after as all-day events, said at the level of `detail`. `appUrl` makes the link to each step (`full` only).
+ */
+export function feedText(data: CalData, s: AgendaSettings, day: string, detail: FeedDetail, tr: IcsTranslate, now: number, appUrl = ''): string {
+  const to = addDays(day, FEED_AHEAD_DAYS);
+  const events = agenda(data, s, addDays(day, -FEED_PAST_DAYS), to).filter(exported);
+  const ctx = { detail, data, tr, appUrl, clockIn };
+  return icsFor(events, { now, titles: fixedTitles(ctx), allDay: allDayEvents(ctx, allDayItems(data, day, to)), withAlarms: false, name: 'Réussite' });
 }
 
 /** What makes two feeds the same: the text without its DTSTAMP lines (they change on every build). */
@@ -88,7 +100,7 @@ export async function uploadFeed(force = false): Promise<void> {
       const fid = await getLocal<string>(db, K.id), secret = await getLocal<string>(db, K.secret);
       if (!(await getLocal<boolean>(db, K.on)) || !fid || !secret || !relayBase()) break;
       if (typeof navigator !== 'undefined' && navigator.onLine === false) break;
-      const text = feedText({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, settings.value, today.value, settings.value.feedTitles, t, Date.now());
+      const text = feedText(calData(), settings.value, today.value, settings.value.feedDetail, t, Date.now(), appAddress());
       const hash = await feedHash(text);
       const same = hash === (await getLocal<string>(db, K.hash)) && Date.now() - ((await getLocal<number>(db, K.at)) ?? 0) < FEED_REFRESH_MS;
       if (!force && same) { feedError.value = null; break; }
@@ -146,7 +158,7 @@ export async function startFeed(): Promise<void> {
   feedId.value = (await getLocal<boolean>(db, K.on)) && fid && FEED_ID.test(fid) ? fid : null;
   // Any change to what the feed is made of schedules an upload; an unchanged text is skipped by its hash.
   effect(() => {
-    void [tasks.value, days.value, decisions.value, places.value, stays.value, settings.value, today.value];
+    void [tasks.value, days.value, decisions.value, places.value, stays.value, addresses.value, projects.value, settings.value, today.value];
     if (feedId.value) scheduleFeed();
   });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void uploadFeed(); });

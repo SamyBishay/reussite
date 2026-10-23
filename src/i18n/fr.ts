@@ -1117,8 +1117,6 @@ export const fr: Partial<Strings> = {
   feedRegenerateConfirm: 'Créer une nouvelle adresse',
   feedRegenerateCancel: 'Garder celle-ci',
   feedRegenerated: 'Nouvelle adresse créée.',
-  feedTitlesSwitch: 'Inclure les titres des étapes',
-  feedTitlesWarn: 'Les titres dans le flux ne sont pas chiffrés de bout en bout : le relais les garde en clair, et celui qui le fait tourner peut les lire. Sans cette option, le flux dit seulement « ▶ Départ » ou « Heure fixe ».',
   feedRefresh: 'Votre appli de calendrier décide à quelle fréquence elle actualise le flux (Google Agenda peut mettre des heures) : ne comptez pas dessus pour les rappels. Les rappels viennent des notifications.',
   feedUploadFailed: 'Impossible de joindre le relais. Nouvel essai bientôt.',
   feedCopyBlocked: 'La copie a été bloquée ici. Sélectionnez l’adresse et copiez-la à la main.',

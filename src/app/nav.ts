@@ -21,8 +21,19 @@ function named(h: string | null): View | null {
   return VIEWS.includes(h as View) ? (h as View) : null;
 }
 export const fromHash = (): View | null => named(location.hash.slice(1));
+/** `#task/<id>`: a link (from a calendar event) that opens a step. The hash is put back to the current view once it is read. */
+export const taskFromHash = (): string | null => {
+  const m = /^#task\/(.+)$/.exec(location.hash);
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]!); } catch { return null; }
+};
 const stored = (): View => { try { return named(localStorage.getItem('reussite.view')) ?? 'home'; } catch { return 'home'; } };
 export const view = signal<View>(fromHash() ?? stored());
+
+/** Forget a `#task/<id>` in the address bar, so a reload does not open the step again. */
+export function clearTaskHash() {
+  try { history.replaceState(null, '', '#' + view.value); } catch { /* fine */ }
+}
 
 export function go(v: View) {
   view.value = v;

@@ -7,10 +7,10 @@ import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc, greet
 import { applyTheme } from './theme';
 import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openPause, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { openPile, openPause, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { startTask, patchTask } from './actions';
 import { openPlaces } from './PlacesSheet';
-import { view, go, fromHash, TABS, calMode, type View } from './nav';
+import { view, go, fromHash, taskFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
 import { startSync } from './sync';
@@ -178,11 +178,19 @@ function Toast() {
 const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses'];
 const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications };
 
+/** A link with `#task/<id>` (an event in a calendar app) opens that step's sheet, if it still exists. */
+function openLinkedTask() {
+  const id = taskFromHash();
+  if (!id) return;
+  clearTaskHash();
+  if (T(id)) openTask(id);
+}
+
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
-    const onHash = () => { const v = fromHash(); if (v) view.value = v; };
+    const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) openLinkedTask(); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);

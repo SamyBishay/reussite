@@ -1473,7 +1473,7 @@ export const fr: Partial<Strings> = {
   bdInOrder: 'Dans cet ordre',
   bdAnyOrder: 'Dans n’importe quel ordre',
   bdOrderHint: 'Dans cet ordre, chaque étape attend la précédente et elles restent dans une seule carte. Dans n’importe quel ordre, ce sont des étapes séparées.',
-  paintingsCredit: 'Couleurs et motifs inspirés de deux peintures de saint Georges et du dragon.',
+  paintingsCredit: 'Couleurs et motifs inspirés de Hilma af Klint, La Colombe (1915).',
   labelField: 'Nom court',
   labelHint: 'Ce que les calendriers montrent pour cette étape. Laissez vide pour utiliser celui fait à partir du titre.',
   timeChip: 'Heure',

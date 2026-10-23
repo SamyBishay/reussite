@@ -3,7 +3,7 @@
 // steps involved or their projects, most recently updated first, within a budget. Private notes are
 // never picked. Pure: shared by the app's prompts and the connector's read_memory.
 import type { MemoryNote } from '../data/schema';
-import { norm } from './names';
+import { mentions } from './names';
 import { oneLine } from './lists';
 
 export type Note = MemoryNote & { id: string };
@@ -30,10 +30,9 @@ export const noteTokens = (note: MemoryNote): number => tokensOf([note.name, ...
  * punctuation ("Ibrahim's" and "d'Ibrahim" both match Ibrahim). A one-letter name matches nothing.
  */
 export function notesMatching<N extends MemoryNote>(text: string, notes: Iterable<N>): N[] {
-  const hay = ' ' + norm(text) + ' ';
   const out: N[] = [];
   for (const n of notes) {
-    if ([n.name, ...n.aliases].some(w => { const k = norm(w); return k.length >= 2 && hay.includes(' ' + k + ' '); })) out.push(n);
+    if ([n.name, ...n.aliases].some(w => mentions(text, w))) out.push(n);
   }
   return out;
 }

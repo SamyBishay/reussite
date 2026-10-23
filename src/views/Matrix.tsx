@@ -3,14 +3,17 @@
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects, pagePlace } from '../app/store';
-import { isOpen, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
-import { openTask, openMove, moveToQuadrant, placeName, placeIds } from '../app/sheets';
+import { isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
+import { ChainFold } from '../app/ChainFold';
+import { openTask, openMove, moveToQuadrant, placeName, placeOptions } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, suitName } from '../app/ui';
 import { t, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
 import { CommandBox } from '../ai/ui';
 import { openDecision } from '../flows/decision';
+import { AreaChips, AreaTag } from '../app/AreaUi';
+import { areaOfStep, pageAreas, showsInArea } from '../app/areas';
 
 /** "On this page" or "Everything", shared by Matrix and Projects; remembered per device. */
 const initialScope = (() => { try { return localStorage.getItem('reussite.scope') === 'all' ? 'all' : 'here'; } catch { return 'here'; } })();
@@ -30,6 +33,8 @@ export function Scope({ hidden }: { hidden: number }) {
 }
 
 const META: Record<number, [Key, Key]> = { 1: ['qNowSub', 'qNowHint'], 2: ['qProtectSub', 'qProtectHint'], 3: ['qQuickSub', 'qQuickHint'], 4: ['qLaterSub', 'qLaterHint'] };
+/** Quadrants group their steps by area when the page has areas (session only). */
+const byArea = signal(false);
 const filters = signal({ q: '', project: '', suit: '', place: '' });
 
 /** Long-press opens the Move menu on touch screens. */
@@ -52,12 +57,15 @@ function Item({ tk, planned }: { tk: T; planned: boolean }) {
     <div class="item" draggable data-task={tk.id} onDragStart={e => { e.dataTransfer?.setData('text/plain', tk.id); (e.currentTarget as HTMLElement).classList.add('dragging'); }}
       onDragEnd={e => (e.currentTarget as HTMLElement).classList.remove('dragging')}>
       <Suit s={tk.suit} />
-      <button type="button" class="linklike t" {...handlers} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
-        <Title s={tk.title} />
-        {tk.kind === 'decision' && <> <span class="tag">{t('decisionTag')}</span></>}
-        {planned && <> <span class="tag today">{t('today')}</span></>}
-        {blocked(tk) && <> <span class="tag">{t('waits')}</span></>}
-      </button>
+      <div class="item-body">
+        <button type="button" class="linklike t" {...handlers} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
+          <Title s={tk.title} />
+          {tk.kind === 'decision' && <> <span class="tag">{t('decisionTag')}</span></>}
+          {planned && <> <span class="tag today">{t('today')}</span></>}
+          {areaOfStep(tk) && <> <AreaTag id={areaOfStep(tk)!} /></>}
+        </button>
+        <ChainFold tk={tk} />
+      </div>
       <span class="ictrls">
         <DueChip tk={tk} />
         {tk.kind === 'decision' && <button type="button" class="icon-btn sm" onClick={() => void openDecision(null, { taskId: tk.id })} aria-label={t('openDecision')} data-testid="matrix-decision">⚖</button>}
@@ -72,20 +80,29 @@ export function Matrix() {
   const [over, setOver] = useState<number | null>(null);
   const f = filters.value;
   const set = (p: Partial<typeof f>) => (filters.value = { ...f, ...p });
-  const all = [...tasks.value.values()].filter(isOpen);
   const placeOk = (x: T) => (f.place === 'all' ? true : f.place ? inPlace(x, f.place) : scope.value === 'all' || inPlace(x));
+  // A step that waits for another is inside its head's card ("+n after"), not a card of its own.
+  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x) && !blocked(x));
+  const oblig = [...tasks.value.values()].filter(x => x.status === 'open' && isObligation(x) && placeOk(x)).sort((a, b) => (a.at || '99').localeCompare(b.at || '99') || a.title.localeCompare(b.title));
   const q = f.q.trim().toLowerCase();
-  const vis = all.filter(x => placeOk(x) && (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit) && (!q || x.title.toLowerCase().includes(q) || (x.note || '').toLowerCase().includes(q)));
+  const vis = all.filter(x => placeOk(x) && (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit) && (!q || x.title.toLowerCase().includes(q) || (x.note || '').toLowerCase().includes(q)) && showsInArea('matrix', x));
   const hidden = all.filter(x => !placeOk(x)).length;
   const qs: Record<number, T[]> = { 1: [], 2: [], 3: [], 4: [] };
   vis.forEach(x => qs[quad(x)]!.push(x));
   Object.values(qs).forEach(a => a.sort(byPriority));
+  // Grouped by area: the place's own steps first, then each area in order; priority holds inside each group.
+  if (byArea.value && pageAreas.value.length) {
+    const rank = (x: T) => { const a = areaOfStep(x); return a ? pageAreas.value.indexOf(a) + 1 : 0; };
+    Object.values(qs).forEach(a => a.sort((x, y) => rank(x) - rank(y)));
+  }
   const planSet = new Set(rawPlan(today.value));
   const projs = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped');
   return (
     <div>
       {!f.place && <Scope hidden={hidden} />}
       <CommandBox scope={{ kind: 'matrix' }} />
+      <AreaChips view="matrix" />
+      {pageAreas.value.length > 0 && <label class="tog" style="margin-top:var(--s2)"><input type="checkbox" checked={byArea.value} onChange={e => (byArea.value = (e.target as HTMLInputElement).checked)} data-testid="sort-area" /> {t('sortByArea')}</label>}
       <div class="filters" data-testid="filters">
         <input type="search" value={f.q} placeholder={t('search')} aria-label={t('search')} onInput={e => set({ q: (e.target as HTMLInputElement).value })} />
         <select aria-label={t('project')} value={f.project} onChange={e => set({ project: (e.target as HTMLSelectElement).value })}>
@@ -96,7 +113,7 @@ export function Matrix() {
         </select>
         <select aria-label={t('where')} value={f.place} onChange={e => set({ place: (e.target as HTMLSelectElement).value })}>
           <option value="">{t('thisPage')}</option><option value="all">{t('everything')}</option>
-          {[...placeIds(), 'any'].map(id => <option value={id}>{placeName(id)}</option>)}
+          {placeOptions()}
         </select>
       </div>
       <div class="matrix">
@@ -114,6 +131,15 @@ export function Matrix() {
           );
         })}
       </div>
+      {oblig.length > 0 && (
+        <details class="more obligations" data-testid="obligations">
+          <summary>{t('obligationsTitle')} · {oblig.length}</summary>
+          <p class="hint">{t('obligationsHint')}</p>
+          <ul class="items">{oblig.map(x => (
+            <li key={x.id}><div class="item"><Suit s={x.suit} /><button type="button" class="linklike t" onClick={() => openTask(x.id)}><Title s={x.title} /></button><span class="ictrls">{x.at && <span class="due">{x.at}</span>}</span></div></li>
+          ))}</ul>
+        </details>
+      )}
       <p class="hint axis-note">{t('axisNote')} {t('moveHint')}</p>
     </div>
   );

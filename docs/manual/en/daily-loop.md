@@ -7,7 +7,7 @@ The loop is short: plan the day, start the first step, close the day. Once a wee
 Open Home and tap **Plan the day**. It is a short morning check-in, one question per screen.
 
 1. **Yesterday.** Tick what was done but not ticked, with roughly how long it took. The rest carries over to today. Réussite says nothing about what didn't happen.
-2. **Today's shape.** What kind of day is it (a usual day, afternoon only, an hour or less, a rest day)? When can you start? What is fixed today?
+2. **Today's shape.** What kind of day is it (a usual day, afternoon only, an hour or less, a rest day)? When can you start? What is fixed today? If one of your places has areas, **Where will you be?** lets you pick one for the morning and one for the afternoon (see [Places and trips](places-and-trips.md)).
 3. **The plan.** Réussite builds it from the method's rules. Tap **Swap** to pick something of the same weight, or **Cut** to take something off. It stays on your list for another day. Tap **Go with this** when you are happy.
 
 ![The plan, made by the method's rules](shot:checkin)
@@ -20,6 +20,7 @@ What the plan contains:
 - Then **Quick** steps, if there is room.
 - At most three work steps (you can change the limit in Settings → Method).
 - One obligation, with a time: leisure, going out or seeing people.
+- If you said where you'll be in the afternoon, the steps of that area come together at the end of the list, and the morning's area first. The plan shows "Afternoon in Heliopolis" on them.
 - A little time for the planning itself.
 
 Réussite adds up the estimates and shows what the day will probably take for you.
@@ -30,13 +31,19 @@ Réussite adds up the estimates and shows what the day will probably take for yo
 
 ## Launch points
 
-A launch point is a time to begin, or to come back to the list after a break. Typical: a start at 09:30 and a restart at 14:00. They are not a timetable. Steps float between them. You can change them on Today, and the defaults in Settings → Method.
+A launch point is a time to begin, or to come back to the list after a break. Typical: a start at 09:30 and a restart at 14:00. They are not a timetable. Steps float between them. You can change them on Today, and the defaults in Settings → Method. They live in Réussite and its notifications. They are not in the calendar, which keeps only what has a time and what is on a day.
 
 ## Start
 
 Today shows the first step on a card, **Start here**. It shows the step's starter: the smallest first action. Tap **Start the timer**, or **Already done** if you did it already. Forgot to start? **I started earlier** takes two taps.
 
 ![Today: the first step and the rest of the list](shot:today)
+
+Adding a step by hand to today (quick add, **Add to today**, **From your list**) puts it right after the step you are timing, or before the first one not done yet. It doesn't wait at the end behind the whole plan.
+
+You can drag a step by its grip to put the list in another order. The arrows still work. When a step has areas, the list is grouped under the area's name.
+
+When you finish a step that others were waiting for, the next one takes its place right after it on the list.
 
 If a step comes with an app or a link, the button opens it for you and starts the timer.
 
@@ -58,7 +65,7 @@ Then it shows the starter, or helps you write a smaller one. If the same step st
 
 ## Break it down
 
-A step over 30 minutes is too big. Tap **Break it down**: it asks for the first action (the app or place, then what to do there), its starter, a time, and what comes next. See [Timing and estimates](timing-and-estimates.md) for the starter test.
+A step over 30 minutes is too big. Tap **Break it down**: it asks for the first action (the app or place, then what to do there), its starter, a time, and what comes next. It then asks whether the steps go **In this order** or **In any order**. In this order, each step waits for the one before, and they stay together in one card: you see the first, with "+3 after" under it that unfolds the rest. In any order, they are separate steps. See [Timing and estimates](timing-and-estimates.md) for the starter test.
 
 ## Close the day
 

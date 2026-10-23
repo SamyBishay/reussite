@@ -2,6 +2,9 @@
 // yesterday, what's carried, today's shape, then the rule-based plan.
 import { useState } from 'preact/hooks';
 import { today, settings, tasks, here, days, places, stays, decisions, createDoc } from '../app/store';
+import { areaOfStep } from '../app/areas';
+import { areaName, placeName } from '../app/sheets';
+import { areasOnPage, HALF_DAY_AT, type Half, type HalfDay } from '../domain/areas';
 import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, personal, planEst, lastDoneOf, type T as Tk } from '../app/model';
 import { finishTask, carry, dayPatch, cloneTemplate, patchTask, addSession, newTaskDoc } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
@@ -9,6 +12,7 @@ import { Title, Meta, quadName } from '../app/ui';
 import { flows } from '../app/sheets';
 import { t, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
+import { rootOf } from '../domain/places';
 import { fixedOnDay } from '../domain/agenda';
 import { withTime } from '../domain/calendar';
 import { plan as makePlan, totalOf, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
@@ -33,22 +37,22 @@ const FAULT: Record<PlanFault, Key> = {
 const PRESETS: [Preset, Key][] = [['normal', 'presetNormal'], ['afternoon', 'presetAfternoon'], ['hour', 'presetHour'], ['rest', 'presetRest']];
 const step = (x: Tk): PStep => {
   const p = personal(x);
-  return { id: x.id, quad: quad(x), due: x.due, blocked: blocked(x), est: planEst(x), lo: p?.lo ?? x.est, hi: p?.hi ?? x.est, starter: x.starter };
+  return { id: x.id, quad: quad(x), due: x.due, blocked: blocked(x), est: planEst(x), lo: p?.lo ?? x.est, hi: p?.hi ?? x.est, starter: x.starter, area: areaOfStep(x) };
 };
 
 /** The planner's input, from the list as it stands now. */
-export function planInput(k: string, shape: { start: string; preset: Preset; fixed: { at: string; dur: number }[] }, skip: Set<string> = new Set(), forced: string[] = []) {
+export function planInput(k: string, shape: { start: string; preset: Preset; fixed: { at: string; dur: number }[] }, skip: Set<string> = new Set(), forced: string[] = [], halves: Partial<Record<Half, string | null>> = {}) {
   const s = settings.value, place = here.value;
   // Every fixed-time item of the day, one-off or standing, comes first and is never skipped or swapped.
   const fixedEvents = fixedOnDay({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, s, k);
   const timed = fixedEvents.map(e => ({ id: e.taskId!, at: e.time, lead: e.lead ?? 0, template: e.template }));
   const timedIds = new Set(timed.map(x => x.id)), timedRoots = new Set(fixedEvents.map(e => e.rootId!));
-  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id) && !timedIds.has(x.id));
+  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id) && !timedIds.has(x.id) && !blocked(x));
   const optionalIds = new Set(dayDoc(k)?.optional ?? []);
   // Steps already on today's list (carried, or added earlier), then any swapped in by hand.
   const carried = [...inPlan.filter(x => !optionalIds.has(x.id) && x.src !== 'plan'), ...forced.map(id => T(id)).filter(isOpen)];
   const cands = candidates(k, place).filter(x => !skip.has(x.id) && !x.at && !forced.includes(x.id) && !timedIds.has(x.id));
-  const later = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
+  const later = [...tasks.value.values()].filter(x => isOpen(x) && !blocked(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
     .sort((a, b) => String(a.created).localeCompare(String(b.created)));
   // A standing item with weekdays belongs to those days only; one already on today's list isn't offered twice.
   const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place) && !skip.has(x.id) && !x.weekdays?.length && !timedRoots.has(x.id))
@@ -58,7 +62,7 @@ export function planInput(k: string, shape: { start: string; preset: Preset; fix
     today: k, maxWorkSteps: s.maxWorkSteps, planningMin: s.planningMin, defaultRestarts: s.launchDefaults.restarts, obligationAt: s.obligationAt, shape,
     carried: carried.map(step), candidates: cands.map(step), obligations, timed,
     optional: [...optionalIds].map(id => T(id)).filter(isOpen).map(step), laterPool: later.map(step),
-    usualLoad: loads.length ? loads[Math.floor(loads.length / 2)]! : null,
+    usualLoad: loads.length ? loads[Math.floor(loads.length / 2)]! : null, halves,
   };
 }
 
@@ -80,6 +84,8 @@ function Checkin() {
   const [swapping, setSwapping] = useState<string | null>(null);
   const [forced, setForced] = useState<string[]>([]);
   const [extra, setExtra] = useState<string[]>([]);
+  // Where the morning and the afternoon are spent, when the place has areas: an area, or none (the place itself).
+  const [halves, setHalves] = useState<Partial<Record<Half, string | null>>>(() => Object.fromEntries((dayDoc(k)?.areas ?? []).map(a => [a.half, a.placeId])));
   // The address or person picked for a placed standing obligation, by its id; none keeps the step as the obligation has it.
   const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const [busy, setBusy] = useState(false);
@@ -112,7 +118,7 @@ function Checkin() {
             {x.id in ticked && <button type="button" onClick={() => { const n = { ...ticked }; delete n[x.id]; setTicked(n); }}>{t('notDone')}</button>}
           </div></div></li>
       ))}</ul>
-      <p class="hint" style="margin-top:10px">{t('ciCarryNote')}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('ciCarryNote')}</p>
       <div class="actions"><button class="btn primary" type="button" onClick={() => void yesterdayDone()} data-testid="ci-next">{t('next_')}</button></div>
     </div>
   );
@@ -123,7 +129,7 @@ function Checkin() {
       <p class="hint">{t('ciHeavyHint')}</p>
       <ul class="picklist">{heavy.map(id => T(id)).filter(isOpen).map(x => (
         <li><div><p><Title s={x.title} /></p><p class="meta">{t('carriedTag', { n: x.carried })}</p>
-          <div class="go" style="margin-top:6px">
+          <div class="go" style="margin-top:var(--s2)">
             <button class="btn small" type="button" onClick={() => flows.breakDown(x.id)}>{t('shrinkIt')}</button>
             <button class="btn small" type="button" onClick={() => { void patchTask(x.id, { kind: 'decision' }); flows.decide(null, { taskId: x.id }); }}>{t('makeDecision')}</button>
           </div></div></li>
@@ -133,6 +139,10 @@ function Checkin() {
   );
 
   const shape = { start, preset, fixed: fixed.map(f => ({ at: f.at, dur: f.dur })) };
+  const areaChoices = areasOnPage(places.value, here.value);
+  const placeRoot = rootOf(places.value, here.value);
+  // The morning means nothing on a day that starts in the afternoon.
+  const dayHalves: HalfDay[] = (['am', 'pm'] as Half[]).filter(h => halves[h] && areaChoices.includes(halves[h]!) && (h === 'pm' || start < HALF_DAY_AT)).map(h => ({ half: h, placeId: halves[h]! }));
 
   if (screen === 'shape') {
     const addFixed = (e: Event) => {
@@ -151,6 +161,18 @@ function Checkin() {
           <div class="chips-pick">{PRESETS.map(([p, key]) => <button type="button" aria-pressed={preset === p} onClick={() => { setPreset(p); if (p === 'afternoon' && start < '13:00') setStart('14:00'); }}>{t(key)}</button>)}</div>
         </div>
         <label class="field"><span>{t('ciStartAt')}</span><input type="time" value={start} onInput={e => setStart((e.target as HTMLInputElement).value || start)} /></label>
+        {areaChoices.length > 0 && (
+          <div class="field" data-testid="ci-halves"><span>{t('halfWhere')}</span>
+            <p class="hint">{t('halfHint')}</p>
+            {(['am', 'pm'] as Half[]).filter(h => h === 'pm' || start < HALF_DAY_AT).map(h => (
+              <div class="chips-pick small" role="group" aria-label={t(h === 'am' ? 'halfMorningIn' : 'halfAfternoonIn')} data-half={h}>
+                <b class="halflabel">{t(h === 'am' ? 'halfAm' : 'halfPm')}</b>
+                <button type="button" aria-pressed={!halves[h]} onClick={() => setHalves({ ...halves, [h]: null })}>{placeName(placeRoot)}</button>
+                {areaChoices.map(a => <button type="button" aria-pressed={halves[h] === a} data-area={a} onClick={() => setHalves({ ...halves, [h]: a })}>{areaName(a)}</button>)}
+              </div>
+            ))}
+          </div>
+        )}
         <div class="field"><span>{t('ciFixed')}</span>
           {fixed.length > 0 && <ul class="mini">{fixed.map((f, i) => <li><span><b>{f.at}</b> {f.title} · {fmtMin(f.dur)}</span><button type="button" class="chip-x" onClick={() => setFixed(fixed.filter((_, j) => j !== i))} aria-label={t('remove', { what: f.title })}>×</button></li>)}</ul>}
           <form class="fixed-add" onSubmit={addFixed}>
@@ -166,7 +188,7 @@ function Checkin() {
   }
 
   // ---------- the plan ----------
-  const inp = planInput(k, shape, skip, forced);
+  const inp = planInput(k, shape, skip, forced, { am: dayHalves.find(h => h.half === 'am')?.placeId, pm: dayHalves.find(h => h.half === 'pm')?.placeId });
   const rule: Plan = makePlan(inp);
   // The AI's plan never drops a fixed-time item: they come first in either plan.
   const ruleFixed = rule.items.filter(i => i.role === 'fixed');
@@ -234,6 +256,7 @@ function Checkin() {
     const finalPlan = [...done.filter(id => !plan.includes(id)), ...plan];
     await dayPatch(k, {
       plan: finalPlan, launches: p.launches, checkin: new Date().toISOString(), shape: { start, preset }, optional,
+      ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}),
       first: first ? { id: first, title: T(first)?.title ?? '' } : null, load: p.total.est,
     });
     closeSheet();
@@ -279,7 +302,7 @@ function Checkin() {
                 <>
                 <li class={'role-' + it.role}>
                   <span class="tag">{forced.includes(it.id) ? quadName(quad(x)) : t(ROLE_KEY[it.role])}{it.at ? ' · ' + it.at : ''}</span>
-                  <span><Title s={x.title} />{it.breakDown && <> <button type="button" class="tag warn linkish" onClick={() => flows.breakDown(x.id)}>{t('breakDownFirst')}</button></>}</span>
+                  <span><Title s={x.title} />{it.half && areaOfStep(x) && <> <span class="tag area" data-testid="plan-half">{t('planHalf', { half: t(it.half === 'am' ? 'halfAm' : 'halfPm'), area: areaName(areaOfStep(x)!) })}</span></>}{it.breakDown && <> <button type="button" class="tag warn linkish" onClick={() => flows.breakDown(x.id)}>{t('breakDownFirst')}</button></>}</span>
                   <span class="due">{pe ? '~' + fmtMin(pe.value) : x.est ? fmtMin(x.est) : '—'}</span>
                   {cutting && <button class="btn small" type="button" onClick={() => { setSkip(new Set([...skip, it.id])); setForced(forced.filter(f => f !== it.id)); }}>{t('cut')}</button>}
                   {!cutting && <button class="btn small ghost" type="button" onClick={() => setSwapping(it.id)}>{t('swap')}</button>}
@@ -292,18 +315,18 @@ function Checkin() {
           <p class="planmeta" data-testid="plan-total">{p.total.lo !== p.total.hi ? t('planTotalRange', { t: fmtMin(p.total.est), lo: fmtMin(p.total.lo), hi: fmtMin(p.total.hi) }) : t('planTotal', { t: fmtMin(p.total.est) })}</p>
           <p class="planmeta">{t('launchPoints')}: {p.launches.map(l => (l.k === 'start' ? '▶ ' : '↻ ') + l.t).join(' · ')}</p>
           {p.offerLater && !extra.includes(p.offerLater) && (
-            <div class="banner" style="margin-top:12px"><p>{t('roomFor', { title: T(p.offerLater)?.title ?? '' })}</p><button class="btn small" type="button" onClick={() => setExtra([...extra, p.offerLater!])}>{t('add')}</button></div>
+            <div class="banner" style="margin-top:var(--s3)"><p>{t('roomFor', { title: T(p.offerLater)?.title ?? '' })}</p><button class="btn small" type="button" onClick={() => setExtra([...extra, p.offerLater!])}>{t('add')}</button></div>
           )}
           <div class="actions">
             <button class="btn primary" type="button" disabled={busy} onClick={() => void accept()} data-testid="go-with-this">{t('goWithThis')}</button>
             <button class="btn" type="button" onClick={() => setCutting(!cutting)}>{cutting ? t('doneCutting') : t('tooMuch')}</button>
           </div>
           {proposed && (
-            <div class="banner" style="margin-top:12px"><p>{t('aiPlanChanges', { n: proposed.items.length })}</p><button class="btn small" type="button" onClick={() => setReviewing(true)} data-testid="ai-plan-review">{t('aiReview')}</button></div>
+            <div class="banner" style="margin-top:var(--s3)"><p>{t('aiPlanChanges', { n: proposed.items.length })}</p><button class="btn small" type="button" onClick={() => setReviewing(true)} data-testid="ai-plan-review">{t('aiReview')}</button></div>
           )}
           {aiPlan ? <div class="actions"><button class="btn small ghost" type="button" onClick={() => { setAiPlan(null); setProposed(null); }} data-testid="ai-plan-undo">{t('aiPlanUndo')}</button></div>
             : <AiAction ai={ai} label={t('aiImprovePlan')} onClick={() => void improve()} testid="ai-improve" />}
-          <p class="hint" style="margin-top:8px">{quadName(2)}: {t('protectRule')}</p>
+          <p class="hint" style="margin-top:var(--s2)">{quadName(2)}: {t('protectRule')}</p>
         </>
       )}
     </div>

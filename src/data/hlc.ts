@@ -52,3 +52,12 @@ export const max = (a: Hlc | undefined, b: Hlc | undefined): Hlc | undefined =>
 
 /** The zero timestamp: older than anything a device writes. Used for imported data. */
 export const ZERO: Hlc = format(0, 0, '0');
+
+/**
+ * The timestamp right after `h` on the same node: a deterministic "newer" clock for a change every device
+ * makes by itself (a migration). It beats `h` wherever `h` is found, and not any real edit made later.
+ */
+export function after(h: Hlc | undefined): Hlc {
+  const p = parse(h ?? ZERO);
+  return p.counter >= 9999 ? format(p.wall + 1, 0, p.node) : format(p.wall, p.counter + 1, p.node);
+}

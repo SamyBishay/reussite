@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withDefaults, DEFAULT_SETTINGS } from './settings';
+import { withDefaults, DEFAULT_SETTINGS, ST_GEORGE_FROM, firstWritten } from './settings';
 
 describe('settings defaults', () => {
   it('adds new keys without overwriting chosen ones', () => {
@@ -18,7 +18,27 @@ describe('settings defaults', () => {
     expect(s.notifyText).toBe('titles');
     expect(s.notifyLead).toBe(45);
     const d = withDefaults({});
-    expect(d).toMatchObject({ notifyText: 'generic', notifyLead: 30, feedTitles: false });
+    expect(d).toMatchObject({ notifyText: 'generic', notifyLead: 30, feedDetail: 'times' });
     expect(Object.values(d.notify).every(Boolean)).toBe(true);
+  });
+  it('reads the old feedTitles switch as the feed level until one is chosen, and keeps the old key', () => {
+    expect(withDefaults({ feedTitles: true } as never)).toMatchObject({ feedDetail: 'labels', feedTitles: true });
+    expect(withDefaults({ feedTitles: false } as never).feedDetail).toBe('times');
+    expect(withDefaults({}).feedDetail).toBe('times');
+    expect(withDefaults({ feedTitles: true, feedDetail: 'full' } as never).feedDetail).toBe('full');
+    expect(withDefaults({ feedTitles: true, feedDetail: 'times' } as never).feedDetail).toBe('times');
+  });
+  it('St George is the default for new people; an older document with no palette chosen keeps Lilac & sea', () => {
+    expect(withDefaults(undefined)).toMatchObject({ preset: 'st-george', accent: '#2D6A67' });
+    expect(withDefaults({ language: 'fr' }, ST_GEORGE_FROM + 1000).preset).toBe('st-george');
+    expect(withDefaults({ language: 'fr' }, ST_GEORGE_FROM - 1000)).toMatchObject({ preset: 'lilac-sea', accent: '#6B4BA6', suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' } });
+    // A palette chosen is never touched, old or new.
+    expect(withDefaults({ preset: 'classic', accent: '#3A3A44' }, ST_GEORGE_FROM - 1000)).toMatchObject({ preset: 'classic', accent: '#3A3A44' });
+    expect(withDefaults({ accent: '#112233' }, ST_GEORGE_FROM - 1000)).toMatchObject({ accent: '#112233', preset: 'st-george' });
+    expect(withDefaults({ preset: 'lilac-sea' } as never, ST_GEORGE_FROM + 1000).preset).toBe('lilac-sea');
+  });
+  it('firstWritten is the oldest field clock', () => {
+    expect(firstWritten({ a: '1760000000000:0000:x', b: '1750000000000:0003:y' })).toBe(1750000000000);
+    expect(firstWritten({})).toBe(Infinity);
   });
 });

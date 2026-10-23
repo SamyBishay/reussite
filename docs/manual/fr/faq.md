@@ -36,6 +36,18 @@ Une étape reportée trois fois ou plus est trop grosse, ou cache une décision.
 
 Touchez **J’ai commencé plus tôt** et dites quand vous avez commencé. Ou marquez l’étape comme faite et choisissez combien de temps elle a pris.
 
+## Où sont passées les heures de « départ » dans mon calendrier ?
+
+Un calendrier sert à ce qui a une heure et à ce qui tombe un jour. Les points de départ restent dans Aujourd’hui et dans les notifications. Le calendrier montre les éléments à heure fixe, et les étapes prévues ou à échéance comme événements sur toute la journée.
+
+## Pourquoi une seule étape est-elle montrée alors que j’en ai ajouté cinq ?
+
+Les étapes qui en attendent une autre forment une seule carte : la première, avec « +4 après ». Touchez-la pour voir les autres. Quand la première est faite, la suivante prend sa place. Si vous les préférez séparées, choisissez **Dans n’importe quel ordre** en découpant une étape, ou videz « Attend » sur une étape.
+
+## Où sont passés mes rendez-vous fixes dans la matrice ?
+
+Ils sont sur la ligne repliée **Obligations**, sous la grille. C’est une heure qui les place, pas un quadrant.
+
 ## J’ai perdu mon téléphone.
 
 Voir [Synchronisation et appareil perdu](sync-and-recovery.md).

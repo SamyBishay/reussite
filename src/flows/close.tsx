@@ -9,7 +9,7 @@ import { closeDay } from '../app/actions';
 import { overlay, openSheet, closeSheet } from '../app/sheet';
 import { rankOf } from '../app/sheets';
 import { Title, Suit } from '../app/ui';
-import { soundCard, soundChord } from '../app/celebrate';
+import { soundCard, soundChord, bigMoment } from '../app/celebrate';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { addDays } from '../domain/dates';
 import { SUIT_ORDER } from '../data/settings';
@@ -128,6 +128,8 @@ function Show() {
       setDealt(nodes.length);
       setFinished(true);
       soundChord(true);
+      // The finish is St George's (a still frame when calm or reduced); the fireworks stay for the deal.
+      if (bigMoment({ title: t('dayIsPlayed'), sub: t('cardsPlayed2', { n: nodes.length }) + ' · ' + t('timed', { t: fmtMin(minutesOn(k)) }) })) return;
       if (!reduce) {
         const c = colors('S');
         burst(innerWidth / 2, innerHeight * 0.3, c, lively ? 64 : 30, 240);
@@ -155,7 +157,10 @@ function Show() {
       <canvas ref={canvas} aria-hidden="true" />
       <div class="show-top">
         <p class="eyebrow">{fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        <p class={'show-count' + (finished ? ' open' : '')} aria-live="polite">{dealt}<small>{t('cardsPlayed', { n: dealt })}</small></p>
+        <div class="show-heart-wrap">
+          <svg class={'show-heart' + (finished ? ' on' : '')} viewBox="0 0 400 380" fill="none" aria-hidden="true"><path d="M200 360C110 300 20 230 20 132A90 90 0 0 1 200 80A90 90 0 0 1 380 132C380 230 290 300 200 360Z" stroke-width="6" stroke-linejoin="round" /></svg>
+          <p class={'show-count' + (finished ? ' open' : '')} aria-live="polite">{dealt}<small>{t('cardsPlayed', { n: dealt })}</small></p>
+        </div>
         {!finished && <button class="btn small skip" type="button" onClick={e => { e.stopPropagation(); skip.current = true; }} data-testid="skip">{t('skip')}</button>}
       </div>
       <div class="tableau-show" ref={grid}>
@@ -203,10 +208,10 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
   return (
     <form onSubmit={submit} class="summary-form" data-testid="close-summary">
       {!inShow && <p class="eyebrow">{fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
-      {!inShow && <h3 style="font-size:56px;line-height:1;margin-top:8px">{deck.length}</h3>}
+      {!inShow && <h3 style="font-size:56px;line-height:1;margin-top:var(--s2)">{deck.length}</h3>}
       {!inShow && <p class="bigsub">{t('cardsPlayed', { n: deck.length })}</p>}
       <div class="minifound">{SUIT_ORDER.map(s => <span><Suit s={s} /> {by[s]}</span>)}</div>
-      <p class="meta" style="margin-top:6px">{t('timed', { t: fmtMin(minutesOn(k)) })}{r.v ? ' · ' + t('estimatesRun', { r: r.v.toFixed(1) }) : ''}</p>
+      <p class="meta" style="margin-top:var(--s2)">{t('timed', { t: fmtMin(minutesOn(k)) })}{r.v ? ' · ' + t('estimatesRun', { r: r.v.toFixed(1) }) : ''}</p>
       {!inShow && deck.length > 0 && <ul class="pilelist">{deck.map((c, i) => <li><span class={'rk suit-' + c.suit}>{rankOf(deck.slice(0, i + 1).filter(x => x.suit === c.suit).length)}</span><span><Title s={c.title} /></span><span class="tm" /></li>)}</ul>}
       <label class="field"><span>{t('tomorrowFirst')}</span>
         <select value={sel} onChange={e => setSel((e.target as HTMLSelectElement).value)}>

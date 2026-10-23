@@ -1,17 +1,23 @@
-// Add to calendar (brief §8): the agenda's launch points and fixed-time items for a day or a week,
-// as an .ics file handed to the share sheet or downloaded.
-import { tasks, days, decisions, places, stays, settings, toast } from './store';
+// Add to calendar (brief §8, §16): the fixed-time items for a day or a week, and the open planned and due steps
+// from today on as all-day events, in full (short names, places, notes, links), as an .ics file handed to the
+// share sheet or downloaded. Launch points stay in the app.
+import { settings, toast, today } from './store';
 import { agenda } from '../domain/agenda';
-import { exported, icsFor, realTitles } from '../domain/ics';
+import { allDayEvents, allDayItems, fixedTitles } from '../domain/calItems';
+import { clockIn, exported, icsFor } from '../domain/ics';
 import { saveFile } from '../data/backup';
 import { t } from '../i18n';
+import { appAddress, calData } from './feed';
 
 export const icsName = (from: string, to: string) => 'reussite-' + (from === to ? from : from + '-to-' + to) + '.ics';
 
-/** The calendar text for days `from`..`to` with real titles and a reminder at each start. */
+/** The calendar text for days `from`..`to` at the `full` level with a reminder at each start. */
 export function calendarText(from: string, to: string, now = Date.now()): { text: string; count: number } {
-  const events = agenda({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, settings.value, from, to).filter(exported);
-  return { text: icsFor(events, { now, titles: realTitles(t), withAlarms: true, name: 'Réussite' }), count: events.length };
+  const data = calData();
+  const events = agenda(data, settings.value, from, to).filter(exported);
+  const items = allDayItems(data, from < today.value ? today.value : from, to);
+  const ctx = { detail: 'full' as const, data, tr: t, appUrl: appAddress(), clockIn };
+  return { text: icsFor(events, { now, titles: fixedTitles(ctx), allDay: allDayEvents(ctx, items), withAlarms: true, name: 'Réussite' }), count: events.length + items.length };
 }
 
 export async function addToCalendar(from: string, to: string) {

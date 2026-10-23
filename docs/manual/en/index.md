@@ -20,7 +20,7 @@ These pages are short and written in plain words. You can read them in any order
 - [Decisions](decisions.md): a way to choose and stop going round in circles.
 - [Places and trips](places-and-trips.md): where you are, and stays away.
 - [Addresses and people](addresses-and-people.md): good places and people you want to see.
-- [The calendar](calendar.md): week, month and your own Log.
+- [The calendar](calendar.md): day, week, month and your own Log.
 - [Timing and estimates](timing-and-estimates.md): how long things really take.
 
 ## Settings, AI, sync

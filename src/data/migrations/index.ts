@@ -3,7 +3,7 @@
 // A migration never drops a field it doesn't recognise.
 import { COLLECTIONS, SCHEMA_VERSION } from '../schema';
 import { type ReussiteDb, dumpAll, getLocal, setLocal } from '../db';
-import { ZERO } from '../hlc';
+import { ZERO, after } from '../hlc';
 import { normDecision } from '../normalize';
 
 export type Data = Record<string, Record<string, unknown>[]>;
@@ -50,8 +50,30 @@ const v3: Migration = data => data;
  */
 const v4: Migration = data => data;
 
+/**
+ * 4 → 5 (phase 4b): steps may carry a `label` (a short name for calendars), places a `parentId` (an area of a
+ * place) and days `areas` (half days spent in an area), all optional and none stored for what exists. The one
+ * change to stored data: a standing obligation (`template`) has no quadrant, so its `urgent` and `important`
+ * are cleared. Every device makes the same change by itself, so the field gets the clock right after its old
+ * one (`after`): the same on every device, newer than the value it replaces wherever that is found (a copy
+ * that has not migrated yet loses to it), and older than any edit made since. A field that is already off,
+ * a document with no such field and every field not named here are left as they are.
+ */
+const v5: Migration = data => ({
+  ...data,
+  tasks: (data.tasks ?? []).map(t => {
+    const d = t as Doc;
+    if (d.template !== true) return t;
+    const on = (['urgent', 'important'] as const).filter(k => d[k] === true);
+    if (!on.length) return t;
+    const out: Doc = { ...d, _v: 5, _hlc: { ...(d._hlc ?? {}) } };
+    for (const k of on) { out[k] = false; out._hlc![k] = after(d._hlc?.[k]); }
+    return out;
+  }),
+});
+
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3, v4];
+export const MIGRATIONS: Migration[] = [v2, v3, v4, v5];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;
@@ -68,7 +90,7 @@ export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list 
  * one with the same migrations. They are partial (only the changed fields), so fields that the
  * migration would add as defaults are left out: a default can't tell "unset" from "reset", and
  * readers fill defaults anyway (normDecision). Fields that are present are converted and keep
- * their clocks. Newer or current documents pass through.
+ * their clocks (a field a migration changed on its own takes the clock the migration gave it). Newer or current documents pass through.
  */
 export function upgradeEntries<E extends { c: string; d: { _v: number } }>(entries: readonly E[], list = MIGRATIONS, to = SCHEMA_VERSION): E[] {
   return entries.map(e => {
@@ -78,7 +100,7 @@ export function upgradeEntries<E extends { c: string; d: { _v: number } }>(entri
     const up = migrateData({ [e.c]: [src] }, from, to, list)[e.c]?.[0] as Doc | undefined;
     if (!up) return e;
     const d: Doc = { id: src.id, _v: to, _hlc: {} };
-    for (const k of Object.keys(src)) if (!META.has(k)) { d[k] = up[k]; if (src._hlc?.[k] !== undefined) d._hlc![k] = src._hlc[k]!; }
+    for (const k of Object.keys(src)) if (!META.has(k)) { d[k] = up[k]; const h = src._hlc?.[k] !== undefined ? up._hlc?.[k] ?? src._hlc[k] : undefined; if (h !== undefined) d._hlc![k] = h; }
     if (src._del !== undefined) d._del = src._del;
     return { ...e, d: d as unknown as E['d'] };
   });

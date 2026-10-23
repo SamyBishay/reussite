@@ -14,10 +14,12 @@ async function addChoir(page: Page) {
   await importSample(page);
   await page.getByPlaceholder(/The app and the first action/).fill('Choir, Hill House 602');
   await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  // Added by hand with nothing running, it goes to the top of what is left: it is the first card.
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
-  await row.getByTestId('details').click();
+  await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
   await sheet(page).locator('details.more summary').click();
   await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('19:00');
   await sheet(page).locator('input[name=dur]').fill('90');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -63,7 +65,7 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
 });
 }
 
-test('Add to calendar downloads an .ics with the day’s launch point when sharing is unavailable', async ({ page }) => {
+test('Add to calendar downloads an .ics with the day’s planned steps and no launch point when sharing is unavailable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
@@ -80,8 +82,9 @@ test('Add to calendar downloads an .ics with the day’s launch point when shari
   expect(d.suggestedFilename()).toMatch(/^reussite-\d{4}-\d{2}-\d{2}\.ics$/);
   const text = readFileSync((await d.path())!, 'utf8');
   expect(text.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
-  expect(text).toContain('SUMMARY:▶ Start');
-  expect(text).toContain('TRIGGER:-PT0M');
+  // Planned cards are all-day events; launch points stay in the app.
+  expect(text).toContain('DTSTART;VALUE=DATE:');
+  expect(text).not.toMatch(/▶|Start|23:30|233000/);
   expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/);
 });
 
@@ -91,14 +94,18 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
   await expect(page.getByTestId('ics-week')).toBeVisible();
-  await noSideways(page, 'calendar week');
+  for (const m of ['day', 'week', 'month', 'agenda']) {
+    await page.getByTestId('cal-' + m).click();
+    await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', m);
+    await noSideways(page, 'calendar ' + m);
+  }
   await page.goto('/#settings');
   await expect(page.getByTestId('calendar-settings')).toBeVisible();
   await noSideways(page, 'settings');
 });
 }
 
-test('the calendar feed: generic titles, step titles when asked, a new address replaces the old, off removes it', async ({ page, request }) => {
+test('the calendar feed: generic titles, short names when asked, places and links in full, a new address replaces the old, off removes it', async ({ page, request }) => {
   await addChoir(page);
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
   await sheet(page).getByTestId('weekdays').getByLabel(todayName(), { exact: true }).check();
@@ -114,7 +121,7 @@ test('the calendar feed: generic titles, step titles when asked, a new address r
   const first = await link();
   expect(first).toMatch(/^http:\/\/localhost:8787\/cal\/[A-Za-z0-9_-]{32}\.ics$/);
   await expect(feed.getByTestId('feed-webcal')).toHaveAttribute('href', first.replace('http:', 'webcal:'));
-  await expect(feed.getByTestId('feed-titles-warn')).toContainText('not end-to-end encrypted');
+  await expect(feed.getByTestId('feed-titles-warn')).toHaveCount(0); // the default says only times
 
   const fetchFeed = async (url: string) => request.get(url);
   await expect.poll(async () => (await fetchFeed(first)).status()).toBe(200);
@@ -126,8 +133,12 @@ test('the calendar feed: generic titles, step titles when asked, a new address r
   expect(generic).not.toContain('Choir');
   expect(generic).not.toContain('VALARM');
 
-  await feed.getByTestId('feed-titles').check();
+  await feed.getByTestId('feed-detail').selectOption('labels');
   await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('SUMMARY:Choir'), { timeout: 20_000 }).toBe(true);
+  expect(await (await fetchFeed(first)).text()).not.toContain('URL:');
+  await expect(feed.getByTestId('feed-titles-warn')).toContainText('not end-to-end encrypted');
+  await feed.getByTestId('feed-detail').selectOption('full');
+  await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('#task/'), { timeout: 20_000 }).toBe(true);
 
   await feed.getByTestId('feed-regenerate').click();
   await feed.getByTestId('feed-regenerate-confirm').click();
@@ -152,10 +163,18 @@ test(`the feed block does not scroll sideways at ${width}px`, async ({ page }) =
   await expect(feed.getByTestId('feed-url')).toContainText('/cal/');
   await feed.getByTestId('feed-regenerate').click();
   await noSideways(page, 'feed block');
-  for (const id of ['feed-webcal', 'feed-copy', 'feed-titles', 'feed-regenerate-confirm']) {
+  for (const id of ['feed-webcal', 'feed-copy', 'feed-detail', 'feed-regenerate-confirm']) {
     const box = (await feed.getByTestId(id).locator('xpath=ancestor-or-self::*[self::a or self::button or self::label][1]').boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44 - 1);
   }
   await feed.getByTestId('feed-switch').uncheck();
 });
 }
+
+test('a #task/<id> link, as in a calendar event, opens that step’s sheet and is then forgotten', async ({ page }) => {
+  await importSample(page);
+  await page.goto('/#task/t1');
+  await expect(sheet(page)).toBeVisible();
+  await expect(sheet(page).getByTestId('task-actions')).toBeVisible();
+  expect(new URL(page.url()).hash).not.toContain('task/');
+});

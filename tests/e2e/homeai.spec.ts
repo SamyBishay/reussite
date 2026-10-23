@@ -59,7 +59,7 @@ async function setUpIn(page: Page) {
   await goTab(page, 'today');
   await page.locator('form.quick input[name=title]').fill('Open Messages and text Ibrahim about the keys');
   await page.locator('form.quick input[name=title]').press('Enter');
-  await expect(page.locator('.row', { hasText: 'text Ibrahim about the keys' })).toHaveCount(1);
+  await expect(page.locator('[data-task]', { hasText: 'text Ibrahim about the keys' })).toHaveCount(1);
   await goTab(page, 'home');
 }
 

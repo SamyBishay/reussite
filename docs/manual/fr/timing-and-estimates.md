@@ -16,6 +16,8 @@ Quand vous ajoutez une étape, donnez-lui une estimation en minutes, **en compta
 
 Touchez **Lancer le chrono** quand vous commencez. Quand vous vous arrêtez, le temps réel est enregistré. Vous avez marqué une étape comme faite sans le chrono ? Réussite demande « Combien de temps ça a pris ? » avec des boutons à la mesure de votre estimation, une molette pour tout le reste, et **Je n’ai pas chronométré**.
 
+Pendant qu’un chrono tourne, trois anneaux sont à côté de l’horloge sur la première carte. L’anneau extérieur se remplit au fil de l’estimation de l’étape. C’est une image du temps qui passe, pas une note.
+
 Vous avez oublié de lancer le chrono ? **J’ai commencé plus tôt** vous laisse dire quand vous avez commencé. Vous avez oublié de l’arrêter ? « Toujours sur… ? » apparaît au bout d’environ deux fois votre durée habituelle pour l’étape (au moins 45 minutes). Touchez **J’ai arrêté à…** et corrigez en deux touches. Chaque séance chronométrée peut être corrigée après coup : ouvrez l’étape, et sous Temps, utilisez **Corriger cette séance** ou **Ajouter du temps**.
 
 **La recherche dit :** non testé ici. `[E?]`

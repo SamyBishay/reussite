@@ -9,6 +9,7 @@ import { COLUMNS, type Column, type Item, type Option } from '../domain/decision
 import { normDecision } from '../data/normalize';
 import { isAllowedLink } from '../domain/links';
 import { norm } from '../domain/names';
+import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -123,6 +124,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     return r && r.target === target ? asRef(v) : undefined;
   };
   const taskId = (v: string) => resolve(v, s.tasks, 'task');
+  const byPlaceName = (v: string): string | undefined => [...s.places.values()].find(p => p.name.trim().toLowerCase() === v.trim().toLowerCase())?.id;
+  /** A place by id, by a ref made earlier in this change-set, or by name. */
+  const placeRef = (v: string): string | undefined => resolve(v, s.places, 'place') ?? byPlaceName(v);
+  /** Refs of places this change-set makes as areas (an area holds no areas). */
+  const areaRefs = new Set<string>();
   /** Notes made earlier in this change-set, by name: a second line for a new note joins it. */
   const madeNotes = new Map<string, { ref: string; name: string; kind: MemoryNote['kind'] }>();
   /** Addresses suggested earlier in this change-set, so one named twice is made once. */
@@ -144,6 +150,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       if (k === 'after') { const a = ((v as string[] | null) ?? []).map(taskId).filter((x): x is string => !!x); o.after = a.length ? a : null; continue; }
       if (k === 'link') { if (v === null || isAllowedLink(v as string)) o.link = (v as string | null) || null; continue; }
       if (k === 'title' && !v) continue;
+      if (k === 'label') { o.label = String(v).trim(); continue; }
       if (k === 'weekdays') { const w = [...new Set((v as number[] | null) ?? [])].sort((a, b) => a - b); o.weekdays = w.length ? w : null; continue; }
       (o as Record<string, unknown>)[k] = v;
     }
@@ -217,6 +224,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     switch (c.op) {
       case 'task.create': {
         const f = cleanTask(c.set);
+        if (!f.label) delete f.label;
         const p = f.project && !isRef(f.project) ? s.projects.get(f.project) : undefined;
         const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
         items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
@@ -230,7 +238,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k === 'estBy' || k === 'dueRule') continue;
-          const cur = k === 'where' ? tk.where || s.projects.get(tk.project)?.where || 'any' : k === 'after' ? ((Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : []).length ? tk.after : null) : tk[k];
+          const cur = k === 'where' ? tk.where || s.projects.get(tk.project)?.where || 'any' : k === 'label' ? tk.label ?? '' : k === 'after' ? ((Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : []).length ? tk.after : null) : tk[k];
           if (same(cur, v)) { delete (f as Record<string, unknown>)[k]; continue; }
           diffs.push({ field: k, before: cur, after: v });
         }
@@ -314,9 +322,21 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         break;
       }
       case 'place.create': {
-        if ([...s.places.values()].some(p => p.name.trim().toLowerCase() === c.set.name.toLowerCase())) break;
-        const timeZone = validZone(c.set.timeZone) ? c.set.timeZone! : gen.zone;
-        items.push({ target: 'place', kind: 'create', title: c.set.name, diffs: [{ field: 'timeZone', before: undefined, after: timeZone }], ops: [{ t: 'create', c: 'places', ref: c.ref, fields: { name: c.set.name, timeZone, order: s.places.size, by: 'ai' } }] });
+        // An area (`parent`): of an existing place, or of one made earlier in this change-set; one level only. A parent that cannot be one skips the change.
+        let parentId: string | undefined, parentName = '';
+        if (c.set.parent) {
+          parentId = placeRef(c.set.parent);
+          if (!parentId) break;
+          if (isRef(parentId)) { if (areaRefs.has(parentId)) break; parentName = refTitles.get(parentId) ?? ''; }
+          else { if (parentProblem(s.places, null, parentId)) break; parentName = s.places.get(parentId)!.name; }
+        }
+        const dupe = [...s.places.values()].some(p => p.name.trim().toLowerCase() === c.set.name.toLowerCase() && (parentId ? p.parentId === parentId : true));
+        if (dupe) break;
+        // An area has no zone of its own: the stored one is the parent's, for a reader that does not know areas.
+        const timeZone = parentId && !isRef(parentId) ? zoneOfPlace(s.places, parentId) ?? gen.zone : validZone(c.set.timeZone) ? c.set.timeZone! : gen.zone;
+        if (parentId && c.ref) areaRefs.add(asRef(c.ref));
+        const diffs: Diff[] = parentId ? [{ field: 'area of', before: undefined, after: parentName }] : [{ field: 'timeZone', before: undefined, after: timeZone }];
+        items.push({ target: 'place', kind: 'create', title: c.set.name, diffs, ops: [{ t: 'create', c: 'places', ref: c.ref, fields: { name: c.set.name, timeZone, order: s.places.size, ...(parentId ? { parentId } : {}), by: 'ai' } }] });
         break;
       }
       case 'place.update': {
@@ -324,8 +344,15 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (!p) break;
         const patch: Partial<Place> = {};
         if (c.set.name && c.set.name !== p.name) patch.name = c.set.name;
-        if (c.set.timeZone && validZone(c.set.timeZone) && c.set.timeZone !== p.timeZone) patch.timeZone = c.set.timeZone;
-        const diffs = Object.entries(patch).map(([field, after]) => ({ field, before: p[field], after }));
+        if (c.set.parent !== undefined) {
+          const want = c.set.parent === null ? null : s.places.has(c.set.parent) ? c.set.parent : byPlaceName(c.set.parent);
+          if (want === undefined || (want !== null && parentProblem(s.places, p.id, want))) break; // not a place, or not allowed as a parent: the whole change is skipped
+          if (!same(p.parentId, want)) patch.parentId = want;
+        }
+        // An area (or a place being made one) has no zone of its own.
+        const isAreaNow = patch.parentId !== undefined ? !!patch.parentId : isArea(s.places, p.id);
+        if (c.set.timeZone && !isAreaNow && validZone(c.set.timeZone) && c.set.timeZone !== p.timeZone) patch.timeZone = c.set.timeZone;
+        const diffs = Object.entries(patch).map(([field, after]) => field === 'parentId' ? { field: 'area of', before: p.parentId ? s.places.get(p.parentId)?.name : undefined, after: after ? s.places.get(after as string)?.name : null } : { field, before: p[field], after });
         if (!diffs.length) break;
         items.push({ target: 'place', kind: 'update', title: p.name, diffs, ops: [{ t: 'update', c: 'places', id: p.id, patch }] });
         break;

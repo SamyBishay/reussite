@@ -162,7 +162,7 @@ function OptionsScreen({ d, back, next }: { d: D; back: () => void; next: () => 
             <button class="btn small" type="button" disabled={!fact.trim()} onClick={() => addOpt(name)}>{t('add')}</button></div>
         </div>
       ) : (
-        <form class="row-inline" style="margin-top:10px" onSubmit={e => { e.preventDefault(); addOpt(name); }}>
+        <form class="row-inline" style="margin-top:var(--s3)" onSubmit={e => { e.preventDefault(); addOpt(name); }}>
           <input type="text" value={name} onInput={e => setName((e.target as HTMLInputElement).value)} placeholder={t('optionPh')} aria-label={t('optionPh')} data-testid="dw-option" />
           <button class="btn small" type="submit">{t('add')}</button>
         </form>

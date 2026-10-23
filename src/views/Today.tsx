@@ -2,21 +2,28 @@
 // which edits any day's plan, launch points and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
-import { T, planOf, dayDoc, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, type T as Tk } from '../app/model';
-import { startTask, addLaunch, delLaunch, carryOver, addToday, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
+import { T, planOf, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
+import { startTask, addLaunch, delLaunch, carryOver, addToday, addByHand, setPlanOrder, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
+import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
+import { Rings, TimerRings } from '../app/Rings';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
 import { openReview } from '../flows/review';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
+import { groupPlan, inArea, type PlanGroup } from '../domain/areas';
+import { areaFilter, areaOfStep } from '../app/areas';
+import { AreaChips } from '../app/AreaUi';
+import { areaName } from '../app/sheets';
 import { addDays, daysBetween } from '../domain/dates';
 import { isoDow } from '../domain/repeat';
 import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
 import type { Launch, Task } from '../data/schema';
+import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 import { SyncCards } from '../app/SyncSettings';
 
@@ -24,6 +31,29 @@ export { openClose };
 
 /** The day being looked at; null is today. Device-local. */
 export const dayView = signal<string | null>(null);
+/** A day's list as shown: a step that waits for another is inside its head's card, not a row of its own. */
+const shownPlan = (k: string) => planOf(k).filter(id => !isWaiting(id));
+/** A day's list under headings: a half spent in an area reads "Afternoon · Heliopolis", other areas by name; the steps with no area need none (unless they come after one). */
+function PlanLists({ ids, k, optional, from, testid }: { ids: string[]; k: string; optional: Set<string>; from: number; testid?: string }) {
+  const groups = groupPlan(ids, id => areaOfStep(T(id)!), dayDoc(k)?.areas);
+  let n = from;
+  return <>{groups.map((g, i) => {
+    const start = n;
+    n += g.ids.filter(id => T(id)!.status === 'open').length;
+    return <PlanGroupList key={g.area ?? ''} g={g} k={k} optional={optional} from={start} first={i === 0} many={groups.length > 1} testid={testid} />;
+  })}</>;
+}
+function PlanGroupList({ g, k, optional, from, first, many, testid }: { g: PlanGroup; k: string; optional: Set<string>; from: number; first: boolean; many: boolean; testid?: string }) {
+  const listRef = useSortable<HTMLOListElement>(ids => void setPlanOrder(ids, k));
+  let n = from;
+  const head = !many ? null : g.area ? (g.half ? t('halfIn', { half: t(g.half === 'am' ? 'halfAm' : 'halfPm'), area: areaName(g.area) }) : areaName(g.area)) : first ? null : t('areaOther');
+  return (
+    <>
+      {head && <h3 class="areahead" data-testid="area-head">{head}</h3>}
+      <ol class="tableau" ref={listRef} {...(testid ? { 'data-testid': testid } : {})}>{g.ids.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol>
+    </>
+  );
+}
 const hmNow = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 function FirstCard({ tk }: { tk: Tk }) {
@@ -38,11 +68,12 @@ function FirstCard({ tk }: { tk: Tk }) {
       <p class="t"><Title s={tk.title} /></p>
       {tk.starter && !run && <p class="starter">{t('starterIs', { s: tk.starter })}</p>}
       <p class="meta"><Meta tk={tk} /></p>
+      <ChainFold tk={tk} />
       {tk.resume && <p class="resume">{t('resume', { text: tk.resume })}</p>}
       <div class="go">
         {run ? (
           <>
-            <Clock tk={tk} big />
+            <span class="timerbox"><TimerRings tk={tk} /><Clock tk={tk} big /></span>
             <button class="btn" type="button" onClick={() => openPause(tk.id)}>{t('pause')}</button>
             <button class="btn primary" type="button" onClick={() => openDone(tk.id)}>{t('done')}</button>
             <GoLink tk={tk} variant="small" />
@@ -68,17 +99,20 @@ function Row({ tk, n, k, optional }: { tk: Tk; n: number; k: string; optional?: 
   const done = tk.status === 'done', run = !!tk.started;
   const isToday = k === today.value;
   return (
-    <li class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id}>
+    <li data-sort class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id}>
       <span class={'num' + (done ? ' suit-' + tk.suit : '')} aria-hidden="true">{done ? settings.value.suits[tk.suit]?.glyph : n}</span>
       <div class="body">
         <p class="t"><Title s={tk.title} />{optional && <> <span class="tag">{t('ifRoom')}</span></>}</p>
         <p class="meta"><Meta tk={tk} />{run && <><span aria-hidden="true">·</span><Clock tk={tk} /></>}{!done && (tk.link || tk.prompt || tk.app) && <><span aria-hidden="true">·</span><GoLink tk={tk} variant="inline" /></>}</p>
+        {!done && <ChainFold tk={tk} />}
         {tk.resume && !done && <p class="resume">{t('resume', { text: tk.resume })}</p>}
       </div>
       <div class="ctrls">
+        <span class="grip" aria-hidden="true" data-testid="grip">{GRIP}</span>
+        <button class="icon-btn kbd-only" type="button" onClick={() => movePlan(tk.id, -1, k)} aria-label={t('earlier')}>↑</button>
+        <button class="icon-btn kbd-only" type="button" onClick={() => movePlan(tk.id, 1, k)} aria-label={t('later')}>↓</button>
         {done ? <button class="icon-btn" type="button" onClick={() => reopen(tk.id)} aria-label={t('reopen')}>↺</button>
           : !isToday ? <>
-            <button class="icon-btn" type="button" onClick={() => movePlan(tk.id, -1, k)} aria-label={t('earlier')}>↑</button>
             <button class="icon-btn" type="button" onClick={() => removeToday(tk.id, k)} aria-label={t('takeOff')}>×</button>
           </>
           : run ? <><button class="icon-btn" type="button" onClick={() => openPause(tk.id)} aria-label={t('pause')}>❚❚</button><button class="icon-btn ok" type="button" onClick={() => openDone(tk.id)} aria-label={t('done')}>✓</button></>
@@ -146,7 +180,7 @@ function QuickAdd({ k }: { k: string }) {
     f.reset();
     (document.activeElement as HTMLElement | null)?.blur();
     const id = await createTask(newTaskDoc(title, suit, 'inbox', { est, estBy: est ? 'me' : null }));
-    await addToday(id, false, k);
+    await addByHand(id, false, k);
   };
   // The whole task sheet for a new step; nothing is written until Save there.
   const details = (e: Event) => {
@@ -155,7 +189,7 @@ function QuickAdd({ k }: { k: string }) {
     const prefill: Partial<Task> = { title: (f.elements.namedItem('title') as HTMLInputElement).value.trim(), suit: (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'] };
     if (est) { prefill.est = est; prefill.estBy = 'me'; }
     f.reset();
-    openNewTask(prefill, id => void addToday(id, false, k));
+    openNewTask(prefill, id => void addByHand(id, false, k));
   };
   return (
     <form class="quick" onSubmit={submit}>
@@ -203,12 +237,11 @@ function StayNotice() {
 /** Another day's plan: its list, first step and launch points, editable. Past days show their cards. */
 function OtherDay({ k }: { k: string }) {
   const past = k < today.value;
-  const plan = planOf(k);
+  const plan = shownPlan(k);
   const d = dayDoc(k);
   const cards = cardsOn(k);
   const open = plan.filter(id => isOpen(T(id)));
   const optional = new Set(d?.optional ?? []);
-  let n = 0;
   return (
     <div data-testid="other-day">
       {past && (
@@ -232,7 +265,7 @@ function OtherDay({ k }: { k: string }) {
       <Fixed k={k} />
       <Launches k={k} />
       <h2 class="sec">{t('dayList')}</h2>
-      {plan.length ? <ol class="tableau">{plan.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol> : <p class="hint">{t('emptyDay')}</p>}
+      {plan.length ? <PlanLists ids={plan} k={k} optional={optional} from={0} /> : <p class="hint">{t('emptyDay')}</p>}
       {!past && (
         <>
           <div class="adders">
@@ -251,7 +284,10 @@ export function Today() {
   const k = dayView.value && dayView.value !== td ? dayView.value : td;
   if (k !== td) return <div><Navigator k={k} /><OtherDay k={k} /></div>;
   const d = dayDoc(k);
-  const plan = planOf(k);
+  const every = shownPlan(k);
+  // Narrowed to an area (a chip): that area's steps and Anywhere's.
+  const af = areaFilter('today');
+  const plan = af ? every.filter(id => inArea(whereOf(T(id)!), af)) : every;
   const open = plan.filter(id => isOpen(T(id)));
   const fid = open[0];
   const yOpen = yesterdayOpen(k);
@@ -265,19 +301,19 @@ export function Today() {
   const s = !plan.length ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
   const reviewDay = isoDow(k) === settings.value.reviewDay && !d?.review;
-  let n = fid ? 1 : 0;
-
   return (
     <div>
       <Navigator k={k} />
+      <AreaChips view="today" />
       <StayNotice />
       <SyncCards />
       {checks.map(dc => (
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
       {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
-      {fid ? <FirstCard tk={T(fid)!} /> : !plan.length ? (
+      {fid ? <FirstCard tk={T(fid)!} /> : !every.length ? (
         <section class="first" data-testid="first">
+          <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
           <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>
@@ -287,8 +323,10 @@ export function Today() {
             <div class="go"><button class="btn" type="button" onClick={() => addToday(s.id)}>{t('putFirst')}</button><button class="btn" type="button" onClick={() => openPick('list')}>{t('chooseFromList')}</button></div>
           </>}
         </section>
+      ) : af && !plan.length ? (
+        <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : (
-        <section class="first"><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
+        <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
       {yOpen.length > 0 && (
         <div class="carry"><p>{t('carryText', { n: yOpen.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: yOpen.length })}</button></div>
@@ -302,7 +340,7 @@ export function Today() {
               {more ? t('more', { n: more }) : t('allPlayed')}
               {est > 0 && ' · ' + (lo !== hi ? t('estimatedRange', { t: fmtMin(est), lo: fmtMin(lo), hi: fmtMin(hi) }) : t('estimatedToday', { t: fmtMin(est) }))}
             </span></h2>
-            <ol class="tableau">{rest.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol>
+            <PlanLists ids={rest} k={k} optional={optional} from={fid ? 1 : 0} testid="plan-list" />
           </>
         )}
         <div class="adders">

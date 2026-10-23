@@ -125,6 +125,17 @@ Same order as schema 3: the **app first, the relay a few minutes later**, never 
 - Until the relay is updated, its connector (schema 3) reads the app's schema-4 batches as newer and refuses to read or write, and says so. Nothing is lost; the connector is the only thing that waits.
 - The other way round, the new relay's connector writes and its compactions are schema 4 at once, and every device still on schema 3 goes read-only until the new app is deployed, with a Reload that can only load the old app.
 
+## Rolling out schema 5
+
+Same order as schemas 3 and 4: the **app first, the relay a few minutes later**, never the other way round (DECISIONS.md, phase 4b). **The relay must be redeployed for schema 5**: it reads `SCHEMA_VERSION` from the app's source (`relay/src/connector/space.ts`), and its change-set validation (`label` on a step, `parent` on a place) is the app's `ChangeSchema` bundled into it.
+
+- What schema 5 adds is optional and stored only when set: `tasks.label`, `places.parentId`, `days.areas`. No collection, no index and no Dexie version are new.
+- The migration changes one thing in stored data: `urgent` and `important` are cleared on standing obligations (`template`). Every device does it by itself, as for schema 2's decisions, so the cleared field takes the clock *right after* its old one (`after` in `src/data/hlc.ts`, same node, counter + 1): the same on every device, newer than the value it replaces, so a copy that has not migrated yet loses to it, and older than any real edit. Documents arriving from a device on an older schema go through `upgradeEntries`, which keeps the migration's clock; a partial one that does not carry `template` is left as it is (the flags are ignored by the matrix and the planner anyway).
+- Until the relay is updated, its connector (schema 4) reads the app's schema-5 batches as newer, and every tool says to update the relay and writes nothing. Nothing is lost; the connector is the only thing that waits.
+- The other way round, the new relay's connector writes (and compacts) schema 5 at once, and every device still on schema 4 goes read-only until the new app is deployed, with a Reload that can only load the old app.
+- A device on schema 4 that pulls schema-5 data applies nothing and goes read-only (`newer`; `src/sync/engine.ts`, tested in `engine.test.ts`, `syncstore.test.ts`, `sync.test.ts` and, for the connector, `connector.undo.test.ts`: all use `SCHEMA_VERSION + 1`, so they follow the bump). The backups and the v1 importer migrate through the same list and merge as before.
+- Areas are read forgivingly (`src/domain/places.ts`): a parent that is gone, a loop or a chain of more than one level makes the place its own top. Writes are checked (`parentProblem`), which is why two devices that each make a valid change cannot leave a place unreadable.
+
 ## Older apps and older blobs
 
 - Blobs of wire generation 1 (format bytes 1 and 2, whole documents, a whole snapshot) are read by every version.

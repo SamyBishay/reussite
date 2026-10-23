@@ -91,7 +91,7 @@ function Stuck({ id: given }: { id?: string }) {
           <p><b>{t('stalledAgain')}</b></p>
           <p class="hint">{t('stalledAgainHint')}</p>
           {ask ? (
-            <div class="row-inline" style="margin-top:10px">
+            <div class="row-inline" style="margin-top:var(--s3)">
               <input type="text" value={who} onInput={e => setWho((e.target as HTMLInputElement).value)} placeholder={t('askWhoPh')} aria-label={t('askWhoPh')} />
               <button class="btn small" type="button" onClick={() => void toQuestion()}>{t('add')}</button>
             </div>

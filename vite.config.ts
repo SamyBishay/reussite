@@ -37,8 +37,8 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           // A link from an AI chat (/drop#…) opens in the window that is already open, not a second one.
           launch_handler: { client_mode: 'focus-existing' },
-          background_color: '#F2F1F6',
-          theme_color: '#6B4BA6',
+          background_color: '#EBEBE6',
+          theme_color: '#2D6A67',
           icons: [
             { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
             { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },

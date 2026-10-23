@@ -134,4 +134,46 @@ describe('the planner', () => {
       expect(roles(plan(input({ candidates: cands })))).toEqual(['n0:now', 'n1:now', 'p0:protect']);
     });
   });
+
+  describe('half days in an area', () => {
+    const h = (id: string, quad: PStep['quad'], area: string | null = 'heli') => s(id, quad, { area });
+
+    it('draws on the afternoon area’s cards first and puts them together, last', () => {
+      const cands = [s('n1', 1), h('hn', 1), s('n2', 1), h('hq', 3), h('hp', 2), s('q1', 3)];
+      const p = plan(input({ maxWorkSteps: 4, candidates: cands, halves: { pm: 'heli' } }));
+      // Heliopolis first within each pass (Now, Protect, Quick), then moved together to the end; the limit still holds.
+      expect(roles(p)).toEqual(['n1:now', 'n2:now', 'hn:now', 'hp:protect']);
+      expect(p.items.filter(i => i.half === 'pm').map(i => i.id)).toEqual(['hn', 'hp']);
+    });
+
+    it('puts the morning area’s cards first and gives the afternoon its own launch point', () => {
+      const p = plan(input({ maxWorkSteps: 4, defaultRestarts: ['15:00'], shape: { start: '09:00', preset: 'normal', fixed: [{ at: '10:00', dur: 30 }] }, candidates: [s('n1', 1), h('hn', 1, 'maadi'), h('hp', 2, 'heli'), s('q1', 3)], halves: { am: 'maadi', pm: 'heli' } }));
+      expect(p.items.map(i => i.id + ':' + (i.half ?? '-'))).toEqual(['hn:am', 'n1:-', 'q1:-', 'hp:pm']);
+      expect(p.launches.some(l => l.t >= '13:00')).toBe(true);
+      // Fixed-time items stay first whatever the halves are.
+      const f = plan(input({ timed: [{ id: 'dent', at: '10:00', lead: 0 }], candidates: [s('n1', 1), h('hn', 1)], halves: { pm: 'heli' } }));
+      expect(f.items.map(i => i.id)).toEqual(['dent', 'n1', 'hn']);
+    });
+
+    it('adds an afternoon launch point only when there is none', () => {
+      const none = plan(input({ defaultRestarts: ['11:30'], candidates: [h('hn', 1)], halves: { pm: 'heli' } }));
+      expect(none.launches).toEqual([{ t: '09:30', k: 'start' }, { t: '11:30', k: 'restart' }, { t: '14:00', k: 'restart' }]);
+      const has = plan(input({ defaultRestarts: ['15:00'], candidates: [h('hn', 1)], halves: { pm: 'heli' } }));
+      expect(has.launches).toEqual([{ t: '09:30', k: 'start' }, { t: '15:00', k: 'restart' }]);
+      // No area card, no extra launch point.
+      expect(plan(input({ defaultRestarts: ['11:30'], candidates: [s('n1', 1)], halves: { pm: 'heli' } })).launches).toHaveLength(2);
+    });
+
+    it('ignores the morning on a day that starts in the afternoon, and changes nothing without halves', () => {
+      const c = [s('n1', 1), h('hn', 1, 'maadi')];
+      expect(plan(input({ shape: { start: '14:00', preset: 'afternoon', fixed: [] }, maxWorkSteps: 3, candidates: c, halves: { am: 'maadi' } })).items.some(i => i.half)).toBe(false);
+      expect(roles(plan(input({ candidates: c })))).toEqual(['n1:now', 'hn:now']);
+    });
+
+    it('groups carried steps of the area too, and keeps the limit and the Protect rule', () => {
+      const p = plan(input({ maxWorkSteps: 3, carried: [s('c1', 1), h('ch', 3)], candidates: [h('hp', 2), s('n1', 1)], halves: { pm: 'heli' } }));
+      expect(p.items.map(i => i.id)).toEqual(['c1', 'ch', 'hp']);
+      expect(p.items.filter(i => i.role === 'protect')).toHaveLength(1);
+    });
+  });
 });

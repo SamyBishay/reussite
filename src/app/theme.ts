@@ -44,20 +44,55 @@ export function readableOn(color: string, bg: string): string {
   return '#FFFFFF';
 }
 
-const LIGHT_GROUND = '#F2F1F6', LIGHT_CARD = '#FFFFFF', DARK_GROUND = '#14121C', DARK_CARD = '#211D2D';
+/** The grounds a preset is drawn on: St George (tokens.css) or the first palette's lilac ones. */
+export type Grounds = 'st-george' | 'lilac';
+const CARDS: Record<Grounds, { light: string; dark: string; darkGround: string }> = {
+  'st-george': { light: '#F7F7F3', dark: '#16161F', darkGround: '#0B0C10' },
+  'lilac': { light: '#FFFFFF', dark: '#211D2D', darkGround: '#14121C' },
+};
+/** The lilac grounds, as they were before St George, in both modes. */
+const LILAC_LIGHT = '--ground:#F2F1F6;--panel:#F8F7FB;--card:#FFFFFF;--card-2:#EEE8F8;--ink:#201C2B;--ink-2:#4E4860;--ink-3:#645D75;--line:#D6D1E3;--line-2:#E7E3EF;--lilac:#B8A2E6;--sea:#8ED8C8;--sea-deep:#1E7568;--sea-soft:#E0F4EF;--suit-a:#7A55B8;--suit-b:#1E7568;--pc:#FBF8F1;--pc-edge:#D2C8B8;--pc-text:#201C2B;--pc-ink:#1E7568;--pc-red:#7A55B8;--accent-deep:#1D1830;--ring-1:#8ED8C8;--ring-2:#B8A2E6;--ring-3:#E7E3EF';
+const LILAC_DARK = '--ground:#14121C;--panel:#1A1724;--card:#211D2D;--card-2:#2F2747;--ink:#ECE8F4;--ink-2:#B7B0C8;--ink-3:#9C95AE;--line:#383249;--line-2:#29243A;--lilac:#C6B3F0;--sea:#8EDCCB;--sea-deep:#8EDCCB;--sea-soft:#1A3432;--suit-a:#C6B3F0;--suit-b:#8EDCCB;--pc:#F4F0F8;--pc-edge:#C9C0DA;--pc-text:#201C2B;--pc-ink:#1E7568;--pc-red:#7A55B8;--accent-deep:#0F0D18;--ring-1:#8EDCCB;--ring-2:#C6B3F0;--ring-3:#383249';
 
 /** Text on an accent-filled button: whichever of white or near-black reads better. */
 export const inkOn = (bg: string) => (contrast(bg, '#FFFFFF') >= contrast(bg, '#1B1530') ? '#FFFFFF' : '#1B1530');
 
-export interface Presets { [id: string]: { name: string; accent: string; suitColors: Record<SuitId, string> } }
+export interface Preset {
+  name: string;
+  accent: string;
+  suitColors: Record<SuitId, string>;
+  /** Colours chosen for dark mode; without them, dark mode lightens the light ones until they read. */
+  dark?: { accent: string; accentSoft: string; suitColors: Record<SuitId, string> };
+  /** The light accent's soft tint, when chosen rather than mixed. */
+  accentSoft?: string;
+  /** Default St George. */
+  grounds?: Grounds;
+}
+export interface Presets { [id: string]: Preset }
 
-/** v1's palette is the default; the others are alternatives that pass AA on the light card. */
+/** St George is the default (brief §16); the others are alternatives that pass AA on the light card. */
 export const PRESETS: Presets = {
-  'lilac-sea': { name: 'Lilac & sea', accent: '#6B4BA6', suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' } },
+  'st-george': {
+    name: 'St George', accent: '#2D6A67', accentSoft: '#D5E5E2', suitColors: { S: '#2F4C8E', D: '#735C1F', C: '#2B6964', H: '#9C4560' },
+    dark: { accent: '#8DB0E6', accentSoft: '#1A2440', suitColors: { S: '#93B4EA', D: '#D4C08F', C: '#86C2BC', H: '#EC9DB8' } },
+  },
+  'lilac-sea': { name: 'Lilac & sea', accent: '#6B4BA6', suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' }, grounds: 'lilac' },
   'ink-coral': { name: 'Ink & coral', accent: '#2F4A8A', suitColors: { S: '#2F4A8A', D: '#B23A3A', C: '#2F4A8A', H: '#B23A3A' } },
   'forest-amber': { name: 'Forest & amber', accent: '#2E6B3F', suitColors: { S: '#2E6B3F', D: '#8A5A0B', C: '#2E6B3F', H: '#8A5A0B' } },
   'classic': { name: 'Classic cards', accent: '#3A3A44', suitColors: { S: '#1F1F27', D: '#B3261E', C: '#1F1F27', H: '#B3261E' } },
 };
+
+/** The grounds the person's colours sit on. A custom palette keeps St George's. */
+export const groundsOf = (s: Pick<Settings, 'preset'>): Grounds => PRESETS[s.preset]?.grounds ?? 'st-george';
+/** The light card the contrast check in Settings measures against. */
+export const lightCard = (s: Pick<Settings, 'preset'>): string => CARDS[groundsOf(s)].light;
+
+/** The preset, when the person's colours are still exactly its own (then its chosen dark colours apply). */
+function exactPreset(s: Pick<Settings, 'preset' | 'accent' | 'suitColors'>): Preset | null {
+  const p = PRESETS[s.preset];
+  if (!p || p.accent.toUpperCase() !== s.accent.toUpperCase()) return null;
+  return (Object.keys(p.suitColors) as SuitId[]).every(k => p.suitColors[k].toUpperCase() === s.suitColors[k]?.toUpperCase()) ? p : null;
+}
 
 export function resolveMode(mode: ThemeMode, s: Pick<Settings, 'lightAt' | 'darkAt'>, now = new Date()): 'light' | 'dark' | 'system' {
   if (mode !== 'time') return mode;
@@ -70,14 +105,17 @@ export function resolveMode(mode: ThemeMode, s: Pick<Settings, 'lightAt' | 'dark
 /** The CSS for the person's colours, in both modes. */
 export function themeCss(s: Settings): string {
   const suits = (Object.keys(s.suitColors) as SuitId[]);
+  const g = groundsOf(s), card = CARDS[g], p = exactPreset(s);
   const light = [
-    `--accent:${s.accent}`, `--accent-ink:${inkOn(s.accent)}`, `--accent-soft:${mix(s.accent, LIGHT_CARD, 0.88)}`,
+    ...(g === 'lilac' ? [LILAC_LIGHT] : []),
+    `--accent:${s.accent}`, `--accent-ink:${inkOn(s.accent)}`, `--accent-soft:${p?.accentSoft ?? mix(s.accent, card.light, 0.88)}`,
     ...suits.map(k => `--suit-${k}:${s.suitColors[k]}`),
   ].join(';');
-  const darkAccent = readableOn(s.accent, DARK_CARD);
+  const darkAccent = p?.dark?.accent ?? readableOn(s.accent, card.dark);
   const dark = [
-    `--accent:${darkAccent}`, `--accent-ink:${inkOn(darkAccent)}`, `--accent-soft:${mix(s.accent, DARK_GROUND, 0.7)}`,
-    ...suits.map(k => `--suit-${k}:${readableOn(s.suitColors[k], DARK_CARD)}`),
+    ...(g === 'lilac' ? [LILAC_DARK] : []),
+    `--accent:${darkAccent}`, `--accent-ink:${inkOn(darkAccent)}`, `--accent-soft:${p?.dark?.accentSoft ?? mix(s.accent, card.darkGround, 0.7)}`,
+    ...suits.map(k => `--suit-${k}:${p?.dark?.suitColors[k] ?? readableOn(s.suitColors[k], card.dark)}`),
   ].join(';');
   return `:root{${light}}` +
     `@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${dark}}}` +

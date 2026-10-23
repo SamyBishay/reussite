@@ -32,6 +32,8 @@ function BreakDown({ id }: { id: string }) {
   const ai = useAi();
   const [proposed, setProposed] = useState<Proposed[]>([]);
   const [note, setNote] = useState('');
+  // In this order: each step waits for the one before, so they are one card (a chain). In any order: separate steps.
+  const [ordered, setOrdered] = useState(true);
   if (!tk) return null;
   const propose = async () => {
     const { system, user, notes } = breakDownPrompt(id);
@@ -53,13 +55,20 @@ function BreakDown({ id }: { id: string }) {
     });
     let prev = id;
     for (const [i, n] of rest.entries()) {
-      prev = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
-        where: tk.where, starter: n.starter.trim() || null, app: n.app || null, est: Number(n.est) || null, estBy: estByOf(n.est, n.est0), after: prev, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + i, src: 'ai',
+      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
+        where: tk.where, starter: n.starter.trim() || null, app: n.app || null, est: Number(n.est) || null, estBy: estByOf(n.est, n.est0), after: ordered ? prev : null, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + i, src: 'ai',
       }));
+      if (ordered) prev = made;
     }
     closeSheet();
     toast(t('brokenDown', { n: kept.length }));
   };
+  const orderPick = (
+    <div class="seg" role="group" aria-label={t('bdOrderHint')} data-testid="bd-order">
+      <button type="button" aria-pressed={ordered} onClick={() => setOrdered(true)}>{t('bdInOrder')}</button>
+      <button type="button" aria-pressed={!ordered} onClick={() => setOrdered(false)}>{t('bdAnyOrder')}</button>
+    </div>
+  );
   const typed = Number(est) || null;
   const pe = typed ? personal({ ...tk, est: typed, app: app || tk.app }) : null;
 
@@ -73,9 +82,10 @@ function BreakDown({ id }: { id: string }) {
     });
     let prev = id;
     for (const n of chain) {
-      prev = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
-        where: tk.where, est: Number(n.est) || null, estBy: Number(n.est) ? 'me' : null, after: prev, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + chain.indexOf(n),
+      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
+        where: tk.where, est: Number(n.est) || null, estBy: Number(n.est) ? 'me' : null, after: ordered ? prev : null, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + chain.indexOf(n),
       }));
+      if (ordered) prev = made;
     }
     closeSheet();
     toast(t('brokenDown', { n: chain.length + 1 }));
@@ -121,6 +131,8 @@ function BreakDown({ id }: { id: string }) {
     <div data-testid="bd-next">
       <h3>{t('bdNext')}</h3>
       <p class="hint">{t('bdNextHint')}</p>
+      {orderPick}
+      <p class="hint">{t('bdOrderHint')}</p>
       <ol class="mini">
         <li><span><b>{title}</b>{typed ? ' · ' + fmtMin(typed) : ''}</span></li>
         {next.map((n, i) => <li><span>{n.title}{Number(n.est) ? ' · ' + fmtMin(Number(n.est)) : ''}</span><button type="button" class="chip-x" onClick={() => setNext(next.filter((_, j) => j !== i))} aria-label={t('remove', { what: n.title })}>×</button></li>)}
@@ -138,6 +150,7 @@ function BreakDown({ id }: { id: string }) {
     <div data-testid="bd-ai">
       <h3>{t('aiBdTitle')}</h3>
       <p class="hint">{t('aiBdHint')}</p>
+      {orderPick}
       {note && <p class="ai-note">{note}</p>}
       <ol class="picklist ai-steps">{proposed.map((x, i) => (
         <li data-testid="ai-step">

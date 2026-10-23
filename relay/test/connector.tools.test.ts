@@ -37,7 +37,7 @@ beforeAll(async () => {
   d.add('tasks', 't5', task('Old thing', { status: 'done', doneDay: day(-3), est0: 10, est: 10 }));
   d.add('tasks', 't6', task('Choir rehearsal', { at: '19:00', dur: 90, due: TODAY }));
   d.add('sessions', 's1', { taskId: 't5', d: day(-3), m: 14, why: 'done', at: '2026-10-16T10:00:00.000Z', source: 'timer' });
-  d.add('days', TODAY, { date: TODAY, plan: ['t1', 't3'], launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }], first: null, checkin: null, closed: null, summary: null });
+  d.add('days', TODAY, { date: TODAY, plan: ['t1', 't3'], launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }], areas: [{ half: 'pm', placeId: 'pl1' }], first: null, checkin: null, closed: null, summary: null });
   d.add('days', day(-1), { date: day(-1), plan: ['t2', 't4'], launches: [], first: null, checkin: null, closed: null, summary: null });
   const line = (id: string, text: string) => ({ id, text, at: '2026-10-01T00:00:00.000Z', by: 'me' });
   d.add('memory', 'm0', { kind: 'profile', name: 'Me', aliases: [], lines: [line('l1', 'Works best in the morning')], private: false, updated: '2026-10-02T00:00:00.000Z' });
@@ -46,9 +46,29 @@ beforeAll(async () => {
   d.add('memory', 'm3', { kind: 'person', name: 'Zelda Secret', aliases: ['Zed'], lines: [line('l1', 'Hidden fact about tea')], private: true, updated: '2026-10-05T00:00:00.000Z' });
   d.add('tasks', 't7', task('Send Ibrahim the rehearsal dates', { project: 'p2' }));
   d.add('tasks', 't8', task('Ibrahim birthday gift', { status: 'done', doneDay: day(-2), est0: 10 }));
+  d.add('projects', 'p3', { name: 'Paperwork', suit: 'D', where: 'any', goal: null, goalBy: null, due: null, order: 3, status: 'active' });
+  d.add('tasks', 't20', task('Gather the papers', { project: 'p3', order: 1 }));
+  d.add('tasks', 't21', task('Fill in the form', { project: 'p3', order: 2, after: ['t20'], due: day(3) }));
+  d.add('tasks', 't22', task('Post the file', { project: 'p3', order: 3, after: ['t21'] }));
   d.add('decisions', 'd1', { title: 'Stay or move?', problem: { what: 'Rent went up' }, options: [{ id: 'o1', name: 'Stay', pros: [{ id: 'i1', text: 'cheap', w: 4 }], cons: [], prosNot: [], consNot: [] }], status: 'draft', chosen: null, taskIds: ['t2'] });
   await app.sync();
   access = (await signIn((await switchOn(app)).body.code)).access;
+});
+
+describe('chains', () => {
+  it('query_tasks shows the head with +n after and leaves the waiting steps under it', async () => {
+    const r = await tool(access, 'query_tasks', { project: 'Paperwork' });
+    expect(r.text).toContain('t20 | Gather the papers (+2 after, chain due ' + day(3) + ')');
+    expect(r.text).not.toContain('Fill in the form');
+    expect(r.text).toContain('2 more wait');
+    expect((await tool(access, 'query_tasks', { text: 'form' })).text).toContain('t21 | Fill in the form (waiting)');
+  });
+  it('get_task on the head lists the chain; get_project lists every step', async () => {
+    const r = await tool(access, 'get_task', { id: 't20' });
+    expect(r.text).toContain('> t20 Gather the papers');
+    expect(r.text).toContain('t22 Post the file');
+    expect((await tool(access, 'get_project', { id: 'p3' })).text).toContain('Post the file');
+  });
 });
 
 describe('reading', () => {
@@ -60,6 +80,7 @@ describe('reading', () => {
     expect(r.text.indexOf('1. t1')).toBeLessThan(r.text.indexOf('2. t3'));
     expect(r.text).toMatch(/estimated 20m/);
     expect(r.text).toContain('Launch points: 09:30 start, 14:00 restart');
+    expect(r.text).toContain('Half days: afternoon in Paris');
     expect(r.text).toContain('Fixed times:\n19:00 (1h30) t6 | Choir rehearsal');
     expect(r.text).toContain("Carried from yesterday, not on today's list yet (2)");
   });
@@ -222,6 +243,47 @@ describe('a quick edit', () => {
     expect(app.device.get('tasks', 't2')).toMatchObject({ note: 'from the app', due: day(4) });
     const after = await tool(access, 'get_task', { id: 't2' });
     expect(after.text).toContain('note: from the app');
+  });
+});
+
+describe('schema 5: labels and areas', () => {
+  it('a label is accepted on a step, written, pulled by the app and shown by get_task', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Send the CAF claim letter', label: 'CAF claim letter', project: 'p1' } }] });
+    expect(r.isError).toBe(false);
+    await app.sync();
+    const made = [...(app.device.docs.get('tasks')?.values() ?? [])].find(t => t.title === 'Send the CAF claim letter')!;
+    expect(made).toMatchObject({ label: 'CAF claim letter', _v: SCHEMA_VERSION });
+    // A label on an existing step is not one of the low-risk changes: it waits for a yes.
+    const upd = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: 't4', set: { label: 'Hélène letter' } }] });
+    expect(upd.text).toContain('Change step "Écrire à Hélène" (label - → Hélène letter)');
+    await tool(access, 'apply_changes', { confirm: /"confirm": "(c\w+)"/.exec(upd.text)![1]! });
+    await app.sync();
+    expect(app.device.get('tasks', 't4')).toMatchObject({ label: 'Hélène letter' });
+    expect((await tool(access, 'get_task', { id: 't4' })).text).toContain('label: Hélène letter');
+  });
+
+  it('an area is a place with a parent: made after a yes, and its zone is its parent\'s', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'place.create', ref: 'ca', set: { name: 'Cairo', timeZone: 'Africa/Cairo' } }, { op: 'place.create', set: { name: 'Heliopolis', parent: 'ca' } }] });
+    expect(r.text).toContain("needs the person's yes");
+    const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
+    expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(false);
+    await app.sync();
+    const places = [...(app.device.docs.get('places')?.values() ?? [])];
+    const cairo = places.find(p => p.name === 'Cairo')!, heli = places.find(p => p.name === 'Heliopolis')!;
+    expect(cairo).not.toHaveProperty('parentId');
+    expect(heli).toMatchObject({ parentId: cairo.id });
+    // A fifth-level nesting is refused: an area holds no areas.
+    const deep = await tool(access, 'apply_changes', { changes: [{ op: 'place.create', set: { name: 'Deep', parent: heli.id } }] });
+    expect(deep.text).not.toMatch(/"confirm"/);
+  });
+
+  it('a place filter on query_tasks finds the steps of its areas', async () => {
+    app.device.add('places', 'ca', { name: 'Cairo', timeZone: 'Africa/Cairo', order: 1 });
+    app.device.add('places', 'he', { name: 'Heliopolis', timeZone: 'Africa/Cairo', order: 2, parentId: 'ca' });
+    app.device.edit('tasks', 't4', { where: 'he' });
+    await app.sync();
+    const q = await tool(access, 'query_tasks', { place: 'ca' });
+    expect(q.text).toContain('Écrire à Hélène');
   });
 });
 

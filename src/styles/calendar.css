@@ -1,0 +1,59 @@
+/* The Calendar tab's grid (Schedule-X). The library's own header is hidden (the tab has its bar); its colours are the app's
+   tokens, so light and dark follow the theme with no script; events are a suit-coloured bar, the short name and, when there
+   is room, where. */
+.sxhost{
+  isolation:isolate;position:relative;z-index:0;
+  margin-top:var(--s3);min-width:0;max-width:100%;height:clamp(460px,calc(100dvh - 360px),820px);
+  --sx-color-primary:var(--accent);--sx-color-on-primary:var(--accent-ink);
+  --sx-color-primary-container:var(--accent-soft);--sx-color-on-primary-container:var(--ink);
+  --sx-color-secondary:var(--ink-2);--sx-color-secondary-container:var(--accent-soft);--sx-color-on-secondary-container:var(--ink);
+  --sx-color-tertiary:var(--ink-2);--sx-color-tertiary-container:var(--accent-soft);--sx-color-on-tertiary-container:var(--ink);
+  --sx-color-surface:var(--card);--sx-color-surface-dim:var(--line-2);--sx-color-surface-bright:var(--card);
+  --sx-color-surface-container:var(--card);--sx-color-surface-container-low:var(--card);--sx-color-surface-container-high:var(--accent-soft);
+  --sx-color-background:var(--card);--sx-color-on-background:var(--ink);--sx-color-on-surface:var(--ink);
+  --sx-color-outline:var(--line);--sx-color-outline-variant:var(--line-2);--sx-color-surface-tint:var(--accent);
+  --sx-internal-color-text:var(--ink);--sx-internal-color-light-gray:var(--card);--sx-internal-color-gray-ripple-background:var(--line-2);
+  --sx-color-neutral:var(--ink-3);--sx-color-neutral-variant:var(--line);
+}
+.sxhost .sx__calendar-wrapper{height:100%;max-height:100%;border:1px solid var(--line-2);border-radius:12px;background:var(--card);color:var(--ink);font-family:var(--sans);font-size:14px;overflow:hidden}
+.sxhost .sx__calendar-header{display:none}
+.sxhost .sx__calendar{border:0;border-radius:0}
+.sxhost .sx__ripple{display:none}
+
+/* The hour grid: the time axis is quiet, and "now" is a line in the accent colour. */
+.sxhost .sx__week-grid__hour-text{font:600 11px var(--mono);color:var(--ink-3)}
+.sxhost .sx__week-grid__day-name{font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.04em}
+.sxhost .sx__week-grid__date{min-height:44px;cursor:pointer}
+.sxhost .sx__week-grid__date-number{font-family:var(--mono)}
+.sxhost .sx__week-grid__date--is-today .sx__week-grid__date-number{background:var(--accent);color:var(--accent-ink)}
+.sxhost .sx__week-grid__date--is-today .sx__week-grid__day-name{color:var(--accent)}
+.sxhost .sx__current-time-indicator{border-top-color:var(--accent)}
+.sxhost .sx__current-time-indicator::before{background:var(--accent)}
+.sxhost .sx__date-grid{border-bottom:1px solid var(--line)}
+
+/* Events: card background, a bar on the left in the suit's colour, the short name, and where, muted. */
+.sxhost .sx__event{border-radius:6px;font-weight:600;color:var(--ink);cursor:pointer}
+.sxhost .sx__date-grid-event,.sxhost .sx__month-grid-event{min-height:26px;display:flex;align-items:center}
+@media (pointer:coarse){.sxhost .sx__date-grid-event,.sxhost .sx__month-grid-event,.sxhost .sx__list-event{min-height:44px}}
+.sxhost .sx__time-grid-event .sx__time-grid-event-time{display:none}
+.sxhost .sx__time-grid-event .sx__time-grid-event-location,.sxhost .sx__time-grid-event-location{font-weight:400;color:var(--ink-3);font-size:12px}
+.sxhost .sx__event.is-done{opacity:.7}
+.sxhost .sx__event.is-done .sx__date-grid-event-text,.sxhost .sx__event.is-done .sx__month-grid-event-title,.sxhost .sx__event.is-done .sx__list-event-title{text-decoration:line-through;color:var(--ink-3)}
+.sxhost .sx__event.k-repeat{opacity:.55;font-weight:400}
+.sxhost .sx__event.k-half{font-weight:600;font-size:11.5px}
+.sxhost .sx__event.k-stay{background:var(--sea-soft);color:var(--sea-deep);font-weight:600}
+.sxhost .sx__event.k-check,.sxhost .sx__event.k-project,.sxhost .sx__event.k-review{font-weight:600}
+.sxhost .sx__event.k-check{background:var(--accent-soft)}
+
+/* Month */
+.sxhost .sx__month-grid-day__header-date{font-family:var(--mono);cursor:pointer;min-width:28px;min-height:28px}
+.sxhost .sx__month-grid-day{cursor:pointer}
+.sxhost .sx__is-today .sx__month-grid-day__header-date{background:var(--accent);color:var(--accent-ink)}
+
+/* Agenda: all-day events have no clock times to show. */
+.sxhost .sx__list-day-header{background:var(--accent-soft);color:var(--ink-2)}
+.sxhost .sx__list-event:not(.k-fixed) .sx__list-event-times,.sxhost .sx__event:not(.k-fixed) .sx__list-event-times{display:none}
+.sxhost .sx__list-event-title{font-weight:600}
+
+/* No sliding between periods: the bar's arrows jump, and a slide would pass the page's edge. */
+.sxhost .sx__view-container,.sxhost .sx__slide-left,.sxhost .sx__slide-right,.sxhost .sx__week-grid *{animation:none!important}

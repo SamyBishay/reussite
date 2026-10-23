@@ -10,7 +10,7 @@ for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await importSample(page);
-    const row = page.locator('.row', { hasText: 'Dentist 14:30' });
+    const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' }); // by hand with nothing running: the first card
 
     await quickTitle(page).fill('Dentist 14:30');
     await page.getByTestId('quick-details').click();
@@ -34,7 +34,7 @@ for (const width of [320, 375, 430]) {
     await expect(row).toHaveCount(1);
 
     // Saved with its time, and on today's list.
-    await row.getByTestId('details').click();
+    await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
     await sheet(page).locator('details.more summary').click();
     await expect(sheet(page).locator('input[name=at]')).toHaveValue('14:30');
     await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
@@ -61,7 +61,7 @@ test('the estimate and suit typed in the quick form carry into the draft', async
   await expect(sheet(page).locator('input[name=est]')).toHaveValue('25');
   await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.locator('.row', { hasText: 'Sort the drawer' })).toHaveCount(1);
+  await expect(page.getByTestId('first')).toContainText('Sort the drawer'); // by hand, with nothing running: the top of what is left
 });
 
 test('an existing step offers a time written in its title or note', async ({ page }) => {
@@ -295,15 +295,29 @@ test('History is empty at first, and says what it will hold', async ({ page }) =
   await expect(page.getByTestId('history-empty')).toBeVisible();
 });
 
-test('the card holds one nudge: yesterday’s carry-over, with its button', async ({ page }) => {
+test('what is waiting is behind the bell: Home has a dot, the page lists it with its button', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'home');
-  const card = page.getByTestId('home-card');
-  await expect(card).toHaveCount(1);
-  await expect(card).toContainText('from yesterday');
-  await expect(page.locator('[data-testid=home] > *')).toHaveCount(3); // greeting, card, input
-  await card.getByRole('button').click();
   await expect(page.getByTestId('home-card')).toHaveCount(0);
+  await expect(page.locator('[data-testid=home] > *')).toHaveCount(2); // greeting, input
+  await expect(page.getByTestId('bell-dot')).toBeVisible();
+  await page.getByTestId('home-bell').click();
+  await expect(page).toHaveURL(/#notifications$/);
+  await expect(page.locator('.mast')).toHaveCount(0);
+  const n = page.getByTestId('carry-nudge');
+  await expect(n).toContainText('from yesterday');
+  await n.getByRole('button').click();
+  await expect(page.getByTestId('carry-nudge')).toHaveCount(0);
+  await expect(page.getByTestId('notifications-empty')).toBeVisible();
+  await goTab(page, 'home');
+  await expect(page.getByTestId('bell-dot')).toHaveCount(0);
+});
+
+test('Settings is a plain page titled Settings', async ({ page }) => {
+  await page.goto('/');
+  await goTab(page, 'settings');
+  await expect(page.getByRole('heading', { name: 'Settings', level: 2 }).first()).toBeVisible();
+  await expect(page.locator('.mast, .side, .foot')).toHaveCount(0);
 });
 
 for (const width of [320, 375, 430]) {

@@ -1,5 +1,6 @@
 // History: what was typed on Home (or came by a link) in the last 90 days, newest first, one line each,
 // with Undo where there is something left to undo.
+import { Rings } from '../app/Rings';
 import { exchanges, clockNow, type WithId } from '../app/store';
 import type { Exchange as Ex } from '../data/schema';
 
@@ -39,7 +40,7 @@ export function History() {
             </li>
           ))}
         </ul>
-      ) : <p class="hint" data-testid="history-empty">{t('historyEmpty')}</p>}
+      ) : <div class="emptystate"><Rings /><p class="hint" data-testid="history-empty">{t('historyEmpty')}</p></div>}
     </div>
   );
 }

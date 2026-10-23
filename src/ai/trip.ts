@@ -1,6 +1,7 @@
 // "Plan this trip" (brief §5, Addresses and people): a context pack for an AI with web search, built from a stay.
 // The pack is the one place addresses go to an AI, and people go only when the person ticked them for this request.
 // Nothing here calls an AI: the pack is copied or shared, and the reply comes back through "Paste the reply".
+import { onPage } from '../domain/places';
 import { tasks, projects, places, stays, days, decisions, addresses, people, settings, memory } from '../app/store';
 import { isOpen, whereOf, byPriority, categories, planOf, T } from '../app/model';
 import { header, projectLines, calibrationLine, stepLines, methodSummary, changesetContract, answerIn, dropInstruction, MAX_STEPS } from './context';
@@ -39,7 +40,7 @@ export function tripPack(stayId: string, question: string, o: TripOptions = {}):
   const l = o.l ?? lang.value;
   const dayList = tripDays(st.from, st.to);
   const cats = categories();
-  const mine = [...addresses.value.values()].filter(a => a.placeId === st.placeId).sort((a, b) => a.name.localeCompare(b.name));
+  const mine = [...addresses.value.values()].filter(a => a.placeId !== 'any' && onPage(places.value, a.placeId, st.placeId)).sort((a, b) => a.name.localeCompare(b.name));
   const onDay = new Set(dayList);
   // What is already on each day's list, so the AI adds to it rather than starting over.
   const onLists = dayList.map(k => ({ k, steps: planOf(k).map(id => T(id)).filter(x => isOpen(x) && !x.at) }));
@@ -47,9 +48,9 @@ export function tripPack(stayId: string, question: string, o: TripOptions = {}):
   const stepList = tripSteps(stayId, st);
   const steps = [...stepList, ...onLists.flatMap(d => d.steps).filter(x => !stepList.includes(x!))].slice(0, MAX_STEPS) as typeof stepList;
   const fixed = agenda({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, settings.value, st.from, dayList[dayList.length - 1]!)
-    .filter(e => e.kind === 'fixed' && onDay.has(e.day) && e.place === st.placeId)
+    .filter(e => e.kind === 'fixed' && onDay.has(e.day) && e.place !== 'any' && onPage(places.value, e.place, st.placeId))
     .map(e => [e.day, e.time, e.dur ?? '-', one(e.title ?? '')].join(' | '));
-  const people_ = o.people ? [...people.value.values()].filter(p => p.placeId === st.placeId || p.placeId === 'any').sort((a, b) => a.name.localeCompare(b.name)) : undefined;
+  const people_ = o.people ? [...people.value.values()].filter(p => onPage(places.value, p.placeId, st.placeId)).sort((a, b) => a.name.localeCompare(b.name)) : undefined;
   const data = tripData({
     place: { id: place.id, name: place.name }, from: st.from, to: st.to, note: st.note, categories: cats, addresses: mine,
     steps: steps.length ? stepLines(steps, MAX_STEPS).split('\n') : [], fixed, planned, people: people_,

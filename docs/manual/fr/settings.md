@@ -1,6 +1,6 @@
 # Les réglages
 
-Ouvrez **Réglages** depuis le menu de l’accueil. Tout ce que vous choisissez ici est un réglage qui reste : une mise à jour ne le réinitialise jamais.
+Ouvrez **Réglages** depuis le menu de l’accueil. C’est une page simple, avec son propre titre. Tout ce que vous choisissez ici est un réglage qui reste : une mise à jour ne le réinitialise jamais.
 
 ![Les réglages](shot:settings)
 
@@ -11,7 +11,7 @@ English ou Français. Le changement est immédiat.
 ## Apparence
 
 - **Thème :** Système, Clair, Sombre, ou Selon l’heure (vous réglez quand le clair commence et quand le sombre commence).
-- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
+- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **Saint Georges**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
 - **Taille du texte :** Petit, Moyen ou Grand.
 - **Réduire les animations**.
 - **Célébrations :** Désactivées, Calmes ou Vives. **Son** et **Volume**.
@@ -28,7 +28,7 @@ Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raison
 - **Temps de planification (min).** 15 par défaut.
 - **Départ par défaut** et **Reprises par défaut :** vos points de départ habituels.
 - **Familles :** renommez les quatre sortes de cartes et choisissez leurs symboles.
-- **Lieux** et **Séjours.** Voir [Lieux et voyages](places-and-trips.md).
+- **Lieux**, leurs **zones** et **Séjours.** Voir [Lieux et voyages](places-and-trips.md).
 - **Utiliser Adresses et proches**, et les **catégories d’adresses.** Voir [Adresses et proches](addresses-and-people.md).
 - Les heures d’une **obligation**, le **jour et l’heure de la revue de la semaine**, le **point du matin** et la **clôture de la journée.** Les notifications s’en servent.
 
@@ -46,7 +46,7 @@ Des rappels qui arrivent sur votre téléphone à la minute voulue, même quand 
 
 Activez **Me notifier sur cet appareil**, puis choisissez ce qui doit vous notifier :
 
-- **Départ et reprise :** vos points de départ.
+- **Départ et reprise :** vos points de départ (notifications seulement : le calendrier ne les contient pas).
 - **Heure de partir :** avant un élément à heure fixe, avec le préavis en minutes que vous choisissez.
 - **Point du matin** et **Clôturer la journée.**
 - **Revue de la semaine.**
@@ -59,7 +59,7 @@ Les rappels sont renouvelés chaque fois que vous ouvrez l’appli. Si vous ne l
 
 ## Calendrier
 
-Abonnez-vous à vos points de départ et à vos éléments à heure fixe depuis une appli de calendrier. Voir [Le calendrier](calendar.md).
+Abonnez-vous à vos éléments à heure fixe et à vos étapes prévues ou à échéance depuis une appli de calendrier. Choisissez **Ce que dit le flux** : les heures seulement, les noms courts, ou les noms courts, les lieux et les notes. Voir [Le calendrier](calendar.md).
 
 ## Données
 
@@ -73,6 +73,6 @@ Si la synchronisation est désactivée, Réussite vous rappelle toutes les deux 
 
 ## À propos
 
-La version, **Lire le manuel**, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
+La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect Saint Georges, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
 
 **Copier le diagnostic** produit un court rapport (versions, appareil, erreurs) que vous pouvez envoyer à un ami quand quelque chose se casse. Il n’inclut jamais vos étapes, notes, noms, lieux ou clés.

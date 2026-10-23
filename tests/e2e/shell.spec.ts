@@ -46,6 +46,26 @@ for (const width of [320, 375, 430]) {
   });
 }
 
+// Brief §16: above 1024 px the content is a centred column of about 720 px, the suit piles beside it.
+for (const [width, height] of [[1440, 900], [1280, 800]] as const) {
+  test(`at ${width}×${height} the main column is centred and narrow, and nothing scrolls sideways`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await importSample(page);
+    for (const v of ['home', 'today', 'settings'] as const) {
+      await goTab(page, v);
+      await noSideways(page, v + ' at ' + width);
+      const m = await page.locator('main').boundingBox();
+      expect(m!.width, v + ': the column is narrow').toBeLessThanOrEqual(760);
+      expect(m!.width, v + ': and not squeezed').toBeGreaterThanOrEqual(600);
+      expect(Math.abs(m!.x + m!.width / 2 - width / 2), v + ': the column is centred').toBeLessThanOrEqual(2);
+    }
+    // The piles are a column of their own beside the list, not a strip above it.
+    await goTab(page, 'today');
+    const side = await page.locator('.side').boundingBox(), main = await page.locator('main').boundingBox();
+    expect(side!.x).toBeGreaterThanOrEqual(main!.x + main!.width + 24);
+  });
+}
+
 test('a sheet covers the tab bar', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('details').first().click();
@@ -99,7 +119,7 @@ test('#settings opens Settings, and Home’s menu reaches Settings, Places, Memo
   await expect(page.locator('main h2')).toHaveText('History');
   await openMenu(page, 'settings');
   await expect(page.getByTestId('open-import')).toBeVisible();
-  await expect(page.locator('.foot')).toBeVisible();
+  await expect(page.locator('.mast, .side, .foot')).toHaveCount(0); // Settings is a plain page now
 });
 
 test('the old #log and a stored log view open the Calendar’s Log', async ({ page }) => {
@@ -113,25 +133,27 @@ test('the old #log and a stored log view open the Calendar’s Log', async ({ pa
   await expect(current(page)).toHaveAttribute('data-testid', 'tab-calendar');
 });
 
-test('the Log is a mode of Calendar, next to Week and Month', async ({ page }) => {
+test('the Log is a mode of Calendar, next to Day, Week, Month and Agenda', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'calendar');
-  await expect(page.getByTestId('month')).toHaveCount(0);
+  await page.getByTestId('cal-week').click();
+  await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', 'week');
   await page.getByTestId('cal-log').click();
   await expect(page.getByTestId('log')).toContainText('Timed sessions');
   await expect(page.getByTestId('log')).not.toContainText('Decisions');
   const view = page.getByRole('group', { name: 'Calendar view' });
   await view.getByRole('button', { name: 'Month' }).click();
-  await expect(page.getByTestId('month')).toBeVisible();
-  await view.getByRole('button', { name: 'Week' }).click();
-  await expect(page.locator('.weekview')).toBeVisible();
+  await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', 'month');
+  await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
+  await page.getByTestId('cal-week').click();
+  await expect(page.locator('.sx__week-grid')).toBeVisible();
   // Leaving the Log for a tab and coming back keeps week or month, not the Log.
   await page.getByTestId('cal-log').click();
   await goTab(page, 'today');
   await goTab(page, 'calendar');
   await page.reload();
   await expect(page.getByTestId('log')).toHaveCount(0);
-  await expect(page.locator('.weekview')).toBeVisible();
+  await expect(page.locator('.sx__week-grid')).toBeVisible();
 });
 
 test('decisions live in Projects, and a decision step in the Matrix opens its decision', async ({ page }) => {

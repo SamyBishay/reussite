@@ -16,7 +16,7 @@ test('About opens the manual: the contents, a page, a picture, and back', async 
   await expect(sheet(page).locator('article h2')).toContainText('The Réussite manual');
   await sheet(page).getByRole('link', { name: 'Matrix', exact: false }).filter({ hasText: 'The matrix' }).click();
   await expect(sheet(page).locator('article[data-page=matrix] h2')).toHaveText('The matrix');
-  await expect.poll(async () => (await loaded(page)).length).toBe(1);
+  await expect.poll(async () => (await loaded(page)).length).toBe(3);
   await expect.poll(async () => (await loaded(page))[0]).toEqual(['manual/shots/en-light/matrix.png', true]);
   await sheet(page).getByTestId('manual-contents').click();
   await expect(sheet(page).locator('article[data-page=index]')).toBeVisible();

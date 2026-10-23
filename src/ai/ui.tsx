@@ -1,7 +1,8 @@
 // AI on screen: "Show me what's sent", the command box, "Ask any AI" and "Paste the reply".
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
-import { projects, decisions, stays, people, toast } from '../app/store';
+import { projects, decisions, stays, people, places, toast } from '../app/store';
+import { onPage } from '../domain/places';
 import { placeName } from '../app/sheets';
 import { t, lang, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
@@ -52,7 +53,7 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
   return (
     <div class="ai-err" data-testid="ai-error" role="alert">
       <p class="err">{message}</p>
-      <div class="actions" style="margin-top:6px">
+      <div class="actions" style="margin-top:var(--s2)">
         {manual && <button class="btn small" type="button" onClick={manual}>{manualLabel ?? t('aiManual')}</button>}
         <DiagnosticsButton />
         {toSettings && <button class="btn small ghost" type="button" onClick={() => { closeSheet(); location.hash = '#settings'; }}>{t('aiOpenSettings')}</button>}
@@ -120,7 +121,7 @@ function PackBlock({ pack }: { pack: string }) {
         {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
         <button class="btn" type="button" onClick={() => openPaste()} data-testid="pack-paste">{t('pasteReply')}</button>
       </div>
-      {copied && <p class="hint" style="margin-top:10px">{t('packNext')}</p>}
+      {copied && <p class="hint" style="margin-top:var(--s3)">{t('packNext')}</p>}
     </>
   );
 }
@@ -162,7 +163,7 @@ function TripAsk({ stayId }: { stayId: string }) {
   const pack = tripPack(stayId, q, { people: withPeople, drop: dropBase.value });
   const st = stays.value.get(stayId);
   if (!pack || !st) return <p class="hint">{t('tripGone')}</p>;
-  const n = [...people.value.values()].filter(p => p.placeId === st.placeId || p.placeId === 'any').length;
+  const n = [...people.value.values()].filter(p => onPage(places.value, p.placeId, st.placeId)).length;
   return (
     <div data-testid="trip-sheet">
       <h3>{t('tripTitle')}</h3>
@@ -202,7 +203,7 @@ function Paste() {
       <label class="field"><span>{t('pasteLabel')}</span>
         <textarea rows={8} value={text} onInput={e => setText((e.target as HTMLTextAreaElement).value)} data-testid="paste-text" />
       </label>
-      {err && <p class="err" role="alert" data-testid="paste-error" style="margin-top:8px">{err}</p>}
+      {err && <p class="err" role="alert" data-testid="paste-error" style="margin-top:var(--s2)">{err}</p>}
       <div class="actions">
         <button class="btn primary" type="submit" disabled={!text.trim()} data-testid="paste-go">{t('pasteGo')}</button>
         {typeof navigator.clipboard?.readText === 'function' && <button class="btn" type="button" onClick={fromClipboard}>{t('pasteFromClipboard')}</button>}

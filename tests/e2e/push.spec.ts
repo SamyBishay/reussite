@@ -88,10 +88,12 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   const hhmm = String(due.getHours()).padStart(2, '0') + ':' + String(due.getMinutes()).padStart(2, '0');
   await page.getByPlaceholder(/The app and the first action/).fill('Choir, Hill House 602');
   await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  // Added by hand with nothing running, it goes to the top of what is left: it is the first card.
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
-  await row.getByTestId('details').click();
+  await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
   await sheet(page).locator('details.more summary').click();
   await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill(hhmm);
   await sheet(page).locator('input[name=dur]').fill('90');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();

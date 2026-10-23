@@ -49,12 +49,12 @@ function TakeoutSheet({ place }: { place: string }) {
       <h3>{t('takeoutTitle')}</h3>
       <p class="hint">{t('takeoutHint')}</p>
       <div class="actions"><label class="btn">{t('chooseFile')}<input type="file" accept=".csv,.json,.geojson,text/csv,application/json,application/geo+json" hidden onChange={choose} data-testid="takeout-file" /></label></div>
-      {fileName && <p class="hint" style="margin-top:8px">{fileName}</p>}
+      {fileName && <p class="hint" style="margin-top:var(--s2)">{fileName}</p>}
       <label class="field"><span>{t('takeoutWhere')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       {err && <p class="err">{err}</p>}
       {text != null && !r && <p class="err" data-testid="takeout-bad">{t('takeoutUnreadable')}</p>}
       {r && (
-        <div data-testid="takeout-summary" style="margin-top:14px">
+        <div data-testid="takeout-summary" style="margin-top:var(--s4)">
           <div class="counts">
             <span>{t('takeoutRows')}</span><span class="n" data-testid="takeout-rows">{r.counts.rows}</span><span />
             <span>{t('takeoutAdded')}</span><span class="n" data-testid="takeout-added">{ready.length}</span><span />

@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -78,6 +78,13 @@ export interface Task {
    * (up to three addresses in the current place), `person` for seeing people. Empty or missing: nothing is offered.
    */
   offer?: Offer | null;
+  // v2, schema 5
+  /**
+   * A short name for calendars: five or six keywords at most ("Choir · Hill House", "CAF claim letter").
+   * The title stays a sentence that starts with an action verb. Empty or missing: a label is derived from
+   * the title when one is needed (`shortLabel`, src/domain/label.ts) and never stored.
+   */
+  label?: string;
   [extra: string]: unknown;
 }
 
@@ -117,6 +124,9 @@ export interface Launch {
   first?: boolean;
 }
 
+/** One half of a day spent in an area (a place that has a `parentId`). */
+export interface DayArea { half: 'am' | 'pm'; placeId: string }
+
 export interface Day {
   date: DayKey;
   plan: string[];
@@ -125,6 +135,8 @@ export interface Day {
   checkin: string | null;
   closed: string | null;
   summary: { cards: number; minutes: number; ratio: number | null } | null;
+  /** Half days spent in an area of the stay's place (schema 5); the rest of the day is in the place itself. */
+  areas?: DayArea[];
   /** Later steps allotted to this day at the Sunday review: played only if there's room. */
   optional?: string[];
   /** The day's shape from the check-in. */
@@ -165,10 +177,17 @@ export interface Decision {
   [extra: string]: unknown;
 }
 
+/**
+ * A place (Cairo), or an area of one (Heliopolis) when `parentId` names the place it belongs to (schema 5).
+ * One level only: an area holds no areas. An area has no time zone of its own: the parent's is used and
+ * `timeZone` is ignored (see `zoneOfPlace`, src/domain/places.ts). A step, address or person set to an area
+ * is on its parent's page.
+ */
 export interface Place {
   name: string;
   timeZone: string;
   order: number;
+  parentId?: string | null;
   [extra: string]: unknown;
 }
 

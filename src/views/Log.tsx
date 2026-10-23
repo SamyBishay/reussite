@@ -30,7 +30,7 @@ function Calibration() {
         {byApp.size > 0 && <table class="sess" style="min-width:0"><thead><tr><th>{t('appField')}</th><th class="n">{t('timedN')}</th><th class="n">{t('realOverEst')}</th></tr></thead>
           <tbody>{[...byApp].sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([a, xs]) => <tr><td>{a}</td><td class="n">{xs.length}</td><td class="n">{x(medianRatio(xs))}</td></tr>)}</tbody></table>}
       </div>
-      {ai.length > 0 && cm != null && ca != null && <p class="hint" style="margin-top:8px">{cm <= ca ? t('yoursCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) }) : t('aiCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) })}</p>}
+      {ai.length > 0 && cm != null && ca != null && <p class="hint" style="margin-top:var(--s2)">{cm <= ca ? t('yoursCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) }) : t('aiCloser', { me: x(medianRatio(mine)), ai: x(medianRatio(ai)) })}</p>}
     </>
   );
 }

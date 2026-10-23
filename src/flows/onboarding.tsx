@@ -7,6 +7,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { settings, saveSettings, createDoc, places } from '../app/store';
 import { applyTheme, PRESETS } from '../app/theme';
 import { go } from '../app/nav';
+import { Mark } from '../app/Mark';
 import { finishedOnboarding } from '../app/onboarding';
 import { JoinPanel, KeyView } from '../app/SyncSettings';
 import { NotifySwitch } from '../app/NotifySettings';
@@ -48,12 +49,13 @@ export async function applyDraft(d: Draft, l: Settings['language'], ai: AiChoice
   await saveSettings(patch);
 }
 
-function Frame({ id, n, of, title, hint, children, back, next, nextLabel = 'next_', nextDisabled, skip, extra }: {
+function Frame({ id, n, of, title, hint, children, back, next, nextLabel = 'next_', nextDisabled, skip, extra, mark }: {
   id: Id; n: number; of: number; title: string; hint?: string; children?: ComponentChildren; back?: () => void; next?: () => void;
-  nextLabel?: Key; nextDisabled?: boolean; skip?: () => void; extra?: ComponentChildren;
+  nextLabel?: Key; nextDisabled?: boolean; skip?: () => void; extra?: ComponentChildren; mark?: boolean;
 }) {
   return (
     <div class="flow ob" data-testid={'ob-' + id}>
+      {mark && <Mark size={72} class="ob-mark" />}
       <p class="eyebrow">{t('obStep', { n, of })}</p>
       <h3>{title}</h3>
       {hint && <p class="hint">{hint}</p>}
@@ -121,7 +123,7 @@ export function Onboarding() {
   const notTherapy = <p class="hint ob-notherapy" data-testid="ob-not-therapy">{t('notTherapy')}</p>;
 
   if (id === 'language') return (
-    <Frame {...frame} title={t('obWelcome')} hint={t('obLanguageHint')} next={next} skip={skip}
+    <Frame {...frame} mark title={t('obWelcome')} hint={t('obLanguageHint')} next={next} skip={skip}
       extra={<>
         <button class="btn wide ob-pair-link" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obHaveDevice')}</button>
         {notTherapy}

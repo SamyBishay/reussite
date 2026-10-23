@@ -6,6 +6,7 @@ import type { Day, Decision, Place, Stay, Task } from '../data/schema';
 import { addDays, type DayKey } from './dates';
 import { isoDow } from './repeat';
 import { atOnDay, placeOfDay } from './zone';
+import { zoneOfPlace } from './places';
 
 type WithId<T> = T & { id: string };
 
@@ -85,7 +86,7 @@ const weekdaysOf = (w: unknown): number[] => (Array.isArray(w) ? w.map(Number).f
 export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: DayKey): AgendaEvent[] {
   const out = new Map<string, AgendaEvent>();
   const stays = [...data.stays.values()];
-  const zoneOf = (id: string) => data.places.get(id)?.timeZone;
+  const zoneOf = (id: string) => zoneOfPlace(data.places, id);
   const where = new Map<DayKey, ReturnType<typeof placeOfDay>>();
   const at = (k: DayKey) => { let w = where.get(k); if (!w) where.set(k, (w = placeOfDay(k, stays, s.here, zoneOf))); return w; };
   const inRange = (k: DayKey) => k >= from && k <= to;

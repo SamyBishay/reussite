@@ -5,11 +5,13 @@ import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
+import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
 import { greeting } from '../domain/greeting';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
+import { onPage } from '../domain/places';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
 
@@ -19,15 +21,25 @@ export const T = (id: string): T | undefined => tasks.value.get(id);
 // The rules themselves live in src/domain/lists.ts (the connector uses them too); these read the signals.
 export const whereOf = (t: T): string => L.whereOf(t, projects.value);
 /** On the page being viewed (or `place`): its own steps plus everything marked Anywhere. */
-export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value);
+export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value, places.value);
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
-export const quad = (t: T): Quadrant => L.quadOf(t, today.value, settings.value.urgencyDays);
-export const urgent = (t: T) => isUrgent(t, today.value, settings.value.urgencyDays);
+/** Obligations (standing, or a copy of one) never sit in the matrix or the planner's pool; their urgent and important flags are ignored. */
+export const isObligation = (t: T): boolean => L.isObligation(t, tasks.value);
+/** The chains of the open steps (src/domain/chains.ts), rebuilt once whenever the steps change. */
+export const chains = computed(() => C.chainIndex(tasks.value));
+/** A chain's head carries the earliest due date of its chain, so a far deadline turns the chain urgent in time. */
+const withChainDue = (t: T): T => { const d = C.effectiveDue(chains.value, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
+export const quad = (t: T): Quadrant => L.quadOf(withChainDue(t), today.value, settings.value.urgencyDays);
+export const urgent = (t: T) => isUrgent(withChainDue(t), today.value, settings.value.urgencyDays);
+/** The chain a step heads (with "+n after"), if it has one. */
+export const chainOfHead = (id: string) => chains.value.chains.get(id);
+/** A step that waits for another in a chain: shown inside its head's card, not on its own. */
+export const isWaiting = (id: string) => C.isWaiting(chains.value, id);
 
 export const listOf = L.listOf;
 export const waitingOn = (t: T): T[] => L.waitingOn(t, tasks.value);
-export const blocked = (t: T) => L.blocked(t, tasks.value);
+export const blocked = (t: T) => isWaiting(t.id);
 
 export const dayDoc = (k: string): WithId<Day> | undefined => days.value.get(k);
 export const rawPlan = (k: string): string[] => L.rawPlan(days.value, k);
@@ -57,11 +69,11 @@ export const elapsedSec = (t: T, now = Date.now()) => (t.started ? Math.max(0, (
 
 const byOrder = L.byOrder;
 export { byOrder };
-export const byPriority = (a: T, b: T): number => L.byPriority(a, b, { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
+export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
 
 export function candidates(k = today.value, place = pagePlace.value): T[] {
   const plan = new Set(rawPlan(k));
-  return [...tasks.value.values()].filter(t => isOpen(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
+  return [...tasks.value.values()].filter(t => isOpen(t) && !isObligation(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
 }
 export const sessionsOf = (id: string): WithId<Session>[] =>
   [...sessions.value.values()].filter(s => s.taskId === id).sort((a, b) => String(a.d + a.at).localeCompare(String(b.d + b.at)));
@@ -130,11 +142,11 @@ export const lastVisitOf = lastVisit;
 
 /** Addresses on a place's page (its own plus Anywhere), by name. */
 export const addressesIn = (place = pagePlace.value): A[] =>
-  [...addresses.value.values()].filter(a => a.placeId === 'any' || a.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+  [...addresses.value.values()].filter(a => onPage(places.value, a.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
 export const peopleIn = (place = pagePlace.value): P[] =>
-  [...people.value.values()].filter(p => p.placeId === 'any' || p.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+  [...people.value.values()].filter(p => onPage(places.value, p.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
 
 /** What the planner offers for a leisure obligation: up to three addresses in the current place (`place`), `category` narrowing them. */
-export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category }) : []);
+export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category, places: places.value }) : []);
 /** What the planner offers for a people obligation: up to three people in the current place, seen least recently first. */
-export const offerPeopleNow = (place = here.value): P[] => (addressesOn() ? offerPeople(people.value.values(), { place }) : []);
+export const offerPeopleNow = (place = here.value): P[] => (addressesOn() ? offerPeople(people.value.values(), { place, places: places.value }) : []);

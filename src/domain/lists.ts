@@ -5,6 +5,7 @@ import type { Point } from './estimates';
 import { SOURCE_WEIGHT } from './estimates';
 import type { DayKey } from './dates';
 import { quadrant, type Quadrant } from './tasks';
+import { onPage, type PlaceMap } from './places';
 
 type WithId<T> = T & { id: string };
 export type TaskW = WithId<Task>;
@@ -27,13 +28,18 @@ export interface Data {
 export const listOf = (a: unknown): string[] => (a == null || a === '' ? [] : Array.isArray(a) ? a.map(String) : [String(a)]);
 
 export const whereOf = (t: Pick<Task, 'where' | 'project'>, projects: ReadonlyMap<string, Pick<Project, 'where'>>): string => t.where || projects.get(t.project)?.where || 'any';
-/** On a place's page: its own steps plus everything marked Anywhere. */
-export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, projects: ReadonlyMap<string, Pick<Project, 'where'>>) => {
+/**
+ * On a place's page: its own steps plus everything marked Anywhere. With `places`, an area counts as its
+ * parent place (a step set to Heliopolis is on Cairo's page, and the other way round).
+ */
+export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, projects: ReadonlyMap<string, Pick<Project, 'where'>>, places?: PlaceMap) => {
   const w = whereOf(t, projects);
-  return w === 'any' || w === place;
+  return places ? onPage(places, w, place) : w === 'any' || w === place;
 };
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed;
+/** A standing obligation, daily ones above all, or a copy of one placed on a day (choir, a walk, seeing someone): it has a time, not a quadrant. */
+export const isObligation = (t: Pick<Task, 'template' | 'from'>, tasks: ReadonlyMap<string, Pick<Task, 'template'>>): boolean => !!t.template || (!!t.from && !!tasks.get(t.from)?.template);
 export const quadOf = (t: Pick<Task, 'urgent' | 'important' | 'due'>, today: DayKey, urgencyDays: number): Quadrant => quadrant(t, today, urgencyDays);
 
 export const waitingOn = (t: Pick<Task, 'after'>, tasks: ReadonlyMap<string, TaskW>): TaskW[] =>
@@ -100,9 +106,12 @@ export const oneLine = one;
 export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, id: string) => (id === 'inbox' ? 'Inbox' : projects.get(id)?.name ?? id);
 
 /** `id | title | Q1 | due | est | project`, as v1 sent them. */
-export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>): string {
+export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
   const done = t.status === 'done' ? ' (done)' : t.status === 'dropped' ? ' (dropped)' : '';
-  return [t.id, one(t.title) + done, 'Q' + quadOf(t, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
+  // The head of a chain says how many steps wait after it, and its quadrant follows the chain's earliest due date.
+  const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
+  const q = chain && chain !== 'waiting' && chain.due && (!t.due || chain.due < t.due) ? { ...t, due: chain.due } : t;
+  return [t.id, one(t.title) + done + note, 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
 

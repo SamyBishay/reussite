@@ -16,6 +16,8 @@ When you add a step, give it an estimate in minutes, **including the time it tak
 
 Tap **Start the timer** when you begin. When you stop, the real time is saved. Marked a step done without the timer? Réussite asks "How long did it take?" with buttons sized to your estimate, a wheel for anything else, and **I didn't time it**.
 
+While a timer runs, three rings sit beside the clock on the first card. The outer one fills over the step's estimate. It is a picture of time passing, not a score.
+
 Forgot to start the timer? **I started earlier** lets you say when you began. Forgot to stop it? "Still on…?" appears after about twice your usual time for the step (at least 45 minutes). Tap **I stopped at…** and fix it in two taps. Every timed session can be fixed afterwards: open the step, and under Time use **Fix this session** or **Add time**.
 
 **Research says:** untested here. `[E?]`

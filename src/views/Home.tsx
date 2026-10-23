@@ -1,11 +1,9 @@
-// Home (brief §5): where the person types. It holds a greeting, one card, the last receipt and the input,
-// and never more. The greeting is only the next step; the card is what an open exchange has to say, else
-// the one most pressing nudge; the receipt is the last thing applied, with Undo. The menu icon holds what
+// Home (brief §5): where the person types. It holds a greeting, one card (an exchange's), the last receipt and the input,
+// and never more. The greeting is only the next step; the card is what an open exchange has to say (what is waiting is behind the bell); the receipt is the last thing applied, with Undo. The menu icon holds what
 // has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { today, clockNow, settings } from '../app/store';
-import { T, dayDoc, greetingNow, decisionsToCheck, yesterdayOpen, planEst } from '../app/model';
-import { startTask, carryOver } from '../app/actions';
+import { today, clockNow } from '../app/store';
+import { T, dayDoc, greetingNow, planEst } from '../app/model';
 import { openSheet, closeSheet, Title, Est } from '../app/ui';
 import { openPause, openDone, DurationPicker } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
@@ -14,14 +12,11 @@ import { addressesOn } from '../app/model';
 import { go, type View } from '../app/nav';
 import { Clock } from '../app/Clock';
 import { isTouch } from '../app/keyboard';
-import { KeyCard } from '../app/SyncSettings';
-import { syncOn, keySaved } from '../app/sync';
 import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
+import { startTask } from '../app/actions';
+import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
-import { openReview } from '../flows/review';
-import { openDecisionPage } from '../flows/decision';
-import { isoDow } from '../domain/repeat';
 import { withTime } from '../domain/calendar';
 import { t, fmtDate } from '../i18n';
 
@@ -113,18 +108,6 @@ function GreetingBody() {
 }
 
 // ---------- the card ----------
-/** The one nudge, the most pressing of: the recovery key, a decision to check, yesterday's carry-over, the review day. */
-function Nudge() {
-  const k = today.value;
-  if (syncOn.value && !keySaved.value) return <KeyCard />;
-  const dc = decisionsToCheck(k)[0];
-  if (dc) return <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>;
-  const y = yesterdayOpen(k);
-  if (y.length) return <div class="banner" data-testid="carry-nudge"><p>{t('carryText', { n: y.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: y.length })}</button></div>;
-  if (isoDow(k) === settings.value.reviewDay && !dayDoc(k)?.review) return <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>;
-  return null;
-}
-
 function CardBody({ c }: { c: HomeCard }) {
   if (c.kind === 'pick') {
     return (
@@ -166,9 +149,7 @@ function CardBody({ c }: { c: HomeCard }) {
 
 function Card() {
   const c = cardNow.value;
-  if (c) return <div data-testid="home-card" data-kind={c.kind}><CardBody c={c} /></div>;
-  const n = Nudge();
-  return n ? <div data-testid="home-card" data-kind="nudge">{n}</div> : null;
+  return c ? <div data-testid="home-card" data-kind={c.kind}><CardBody c={c} /></div> : null;
 }
 
 // ---------- the receipt ----------
@@ -235,9 +216,15 @@ export function Home() {
       <section class="greeting" data-testid="greeting">
         <div class="homebar">
           <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+          <div class="homebtns">
+          <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
+            {notifications().length > 0 && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
+          </button>
           <button type="button" class="icon-btn" onClick={() => openSheet(<HomeMenu />)} aria-label={t('menu')} data-testid="home-menu">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
+          </div>
         </div>
         <GreetingBody />
       </section>

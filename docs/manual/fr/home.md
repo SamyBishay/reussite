@@ -14,7 +14,13 @@ Dans cet ordre, le premier cas qui s’applique :
 4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**.
 5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**.
 
-L’accueil n’a ni compteurs, ni liste, ni séries.
+L’accueil n’a ni compteurs, ni liste, ni séries. Ce qui vous attend ne gêne pas : une petite **cloche** en haut montre un point discret quand quelque chose attend, et ouvre la page **Notifications**.
+
+## La cloche
+
+![La page Notifications](shot:notifications)
+
+La page **Notifications** liste tout ce qui attend, et pas seulement le plus pressant : votre clé de récupération si vous ne l’avez pas gardée, les décisions à vérifier, les étapes d’hier reportées et le jour de la revue. Le point n’a pas de chiffre et n’est jamais rouge. Quand rien n’attend, la page le dit.
 
 ## La boîte unique
 
@@ -44,7 +50,7 @@ Ouvrez l’**Historique** depuis le menu en haut de l’accueil. Il liste les 90
 
 ## Le menu
 
-L’icône de menu en haut de l’accueil contient ce qui n’a pas d’onglet : **Réglages**, **Lieux**, **Adresses et proches**, **+ Adresse**, **Mémoire** et **Historique**.
+L’icône de menu en haut de l’accueil contient ce qui n’a pas d’onglet : **Réglages**, **Lieux**, **Adresses et proches**, **+ Adresse**, **Mémoire** et **Historique**. La cloche est à côté.
 
 ## La barre d’onglets
 

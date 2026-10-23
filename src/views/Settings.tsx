@@ -2,11 +2,13 @@
 import { useEffect, useState } from 'preact/hooks';
 import { settings, saveSettings, places, stays, db, toast, update, readOnly, today } from '../app/store';
 import { openSheet, closeSheet, suitName } from '../app/ui';
-import { placeIds, placeName } from '../app/sheets';
+import { placeIds, placeName, placeOptions } from '../app/sheets';
+import { AreaEditor } from '../app/AreaUi';
+import { placeRows } from '../domain/areas';
 import { addPlace, saveStay, removeStay } from '../app/actions';
 import changelog from '../../CHANGELOG.md?raw';
 import { t, lang, type Key } from '../i18n';
-import { PRESETS, contrast, AA } from '../app/theme';
+import { PRESETS, contrast, AA, lightCard } from '../app/theme';
 import { SUIT_ORDER, type Settings as S, type ThemeMode, type Celebrations, type TextSize } from '../data/settings';
 import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
@@ -29,7 +31,6 @@ import { markFull, readBackupFile, syncOn } from '../app/sync';
 const openManual = () => void import('../manual/Manual').then(m => openSheet(<m.ManualSheet />, true));
 
 const set = (p: Partial<S>) => void saveSettings(p);
-const CARD_LIGHT = '#FFFFFF';
 
 function Seg<V extends string>({ value, options, onChange, label }: { value: V; options: [V, Key][]; onChange: (v: V) => void; label: string }) {
   return (
@@ -40,7 +41,7 @@ function Seg<V extends string>({ value, options, onChange, label }: { value: V; 
 }
 
 function Contrast({ color }: { color: string }) {
-  const r = contrast(color, CARD_LIGHT);
+  const r = contrast(color, lightCard(settings.value));
   const txt = r.toFixed(1).replace('.', lang.value === 'fr' ? ',' : '.');
   return r < AA ? <p class="err" style="font-size:13px">{t('contrastWarn', { r: txt })}</p> : <p class="hint" style="font-size:12.5px">{t('contrastOk', { r: txt })}</p>;
 }
@@ -100,7 +101,7 @@ function Appearance() {
       <div class="field"><span>{t('celebrations')}</span>
         <Seg<Celebrations> label={t('celebrations')} value={s.celebrations} onChange={v => set({ celebrations: v })} options={[['off', 'celOff'], ['calm', 'celCalm'], ['lively', 'celLively']]} />
       </div>
-      <div class="toggles" style="margin-top:14px">
+      <div class="toggles" style="margin-top:var(--s4)">
         <label class="tog"><input type="checkbox" checked={s.reduceMotion} onChange={e => set({ reduceMotion: (e.target as HTMLInputElement).checked })} /> {t('reduceMotion')}</label>
         <label class="tog"><input type="checkbox" checked={s.linksInApp} onChange={e => set({ linksInApp: (e.target as HTMLInputElement).checked })} /> {t('linksInApp')}</label>
         <label class="tog"><input type="checkbox" checked={s.sound} onChange={e => set({ sound: (e.target as HTMLInputElement).checked })} /> {t('soundLabel')}</label>
@@ -125,7 +126,7 @@ function NumberField({ label, value, min, max, onSave }: { label: string; value:
 
 
 function PlacesEditor() {
-  const ps = placeIds().map(id => places.value.get(id)!);
+  const ps = placeRows(places.value).filter(r => !r.area).map(r => places.value.get(r.id)!);
   const add = async (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
@@ -138,13 +139,17 @@ function PlacesEditor() {
   return (
     <div class="field" data-testid="places"><span>{t('places')}</span>
       <p class="hint">{t('placesHint')}</p>
+      <p class="hint">{t('areasHint')}</p>
       {ps.map(p => (
-        <div class="placerow">
-          <input type="text" aria-label={t('placeName')} defaultValue={p.name} onChange={e => update<Place>('places', p.id, { name: (e.target as HTMLInputElement).value.trim() || p.name })} />
-          <select aria-label={t('timeZone')} value={p.timeZone} onChange={e => update<Place>('places', p.id, { timeZone: (e.target as HTMLSelectElement).value })}>
-            {(ZONES.includes(p.timeZone) ? ZONES : [p.timeZone, ...ZONES]).map(z => <option value={z}>{z.replace(/_/g, ' ')}</option>)}
-          </select>
-        </div>
+        <>
+          <div class="placerow">
+            <input type="text" aria-label={t('placeName')} defaultValue={p.name} onChange={e => update<Place>('places', p.id, { name: (e.target as HTMLInputElement).value.trim() || p.name })} />
+            <select aria-label={t('timeZone')} value={p.timeZone} onChange={e => update<Place>('places', p.id, { timeZone: (e.target as HTMLSelectElement).value })}>
+              {(ZONES.includes(p.timeZone) ? ZONES : [p.timeZone, ...ZONES]).map(z => <option value={z}>{z.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+          <AreaEditor placeId={p.id} />
+        </>
       ))}
       <form class="addplace" onSubmit={add}>
         <input type="text" name="name" placeholder={t('newPlaceName')} aria-label={t('newPlaceName')} autocomplete="off" required />
@@ -152,7 +157,7 @@ function PlacesEditor() {
       </form>
       <label class="field"><span>{t('currentPlace')}</span>
         <select value={settings.value.here} onChange={e => set({ here: (e.target as HTMLSelectElement).value })}>
-          {[...placeIds(), 'any'].map(id => <option value={id}>{placeName(id)}</option>)}
+          {placeOptions()}
         </select>
       </label>
       <p class="hint">{t('currentPlaceHint')}</p>
@@ -330,7 +335,7 @@ function ImportSheet() {
       <h3>{t('importTitle')}</h3>
       <p class="hint">{t('importHint')}</p>
       <div class="actions"><label class="btn">{t('chooseFile')}<input type="file" accept="application/json,.json" hidden onChange={choose} data-testid="import-file" /></label></div>
-      {err && <><p class="err" style="margin-top:12px">{err}</p><div class="actions"><DiagnosticsButton /></div></>}
+      {err && <><p class="err" style="margin-top:var(--s3)">{err}</p><div class="actions"><DiagnosticsButton /></div></>}
       {s && (
         <>
           <div class="counts" data-testid="import-summary">
@@ -339,7 +344,7 @@ function ImportSheet() {
               <><span>{t(COLL_KEY[c] ?? 'collMeta')}</span><span class="n">{s.found[c] ?? '—'}</span><span class="n">{s.produced[c]}</span></>
             ))}
           </div>
-          <p class="hint" style="margin-top:10px">{s.skipped.length ? t('importSkipped', { n: s.skipped.length }) + ': ' + s.skipped.map(x => x.collection + ' ' + x.id + ' (' + x.reason + ')').join('; ') : t('importNothingSkipped')}</p>
+          <p class="hint" style="margin-top:var(--s3)">{s.skipped.length ? t('importSkipped', { n: s.skipped.length }) + ': ' + s.skipped.map(x => x.collection + ' ' + x.id + ' (' + x.reason + ')').join('; ') : t('importNothingSkipped')}</p>
           <div class="actions"><button class="btn primary" type="button" disabled={busy || readOnly.value} onClick={go}>{t('importConfirm')}</button><button class="btn ghost" type="button" onClick={closeSheet}>{t('cancel')}</button></div>
         </>
       )}
@@ -371,25 +376,26 @@ function Data() {
   return (
     <section class="set" data-testid="data">
       <h2>{t('data')}</h2>
-      <div class="actions" style="margin-top:8px">
+      <div class="actions" style="margin-top:var(--s2)">
         <button class="btn" type="button" onClick={() => void saveBackupFile()} data-testid="export-backup">{t('exportBackup')}</button>
         {syncOn.value && <button class="btn" type="button" onClick={() => void saveBackupFile(true)} data-testid="export-encrypted">{t('backupEncrypted')}</button>}
         <label class="btn">{t('importBackup')}<input type="file" accept="application/json,.json" hidden onChange={restore} /></label>
         <button class="btn" type="button" onClick={() => openSheet(<ImportSheet key={'imp' + Date.now()} />)} data-testid="open-import">{t('importV1')}</button>
       </div>
-      {syncOn.value && <p class="hint" style="margin-top:10px">{t('backupEncryptedHint')}</p>}
-      {persisted !== null && <p class="hint" style="margin-top:10px" data-testid="storage">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
-      {persisted === false && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
+      {syncOn.value && <p class="hint" style="margin-top:var(--s3)">{t('backupEncryptedHint')}</p>}
+      {persisted !== null && <p class="hint" style="margin-top:var(--s3)" data-testid="storage">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
+      {persisted === false && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
     </section>
   );
 }
 
 export function Settings() {
   return (
-    <div>
+    <div data-testid="settings">
+      <h2 class="sec" style="margin-top:0">{t('tabSettings')}</h2>
       <section class="set">
         <h2>{t('language')}</h2>
-        <div class="seg" role="group" aria-label={t('language')} style="margin-top:8px">
+        <div class="seg" role="group" aria-label={t('language')} style="margin-top:var(--s2)">
           <button type="button" aria-pressed={settings.value.language === 'en'} onClick={() => set({ language: 'en' })} lang="en">English</button>
           <button type="button" aria-pressed={settings.value.language === 'fr'} onClick={() => set({ language: 'fr' })} lang="fr">Français</button>
         </div>
@@ -407,6 +413,7 @@ export function Settings() {
         <p class="hint">{t('version', { v: __APP_VERSION__ })}</p>
         <div class="actions"><DiagnosticsButton ghost={false} /></div>
         {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
+        <p class="hint" data-testid="paintings-credit">{t('paintingsCredit')}</p>
         <p class="hint">{t('notTherapy')}</p>
         <div data-testid="privacy"><h3 class="privacy-h">{t('privacyTitle')}</h3>
           <p>{t('privacyRelay')}</p>

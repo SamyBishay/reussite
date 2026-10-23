@@ -1,5 +1,5 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
-import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, db, newId, type WithId } from './store';
+import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, type T as Tk } from './model';
 import { projects } from './store';
 import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
@@ -7,6 +7,9 @@ import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
+import { parentProblem } from '../domain/places';
+import { nextHeads } from '../domain/chains';
+import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
 
@@ -60,14 +63,16 @@ export interface Finished { last: boolean; projectDone: string | null; nextId: s
  */
 export async function finishTask(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
+  const passing = nextHeads(tasks.value, tk.id);
   const wasLast = rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0;
   const { patch, session } = finishEffects(tk, { today: k, day, nowIso: nowISO(), nowMs: Date.now(), typed, minutes });
   if (session) await addSession(tk.id, session.m, session.why, session.source, session.d);
   await patchTask(tk.id, patch);
+  const passed = await placeHeads(tk.id, passing);
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
   if (tk.personId) await seeStepPerson(tk.personId, day);
-  return { last: wasLast && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
+  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
 }
 
 /** A project whose real steps are all done moves to the Completed shelf. */
@@ -85,8 +90,33 @@ export async function reopen(id: string) {
 }
 /** Drop a step for good (a repeating one stops repeating). */
 export async function dropTask(id: string) {
+  const passing = nextHeads(tasks.value, id);
   await patchTask(id, { status: 'dropped', started: null });
-  if (rawPlan(today.value).includes(id)) await removeToday(id);
+  await placeHeads(id, passing, true);
+}
+
+/**
+ * When the head of a chain leaves (done, or dropped), the step that takes its place goes on the lists the old head
+ * was on, from today on, right after it (in its place when it is dropped), unless it is already there. Today's list
+ * loses a dropped step either way. True when a step was placed or was already on one of those lists.
+ */
+async function placeHeads(id: string, heads: string[], drop = false): Promise<boolean> {
+  const k0 = today.value;
+  let placed = false;
+  for (const [k, d] of [...days.value.entries()]) {
+    if (!Array.isArray(d.plan)) continue;
+    const at = d.plan.indexOf(id);
+    if (at < 0) continue;
+    const add = k >= k0 ? heads.filter(h => !d.plan.includes(h)) : [];
+    if (k >= k0 && heads.some(h => d.plan.includes(h))) placed = true;
+    const rm = drop && k === k0;
+    if (!add.length && !rm) continue;
+    if (add.length) placed = true;
+    const next = [...d.plan];
+    next.splice(at + 1, 0, ...add);
+    await dayPatch(k, { plan: rm ? next.filter(x => x !== id) : next });
+  }
+  return placed;
 }
 
 // ---------- repeating steps ----------
@@ -114,6 +144,23 @@ export async function addToday(id: string, quiet = false, k = today.value) {
   await dayPatch(k, { plan: p });
   if (!quiet) toast(k === today.value ? t('addedToday') : t('plannedOn', { date: k }));
 }
+/**
+ * A step the person adds by hand. On today it goes right after the step in progress, else at the top of what
+ * is left, not at the bottom; on another day it goes last, as there is nothing in progress there.
+ */
+export async function addByHand(id: string, quiet = false, k = today.value) {
+  if (k !== today.value) return addToday(id, quiet, k);
+  const p = rawPlan(k);
+  if (p.includes(id)) return;
+  const next = insertAfterCurrent(p, id, running()?.id ?? null, x => { const tk = T(x); return !!tk && tk.status === 'open'; });
+  await dayPatch(k, { plan: next });
+  if (!quiet) toast(t('addedToday'));
+}
+/** The day's list after a drag: the steps shown take each other's places, the rest stay put. */
+export async function setPlanOrder(shown: string[], k = today.value) {
+  const p = rawPlan(k), next = reorderSubset(p, shown);
+  if (next.some((x, i) => x !== p[i])) await dayPatch(k, { plan: next });
+}
 export const removeToday = (id: string, k = today.value) => dayPatch(k, { plan: rawPlan(k).filter(x => x !== id) });
 export async function movePlan(id: string, dir: -1 | 1, k = today.value) {
   const p = rawPlan(k);
@@ -128,6 +175,16 @@ export async function planOn(id: string, k: string) {
   await addToday(id, true, k);
 }
 export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, dueRule: null });
+/**
+ * A fixed-time step moved on the calendar's hour grid: to a day and a time. One with a due date is due that day;
+ * one that is only on a day's list is planned on the new day.
+ */
+export async function moveFixed(id: string, k: string, at: string) {
+  const tk = T(id);
+  if (!tk) return;
+  if (tk.due) await patchTask(id, { at, due: k, dueRule: null });
+  else { await planOn(id, k); await patchTask(id, { at }); }
+}
 /** A done step moved to another day changes its done date. */
 export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, doneAt: k + 'T12:00:00.000Z' });
 
@@ -216,6 +273,11 @@ export async function moveStep(id: string, dir: -1 | 1) {
   await patchTask(a.id, { order: oa === ob ? ob + dir : ob });
   await patchTask(b.id, { order: oa });
 }
+/** A project's open steps after a drag: the same `order` numbers, handed out in the new sequence. */
+export async function setStepOrder(sequence: string[]) {
+  const cur = sequence.map(id => T(id)).filter((x): x is Tk => !!x).sort((a, b) => (a.order || 0) - (b.order || 0));
+  for (const c of reslot(cur, sequence)) await patchTask(c.id, { order: c.order });
+}
 export async function moveProject(id: string, dir: -1 | 1) {
   const p = projects.value.get(id);
   if (!p) return;
@@ -234,6 +296,32 @@ export async function addPlace(name: string): Promise<string> {
   const same = [...places.value.values()].find(p => p.name.toLowerCase() === n.toLowerCase());
   if (same) return same.id;
   return createDoc<Place>('places', { name: n, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, order: places.value.size });
+}
+
+/** An area of a place (Cairo → Heliopolis): a place that has a parent. One level; the same name under the same place is the same area. Returns its id, or null when the parent can not hold areas. */
+export async function addArea(parentId: string, name: string): Promise<string | null> {
+  const n = name.trim();
+  if (!n || parentProblem(places.value, null, parentId)) return null;
+  const same = [...places.value.values()].find(p => p.parentId === parentId && p.name.toLowerCase() === n.toLowerCase());
+  if (same) return same.id;
+  const parent = places.value.get(parentId)!;
+  return createDoc<Place>('places', { name: n, timeZone: parent.timeZone, order: places.value.size, parentId });
+}
+/**
+ * Take an area away (a tombstone). What was set to it goes back to its place, so nothing falls off every page: steps, projects,
+ * addresses, people, stays, the current place, and a half day spent there is cleared.
+ */
+export async function removeArea(id: string): Promise<void> {
+  const area = places.value.get(id), up = area?.parentId;
+  if (!area || !up || !places.value.has(up)) return;
+  for (const x of tasks.value.values()) if (x.where === id) await patchTask(x.id, { where: up });
+  for (const x of projects.value.values()) if (x.where === id) await patchProject(x.id, { where: up });
+  for (const x of addresses.value.values()) if (x.placeId === id) await update<Address>('addresses', x.id, { placeId: up });
+  for (const x of people.value.values()) if (x.placeId === id) await update<Person>('people', x.id, { placeId: up });
+  for (const x of stays.value.values()) if (x.placeId === id) await update<Stay>('stays', x.id, { placeId: up });
+  for (const d of days.value.values()) if (d.areas?.some(a => a.placeId === id)) await update<Day>('days', d.date, { areas: d.areas.filter(a => a.placeId !== id) });
+  if (settings.value.here === id) await saveSettings({ here: up });
+  await removeDoc('places', id);
 }
 export async function saveStay(id: string | null, s: Stay): Promise<string> {
   const sid = id ?? await createDoc<Stay>('stays', s);

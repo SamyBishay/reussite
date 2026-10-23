@@ -27,12 +27,20 @@ Si vous déplacez une étape dans un quadrant urgent, Réussite demande : «�
 
 - Faites glisser une étape vers un autre quadrant, ou appuyez longuement dessus sur un téléphone. Ou ouvrez l’étape et utilisez **Déplacer vers…**.
 - Filtrez par projet ou par famille, ou cherchez dans vos étapes.
+- Si votre lieu a des **zones**, une rangée de pastilles réduit la matrice à une zone (et à Partout). Touchez la pastille de nouveau pour l’enlever. **Grouper par zone** trie chaque quadrant par zone. Le choix dure jusqu’à la fermeture de l’appli.
+- Une étape qui en attend une autre n’apparaît qu’une fois, en une seule carte : la première étape, avec « +2 après » sous son titre. Touchez-la pour déplier le reste, en grisé. Quand la première est faite, la suivante prend sa place.
 - **À Maison** (ou le nom de votre lieu) montre les étapes de ce lieu et celles marquées Partout. **Tout** montre tout.
 - Changez une échéance partout où une étape apparaît.
 
+![Une chaîne, dépliée sous sa première étape](shot:chain)
+
+![La matrice réduite à une zone](shot:areas)
+
 ## Les étapes
 
-Une étape a un titre, écrit comme la **première action** : l’appli ou le lieu, puis ce qu’il faut y faire (« Ouvrir Mail et répondre à… »). Elle a aussi un démarreur, une estimation, une échéance facultative, un projet et une famille. Sous **Plus**, vous trouverez le type (une étape ou une décision), « Attend », l’appli et le lien, la répétition et une heure fixe.
+Une étape a un titre, écrit comme la **première action** : l’appli ou le lieu, puis ce qu’il faut y faire (« Ouvrir Mail et répondre à… »). Elle a aussi un démarreur, une estimation, une échéance facultative, un projet et une famille. Une étape peut aussi avoir un **nom court** (cinq ou six mots, comme « Chorale · Hill House »). C’est ce que montrent les calendriers. Laissez-le vide et Réussite en fait un à partir du titre.
+
+Quand vous ouvrez une étape, ses boutons (Enregistrer, Marquer comme fait, Déplacer vers…, La découper, Abandonner et les autres) sont sur une rangée sous le titre, toujours à portée. À côté du titre, une pastille **Heure** : touchez-la pour donner une heure fixe à l’étape. Sous **Plus**, vous trouverez le type (une étape ou une décision), « Attend », l’appli et le lien, la répétition, et la durée et le « partir plus tôt » qui vont avec une heure.
 
 **La recherche dit :** non testé ici. `[E?]`
 
@@ -41,3 +49,5 @@ Une étape a un titre, écrit comme la **première action** : l’appli ou le 
 ## Étapes répétées et rendez-vous fixes
 
 Une étape peut se répéter chaque jour, chaque semaine, chaque mois, ou tous les quelques jours, semaines ou mois. Un **rendez-vous fixe** est un loisir, des proches ou du soin : une obligation, pas une récompense. Avec une heure et des jours de la semaine (par exemple, la chorale le mercredi à 19 h 30), il apparaît tout seul dans votre plan ces jours-là, et on vous dit quand partir.
+
+Les rendez-vous fixes ne sont pas dans les quadrants, car c’est une heure qui les place et non l’urgence. La matrice les liste sous la grille, sur une ligne repliée appelée **Obligations**.

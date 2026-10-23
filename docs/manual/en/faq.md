@@ -36,6 +36,18 @@ A step carried three times or more is too big, or hides a decision. Tap **Shrink
 
 Tap **I started earlier** and say when you began. Or mark the step done and pick how long it took.
 
+## Where did the "start" times go in my calendar?
+
+A calendar is for what is at a time and what is on a day. Launch points stay in Today and in notifications. The calendar shows fixed-time items, and planned and due steps as all-day events.
+
+## Why is only one step shown when I added five?
+
+Steps that wait for another are one card: the first, with "+4 after". Tap it to see the others. When the first is done, the next takes its place. If you'd rather have them separate, choose **In any order** when you break a step down, or empty "Waits for" on a step.
+
+## Where did my standing items go from the matrix?
+
+They are in the folded **Obligations** line under the grid. A time places them, not a quadrant.
+
 ## I lost my phone.
 
 See [Sync and recovering a lost device](sync-and-recovery.md).

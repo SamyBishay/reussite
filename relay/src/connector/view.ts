@@ -5,7 +5,7 @@ import type { Day, Decision, Exchange, MemoryNote, Place, Project, Session, Stay
 import { fieldsOf } from '../../../src/data/doc';
 import { normDecision, normExchange, normNote } from '../../../src/data/normalize';
 import { withDefaults, type Settings } from '../../../src/data/settings';
-import { whereNow } from '../../../src/domain/places';
+import { whereNow, zoneOfPlace } from '../../../src/domain/places';
 import type { Data } from '../../../src/domain/lists';
 import type { Snapshot } from '../../../src/ai/apply';
 import type { Collection } from '../../../src/data/schema';
@@ -65,11 +65,11 @@ export class View {
   get where() {
     return this.once('where', () => {
       const s = this.settings;
-      return whereNow(this.at, { here: s.here, dayStart: s.dayStart }, id => this.places.get(id)?.timeZone, this.stays.values());
+      return whereNow(this.at, { here: s.here, dayStart: s.dayStart }, id => zoneOfPlace(this.places, id), this.stays.values());
     });
   }
   get today() { return this.where.today; }
-  get zone(): string { return this.places.get(this.where.here)?.timeZone ?? 'UTC'; }
+  get zone(): string { return zoneOfPlace(this.places, this.where.here) ?? 'UTC'; }
 
   get data(): Data {
     const v = this;

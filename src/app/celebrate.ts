@@ -2,6 +2,7 @@
 // time, at once, in proportion. No random variety: the pitch only rises with the day's count.
 // The completed-step effect takes 0.6 s at most and never blocks the next tap.
 import { settings } from './store';
+import { playStGeorge, type Words } from './stgeorge';
 
 type Kind = 'step' | 'last' | 'project' | 'decision';
 
@@ -59,6 +60,17 @@ export function soundChord(big = false) {
 
 const motionOff = () => settings.value.reduceMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/**
+ * The big celebration (St George, src/app/stgeorge.ts) for the big moments: the close of the day, the day's
+ * last card, a finished project. Lively plays the fight; Calm and reduced motion a still frame; Off nothing.
+ * Returns whether it showed.
+ */
+export function bigMoment(words: Words): boolean {
+  const c = settings.value.celebrations;
+  if (c === 'off' || typeof document === 'undefined') return false;
+  return playStGeorge(words, c === 'lively' && !motionOff() ? 'lively' : 'still');
+}
+
 function flyCard(suit: string, glyph: string): HTMLElement {
   const el = document.createElement('div');
   el.className = 'flycard suit-' + suit;
@@ -85,7 +97,7 @@ function particles(x: number, y: number, color: string, n: number) {
  * Play the feedback for a completion. Call it before the write, so the step's card is still
  * on screen to fly from. `n` is the day's card count after this one.
  */
-export function celebrate(kind: Kind, taskId: string | null, suit: string, n: number) {
+export function celebrate(kind: Kind, taskId: string | null, suit: string, n: number, words?: Words) {
   const s = settings.value;
   if (kind === 'step' || kind === 'last') {
     if (kind === 'last') soundChord(); else soundStep(n);
@@ -93,6 +105,8 @@ export function celebrate(kind: Kind, taskId: string | null, suit: string, n: nu
   if (s.celebrations !== 'off') try { navigator.vibrate?.(kind === 'step' ? 12 : [12, 40, 18]); } catch { /* not allowed here */ }
   if (s.celebrations === 'off' || typeof document === 'undefined') return;
   if (kind === 'project' || kind === 'decision') return; // their moment is drawn by the view (bar fill, shelf)
+  // The day's last card: St George, over the card's flight (which it would hide).
+  if (kind === 'last' && words && bigMoment(words)) return;
   const src = taskId ? document.querySelector(`[data-task="${CSS.escape(taskId)}"]`) : null;
   const pile = document.querySelector(`.pile[data-suit="${suit}"] .pc`);
   if (!src || !pile) return;

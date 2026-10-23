@@ -1,9 +1,10 @@
 // Projects by suit (brief §5, Projects): the project editor with its SMART goal, steps in
 // order with what waits for what, linked decisions, progress bars, and the Completed shelf.
 import { useState } from 'preact/hooks';
-import { tasks, projects, settings, decisions, createDoc, toast, pagePlace } from '../app/store';
-import { isOpen, inPlace, blocked, byOrder, waitingOn, type T } from '../app/model';
-import { createTask, newTaskDoc, patchProject, moveStep, moveProject } from '../app/actions';
+import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace } from '../app/store';
+import { onPage } from '../domain/places';
+import { isOpen, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
+import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
 import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
@@ -13,27 +14,37 @@ import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Task } from '../data/schema';
+import { useSortable, GRIP } from '../app/sortable';
+import { groupByArea } from '../domain/areas';
+import { AreaTag } from '../app/AreaUi';
+import { areaOfStep } from '../app/areas';
+import { areaName } from '../app/sheets';
 import { CommandBox } from '../ai/ui';
 
 type P = Project & { id: string };
 const openProj = new Set<string>();
 
-function Step({ tk, first, last }: { tk: T; first?: boolean; last?: boolean }) {
+function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: boolean; sortable?: boolean }) {
   const done = tk.status === 'done';
   const w = waitingOn(tk)[0];
+  // A step that waits is greyed and indented by how far down its chain it is.
+  const waiting = !done && blocked(tk);
+  const depth = waiting ? chains.value.chains.get(chains.value.of.get(tk.id) ?? '')?.depth.get(tk.id) ?? 1 : 0;
   return (
-    <li class={done ? 'done' : ''} data-task={tk.id}>
+    <li class={(done ? 'done' : '') + (waiting ? ' waiting' : '')} data-task={tk.id} {...(depth > 1 ? { style: { marginLeft: (depth - 1) * 12 + 'px' } } : {})} {...(sortable ? { 'data-sort': '' } : {})}>
       <span class={'g suit-' + tk.suit} aria-hidden="true">{tk.template ? '↻' : done ? '✓' : '·'}</span>
       <span class="stept">
         <button class="linklike" type="button" onClick={() => openTask(tk.id)}><Title s={tk.title} /></button>
+        {!done && areaOfStep(tk) && <> <AreaTag id={areaOfStep(tk)!} /></>}
         {!done && w && <small class="muted"> · {t('waitsFor', { what: w.title.length > 30 ? w.title.slice(0, 28) + '…' : w.title })}</small>}
       </span>
       <span class="stepctl">
         {!done && !tk.template && <DueChip tk={tk} />}
         <span class="due">{tk.template ? t('standing') : tk.est ? fmtMin(tk.est) : ''}</span>
         {!done && !tk.template && <>
-          <button type="button" class="icon-btn sm" disabled={first} onClick={() => moveStep(tk.id, -1)} aria-label={t('earlier')}>↑</button>
-          <button type="button" class="icon-btn sm" disabled={last} onClick={() => moveStep(tk.id, 1)} aria-label={t('later')}>↓</button>
+          <span class="grip sm" aria-hidden="true" data-testid="grip">{GRIP}</span>
+          <button type="button" class="icon-btn sm kbd-only" disabled={first} onClick={() => moveStep(tk.id, -1)} aria-label={t('earlier')}>↑</button>
+          <button type="button" class="icon-btn sm kbd-only" disabled={last} onClick={() => moveStep(tk.id, 1)} aria-label={t('later')}>↓</button>
         </>}
       </span>
     </li>
@@ -51,6 +62,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   const label = t('stepsDone', { d: done.length, n: total });
   const linked = [...decisions.value.values()].filter(d => d.projectId === p.id);
   const left = open.length;
+  const listRef = useSortable<HTMLOListElement>(ids => void setStepOrder(ids));
   const add = async (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
@@ -79,13 +91,13 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
       ))}</ul>}
       <details open={openProj.has(p.id)} onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) openProj.add(p.id); else openProj.delete(p.id); }}>
         <summary>{tmpl.length && !total ? t('standingItems') : tmpl.length ? t('stepsAndStanding') : t('steps')}</summary>
-        <ol class="steps">{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} />)}{doneSorted.map(x => <Step key={x.id} tk={x} />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
+        <ol class="steps" ref={listRef}>{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} sortable />)}{doneSorted.map(x => <Step key={x.id} tk={x} />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
         <form class="addstep" onSubmit={add}>
           <input type="text" name="title" placeholder={t('nextStepPlaceholder')} aria-label={t('newStepFor', { name: p.name })} autocomplete="off" required />
           <input type="number" name="est" min="1" max="600" placeholder={t('minShort')} aria-label={t('estimateMin')} />
           <button class="btn small" type="submit">{t('add')}</button>
         </form>
-        {p.id !== 'inbox' && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={() => void openDecision(null, { projectId: p.id })}>{t('newDecision')}</button></div>}
+        {p.id !== 'inbox' && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={() => void openDecision(null, { projectId: p.id })}>{t('newDecision')}</button></div>}
       </details>
     </article>
   );
@@ -118,7 +130,7 @@ function ProjectSheet({ id }: { id: string }) {
           </select>
         </label>
       </div>
-      <div class="actions" style="margin-top:10px">
+      <div class="actions" style="margin-top:var(--s3)">
         <button class="btn small" type="button" onClick={() => moveProject(id, -1)}>{t('earlier')}</button>
         <button class="btn small" type="button" onClick={() => moveProject(id, 1)}>{t('later')}</button>
       </div>
@@ -207,7 +219,7 @@ export function Projects() {
   const page = pagePlace.value;
   let hidden = 0;
   const vis = projs.filter(p => {
-    const ok = scope.value === 'all' || !p.where || p.where === 'any' || p.where === page || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x));
+    const ok = scope.value === 'all' || !p.where || onPage(places.value, p.where, page) || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x));
     if (!ok) hidden++;
     return ok;
   });
@@ -221,19 +233,24 @@ export function Projects() {
         if (!ps.length) return null;
         return (
           <section class="suitsec"><h3><Suit s={s} /> {suitName(s)}</h3>
-            <div class="projs">{ps.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
+            {groupByArea(ps, p => p.where || 'any', places.value, page).map((g, i, all) => (
+              <>
+                {all.length > 1 && (g.area ? <h4 class="areahead" data-testid="area-head">{areaName(g.area)}</h4> : i > 0 && <h4 class="areahead">{t('areaOther')}</h4>)}
+                <div class="projs">{g.items.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
+              </>
+            ))}
           </section>
         );
       })}
       {inbox.some(x => x.status === 'open' && !x.fixed) && (
-        <section class="suitsec"><h3>{t('inbox')}</h3><p class="hint" style="margin-bottom:10px">{t('inboxHint')}</p>
+        <section class="suitsec"><h3>{t('inbox')}</h3><p class="hint" style="margin-bottom:var(--s3)">{t('inboxHint')}</p>
           <div class="projs"><ProjectCard p={(projects.value.get('inbox') as P) ?? ({ id: 'inbox', name: t('inbox') } as P)} ts={inbox.filter(x => !x.fixed && x.src !== 'plan')} /></div>
         </section>
       )}
       <Decisions />
       <NewProject />
       <Shelf done={[...projects.value.values()].filter(p => p.status === 'done')} by={by} />
-      <p class="hint" style="margin-top:10px">{t('placePageNote', { place: placeName(page) })}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('placePageNote', { place: placeName(page) })}</p>
     </div>
   );
 }

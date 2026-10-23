@@ -15,7 +15,7 @@ Votre liste est d’abord brouillée sur votre appareil. **Ce que le relais peut
 - votre liste sous forme de blocs brouillés, leur taille et leur heure d’arrivée ;
 - les adresses IP ;
 - l’adresse de notification de chaque appareil, et les heures auxquelles ses notifications sont dues (leur texte est brouillé, donc le relais ne peut pas le lire) ;
-- le flux de calendrier, seulement si vous l’activez, avec des titres génériques sauf si vous incluez les titres des étapes ;
+- le flux de calendrier, seulement si vous l’activez. Avec **Les heures seulement**, il dit seulement « Heure fixe » et « Étape prévue ». Avec **Noms courts**, et avec **Noms courts, lieux et notes**, ce qu’il dit (les noms courts, puis les lieux, les notes et les liens) est stocké en clair, et celui qui fait tourner le relais peut le lire ;
 - toute votre liste, **tant que le connecteur est activé**.
 
 Il ne voit jamais ce qu’il y a dans un bloc brouillé.

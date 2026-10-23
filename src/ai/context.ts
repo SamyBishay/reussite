@@ -9,6 +9,7 @@ import { T, isOpen, inPlace, planOf, byPriority, byOrder, estModel, estPoints } 
 import { cleanMethod, contractOf, methodSummaryOf } from './method';
 import { decisionLines, oneLine as one, stepLine as pureStepLine, STEP_HEADER } from '../domain/lists';
 import { appKey, medianRatio } from '../domain/estimates';
+import { zoneOfPlace } from '../domain/places';
 import { pickNotes, noteBlock, type Note } from '../domain/memory';
 import { preferencesPack, preferencesSystem } from '../domain/preferences';
 import { lang } from '../i18n';
@@ -85,7 +86,10 @@ export function projectLines(max = 30): string {
 }
 export function placeLines(): string {
   const ps = [...places.value.values()];
-  return ps.length ? 'Places (id | name | time zone):\n' + ps.map(p => [p.id, one(p.name), p.timeZone].join(' | ')).join('\n') : '';
+  const by = new Map(ps.map(p => [p.id, p]));
+  // An area has its parent's zone and a last column naming the place it belongs to; places without areas read as before.
+  const area = (p: (typeof ps)[number]) => (p.parentId && by.has(p.parentId) ? [' | area of ' + by.get(p.parentId)!.id] : []);
+  return ps.length ? 'Places (id | name | time zone):\n' + ps.map(p => [p.id, one(p.name), zoneOfPlace(places.value, p.id) ?? p.timeZone].join(' | ') + area(p).join('')).join('\n') : '';
 }
 
 /** Today's date, weekday and place: the first line of every context. */

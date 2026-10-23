@@ -7,10 +7,10 @@ import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc, greet
 import { applyTheme } from './theme';
 import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openPause, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { openPile, openPause, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { startTask, patchTask } from './actions';
 import { openPlaces } from './PlacesSheet';
-import { view, go, fromHash, TABS, calMode, type View } from './nav';
+import { view, go, fromHash, taskFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
 import { startSync } from './sync';
@@ -22,6 +22,7 @@ import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
 import { Projects } from '../views/Projects';
 import { Calendar } from '../views/Calendar';
+import { Notifications } from '../views/Notifications';
 import { Settings } from '../views/Settings';
 import { Home } from '../views/Home';
 import { Memory } from '../views/Memory';
@@ -99,7 +100,7 @@ const TAB_ICON: Record<string, string> = {
 /** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
 function Tabs() {
   const v = view.value;
-  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' : v === x);
+  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' || v === 'notifications' : v === x);
   return (
     <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
       <div class="tabbar-in">
@@ -140,7 +141,7 @@ function Runbar() {
   return <div id="runbar" />;
 }
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || (view.value === 'calendar' && calMode.value === 'log')) return null;
+  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
       <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
@@ -173,15 +174,25 @@ function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
 
-/** Home and the screens behind its menu have no masthead, suit piles or footer; the others keep them. */
-const BARE: View[] = ['home', 'memory', 'history', 'addresses'];
-const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses };
+/** Home, Settings and the screens behind Home's bell and menu have no masthead, suit piles or footer; the others keep them. */
+const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses'];
+/** Views that get a wider column above 1024 px (brief §16). */
+const WIDE: View[] = ['matrix', 'calendar'];
+const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications };
+
+/** A link with `#task/<id>` (an event in a calendar app) opens that step's sheet, if it still exists. */
+function openLinkedTask() {
+  const id = taskFromHash();
+  if (!id) return;
+  clearTaskHash();
+  if (T(id)) openTask(id);
+}
 
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
-    const onHash = () => { const v = fromHash(); if (v) view.value = v; };
+    const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) openLinkedTask(); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -200,7 +211,7 @@ export function App() {
   );
   return (
     <>
-      <div class={'app' + (bare ? ' bare' : '')}>
+      <div class={'app' + (bare ? ' bare' : '') + (WIDE.includes(view.value) ? ' wide' : '')} data-view={view.value}>
         {!bare && <Mast />}
         {!bare && <Side />}
         <Runbar />
@@ -208,7 +219,7 @@ export function App() {
           <UpdateBanner />
           <PlaceBanner />
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
-          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
+          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>
       </div>

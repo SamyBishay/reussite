@@ -143,6 +143,11 @@ describe('day start and places', () => {
     ]);
     expect(fixed({ ...w, stays: [] })[0]).toMatchObject({ place: 'paris' });
   });
+  it('a stay in an area uses its parent place’s zone, not the zone stored on the area', () => {
+    const area = { ...place('heli', 'Asia/Tokyo'), parentId: 'cairo' };
+    const w = { tasks: [task('t', { title: 'Meet', at: '19:00', due: '2026-10-21' })], places: [place('paris', 'Europe/Paris'), place('cairo', 'Africa/Cairo'), area], stays: [stay('s1', 'heli', '2026-10-20', '2026-10-24')] };
+    expect(fixed(w).map(e => [e.place, e.zone, iso(e.at)])).toEqual([['heli', 'Africa/Cairo', '2026-10-21T16:00:00.000Z']]);
+  });
   it('a place with an unknown zone does not break the agenda', () => {
     expect(() => week({ places: [place('paris', 'Nowhere/Land')], tasks: [choir()] })).not.toThrow();
   });

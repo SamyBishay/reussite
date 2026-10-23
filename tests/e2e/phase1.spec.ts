@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab } from './helpers';
+import { importSample, noSideways, goTab, calEvent } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -47,12 +47,13 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');
 });
 
-test('calendar week view: plan a step on a day, or make it due', async ({ page }) => {
+test('calendar week view: tap a card, then Move to… plans it on a day', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('cal-week').click();
   await expect(page.getByTestId('calendar')).toBeVisible();
-  const today = page.getByTestId('wday-' + iso(0));
-  await today.locator('.cal-item', { hasText: 'thesis draft and write' }).getByTestId('cal-move').click();
+  await calEvent(page, 'thesis draft second').first().click();
+  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
   await sheet(page).getByRole('button', { name: 'Plan it on…' }).click();
   await sheet(page).getByRole('button', { name: 'Tomorrow' }).click();
   // Tomorrow may fall in next week's view; open it in the day navigator instead.
@@ -60,8 +61,8 @@ test('calendar week view: plan a step on a day, or make it due', async ({ page }
   await page.getByTestId('next-day').click();
   await expect(page.getByTestId('other-day')).toContainText('thesis draft and write');
   await page.getByTestId('tab-calendar').click();
-  await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
-  await expect(page.getByTestId('month')).toBeVisible();
+  await page.getByTestId('cal-month').click();
+  await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
 });
 
 test('a stay switches the current place on its first day', async ({ page }) => {
@@ -73,8 +74,8 @@ test('a stay switches the current place on its first day', async ({ page }) => {
   await form.locator('input[name=from]').fill(iso(0));
   await form.locator('input[name=to]').fill(iso(3));
   await form.getByRole('button', { name: 'Add' }).click();
-  await expect(page.getByTestId('place-pill')).toContainText('Away');
   await page.getByTestId('tab-today').click();
+  await expect(page.getByTestId('place-pill')).toContainText('Away');
   await expect(page.getByTestId('stay-notice')).toContainText('Away');
 });
 
@@ -153,6 +154,60 @@ test('close of the day: the cards land readable, then the summary', async ({ pag
   await expect(page.getByTestId('show')).toBeHidden();
 });
 
+test('the close of the day ends on St George: a tap skips it at once; Calm is a still frame, Off nothing', async ({ page }) => {
+  await importSample(page);
+  const sg = page.getByTestId('stgeorge');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await page.getByTestId('skip').click();
+  await expect(sg).toBeVisible();
+  await expect(sg).toHaveClass(/play/);
+  await expect(sg).toContainText('The day is played.');
+  // Transforms and opacity only.
+  const props = await sg.evaluate(el => [...new Set(el.getAnimations({ subtree: true }).flatMap(a => ((a.effect as KeyframeEffect).getKeyframes()).flatMap(k => Object.keys(k).filter(x => !['offset', 'easing', 'composite', 'computedOffset'].includes(x)))))]);
+  expect(props.every(p => p === 'transform' || p === 'opacity'), props.join()).toBe(true);
+  const t0 = Date.now();
+  await sg.click();
+  await expect(sg).toHaveCount(0, { timeout: 1000 });
+  expect(Date.now() - t0).toBeLessThan(1000);
+  await page.getByTestId('show').getByRole('button', { name: 'Not yet' }).click({ timeout: 1000 });
+  // Calm: the last frame, no fight.
+  await goTab(page, 'settings');
+  await page.getByTestId('appearance').getByRole('button', { name: 'Calm', exact: true }).click();
+  await goTab(page, 'today');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await page.getByTestId('skip').click();
+  await expect(sg).toHaveClass(/still/);
+  await expect(sg).not.toHaveClass(/play/);
+  await expect(sg).toHaveCount(0, { timeout: 4000 });
+  await page.getByTestId('show').getByRole('button', { name: 'Not yet' }).click();
+  // Off: the summary, and nothing over it.
+  await goTab(page, 'settings');
+  await page.getByTestId('appearance').getByRole('button', { name: 'Off', exact: true }).click();
+  await goTab(page, 'today');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await expect(page.getByTestId('close-summary')).toBeVisible();
+  await expect(sg).toHaveCount(0);
+});
+
+test('an ordinary Done never brings St George; the day’s last card does', async ({ page }) => {
+  await importSample(page);
+  const sg = page.getByTestId('stgeorge');
+  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already done' });
+  let seen = false;
+  for (let i = 0; i < 12 && await doneBtn.count() > 0; i++) {
+    await doneBtn.click();
+    await page.getByRole('button', { name: 'I didn’t time it' }).click();
+    if (await page.locator('main').getByText('List played').count() > 0) {
+      await expect(sg).toBeVisible();
+      await expect(sg).toContainText('List played');
+      seen = true;
+      break;
+    }
+    await expect(sg).toHaveCount(0);
+  }
+  expect(seen).toBe(true);
+});
+
 test('personal estimates wait for five timed steps', async ({ page }) => {
   await importSample(page);
   await page.locator('.row:not(.done)').getByTestId('details').first().click();
@@ -190,8 +245,12 @@ for (const width of [320, 375, 430]) {
     // Calendar, both views; the day navigator.
     await page.getByTestId('tab-calendar').click();
     await check('calendar week');
-    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
+    await page.getByTestId('cal-month').click();
     await check('calendar month');
+    await page.getByTestId('cal-agenda').click();
+    await check('calendar agenda');
+    await page.getByTestId('cal-day').click();
+    await check('calendar day');
     await page.getByTestId('tab-today').click();
     await page.getByTestId('next-day').click();
     await check('tomorrow');
@@ -220,8 +279,8 @@ for (const width of [320, 375, 430]) {
     await page.keyboard.press('Escape');
     // The weekly review, each screen.
     await page.getByTestId('tab-calendar').click();
-    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Week' }).click();
-    await page.locator('main').getByRole('button', { name: '☀ Weekly review' }).first().click();
+    await page.getByTestId('cal-week').click();
+    await calEvent(page, 'Weekly review').first().click();
     for (let i = 0; i < 10; i++) {
       await check('review ' + i);
       if (i < 9) await page.getByTestId('rv-next').click();
@@ -235,6 +294,7 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('17:00');
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
@@ -243,5 +303,134 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   await expect(page.locator('ul.fixed')).toContainText('17:00');
   await expect(page.locator('ul.fixed')).toContainText('Walk to the park');
   await page.getByTestId('tab-calendar').click();
-  await expect(page.getByTestId('wday-' + iso(0))).toContainText('Walk to the park');
+  // A fixed time is on the hour grid (not in the all-day row), at its time.
+  await page.getByTestId('cal-day').click();
+  const timed = page.locator('.sx__time-grid-event', { hasText: 'park' });
+  await expect(timed).toHaveCount(1);
+  await expect(page.locator('.sx__date-grid-event', { hasText: 'park' })).toHaveCount(0);
+  // Both are read in one frame: the grid scrolls to its first position by itself (smoothly) after it is drawn, and two
+  // separate measures taken while it moves differ by however far it went between them.
+  const gap = await page.evaluate(() => {
+    const ev = document.querySelector('.sx__time-grid-event')!.getBoundingClientRect().y;
+    const hour = [...document.querySelectorAll('.sx__week-grid__hour')].find(h => h.textContent?.includes('17:00'))!.getBoundingClientRect().y;
+    return Math.abs(ev - hour);
+  });
+  expect(gap).toBeLessThan(4);
+});
+
+test('a standing obligation is not in the four quadrants: it is on the Obligations line, folded', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-matrix').click();
+  await expect(page.getByTestId('obligations')).not.toContainText('scanned receipts');
+  await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
+  await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.matrix')).not.toContainText('scanned receipts');
+  const ob = page.getByTestId('obligations');
+  await expect(ob).toBeVisible();
+  expect(await ob.evaluate(d => (d as HTMLDetailsElement).open)).toBe(false);
+  await ob.locator('summary').click();
+  await expect(ob).toContainText('scanned receipts');
+});
+
+test('a card’s actions are in a bar at the top of its sheet, which stays in view while the fields scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 560 });
+  await importSample(page);
+  await page.getByTestId('tab-matrix').click();
+  await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
+  const bar = sheet(page).getByTestId('task-actions');
+  await expect(bar.getByRole('button', { name: 'Save' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Mark done' })).toBeVisible();
+  await sheet(page).evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(bar.getByRole('button', { name: 'Save' })).toBeInViewport();
+  const [b, s] = await Promise.all([bar.boundingBox(), sheet(page).boundingBox()]);
+  expect(b!.y - s!.y).toBeLessThan(4);
+});
+
+test('a start time is set from a Time chip next to the title; length and lead appear once there is a time', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-today').click();
+  await page.getByTestId('quick-details').click();
+  const s = sheet(page);
+  await expect(s.getByTestId('time-chip')).toHaveText('Time');
+  await expect(s.locator('input[name=at]')).toBeHidden();
+  await s.getByTestId('time-chip').click();
+  await expect(s.locator('input[name=dur]')).toHaveCount(0);
+  await s.locator('input[name=at]').fill('16:30');
+  await expect(s.getByTestId('time-chip')).toHaveText('16:30');
+  await expect(s.locator('input[name=dur]')).toBeVisible();
+  await expect(s.getByTestId('lead')).toBeVisible();
+});
+
+const planIds = (page: Page) => page.locator('[data-testid=plan-list] > li').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));
+
+test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and ↓ are the keyboard way', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('plan-list').scrollIntoViewIfNeeded();
+  await page.evaluate(() => document.querySelector('[data-testid=plan-list]')!.scrollIntoView({ block: 'start' })); // the whole list in view, so the mouse can reach it
+  const before = await planIds(page);
+  expect(before.length).toBeGreaterThanOrEqual(3);
+  const last = page.locator('[data-testid=plan-list] > li').last();
+  const first = page.locator('[data-testid=plan-list] > li').nth(1); // (the first row is a step already done)
+  const g = (await last.getByTestId('grip').boundingBox())!, f = (await first.boundingBox())!;
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + g.width / 2, g.y - 20, { steps: 5 });
+  await page.waitForTimeout(100);
+  await page.mouse.move(g.x + g.width / 2, f.y + 4, { steps: 15 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  await expect.poll(() => planIds(page)).not.toEqual(before);
+  const after = await planIds(page);
+  expect(after[1]).toBe(before[before.length - 1]);
+  expect(after).toHaveLength(before.length);
+  await page.reload();
+  await expect(page.getByTestId('first')).toBeVisible();
+  expect(await planIds(page)).toEqual(after);
+  // keyboard: the hidden ↑ comes into view when focused
+  const row = page.locator('[data-testid=plan-list] > li').nth(2);
+  const up = row.getByRole('button', { name: 'Earlier' });
+  await up.focus();
+  await expect(up).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await planIds(page))[1]).toBe(after[2]);
+  expect((await planIds(page))[2]).toBe(after[1]);
+});
+
+test('a step added by hand goes right after the one running, not at the bottom', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('first').getByRole('button', { name: /Start timer|Just start the timer/ }).click();
+  const ids0 = await page.evaluate(() => [...document.querySelectorAll('[data-testid=plan-list] > li')].map(e => (e as HTMLElement).dataset.task));
+  await page.locator('form.quick input[name=title]').fill('Zebra errand');
+  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  const rows = page.locator('[data-testid=plan-list] > li');
+  await expect(rows).toHaveCount(ids0.length + 1);
+  await expect(rows.nth(1)).toContainText('Zebra errand'); // the done step stays above; the running one is the first card
+});
+
+test('a project’s steps are ordered by dragging a grip, too', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-projects').click();
+  await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  const list = page.locator('ol.steps').filter({ has: page.locator('li[data-sort]:nth-of-type(3)') }).first();
+  await list.scrollIntoViewIfNeeded();
+  await list.evaluate(el => el.scrollIntoView({ block: 'start' }));
+  const ids = () => list.locator('> li[data-sort]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));
+  const before = await ids();
+  const a = (await list.locator('> li[data-sort]').nth(1).getByTestId('grip').boundingBox())!, b = (await list.locator('> li[data-sort]').first().boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2, a.y - 10, { steps: 5 });
+  await page.waitForTimeout(100);
+  await page.mouse.move(a.x + a.width / 2, b.y + 2, { steps: 12 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  await expect.poll(ids).not.toEqual(before);
+  const after = await ids();
+  expect(after[0]).toBe(before[1]);
+  expect(after[1]).toBe(before[0]);
+  await page.reload();
+  await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  expect(await ids()).toEqual(after);
 });

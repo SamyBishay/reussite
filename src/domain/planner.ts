@@ -2,6 +2,7 @@
 // and the same answers to the check-in always give the same plan.
 import { shiftTime } from './calendar';
 import { addDays, type DayKey } from './dates';
+import { HALF_DAY_AT, type Half } from './areas';
 
 export type Preset = 'normal' | 'afternoon' | 'hour' | 'rest';
 export type Role = 'fixed' | 'carried' | 'now' | 'protect' | 'quick' | 'obligation' | 'optional';
@@ -16,6 +17,8 @@ export interface PStep {
   lo?: number | null;
   hi?: number | null;
   starter?: string | null;
+  /** The area the step is set to (a place that has a parent), if any: what a half day in that area draws on. */
+  area?: string | null;
 }
 export interface Obligation { id: string; lastDone: DayKey | null; at?: string | null; est: number | null }
 export interface Fixed { at: string; dur: number }
@@ -46,12 +49,16 @@ export interface PlanInput {
   usualLoad: number | null;
   /** Every fixed-time item dated today, still to do. */
   timed?: Timed[];
+  /** Areas the day spends its morning (launch points before 13:00) and its afternoon (from 13:00) in. */
+  halves?: Partial<Record<Half, string | null>>;
 }
 
 export interface PlanItem {
   id: string;
   role: Role;
   at?: string;
+  /** A step drawn on for a half day in an area: the morning or the afternoon it is put in. */
+  half?: Half;
   /** A fixed-time item's leave-by time (at minus its lead), worked out here and never stored. */
   leave?: string;
   breakDown?: boolean;
@@ -90,7 +97,14 @@ export function plan(input: PlanInput): Plan {
   const fits = (s: PStep) => shape.preset !== 'hour' || work.length === 0 || minutes + (s.est ?? 0) <= HOUR_BUDGET;
   const take = (s: PStep, role: Role) => { add(s, role); minutes += s.est ?? 0; };
 
-  const pool = input.candidates.filter(s => !s.blocked && !taken.has(s.id));
+  // A half day in an area draws on that area's cards first (within each pass, so Now, Protect and Quick keep their rules).
+  // The morning means nothing on a day that starts in the afternoon.
+  const halves: Partial<Record<Half, string>> = {};
+  if (input.halves?.pm) halves.pm = input.halves.pm;
+  if (input.halves?.am && shape.start < HALF_DAY_AT) halves.am = input.halves.am;
+  const halfOf = (s: PStep): Half | null => (s.area && s.area === halves.am ? 'am' : s.area && s.area === halves.pm ? 'pm' : null);
+  const byHalf = (a: PStep, b: PStep) => Number(!halfOf(a)) - Number(!halfOf(b));
+  const pool = input.candidates.filter(s => !s.blocked && !taken.has(s.id)).sort(byHalf);
   if (rest) {
     // Rest day: the obligation only, unless something is due within two days.
     for (const s of input.carried) if (dueSoon(s) && work.length < limit) take(s, 'carried');
@@ -106,6 +120,13 @@ export function plan(input: PlanInput): Plan {
     for (const s of pool) if (s.quad === 3 && work.length < limit && !taken.has(s.id) && fits(s)) take(s, 'quick');
   }
   for (const it of items) { const s = work.find(w => w.id === it.id); if (s && needsBreakDown(s)) it.breakDown = true; }
+  // The cards of a half day's area are together: the morning's first, the afternoon's last, the rest between.
+  const lead = items.length - work.length;
+  const fixedItems = items.slice(0, lead);
+  const workItems = items.slice(lead);
+  const halfItem = (it: PlanItem): Half | null => { const s = work.find(w => w.id === it.id); return s ? halfOf(s) : null; };
+  for (const it of workItems) { const h = halfItem(it); if (h) it.half = h; }
+  items.splice(0, items.length, ...fixedItems, ...workItems.filter(i => i.half === 'am'), ...workItems.filter(i => !i.half), ...workItems.filter(i => i.half === 'pm'));
 
   // One standing obligation, the one done least recently, with a time.
   const ob = [...input.obligations].sort((a, b) => (a.lastDone ?? '') < (b.lastDone ?? '') ? -1 : (a.lastDone ?? '') > (b.lastDone ?? '') ? 1 : 0)[0];
@@ -121,6 +142,11 @@ export function plan(input: PlanInput): Plan {
   const ends = shape.fixed.map(f => mins(f.at) + Math.max(0, f.dur || 0)).filter(m => m > start).sort((a, b) => a - b);
   const restarts = (ends.length ? ends.map(hm) : input.defaultRestarts.filter(t => mins(t) > start)).filter((t, i, a) => a.indexOf(t) === i).slice(0, 2);
   const launches: Launch[] = [{ t: shape.start, k: 'start' }, ...restarts.map(t => ({ t, k: 'restart' as const }))];
+  // The afternoon's cards need an afternoon launch point to start from.
+  if (items.some(i => i.half === 'pm') && !launches.some(l => l.t >= HALF_DAY_AT)) {
+    launches.push({ t: input.defaultRestarts.filter(t => t >= HALF_DAY_AT).sort()[0] ?? '14:00', k: 'restart' });
+    launches.sort((a, b) => a.t.localeCompare(b.t));
+  }
 
   const usual = input.usualLoad ?? input.maxWorkSteps * 30;
   const light = rest || total.est - input.planningMin < usual / 2;

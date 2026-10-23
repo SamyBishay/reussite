@@ -765,6 +765,13 @@ export const fr: Partial<Strings> = {
   eveningAt: 'Clôture de la journée',
   remindersLater: 'Les notifications utilisent ces heures. Activez-les dans Notifications, plus bas.',
   changelog: 'Nouveautés',
+  manualOpen: 'Lire le manuel',
+  manualHint: 'De courtes pages en mots simples, avec des images de l’appli.',
+  manualTitle: 'Manuel',
+  manualContents: 'Sommaire',
+  manualLoading: 'Chargement…',
+  manualMissing: 'Cette page n’a pas pu être chargée.',
+  manualNotTranslated: 'Cette page n’est pas encore traduite ; la voici en anglais.',
   // Phase 2 : l’IA
   yes: 'oui',
   no: 'non',

@@ -7,6 +7,7 @@ import {
   blocked, byPriority, decisionsToCheck, estPointsOf, fixedOn, isOpen, listOf, oneLine, planOf, projName, quadOf, stepLine, yesterdayOpen, type TaskW,
 } from '../../../src/domain/lists';
 import { addDays } from '../../../src/domain/dates';
+import { chainIndex, chainOf, effectiveDue, isWaiting, type ChainIndex } from '../../../src/domain/chains';
 import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
 import { findByName, norm } from '../../../src/domain/names';
 import { onPage } from '../../../src/domain/places';
@@ -32,7 +33,18 @@ function estModel(v: View): Model {
 }
 const personal = (v: View, t: Pick<Task, 'est' | 'app' | 'project' | 'suit' | 'estBy'>) => predict(estModel(v), { est: t.est, app: t.app, project: t.project, suit: t.suit, estBy: t.estBy });
 
-export const line = (v: View, t: TaskW) => stepLine(t, v.data);
+/** The chains of the open steps, built once per view: one pass, shared by every tool. */
+const chainsOf = new WeakMap<View, ChainIndex>();
+export function chains(v: View): ChainIndex {
+  let ix = chainsOf.get(v);
+  if (!ix) { ix = chainIndex(v.tasks); chainsOf.set(v, ix); }
+  return ix;
+}
+/** A step as a line; a chain's head says "+n after" and its chain's date, a step that waits says so. */
+export const line = (v: View, t: TaskW) => {
+  const ix = chains(v), c = ix.chains.get(t.id);
+  return stepLine(t, v.data, c ? { after: c.after, due: c.due } : isWaiting(ix, t.id) ? 'waiting' : undefined);
+};
 export const lines = (v: View, ts: TaskW[], max = MAX_LINES) => ts.slice(0, max).map(t => line(v, t)).join('\n');
 
 const weekday = (k: string) => new Date(k + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
@@ -60,7 +72,7 @@ export function dayText(v: View, k: string): string {
   const d = v.data;
   const day = v.days.get(k);
   const isToday = k === v.today;
-  const plan = planOf(d, k).map(id => v.tasks.get(id)!);
+  const plan = planOf(d, k).filter(id => !isWaiting(chains(v), id)).map(id => v.tasks.get(id)!);
   const optional = new Set(day?.optional ?? []);
   const open = plan.filter(t => isOpen(t));
   const work = open.filter(t => !optional.has(t.id));
@@ -96,16 +108,23 @@ export function dayText(v: View, k: string): string {
   return L.join('\n\n');
 }
 
+/** A chain's head with its chain's earliest due date when that comes first, for the quadrant. */
+const effective = (t: TaskW, ix: ChainIndex): TaskW => { const d = effectiveDue(ix, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
+
 export interface Query { quadrant?: number; project?: string; place?: string; status?: 'open' | 'done' | 'dropped' | 'all'; dueFrom?: string; dueTo?: string; text?: string; limit?: number }
 
 export function queryText(v: View, q: Query, ids: { project?: string; place?: string }): string {
   const status = q.status ?? 'open';
   const words = q.text ? q.text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean) : [];
   const d = v.data;
+  const ix = chains(v);
+  let hidden = 0;
   const hit = [...v.tasks.values()].filter(t => {
     if (t.template) return false;
+    // A step that waits is under its head ("+n after"); naming words finds it anyway.
+    if (!words.length && isWaiting(ix, t.id)) { if (status === 'open' || status === 'all') hidden++; return false; }
     if (status !== 'all' && t.status !== status) return false;
-    if (q.quadrant && quadOf(t, d.today, d.urgencyDays) !== q.quadrant) return false;
+    if (q.quadrant && quadOf(effective(t, ix), d.today, d.urgencyDays) !== q.quadrant) return false;
     if (ids.project && t.project !== ids.project) return false;
     if (ids.place) { const w = t.where || v.projects.get(t.project)?.where || 'any'; if (!onPage(v.places, w, ids.place)) return false; }
     if (q.dueFrom && !(t.due && t.due >= q.dueFrom)) return false;
@@ -116,10 +135,18 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
     }
     return true;
   });
-  hit.sort(status === 'done' || status === 'dropped' ? (a, b) => String(b.doneDay ?? '').localeCompare(String(a.doneDay ?? '')) || a.order - b.order : (a, b) => byPriority(a, b, d));
+  hit.sort(status === 'done' || status === 'dropped' ? (a, b) => String(b.doneDay ?? '').localeCompare(String(a.doneDay ?? '')) || a.order - b.order : (a, b) => byPriority(effective(a, ix), effective(b, ix), d));
   const max = Math.min(q.limit ?? MAX_LINES, MAX_LINES);
-  if (!hit.length) return 'No steps match.';
-  return `${hit.length} step${hit.length === 1 ? '' : 's'} match${hit.length > max ? `, showing the first ${max}` : ''}.\n${'id | title | quadrant | due | estimate | project'}\n${lines(v, hit, max)}`;
+  const waiting = hidden ? ` ${hidden} more wait${hidden === 1 ? 's' : ''} for another step, under its head; get_task on a head lists its chain.` : '';
+  if (!hit.length) return 'No steps match.' + waiting;
+  return `${hit.length} step${hit.length === 1 ? '' : 's'} match${hit.length > max ? `, showing the first ${max}` : ''}.${waiting}\n${'id | title | quadrant | due | estimate | project'}\n${lines(v, hit, max)}`;
+}
+
+/** The steps of the chain a step is in, in the order they unfold (head first), each with its id; the step asked for is marked. */
+function chainLines(v: View, t: TaskW): string[] {
+  const c = chainOf(chains(v), t.id);
+  if (!c) return [];
+  return [...c.members.map(id => `${id === t.id ? '> ' : ''}${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`), ...(c.due ? [`earliest due ${c.due}`] : [])];
 }
 
 export function taskText(v: View, t: TaskW): string {
@@ -136,6 +163,7 @@ export function taskText(v: View, t: TaskW): string {
     f('label', t.label), f('starter', t.starter), f('resume', t.resume), f('note', t.note),
     f('app', t.app), f('link', t.link), f('prompt', t.prompt),
     f('waiting on', listOf(t.after).map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`)),
+    f('chain', chainLines(v, t)),
     f('repeats', t.repeat), f('carried', t.carried || null), f('stuck', t.stalls || null), f('frictions', t.friction),
     f('created', t.created), f('by', t.src === 'ai' ? 'an AI' : null),
   ].filter(Boolean);

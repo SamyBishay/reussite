@@ -46,10 +46,10 @@ All answers are plain text, compact lines `id | title | Q1 | due | estimate | pr
 
 | tool | input | answers |
 | --- | --- | --- |
-| `today` | none | The date and place; the next step with its starter and resume note; today's list in order with the estimated total and its personal range; launch points; fixed times; steps carried from yesterday; decisions to check; what is done today. |
+| `today` | none | The date and place; the next step with its starter and resume note; today's list in order with the estimated total and its personal range; launch points; fixed times; steps carried from yesterday; decisions to check; what is done today. A step that waits for another is not listed on its own: the head of its chain shows `(+n after, chain due D)` and its quadrant follows the chain's earliest due date. |
 | `get_day` | `date` | The same for any date. |
-| `query_tasks` | `quadrant?` 1–4, `project?` id or name, `place?` id, name or `any`, `status?` `open` (default) `done` `dropped` `all`, `due_from?`, `due_to?`, `text?` (all words, case and accents ignored), `limit?` ≤ 50 | At most 50 lines, most pressing first (done steps newest first), with the count. |
-| `get_task` | `id` (an id or a title) | The step with its fields and its work sessions. |
+| `query_tasks` | `quadrant?` 1–4, `project?` id or name, `place?` id, name or `any`, `status?` `open` (default) `done` `dropped` `all`, `due_from?`, `due_to?`, `text?` (all words, case and accents ignored), `limit?` ≤ 50 | At most 50 lines, most pressing first (done steps newest first), with the count. Steps that wait are left out (the count line says how many) unless `text` is given; they read `(waiting)`. |
+| `get_task` | `id` (an id or a title) | The step with its fields and its work sessions. On a step in a chain, a `chain` line lists its members head first (`>` marks this step) and the earliest due date. |
 | `get_project` | `id` (an id or a name) | Goal, SMART fields, counts, at most 50 open steps. |
 | `get_decision` | `id` (an id or a title) | Problem, options with their four columns, the choice, its steps. |
 | `read_memory` | `name?` a note id, name or alias, or words that contain one; `query?` free words | What the person told Réussite. Nothing: the profile in full, then the index of the other notes (`id \| kind \| name \| aliases`, newest first, at most 60). A name: the matching notes (by id, name, alias, then a whole-word name in the text, then a unique prefix of whole words) and a query: the notes named in it or with all its words in one line; each note as the app's AI reads it (`noteBlock`, `src/domain/memory.ts`: the head, then the lines numbered from 1) and the open steps that name it (`queryText`, at most 10). At most 8 notes. No match: one sentence and the index. |

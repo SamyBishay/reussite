@@ -46,9 +46,29 @@ beforeAll(async () => {
   d.add('memory', 'm3', { kind: 'person', name: 'Zelda Secret', aliases: ['Zed'], lines: [line('l1', 'Hidden fact about tea')], private: true, updated: '2026-10-05T00:00:00.000Z' });
   d.add('tasks', 't7', task('Send Ibrahim the rehearsal dates', { project: 'p2' }));
   d.add('tasks', 't8', task('Ibrahim birthday gift', { status: 'done', doneDay: day(-2), est0: 10 }));
+  d.add('projects', 'p3', { name: 'Paperwork', suit: 'D', where: 'any', goal: null, goalBy: null, due: null, order: 3, status: 'active' });
+  d.add('tasks', 't20', task('Gather the papers', { project: 'p3', order: 1 }));
+  d.add('tasks', 't21', task('Fill in the form', { project: 'p3', order: 2, after: ['t20'], due: day(3) }));
+  d.add('tasks', 't22', task('Post the file', { project: 'p3', order: 3, after: ['t21'] }));
   d.add('decisions', 'd1', { title: 'Stay or move?', problem: { what: 'Rent went up' }, options: [{ id: 'o1', name: 'Stay', pros: [{ id: 'i1', text: 'cheap', w: 4 }], cons: [], prosNot: [], consNot: [] }], status: 'draft', chosen: null, taskIds: ['t2'] });
   await app.sync();
   access = (await signIn((await switchOn(app)).body.code)).access;
+});
+
+describe('chains', () => {
+  it('query_tasks shows the head with +n after and leaves the waiting steps under it', async () => {
+    const r = await tool(access, 'query_tasks', { project: 'Paperwork' });
+    expect(r.text).toContain('t20 | Gather the papers (+2 after, chain due ' + day(3) + ')');
+    expect(r.text).not.toContain('Fill in the form');
+    expect(r.text).toContain('2 more wait');
+    expect((await tool(access, 'query_tasks', { text: 'form' })).text).toContain('t21 | Fill in the form (waiting)');
+  });
+  it('get_task on the head lists the chain; get_project lists every step', async () => {
+    const r = await tool(access, 'get_task', { id: 't20' });
+    expect(r.text).toContain('> t20 Gather the papers');
+    expect(r.text).toContain('t22 Post the file');
+    expect((await tool(access, 'get_project', { id: 'p3' })).text).toContain('Post the file');
+  });
 });
 
 describe('reading', () => {

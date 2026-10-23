@@ -106,9 +106,12 @@ export const oneLine = one;
 export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, id: string) => (id === 'inbox' ? 'Inbox' : projects.get(id)?.name ?? id);
 
 /** `id | title | Q1 | due | est | project`, as v1 sent them. */
-export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>): string {
+export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
   const done = t.status === 'done' ? ' (done)' : t.status === 'dropped' ? ' (dropped)' : '';
-  return [t.id, one(t.title) + done, 'Q' + quadOf(t, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
+  // The head of a chain says how many steps wait after it, and its quadrant follows the chain's earliest due date.
+  const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
+  const q = chain && chain !== 'waiting' && chain.due && (!t.due || chain.due < t.due) ? { ...t, due: chain.due } : t;
+  return [t.id, one(t.title) + done + note, 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
 

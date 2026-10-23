@@ -9,7 +9,8 @@ L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Sema
 ## Ce que montre un jour
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure.
-- **La rangée du haut** contient le reste de la journée : les cartes qui y sont prévues, les étapes qui y sont dues et les cartes jouées. Ce qui est fait est barré.
+- **Les cartes du jour** sont aussi sur la grille, avec une bordure en pointillés. Elles n’ont pas d’heure à elles : Réussite les place l’une après l’autre à partir de vos points de départ (à partir de maintenant, aujourd’hui), dans l’ordre de la liste, selon votre rythme et en contournant vos éléments à heure fixe. Une carte jouée est là où elle a vraiment eu lieu. Les cartes non jouées d’un jour passé n’ont pas d’heure.
+- **La rangée du haut** contient les étapes dues ce jour-là (et les cartes qui n’ont plus de place dans la journée). Ce qui est fait est barré.
 - Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
 - Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu. Il n’y a pas de points de départ ici.
 - Les étapes qui en attendent une autre forment une seule carte, la première étape, avec « +n après ». Touchez-la pour voir le reste.
@@ -18,7 +19,8 @@ Touchez un événement pour ouvrir l’étape. Touchez le numéro d’un jour po
 
 ## Déplacer
 
-- **Planifier une étape un autre jour :** faites glisser sa carte de la rangée du haut vers ce jour.
+- **Planifier une étape un autre jour :** faites glisser sa carte en pointillés vers ce jour.
+- **Mettre une carte plus tôt ou plus tard dans la journée :** faites glisser sa carte en pointillés vers une autre heure du même jour. La liste est réordonnée pour qu’elle tombe là si possible ; la carte n’a jamais d’heure à elle.
 - **Changer une heure :** faites glisser une étape à heure fixe sur la grille. Elle se déplace par pas de 15 minutes.
 - **Donner une échéance à un jour :** ouvrez l’étape et choisissez **Déplacer vers…**.
 - Sur un téléphone, touchez une étape pour l’ouvrir, puis utilisez **Déplacer vers…**.
@@ -27,11 +29,11 @@ Si votre lieu a des zones, les **pastilles de zone** réduisent le calendrier à
 
 ## Ajouter au calendrier
 
-**Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier** produisent un fichier de vos éléments à heure fixe (chacun avec un rappel à son début), et de vos étapes prévues ou à échéance comme événements sur toute la journée. Il contient les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
+**Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier** produisent un fichier de vos éléments à heure fixe (chacun avec un rappel à son début), et de vos cartes prévues à leurs heures projetées (sans rappel), et de vos étapes à échéance comme événements sur toute la journée. Il contient les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
 
 ## Le flux de calendrier
 
-Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos éléments à heure fixe et vos étapes prévues ou à échéance y restent à jour, d’une semaine en arrière à six semaines devant. Les étapes qui en attendent une autre sont laissées de côté jusqu’à leur tour.
+Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos éléments à heure fixe, vos cartes prévues (à leurs heures projetées) et vos étapes à échéance y restent à jour, d’une semaine en arrière à six semaines devant. Les étapes qui en attendent une autre sont laissées de côté jusqu’à leur tour.
 
 **Ce que dit le flux** a trois niveaux :
 

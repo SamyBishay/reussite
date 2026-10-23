@@ -6,13 +6,17 @@ Files: `src/app/feed.ts` (build, hash, upload, switch), `src/app/CalendarSetting
 
 ## Content
 
-Fixed-time items from 7 days back to 45 days ahead, and the open planned cards (a day's list) and due steps from today to 45 days ahead as all-day events (`VALUE=DATE`, one each, transparent; `allDayItems` in `src/domain/calItems.ts`). Launch points, the check-in, the close and the review are not in the feed or in Add to calendar: they stay in Today, the planner and the notifications. No reminders in the feed (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job).
+Fixed-time items from 7 days back to 45 days ahead; the open planned cards (a day's list) from today to 45 days ahead as **timed** events at projected times (`plannedEvents` in `src/domain/calItems.ts`, the times from `src/domain/schedule.ts`: below), transparent, no reminder, UID `plan:<task>:<day>`, `AgendaEvent.planned`; and the due steps not planned that day as all-day events (`VALUE=DATE`, one each, transparent; `allDayItems`). A planned card the day has no room for (past 23:59) stays all-day.
+
+### Projected times
+
+`schedule.ts` (`placeCards` pure, `makeScheduler` over the app's data): the cards of a day's list, heads of chains only, are laid one after another from the day's launch points (`days.launches`; none: `launchDefaults.start`, else 09:00) in list order, each as long as its personal estimate (else `est`, else 30 min; 5-minute steps). A fixed-time item keeps its time and a card that would overlap it moves after it. A card that does not fit before the next launch point waits for it (a Restart resumes the queue at its time); a block that runs past one carries on from where it ends. Cards of the afternoon area of a half day start from the first launch at or after 13:00. "If there's room" cards (`days.optional`) come last. Today: done cards at their real times (last session's end minus the day's session minutes, else `doneAt`), the running card from `started` to max(now, start + estimate), the rest from max(now, previous end), with now rounded up to 5 minutes. Past days: only done cards are timed. Nothing is stored. Because today's times depend on the clock, the feed's hash changes as the day goes and the text is uploaded again at the next trigger; the size stays far under the 256 KB limit (about 300 bytes a card at `full`). Launch points, the check-in, the close and the review are not in the feed or in Add to calendar: they stay in Today, the planner and the notifications. No reminders in the feed (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job).
 
 What an event says is the synced setting `feedDetail`, three levels (`calItems.ts` builds the words, `ics.ts` only formats them):
 
 | Level | SUMMARY | Also |
 | --- | --- | --- |
-| `times` | "Fixed time", "Planned step", "Step due" | nothing |
+| `times` | "Fixed time", "Planned step" (a planned card, timed), "Step due" | nothing |
 | `labels` | the step's short name (`shortLabel`) | nothing |
 | `full` | the short name | LOCATION: the linked address's street address (else its name), else the name of the place or area the step is set to ("Anywhere" gives none); DESCRIPTION: the full title, the leave-by line (fixed-time items with a lead), the note, the link; URL: `<app address>#task/<id>`, which opens the step's sheet (`taskFromHash` in `nav.ts`) |
 

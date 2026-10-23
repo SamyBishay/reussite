@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { openMenu } from '../e2e/helpers';
+import { openMenu, expandSettings } from '../e2e/helpers';
 
 // The manual's screenshots (docs/dev/manual.md). One run makes every picture the manual shows, in both languages and both
 // themes, from invented data only: nothing here is read from the real list, and `private/` is never touched. Run with
@@ -49,14 +49,18 @@ function list(lang: Lang): Docs {
     ['t13', task(L('Open Mail and send the boiler form to the agency', 'Ouvrir Mail et envoyer le formulaire de la chaudière à l’agence'), { project: 'p1', suit: 'D', est: 10, order: 13, after: 't12' })],
     ['t8', task(L('See a friend or go out', 'Voir un proche ou sortir'), { project: 'p2', suit: 'H', template: true, offer: 'address', est: 60, order: 8, at: '18:00', dur: 90 })],
     ['t9', task(L('Choir rehearsal', 'Répétition de la chorale'), { project: 'p2', suit: 'H', template: true, est: 90, at: '19:30', dur: 90, lead: 30, weekdays: [3], order: 9 })],
-    ['t10', task(L('Dentist', 'Dentiste'), { project: 'p2', suit: 'H', due: day(4), at: '14:30', dur: 45, est: 45, order: 10 })],
+    ['t10', task(L('Dentist', 'Dentiste'), { project: 'p2', suit: 'H', due: day(1), at: '10:30', dur: 45, est: 45, order: 10 })],
+    // Fixed-time items in the morning hours, so the calendar's grid has something to show.
+    ['t14', task(L('Supervisor meeting', 'Rendez-vous avec la directrice'), { project: 'p3', suit: 'S', due: day(0), at: '09:30', dur: 60, est: 60, order: 14 })],
+    ['t15', task(L('Call with the agency', 'Appel avec l’agence'), { project: 'p1', suit: 'D', due: day(0), at: '11:30', dur: 30, est: 30, order: 15 })],
+    ['t16', task(L('Lunch with Noor', 'Déjeuner avec Noor'), { project: 'p2', suit: 'H', due: day(2), at: '12:30', dur: 60, est: 60, order: 16 })],
     ['t11', task(L('Open the buy-a-gift list and pick a gift for Mum', 'Ouvrir la liste de cadeaux et en choisir un pour maman'), { project: 'p2', suit: 'H', where: 'lisbon', est: 20, order: 11, dueRule: { beforeEndOf: 'stay1', daysBefore: 2 } })],
     ...past.map(([en, fr, p, s, est, real, ago], i) => [`d${i}`, done(L(en, fr), p, s, est, real, ago)] as [string, Record<string, unknown>]),
   ];
   const sessions: [string, Record<string, unknown>][] = past.map(([, , , , , real, ago], i) => [`s${i}`, { taskId: `d${i}`, d: day(-ago), m: real, why: 'done', at: day(-ago) + 'T10:00:00.000Z', source: 'timer' }]);
   const item = (id: string, text: string, w: number) => ({ id, text, w, by: 'me' });
   return {
-    meta: [['settings', { language: lang, here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
+    meta: [['settings', { language: lang, preset: 'st-george', here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
     places: [['home', { name: L('Home', 'Maison'), timeZone: 'Europe/Paris', order: 1 }], ['lisbon', { name: L('Lisbon', 'Lisbonne'), timeZone: 'Europe/Lisbon', order: 2 }], ['oldtown', { name: L('Old town', 'Vieille ville'), timeZone: 'Europe/Paris', order: 3, parentId: 'home' }]],
     stays: [['stay1', { placeId: 'lisbon', from: day(12), to: day(16), note: '' }]],
     projects: [
@@ -190,7 +194,10 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
       await page.goto('/#calendar');
       await expect(page.getByTestId('calendar')).toBeVisible();
-      await shot(page, 'calendar');
+      await page.getByTestId('cal-week').click();
+      await expect(page.locator('.sx__week-grid__date')).toHaveCount(3);
+      await atTop(page, 'calendar');
+      await shot(page, 'calendar', true);
       await page.getByTestId('cal-day').click();
       await page.waitForTimeout(300);
       await atTop(page, 'calendar');
@@ -206,6 +213,7 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
       await page.goto('/#settings');
       await shot(page, 'settings');
+      await expandSettings(page);
       await page.getByTestId('stays').getByTestId('plan-trip').click();
       await expect(sheet(page).getByTestId('trip-sheet')).toBeVisible();
       await shot(page, 'trip');

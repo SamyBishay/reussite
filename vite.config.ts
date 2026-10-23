@@ -2,6 +2,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { manualSite } from './src/manual/site';
 import pkg from './package.json' with { type: 'json' };
 
 // Content-Security-Policy, added to the built page only (the dev server needs inline HMR and a
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
     base: './',
     plugins: [
       preact(),
+      manualSite(),
       { name: 'csp', apply: 'build', transformIndexHtml: (html: string) => html.replace('<meta charset="utf-8" />', `$&\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`) },
       VitePWA({
         registerType: 'prompt',
@@ -51,8 +53,8 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,ico}'],
-          // The manual's screenshots (public/manual/shots) are fetched when a page shows one and kept by the worker's own runtime cache (src/sw.ts).
-          globIgnores: ['manual/shots/**'],
+          // The public manual's pages and fonts (src/manual/site.ts) are plain pages, not part of the app. The manual's screenshots (public/manual/shots) are fetched when a page shows one and kept by the worker's own runtime cache (src/sw.ts).
+          globIgnores: ['manual/**'],
           rollupFormat: 'iife',
         },
       }),

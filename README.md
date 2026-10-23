@@ -6,6 +6,10 @@ Each day you get a short list, each step has a small first action, and you see y
 
 Réussite helps you apply a method. It doesn't replace therapy or care from a professional.
 
+## For friends: start here
+
+Read the manual first, no install needed: **https://reussite.rudolphem.workers.dev/manual/getting-started** (in French: [/manual/fr/getting-started](https://reussite.rudolphem.workers.dev/manual/fr/getting-started)). The [contents](https://reussite.rudolphem.workers.dev/manual/) lists every page.
+
 ## Open it
 
 The app is at **https://reussite.rudolphem.workers.dev**. There is nothing to download from a store.
@@ -20,7 +24,7 @@ Your data stays on your devices. If you turn sync on, it is encrypted on your de
 
 ## Learn more
 
-The manual is in [`docs/manual/en/`](docs/manual/en/index.md), and in the app under Settings → About. The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md). If you want to use your own AI, see [`docs/ai/`](docs/ai/): a plain prompt for the morning check-in works in any chatbot.
+The manual is on the web at [/manual/](https://reussite.rudolphem.workers.dev/manual/), in [`docs/manual/en/`](docs/manual/en/index.md), and in the app under Settings → About. The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md). If you want to use your own AI, see [`docs/ai/`](docs/ai/): a plain prompt for the morning check-in works in any chatbot.
 
 ## For developers
 

@@ -58,6 +58,8 @@ export interface AgendaEvent {
   /** Minutes before `at` to leave. */
   lead?: number;
   dur?: number | null;
+  /** A planned card laid out in time (schedule.ts), not a fixed time: exported as a transparent event, no reminder. Never made by `agenda`. */
+  planned?: boolean;
   // launch
   launch?: { k: 'start' | 'restart'; n: number; note?: string };
   // decision

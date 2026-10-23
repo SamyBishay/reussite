@@ -6,13 +6,13 @@
 import { effect, signal } from '@preact/signals';
 import { getLocal, setLocal } from '../data/db';
 import { addDays } from '../domain/dates';
-import { agenda, type AgendaSettings } from '../domain/agenda';
-import { allDayEvents, allDayItems, fixedTitles, type CalData, type FeedDetail } from '../domain/calItems';
+import { agenda } from '../domain/agenda';
+import { allDayEvents, allDayItems, fixedTitles, plannedEvents, plannedKeys, type CalData, type FeedDetail, type PlannedSettings } from '../domain/calItems';
 import { clockIn, exported, icsFor, type IcsTranslate } from '../domain/ics';
 import { b64uEncode } from '../sync/bytes';
 import { feedPath, feedUrl, FEED_ID, MAX_FEED_BYTES } from '../feed/protocol';
 import { t } from '../i18n';
-import { addresses, days, db, decisions, places, projects, settings, stays, tasks, today } from './store';
+import { addresses, days, db, decisions, places, projects, sessions, settings, stays, tasks, today } from './store';
 import { relayBase } from './sync';
 
 export const FEED_PAST_DAYS = 7;
@@ -35,17 +35,18 @@ export const feedBusy = signal(false);
 export const appAddress = () => (typeof location === 'undefined' ? '' : location.origin + location.pathname);
 
 /** The data the exports read, from the store. */
-export const calData = (): CalData => ({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, addresses: addresses.value, projects: projects.value });
+export const calData = (): CalData => ({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, addresses: addresses.value, projects: projects.value, sessions: sessions.value });
 
 /**
- * The calendar text for the feed window around `day`: fixed-time items at their times, and the open planned and due
- * steps of `day` and after as all-day events, said at the level of `detail`. `appUrl` makes the link to each step (`full` only).
+ * The calendar text for the feed window around `day`: fixed-time items at their times, the open planned cards of
+ * `day` and after at the times `schedule.ts` projects for them, and the due steps (and any card with no time left) as all-day events, said at the level of `detail`. `appUrl` makes the link to each step (`full` only).
  */
-export function feedText(data: CalData, s: AgendaSettings, day: string, detail: FeedDetail, tr: IcsTranslate, now: number, appUrl = ''): string {
+export function feedText(data: CalData, s: PlannedSettings, day: string, detail: FeedDetail, tr: IcsTranslate, now: number, appUrl = ''): string {
   const to = addDays(day, FEED_AHEAD_DAYS);
-  const events = agenda(data, s, addDays(day, -FEED_PAST_DAYS), to).filter(exported);
+  const planned = plannedEvents(data, s, day, day, to, now);
+  const events = [...agenda(data, s, addDays(day, -FEED_PAST_DAYS), to).filter(exported), ...planned];
   const ctx = { detail, data, tr, appUrl, clockIn };
-  return icsFor(events, { now, titles: fixedTitles(ctx), allDay: allDayEvents(ctx, allDayItems(data, day, to)), withAlarms: false, name: 'Réussite' });
+  return icsFor(events, { now, titles: fixedTitles(ctx), allDay: allDayEvents(ctx, allDayItems(data, day, to, plannedKeys(planned))), withAlarms: false, name: 'Réussite' });
 }
 
 /** What makes two feeds the same: the text without its DTSTAMP lines (they change on every build). */
@@ -158,7 +159,7 @@ export async function startFeed(): Promise<void> {
   feedId.value = (await getLocal<boolean>(db, K.on)) && fid && FEED_ID.test(fid) ? fid : null;
   // Any change to what the feed is made of schedules an upload; an unchanged text is skipped by its hash.
   effect(() => {
-    void [tasks.value, days.value, decisions.value, places.value, stays.value, addresses.value, projects.value, settings.value, today.value];
+    void [tasks.value, days.value, sessions.value, decisions.value, places.value, stays.value, addresses.value, projects.value, settings.value, today.value];
     if (feedId.value) scheduleFeed();
   });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void uploadFeed(); });

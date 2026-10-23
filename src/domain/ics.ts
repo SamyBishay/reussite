@@ -1,7 +1,7 @@
 // iCalendar (RFC 5545) for Add to calendar and the feed (brief §8, §16). Pure: events in, text out. A fixed-time
 // item is an event at its time and for its duration, with its zone as a TZID and a generated VTIMEZONE, so the time
-// stays right across daylight-saving changes and when a stay moves the day to another zone. A planned card or a
-// step due is an all-day event (VALUE=DATE). Launch points, the check-in, the close and the review are not exported:
+// stays right across daylight-saving changes and when a stay moves the day to another zone. A planned card is an event
+// too, at the time schedule.ts lays it out (transparent, no reminder); a step due is an all-day event (VALUE=DATE). Launch points, the check-in, the close and the review are not exported:
 // the calendar is for things at a time and things on a day, and reminders are the notifications' job.
 import type { AgendaEvent } from './agenda';
 import { addDays, partsIn } from './dates';
@@ -145,7 +145,8 @@ export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string
       `DTSTART;TZID=${zone}:${local(e.at, zone)}`,
       `DTEND;TZID=${zone}:${local(end, zone)}`,
       ...textLines(text),
-      ...(opts.withAlarms ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(text.summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
+      ...(e.planned ? ['TRANSP:TRANSPARENT'] : []),
+      ...(opts.withAlarms && !e.planned ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(text.summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
       'END:VEVENT',
     );
   }

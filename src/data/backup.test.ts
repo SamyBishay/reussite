@@ -52,6 +52,18 @@ describe('backup', () => {
     expect(await restoreBackup(b, old)).toMatchObject({ addresses: 0, people: 0 });
     expect(await b.addresses.get('a1')).toBeDefined();
   });
+  it('a schema 4 backup is brought to the current schema and merged: a standing obligation loses its flags, a newer edit here wins', async () => {
+    const b = new ReussiteDb('bk-s4');
+    const c = '0000000000001:0000:a';
+    await b.tasks.put(create<Record<string, unknown>>('tm', { title: 'Choir', template: true, urgent: false }, SCHEMA_VERSION, '0000000000009:0000:b'));
+    const file = parseBackup({ format: 'reussite-backup', schema: 4, exported: '2026-10-01T00:00:00Z', data: { tasks: [
+      create<Record<string, unknown>>('tm', { title: 'Old choir', template: true, urgent: true, important: true }, 4, c),
+      create<Record<string, unknown>>('t1', { title: 'Pay', urgent: true }, 4, c),
+    ] } });
+    await restoreBackup(b, file);
+    expect(await b.tasks.get('tm')).toMatchObject({ title: 'Choir', urgent: false, important: false });
+    expect(await b.tasks.get('t1')).toMatchObject({ title: 'Pay', urgent: true });
+  });
   it('refuses other files and newer versions', () => {
     expect(() => parseBackup({ tasks: {} })).toThrow();
     expect(() => parseBackup({ format: 'reussite-backup', schema: 999, data: {} })).toThrow(/newer/);

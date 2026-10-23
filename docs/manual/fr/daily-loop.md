@@ -31,7 +31,7 @@ Réussite additionne les estimations et montre ce que la journée va probablemen
 
 ## Les points de départ
 
-Un point de départ est un moment pour commencer, ou pour revenir à la liste après une pause. Par exemple, un départ à 9 h 30 et une reprise à 14 h. Ce n’est pas un emploi du temps : les étapes flottent entre eux. Vous pouvez les changer dans Aujourd’hui, et les valeurs par défaut dans Réglages → Méthode. Ils vivent dans Réussite et ses notifications. Ils ne sont pas dans le calendrier, qui ne garde que ce qui a une heure et ce qui tombe un jour.
+Un point de départ est un moment pour commencer, ou pour revenir à la liste après une pause. Par exemple, un départ à 9 h 30 et une reprise à 14 h. Ce n’est pas un emploi du temps : les étapes flottent entre eux. Dans Aujourd’hui, ils sont repliés sous **Points de départ** (le résumé en donne les heures) : ouvrez-le pour en ajouter ou en retirer un. Les valeurs par défaut dans Réglages → Méthode. Ils vivent dans Réussite et ses notifications. Ils ne sont pas dans le calendrier, qui ne garde que ce qui est à heure fixe.
 
 ## Démarrer
 

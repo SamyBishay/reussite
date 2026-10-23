@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways } from './helpers';
+import { noSideways, expandSettings } from './helpers';
 
 // The manual in Settings → About (docs/dev/manual.md): opens in the app's language and look, falls back to English, keeps its
 // links inside the sheet or out of the app, and never scrolls sideways.
 const sheet = (page: Page) => page.getByTestId('sheet');
 async function openManual(page: Page) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('open-manual').click();
   await expect(sheet(page).getByTestId('manual')).toBeVisible();
 }
@@ -30,7 +30,7 @@ test('a dark look gets the dark picture', async ({ page }) => {
 });
 
 test('in French, the manual is in French, with the French pictures', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByRole('button', { name: 'Français' }).click();
   await page.getByTestId('open-manual').click();
   await expect(sheet(page).locator('article')).toHaveAttribute('lang', 'fr');
@@ -53,7 +53,7 @@ test('links: a page stays in the sheet, anything else must be an allowed link', 
 
 test('the French manual does not scroll sideways at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByRole('button', { name: 'Français' }).click();
   await page.getByTestId('open-manual').click();
   await expect(sheet(page).getByTestId('manual')).toBeVisible();

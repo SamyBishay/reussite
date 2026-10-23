@@ -38,7 +38,7 @@ Tap **I started earlier** and say when you began. Or mark the step done and pick
 
 ## Where did the "start" times go in my calendar?
 
-A calendar is for what is at a time and what is on a day. Launch points stay in Today and in notifications. The calendar shows fixed-time items, and planned and due steps as all-day events.
+A calendar is for what is at a time and what is on a day. Launch points stay in Today and in notifications. The calendar shows only fixed-time items.
 
 ## Why is only one step shown when I added five?
 

@@ -65,15 +65,15 @@ export interface Preset {
   dark?: { accent: string; accentSoft: string; suitColors: Record<SuitId, string> };
   /** The light accent's soft tint, when chosen rather than mixed. */
   accentSoft?: string;
-  /** Default St George. */
+  /** Default palette, shown as "af Klint" (after Hilma af Klint, whose painting The Dove, 1915, inspired it). Its stored id stays `st-george`: people's synced settings hold it. */
   grounds?: Grounds;
 }
 export interface Presets { [id: string]: Preset }
 
-/** St George is the default (brief §16); the others are alternatives that pass AA on the light card. */
+/** The default palette is af Klint (id `st-george`, kept so nobody's settings break); the others are alternatives that pass AA on the light card. */
 export const PRESETS: Presets = {
   'st-george': {
-    name: 'St George', accent: '#2D6A67', accentSoft: '#D5E5E2', suitColors: { S: '#2F4C8E', D: '#735C1F', C: '#2B6964', H: '#9C4560' },
+    name: 'af Klint', accent: '#2D6A67', accentSoft: '#D5E5E2', suitColors: { S: '#2F4C8E', D: '#735C1F', C: '#2B6964', H: '#9C4560' },
     dark: { accent: '#8DB0E6', accentSoft: '#1A2440', suitColors: { S: '#93B4EA', D: '#D4C08F', C: '#86C2BC', H: '#EC9DB8' } },
   },
   'lilac-sea': { name: 'Lilac & sea', accent: '#6B4BA6', suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' }, grounds: 'lilac' },

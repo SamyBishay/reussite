@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { agenda, type AgendaEvent } from './agenda';
 import { choir, day, place, settings, state, stay, task, tr } from './agenda.fixture';
-import { allDayEvents, allDayItems, fixedTitles, type CalData, type FeedDetail } from './calItems';
+import { fixedTitles, type CalData, type FeedDetail } from './calItems';
 import { DEFAULT_FIXED_MINUTES, clockIn, escapeText, exported, fold, icsFor, type IcsOptions, type IcsTranslate } from './ics';
 
 const NOW = Date.parse('2026-10-19T08:00:00Z');
@@ -126,7 +126,7 @@ describe('what an event says', () => {
       choir({ note: 'Bring the blue folder', link: 'https://choir.example/list', addressId: 'hh' }),
       task('letter', { title: 'Reply to the CAF letter', due: '2026-10-21', note: 'Case 4471', where: 'cairo' }),
       task('plan', { title: 'Call the plumber about the leak', label: 'Plumber' }),
-      task('timed', { title: 'Dentist', at: '09:15', due: '2026-10-22', dur: 45 }),
+      task('timed', { title: 'Dentist', at: '09:15', due: '2026-10-22', dur: 45, note: 'Case 4471', where: 'cairo' }),
       task('done', { title: 'Already done', status: 'done', due: '2026-10-21' }),
       task('dropped', { title: 'Dropped step', status: 'dropped', due: '2026-10-21' }),
       task('std', { title: 'A standing step', template: true, due: '2026-10-21' }),
@@ -139,45 +139,28 @@ describe('what an event says', () => {
   const build = (detail: FeedDetail, d: CalData = withAddress) => {
     const c = ctx(d, detail);
     const events = agenda(d, settings(), '2026-10-19', '2026-10-26').filter(exported);
-    return icsFor(events, { now: NOW, titles: fixedTitles(c), allDay: allDayEvents(c, allDayItems(d, '2026-10-20', '2026-10-26')), withAlarms: false, deviceZone: 'Europe/Paris' });
+    return icsFor(events, { now: NOW, titles: fixedTitles(c), withAlarms: false, deviceZone: 'Europe/Paris' });
   };
   const vevents = (text: string) => kids(parse(text), 'VEVENT');
   const byUid = (text: string) => Object.fromEntries(vevents(text).map(e => [prop(e, 'UID')![2].replace('@reussite.local', ''), e]));
 
-  it('writes planned cards and due steps as all-day events, one each, ending the next day', () => {
-    const e = byUid(build('labels'));
-    const plan = e['plan:plan:2026-10-20']!, due = e['due:letter:2026-10-21']!;
-    expect(prop(plan, 'DTSTART')).toEqual(['DTSTART', 'VALUE=DATE', '20261020']);
-    expect(prop(plan, 'DTEND')).toEqual(['DTEND', 'VALUE=DATE', '20261021']);
-    expect(prop(plan, 'TRANSP')![2]).toBe('TRANSPARENT');
-    expect(prop(due, 'DTSTART')![2]).toBe('20261021');
-    expect(prop(due, 'DTEND')![2]).toBe('20261022');
-    expect(kids(plan, 'VALARM')).toHaveLength(0);
-    // Not the step the day before (past), not a timed step, a done one, a dropped one, a standing one or a fixed commitment.
-    expect(Object.keys(e).filter(k => k.startsWith('plan:') || k.startsWith('due:')).sort()).toEqual(['due:letter:2026-10-21', 'plan:plan:2026-10-20']);
-    expect(Object.keys(e)).toContain('fixed:timed:2026-10-22');
-  });
-
-  it('puts the end of a month and a year in the all-day end date', () => {
-    const d = state({ tasks: [task('a', { title: 'Pay', due: '2026-12-31' })] }) as CalData;
-    const c = ctx(d);
-    const text = icsFor([], { now: NOW, titles: fixedTitles(c), allDay: allDayEvents(c, allDayItems(d, '2026-12-01', '2026-12-31')), withAlarms: false });
-    expect(prop(vevents(text)[0]!, 'DTEND')![2]).toBe('20270101');
+  it('writes only fixed-time events: no planned card, due step, all-day event or transparent entry', () => {
+    const text = build('labels');
+    const e = byUid(text);
+    expect(Object.keys(e).sort()).toEqual(['fixed:choir:2026-10-19', 'fixed:choir:2026-10-26', 'fixed:timed:2026-10-22']);
+    expect(text).not.toMatch(/VALUE=DATE|TRANSPARENT/);
+    expect(text).not.toMatch(/CAF|Plumber|Already done/);
   });
 
   it('times: only the kind of thing and when, nothing of the step', () => {
     const text = build('times');
     expect(text).toContain('SUMMARY:Fixed time\r\n');
-    expect(text).toContain('SUMMARY:Planned step\r\n');
-    expect(text).toContain('SUMMARY:Step due\r\n');
     expect(text).not.toMatch(/Choir|Hill|Plumber|CAF|Dentist|LOCATION|DESCRIPTION|URL:|leave at|blue folder|Case/);
     expect(text).not.toContain('app.example');
   });
 
   it('labels: the short name, derived or the step’s own, and nothing else', () => {
     const e = byUid(build('labels'));
-    expect(prop(e['plan:plan:2026-10-20']!, 'SUMMARY')![2]).toBe('Plumber');
-    expect(prop(e['due:letter:2026-10-21']!, 'SUMMARY')![2]).toBe('CAF letter');
     expect(prop(e['fixed:timed:2026-10-22']!, 'SUMMARY')![2]).toBe('Dentist');
     for (const x of Object.values(e)) for (const k of ['LOCATION', 'DESCRIPTION', 'URL']) expect(prop(x, k)).toBeUndefined();
     expect(build('labels')).not.toMatch(/blue folder|Case|leave at|app\.example|12 Hill/);
@@ -190,11 +173,10 @@ describe('what an event says', () => {
     expect(prop(c, 'LOCATION')![2]).toBe('12 Hill Road\\, Paris');
     expect(prop(c, 'DESCRIPTION')![2]).toBe('Choir\\, Hill House 602\\nleave at 18:30\\nBring the blue folder\\nhttps://choir.example/list');
     expect(prop(c, 'URL')![2]).toBe('https://app.example/#task/choir');
-    const l = e['due:letter:2026-10-21']!;
-    expect(prop(l, 'LOCATION')![2]).toBe('cairo'); // no address: the place it is set to
-    expect(prop(l, 'DESCRIPTION')![2]).toBe('Reply to the CAF letter\\nCase 4471');
-    expect(prop(l, 'URL')![2]).toBe('https://app.example/#task/letter');
-    expect(prop(e['plan:plan:2026-10-20']!, 'LOCATION')).toBeUndefined(); // Anywhere says nothing
+    const dent = e['fixed:timed:2026-10-22']!;
+    expect(prop(dent, 'LOCATION')![2]).toBe('cairo'); // no address: the place it is set to
+    expect(prop(dent, 'DESCRIPTION')![2]).toBe('Dentist\\nleave at 08:45\\nCase 4471');
+    expect(prop(dent, 'URL')![2]).toBe('https://app.example/#task/timed');
   });
 
   it('uses the address’s name when it has no street, and the place of the project when the step has none', () => {
@@ -202,19 +184,18 @@ describe('what an event says', () => {
       ...withAddress,
       addresses: new Map([['hh', { id: 'hh', name: 'Hill House', placeId: 'paris' } as never]]),
       projects: new Map([['pr', { id: 'pr', where: 'cairo' } as never]]),
-      tasks: new Map([...withAddress.tasks, ['inproject', { ...task('inproject', { title: 'Buy a gift', project: 'pr', where: '', due: '2026-10-23' }), id: 'inproject' }]]),
+      tasks: new Map([...withAddress.tasks, ['inproject', { ...task('inproject', { title: 'Buy a gift', project: 'pr', where: '', at: '15:00', due: '2026-10-23' }), id: 'inproject' }]]),
     };
     const e = byUid(build('full', d));
     expect(prop(e['fixed:choir:2026-10-26']!, 'LOCATION')![2]).toBe('Hill House');
-    expect(prop(e['due:inproject:2026-10-23']!, 'LOCATION')![2]).toBe('cairo');
+    expect(prop(e['fixed:inproject:2026-10-23']!, 'LOCATION')![2]).toBe('cairo');
   });
 
   it('folds long descriptions and keeps CRLF', () => {
-    const d = state({ tasks: [task('a', { title: 'Write the report', note: 'x'.repeat(200) + ' é🙂', due: '2026-10-21' })] }) as CalData;
-    const c = ctx(d);
-    const text = icsFor([], { now: NOW, titles: fixedTitles(c), allDay: allDayEvents(c, allDayItems(d, '2026-10-20', '2026-10-26')), withAlarms: false });
+    const d = state({ tasks: [task('a', { title: 'Write the report', note: 'x'.repeat(200) + ' é🙂', at: '10:00', due: '2026-10-21' })] }) as CalData;
+    const text = icsFor(agenda(d, settings(), '2026-10-20', '2026-10-26'), { now: NOW, titles: fixedTitles(ctx(d)), withAlarms: false });
     for (const l of text.split('\r\n')) expect(new TextEncoder().encode(l).length).toBeLessThanOrEqual(75);
-    expect(prop(parse(text).kids[0]!, 'DESCRIPTION')![2]).toContain('é🙂');
+    expect(prop(kids(parse(text), 'VEVENT')[0]!, 'DESCRIPTION')![2]).toContain('é🙂');
   });
 });
 
@@ -282,21 +263,11 @@ describe('golden file', () => {
       days: [day('2026-10-20', { launches: [{ t: '08:30', k: 'start' }, { t: '14:00', k: 'restart', n: 'Taxes' }], plan: ['letter'] })],
       stays: [stay('s', 'cairo', '2026-10-26', '2026-10-31')],
     }) as CalData;
-    const c = ctx(data);
     const e = agenda(data, settings(), '2026-10-19', '2026-10-28').filter(exported);
-    const text = icsFor(e, { ...opts({ name: 'Réussite' }, data), allDay: allDayEvents(c, allDayItems(data, '2026-10-19', '2026-10-28')) });
+    const text = icsFor(e, opts({ name: 'Réussite' }, data));
     const path = new URL('../../tests/fixtures/ics/week.ics', import.meta.url);
     if (process.env.UPDATE_GOLDEN || !existsSync(path)) writeFileSync(path, text);
     expect(text).toBe(readFileSync(path, 'utf8'));
     parse(text);
-  });
-});
-
-describe('chains in the exports', () => {
-  it('a step that waits is no all-day event, planned or due', () => {
-    const t = (id: string, o: object = {}) => [id, { id, title: id, status: 'open', template: false, fixed: false, at: null, order: 0, due: null, after: null, ...o }] as const;
-    const tasks = new Map([t('a'), t('b', { after: 'a', due: '2026-10-22' }), t('c', { due: '2026-10-22' })]) as unknown as Parameters<typeof allDayItems>[0]['tasks'];
-    const days = new Map([['2026-10-22', { id: '2026-10-22', date: '2026-10-22', plan: ['a', 'b'] }]]) as unknown as Parameters<typeof allDayItems>[0]['days'];
-    expect(allDayItems({ tasks, days }, '2026-10-22', '2026-10-22').map(i => i.taskId)).toEqual(['a', 'c']);
   });
 });

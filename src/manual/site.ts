@@ -1,7 +1,7 @@
 // The manual as plain static pages (docs/dev/manual.md): one HTML file per page of docs/manual/<language>/, written at build time
 // from the same Markdown and the same reader as the in-app viewer (markdown.ts), so they never go stale. English is served at
 // /manual/ and French at /manual/fr/. No script, no third-party file: one inline stylesheet, the app's own font files and the
-// St George tokens, light and dark by the device's setting. Used by vite.config.ts; `renderPage` is pure and tested.
+// The af Klint palette's tokens, light and dark by the device's setting. Used by vite.config.ts; `renderPage` is pure and tested.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';

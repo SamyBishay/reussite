@@ -1,8 +1,8 @@
 // iCalendar (RFC 5545) for Add to calendar and the feed (brief §8, §16). Pure: events in, text out. A fixed-time
 // item is an event at its time and for its duration, with its zone as a TZID and a generated VTIMEZONE, so the time
-// stays right across daylight-saving changes and when a stay moves the day to another zone. A planned card is an event
-// too, at the time schedule.ts lays it out (transparent, no reminder); a step due is an all-day event (VALUE=DATE). Launch points, the check-in, the close and the review are not exported:
-// the calendar is for things at a time and things on a day, and reminders are the notifications' job.
+// stays right across daylight-saving changes and when a stay moves the day to another zone. Only fixed-time items are
+// exported: planned cards, due steps, launch points, the check-in, the close and the review are not (the calendar is
+// for what is at a time; reminders are the notifications' job).
 import type { AgendaEvent } from './agenda';
 import { addDays, partsIn } from './dates';
 import { offsetAt } from './zone';
@@ -17,22 +17,17 @@ export const UID_DOMAIN = 'reussite.local';
 const ZONE_MARGIN_DAYS = 14;
 
 /** The words a title can use; the app passes its `t`. */
-export type IcsKey = 'notifyLeaveBy' | 'icsFixed' | 'icsPlanned' | 'icsDue';
+export type IcsKey = 'notifyLeaveBy' | 'icsFixed';
 export type IcsTranslate = (key: IcsKey, vars?: Record<string, string | number>) => string;
 
 /** What a fixed-time event says: its name, and optionally where, a longer text and the link that opens it. */
 export interface IcsText { summary: string; description?: string; location?: string; url?: string }
 export type IcsTitles = (e: AgendaEvent, zone: string) => IcsText;
 
-/** An event on a whole day: a planned card or a step due. `day` is its date; the end is the next day (exclusive). */
-export interface IcsAllDay extends IcsText { id: string; day: string }
-
 export interface IcsOptions {
   /** DTSTAMP and the calendar's "now", epoch milliseconds (passed in so the output is reproducible). */
   now: number;
   titles: IcsTitles;
-  /** All-day events (VALUE=DATE), after the timed ones. */
-  allDay?: readonly IcsAllDay[];
   /** A VALARM at the start of each timed event: on for the export, off for the feed. */
   withAlarms: boolean;
   /** The zone name for events whose zone is the device's (`zone` undefined). */
@@ -116,7 +111,6 @@ function vtimezone(zone: string, from: number, to: number): string[] {
 /** Whether an agenda event is exported at all: only fixed-time items (launch points stay in the app). */
 export const exported = (e: AgendaEvent) => e.kind === 'fixed';
 
-const dateOnly = (k: string) => k.replace(/-/g, '');
 const textLines = (x: IcsText) => [
   'SUMMARY:' + escapeText(x.summary),
   ...(x.location ? ['LOCATION:' + escapeText(x.location)] : []),
@@ -124,7 +118,7 @@ const textLines = (x: IcsText) => [
   ...(x.url ? ['URL:' + x.url] : []),
 ];
 
-/** The calendar text for these events (others are skipped) and the all-day events: CRLF line endings, folded lines. */
+/** The calendar text for these events (others are skipped): CRLF line endings, folded lines. */
 export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string {
   const device = opts.deviceZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const evs = events.filter(exported);
@@ -145,20 +139,7 @@ export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string
       `DTSTART;TZID=${zone}:${local(e.at, zone)}`,
       `DTEND;TZID=${zone}:${local(end, zone)}`,
       ...textLines(text),
-      ...(e.planned ? ['TRANSP:TRANSPARENT'] : []),
-      ...(opts.withAlarms && !e.planned ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(text.summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
-      'END:VEVENT',
-    );
-  }
-  for (const a of opts.allDay ?? []) {
-    body.push(
-      'BEGIN:VEVENT',
-      'UID:' + a.id + '@' + UID_DOMAIN,
-      'DTSTAMP:' + utc(opts.now),
-      'DTSTART;VALUE=DATE:' + dateOnly(a.day),
-      'DTEND;VALUE=DATE:' + dateOnly(addDays(a.day, 1)),
-      ...textLines(a),
-      'TRANSP:TRANSPARENT',
+      ...(opts.withAlarms ? ['BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + escapeText(text.summary), 'TRIGGER:-PT0M', 'END:VALARM'] : []),
       'END:VEVENT',
     );
   }

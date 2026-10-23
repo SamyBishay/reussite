@@ -1,3 +1,4 @@
+import { expandSettings } from './helpers';
 // The service worker's side of a push, in Chrome on Android emulation: the DevTools protocol can
 // deliver a push message to a worker without any push service, so this checks that the worker
 // shows a notification, always, even for a payload it cannot read. (A tap can't be sent over the protocol; the
@@ -10,7 +11,7 @@ test.skip(({ browserName }) => browserName !== 'chromium', 'uses the Chrome DevT
 
 test('a delivered push always shows a notification, tagged by item id', async ({ page, context }) => {
   await context.grantPermissions(['notifications']);
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   const origin = new URL(page.url()).origin;
   const cdp = await context.newCDPSession(page);

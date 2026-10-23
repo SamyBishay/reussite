@@ -123,6 +123,9 @@ function Row({ tk, n, k, optional }: { tk: Tk; n: number; k: string; optional?: 
   );
 }
 
+/** Whether the Launch points block is open: kept for the session, so it stays as the person left it. */
+const launchesOpen = signal(false);
+
 function Launches({ k }: { k: string }) {
   const d = dayDoc(k);
   const L: Launch[] = d?.launches ?? [];
@@ -137,8 +140,9 @@ function Launches({ k }: { k: string }) {
     f.reset();
   };
   return (
-    <>
-      <h2 class="sec">{t('launchPoints')} <span class="hint-inline">{t('launchHint')}</span></h2>
+    <details class="launchbox" data-testid="launch-box" open={launchesOpen.value} onToggle={e => { launchesOpen.value = (e.currentTarget as HTMLDetailsElement).open; }}>
+      <summary><span>{t('launchPoints')}</span> <span class="hint-inline" data-testid="launch-summary">· {L.length ? L.map(l => l.t).join(', ') : t('launchNone')}</span></summary>
+      <p class="hint">{t('launchHint')}</p>
       <div class="launches">
         {L.length ? L.map((l, i) => (
           <span class={'chip' + (i === nextIdx ? ' next' : '') + (hm && l.t < hm ? ' past' : '')}>
@@ -152,7 +156,7 @@ function Launches({ k }: { k: string }) {
           <button class="btn small" type="submit">{t('add')}</button>
         </form>
       </div>
-    </>
+    </details>
   );
 }
 

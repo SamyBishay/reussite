@@ -2,6 +2,8 @@
 
 Ouvrez **Réglages** depuis le menu de l’accueil. C’est une page simple, avec son propre titre. Tout ce que vous choisissez ici est un réglage qui reste : une mise à jour ne le réinitialise jamais.
 
+Chaque section est repliée : seule **Apparence** est ouverte au début, et un toucher sur un titre en ouvre une autre. Dans une section, les quelques commandes que la plupart des gens utilisent sont visibles et le reste est sous **Plus**. Si quelque chose sous Plus a reçu une valeur, Plus dit combien (« Plus · 2 renseignés »), de sorte que rien de ce qui est réglé n’est jamais caché.
+
 ![Les réglages](shot:settings)
 
 ## Langue
@@ -11,7 +13,7 @@ English ou Français. Le changement est immédiat.
 ## Apparence
 
 - **Thème :** Système, Clair, Sombre, ou Selon l’heure (vous réglez quand le clair commence et quand le sombre commence).
-- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **Saint Georges**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
+- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **af Klint**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
 - **Taille du texte :** Petit, Moyen ou Grand.
 - **Réduire les animations**.
 - **Célébrations :** Désactivées, Calmes ou Vives. **Son** et **Volume**.
@@ -59,7 +61,7 @@ Les rappels sont renouvelés chaque fois que vous ouvrez l’appli. Si vous ne l
 
 ## Calendrier
 
-Abonnez-vous à vos éléments à heure fixe et à vos étapes prévues ou à échéance depuis une appli de calendrier. Choisissez **Ce que dit le flux** : les heures seulement, les noms courts, ou les noms courts, les lieux et les notes. Voir [Le calendrier](calendar.md).
+Abonnez-vous à vos éléments à heure fixe depuis une appli de calendrier. Choisissez **Ce que dit le flux** : les heures seulement, les noms courts, ou les noms courts, les lieux et les notes. Voir [Le calendrier](calendar.md).
 
 ## Données
 
@@ -73,6 +75,6 @@ Si la synchronisation est désactivée, Réussite vous rappelle toutes les deux 
 
 ## À propos
 
-La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect Saint Georges, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
+La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect af Klint, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
 
 **Copier le diagnostic** produit un court rapport (versions, appareil, erreurs) que vous pouvez envoyer à un ami quand quelque chose se casse. Il n’inclut jamais vos étapes, notes, noms, lieux ou clés.

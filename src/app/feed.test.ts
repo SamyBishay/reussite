@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { choir, day, state, settings as agendaSettings, tr } from '../domain/agenda.fixture';
+import { choir, day, state, settings as agendaSettings, task, tr } from '../domain/agenda.fixture';
 import type { IcsTranslate } from '../domain/ics';
 import type { FeedDetail } from '../domain/calItems';
 import { withDefaults } from '../data/settings';
@@ -21,6 +21,17 @@ describe('the feed text', () => {
     expect(generic).not.toContain('VALARM');
     expect(text('labels')).toContain('SUMMARY:Choir Hill House 602');
     expect(text('labels')).not.toContain('LOCATION');
+  });
+
+  it('carries fixed-time items only: no planned card, due step or all-day event', () => {
+    const w = state({
+      tasks: [task('dent', { title: 'Dentist', at: '09:15', due: '2026-10-22', dur: 45 }), task('plan', { title: 'Call the plumber' }), task('due', { title: 'Pay the bill', due: '2026-10-23' })],
+      days: [day('2026-10-22', { plan: ['plan', 'dent'], launches: [{ t: '09:30', k: 'start' }] })],
+    });
+    const t = feedText(w, agendaSettings(), '2026-10-20', 'labels', itr, 0);
+    expect(t.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(t).toContain('SUMMARY:Dentist');
+    expect(t).not.toMatch(/plumber|bill|VALUE=DATE|TRANSPARENT/i);
   });
 
   it('covers a week back to 45 days ahead', () => {

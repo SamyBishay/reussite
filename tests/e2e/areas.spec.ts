@@ -1,12 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu, goTab, calEvent } from './helpers';
+import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet } from './helpers';
 
 // Areas inside places, half days and people's pages (phase 4b). Every name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
 
 /** Cairo with an area, Heliopolis, and the person is in Cairo. */
 async function cairoWithHeliopolis(page: Page) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByPlaceholder('Name of the new place').fill('Cairo');
   await page.getByTestId('add-place').click();
   await page.getByLabel('Current place').selectOption({ label: 'Cairo' });
@@ -18,11 +18,13 @@ async function cairoWithHeliopolis(page: Page) {
 }
 
 /** A step added by hand from the quick form's Details sheet, set to `where`. */
-async function addStep(page: Page, title: string, where: string) {
+async function addStep(page: Page, title: string, where: string, at?: string) {
   await goTab(page, 'today');
   await page.getByPlaceholder(/The app and the first action/).fill(title);
   await page.getByTestId('quick-details').click();
+  await expandSheet(page);
   await sheet(page).locator('label.field', { hasText: /^Where/ }).locator('select').selectOption({ label: where });
+  if (at) { await sheet(page).getByTestId('time-chip').click(); await sheet(page).locator('input[name=at]').fill(at); }
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
 }
@@ -58,7 +60,15 @@ test('an area is made under a place, offered in the place field, and one tap nar
   await goTab(page, 'matrix');
   await page.getByTestId('area-chips').getByRole('button', { name: 'Heliopolis' }).click();
 
-  // The Calendar: the same chips, on the day's cards.
+  // The Calendar: the same chips, on the day's fixed-time steps (give two of the steps a time first).
+  await goTab(page, 'today');
+  for (const [title, at] of [['Renew the visa', '10:00'], ['Buy a SIM card', '11:00']] as const) {
+    await page.locator('.row', { hasText: title }).getByTestId('details').click();
+    await sheet(page).getByTestId('time-chip').click();
+    await sheet(page).locator('input[name=at]').fill(at);
+    await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(sheet(page)).toBeHidden();
+  }
   await goTab(page, 'calendar');
   await page.getByTestId('cal-day').click();
   await expect(calEvent(page, 'visa')).toHaveCount(1);
@@ -73,12 +83,14 @@ test('the morning check-in can say "afternoon in Heliopolis": the plan puts them
     await goTab(page, 'today');
     await page.getByPlaceholder(/The app and the first action/).fill(title);
     await page.getByTestId('quick-details').click();
+    await expandSheet(page);
     await sheet(page).locator('label.field', { hasText: /^Where/ }).locator('select').selectOption({ label: where });
     await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
     await expect(sheet(page)).toBeHidden();
   }
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
+  await page.getByTestId('ci-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
   const halves = page.getByTestId('ci-halves');
   await expect(halves.locator('[data-half=am]')).toBeVisible();
   await noSideways(page, 'check-in shape with the halves');

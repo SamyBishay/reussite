@@ -1,6 +1,6 @@
 :root{
   /* Layout: a card table. One focal "Start here" card, a quiet list below, suit piles to the side.
-     Colours: "St George" (brief §16), from two paintings: the light ground is the calm after the victory,
+     Colours: "af Klint" (brief §16; the preset id is still `st-george`), from two paintings: the light ground is the calm after the victory,
      the dark one the dragon's. The person's accent and suit colours, and the Lilac & sea grounds, come
      from Settings (src/app/theme.ts) and override these. */
   --ground:#EBEBE6;          /* bg */

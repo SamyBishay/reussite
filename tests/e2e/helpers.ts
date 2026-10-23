@@ -1,11 +1,24 @@
 import { expect, type Page } from '@playwright/test';
 import { sampleExport } from './fixture';
 
+/** Settings sections are folded (only the first is open); most tests want them all open. */
+export async function expandSettings(page: Page) {
+  const root = page.getByTestId('settings');
+  await root.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+  await root.locator('details').evaluateAll(ds => ds.forEach(d => { (d as HTMLDetailsElement).open = true; })).catch(() => undefined);
+}
+
+/** Open every fold (More, a section) inside the topmost sheet. */
+export async function expandSheet(page: Page) {
+  await page.getByTestId('sheet').locator('details').evaluateAll(ds => ds.forEach(d => { (d as HTMLDetailsElement).open = true; }));
+}
+
 /** Settings, Places, Addresses, Memory and History sit behind the menu icon at the top of Home. */
 export async function openMenu(page: Page, item: 'settings' | 'places' | 'memory' | 'history' | 'addresses' | 'add-address') {
   await page.getByTestId('tab-home').click();
   await page.getByTestId('home-menu').click();
   await page.getByTestId('menu-' + item).click();
+  if (item === 'settings') await expandSettings(page);
 }
 
 /** A tab of the bottom bar, or what lives behind one: the Log is a mode of Calendar, Settings is in Home's menu. */
@@ -18,8 +31,15 @@ export async function goTab(page: Page, tab: 'home' | 'today' | 'matrix' | 'proj
   await page.getByTestId('tab-' + tab).click();
 }
 
+/** The weekly review is started from Settings (Method) on any day; Today and the bell offer it on its day. */
+export async function openWeeklyReview(page: Page) {
+  await goTab(page, 'settings');
+  await page.getByTestId('start-review-now').click();
+}
+
 export async function importSample(page: Page) {
   await page.goto('/#settings');
+  await expandSettings(page);
   await page.getByTestId('open-import').click();
   await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(sampleExport())) });
   await expect(page.getByTestId('import-summary')).toBeVisible();

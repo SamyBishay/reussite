@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, calEvent } from './helpers';
+import { importSample, noSideways, goTab, openWeeklyReview, expandSheet } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -47,22 +47,38 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');
 });
 
-test('calendar week view: tap a card, then Move to… plans it on a day', async ({ page }) => {
+test('the calendar tab opens its views; a fixed-time step there opens its sheet', async ({ page }) => {
   await importSample(page);
+  await page.goto('/#task/t2');
+  await sheet(page).getByTestId('time-chip').click();
+  await sheet(page).locator('input[name=at]').fill('11:00');
+  await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-week').click();
   await expect(page.getByTestId('calendar')).toBeVisible();
-  await calEvent(page, 'thesis draft second').first().click();
-  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
-  await sheet(page).getByRole('button', { name: 'Plan it on…' }).click();
-  await sheet(page).getByRole('button', { name: 'Tomorrow' }).click();
-  // Tomorrow may fall in next week's view; open it in the day navigator instead.
-  await page.getByTestId('tab-today').click();
-  await page.getByTestId('next-day').click();
-  await expect(page.getByTestId('other-day')).toContainText('thesis draft and write');
-  await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('calendar-grid').locator('.sx__time-grid-event.k-fixed').first().click();
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Close' }).click();
   await page.getByTestId('cal-month').click();
   await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
+});
+
+test('launch points are folded on Today and in the day navigator, with their times in the summary, and stay as the person left them', async ({ page }) => {
+  await importSample(page);
+  const box = page.getByTestId('launch-box');
+  await expect(box).toBeVisible();
+  await expect(box).not.toHaveAttribute('open', '');
+  await expect(page.getByTestId('launch-summary')).toHaveText('· 09:30, 14:00');
+  await expect(page.locator('form.launch-add')).toBeHidden();
+  await box.locator('summary').click();
+  await expect(page.locator('form.launch-add')).toBeVisible();
+  // The state is kept for the session: another tab and back, and another day.
+  await page.getByTestId('tab-matrix').click();
+  await page.getByTestId('tab-today').click();
+  await expect(page.getByTestId('launch-box')).toHaveAttribute('open', '');
+  await page.getByTestId('next-day').click();
+  await expect(page.getByTestId('other-day').getByTestId('launch-box')).toHaveAttribute('open', '');
+  await expect(page.getByTestId('other-day').getByTestId('launch-summary')).toHaveText('· none');
 });
 
 test('a stay switches the current place on its first day', async ({ page }) => {
@@ -278,9 +294,7 @@ for (const width of [320, 375, 430]) {
     await check('places');
     await page.keyboard.press('Escape');
     // The weekly review, each screen.
-    await page.getByTestId('tab-calendar').click();
-    await page.getByTestId('cal-week').click();
-    await calEvent(page, 'Weekly review').first().click();
+    await openWeeklyReview(page);
     for (let i = 0; i < 10; i++) {
       await check('review ' + i);
       if (i < 9) await page.getByTestId('rv-next').click();
@@ -324,6 +338,7 @@ test('a standing obligation is not in the four quadrants: it is on the Obligatio
   await expect(page.getByTestId('obligations')).not.toContainText('scanned receipts');
   await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.matrix')).not.toContainText('scanned receipts');

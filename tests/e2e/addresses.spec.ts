@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu } from './helpers';
+import { noSideways, openMenu, expandSettings, expandSheet } from './helpers';
 
 // Addresses and people (phase 4): paste a Maps link, the after-visit note, people, the module switch, the
 // Google Takeout import. Every name, link and number here is invented.
@@ -37,6 +37,7 @@ async function newStep(page: Page, title: string, feeds?: string) {
   await page.goto('/#today');
   await page.getByPlaceholder(/The app and the first action/).fill(title);
   await page.getByTestId('quick-details').click();
+  await expandSheet(page);
   if (feeds) await sheet(page).getByTestId('feeds-select').selectOption({ label: feeds });
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
@@ -108,6 +109,7 @@ test('when the clipboard is refused a plain paste field takes the link', async (
   await sheet(page).getByTestId('addr-paste-field').fill('Chez Louise\n' + SHORT);
   await expect(sheet(page).getByTestId('addr-name')).toHaveValue('Chez Louise');
   await sheet(page).getByTestId('addr-category').selectOption({ label: 'Food' });
+  await expandSheet(page);
   await sheet(page).getByTestId('addr-street').fill('1 Rue Exemple');
   await sheet(page).getByTestId('addr-save').click();
   await expect(sheet(page)).toBeHidden();
@@ -123,6 +125,7 @@ test('a link the app would not open is refused', async ({ page }) => {
   await page.goto('/');
   await openMenu(page, 'add-address');
   await sheet(page).getByTestId('addr-name').fill('Somewhere');
+  await expandSheet(page);
   await sheet(page).getByTestId('addr-link').fill('javascript:alert(1)');
   await sheet(page).getByTestId('addr-save').click();
   await expect(sheet(page).locator('.err')).toContainText('can’t be opened');
@@ -211,6 +214,7 @@ test('a person: a number becomes a WhatsApp link, and a step done sets last seen
   await page.getByTestId('person-open-sheet').click();
   await expect(sheet(page).getByTestId('person-seen')).toHaveValue(dayKey());
   // By hand: change it, then clear it.
+  await expandSheet(page);
   await sheet(page).getByTestId('person-seen').fill('2026-01-05');
   await sheet(page).getByTestId('person-save').click();
   await expect(page.getByTestId('person-row').filter({ hasText: 'Alex' })).toContainText('5 Jan 2026');
@@ -220,7 +224,7 @@ test('a person: a number becomes a WhatsApp link, and a step done sets last seen
 test('the module switch hides every screen, button and offer, and keeps the data', async ({ page }) => {
   await addByPaste(page, GOOGLE);
   await newStep(page, 'Lunch out', 'Chez Louise');
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('addresses-switch')).toBeChecked();
   await page.getByTestId('addresses-switch').uncheck();
   await expect(page.getByTestId('categories')).toHaveCount(0);
@@ -230,6 +234,7 @@ test('the module switch hides every screen, button and offer, and keeps the data
   await expect(page.getByTestId('feeds')).toHaveCount(0);
   await openStep(page, 'Lunch out');
   await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
+  await expandSheet(page);
   await expect(sheet(page).getByTestId('feeds-select')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await page.getByTestId('tab-home').click();
@@ -247,7 +252,7 @@ test('the module switch hides every screen, button and offer, and keeps the data
   await expect(page.getByTestId('addr-new')).toHaveCount(0);
 
   // On again: everything is back.
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('addresses-switch').check();
   await openAddresses(page);
   await expect(page.getByTestId('address-row').filter({ hasText: 'Chez Louise' })).toHaveCount(1);
@@ -255,7 +260,7 @@ test('the module switch hides every screen, button and offer, and keeps the data
 
 test('categories: rename, add, reorder and remove; an address whose category goes shows as uncategorised', async ({ page }) => {
   await addByPaste(page, GOOGLE);
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   const names = () => page.getByTestId('category-name').evaluateAll(els => els.map(e => (e as HTMLInputElement).value));
   expect(await names()).toEqual(['Food', 'Café & bar', 'Shopping', 'Sight', 'Museum', 'Park & public space', 'Outing', 'Other']);
   await page.getByTestId('category-name').first().fill('Eating out');
@@ -270,7 +275,7 @@ test('categories: rename, add, reorder and remove; an address whose category goe
   // The address is "Other" (the default) until its category goes.
   await openAddresses(page);
   await expect(page.getByTestId('address-row')).toContainText('Other');
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByRole('button', { name: 'Remove Other' }).click();
   await openAddresses(page);
   await expect(page.getByTestId('address-row')).toContainText('Uncategorised');
@@ -322,6 +327,7 @@ test('a standing obligation chooses what the planner offers', async ({ page }) =
   await newStep(page, 'See a friend');
   await openStep(page, 'See a friend');
   await sheet(page).locator('details.more summary').click();
+  await expandSheet(page);
   await expect(sheet(page).getByTestId('offer')).toHaveCount(0); // only a standing obligation offers
   await sheet(page).locator('input[name=template]').check();
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -334,7 +340,9 @@ test('a standing obligation chooses what the planner offers', async ({ page }) =
   await page.getByText('Standing items').click();
   await page.locator('[data-task]').filter({ hasText: 'See a friend' }).first().getByRole('button').first().click();
   await sheet(page).locator('details.more summary').click();
+  await expandSheet(page);
   await expect(sheet(page).getByTestId('feeds-select')).toHaveCount(0);
+  await expandSheet(page);
   await sheet(page).getByTestId('offer').selectOption('person');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
@@ -347,7 +355,7 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await clipboard(page, SHORT);
     if (french) {
-      await page.goto('/#settings');
+      await page.goto('/#settings'); await expandSettings(page);
       await page.getByRole('button', { name: 'Français' }).click();
       await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     }
@@ -359,6 +367,7 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await sheet(page).getByTestId('addr-paste').click();
     await noSideways(page, 'new address, asked for the name');
     await sheet(page).getByTestId('addr-name').fill('A very long name for a place that someone saved from Maps one rainy afternoon');
+    await expandSheet(page);
     await sheet(page).getByTestId('addr-street').fill('1 Rue de la Longue Adresse Exemple, 75000 Ville-Avec-Un-Nom-Tres-Long');
     await sheet(page).getByTestId('addr-save').click();
     await expect(sheet(page)).toBeHidden();
@@ -367,6 +376,7 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await sheet(page).getByTestId('person-reach').fill('+33 6 12 34 56 78');
     await noSideways(page, 'new person with the reach options');
     await sheet(page).getByTestId('reach-whatsapp').click();
+    await expandSheet(page);
     await sheet(page).getByTestId('person-seen').fill('2026-02-03');
     await sheet(page).getByTestId('person-save').click();
     await expect(sheet(page)).toBeHidden();
@@ -390,7 +400,7 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await noSideways(page, 'takeout');
     await page.keyboard.press('Escape');
 
-    await page.goto('/#settings');
+    await page.goto('/#settings'); await expandSettings(page);
     await expect(page.getByTestId('categories')).toBeVisible();
     await noSideways(page, 'settings with categories');
   });

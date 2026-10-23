@@ -2,6 +2,8 @@
 
 Open **Settings** from Home's menu. It is a plain page with its own heading. Everything you choose here is a setting that stays: an update never resets it.
 
+Each section is folded: only **Appearance** is open to begin with, and a tap on a heading opens another. Inside a section, the few controls most people use are in view and the rest are under **More**. If something under More has been set to a value, More says how many ("More · 2 set"), so nothing set is ever out of sight.
+
 ![Settings](shot:settings)
 
 ## Language
@@ -11,7 +13,7 @@ English or Français. It changes at once.
 ## Appearance
 
 - **Theme:** System, Light, Dark, or By time of day (you set when light starts and dark starts).
-- **Palette** and **Accent colour**, and the **Suit colours**. New people start with the **St George** palette. If you chose one before, it stays. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
+- **Palette** and **Accent colour**, and the **Suit colours**. New people start with the **af Klint** palette. If you chose one before, it stays. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
 - **Text size:** Small, Medium or Large.
 - **Reduce motion**.
 - **Celebrations:** Off, Calm or Lively. **Sound** and **Volume**.
@@ -59,7 +61,7 @@ Reminders are renewed each time you open the app. If you don't open it for about
 
 ## Calendar
 
-Subscribe to your fixed-time items and your planned and due steps from a calendar app. Choose **What the feed says**: times only, short names, or short names, places and notes. See [The calendar](calendar.md).
+Subscribe to your fixed-time items from a calendar app. Choose **What the feed says**: times only, short names, or short names, places and notes. See [The calendar](calendar.md).
 
 ## Data
 
@@ -73,6 +75,6 @@ If sync is off, Réussite reminds you every two weeks to save a backup file. It 
 
 ## About
 
-The version, **Read the manual**, the credit for the paintings that inspired the St George look, **Copy diagnostics**, the privacy note and **What's new**.
+The version, **Read the manual**, the credit for the paintings that inspired the af Klint look, **Copy diagnostics**, the privacy note and **What's new**.
 
 **Copy diagnostics** makes a short report (versions, device, errors) that you can send to a friend when something breaks. It never includes your steps, notes, names, places or keys.

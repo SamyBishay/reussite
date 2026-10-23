@@ -18,7 +18,7 @@ Chaque projet devrait avoir une étape suivante concrète, écrite comme une pre
 
 ## Ordre et chaînes
 
-Faites glisser les étapes ouvertes d’un projet par leur poignée pour changer leur ordre. Quand une étape en attend une autre, seule la première apparaît ailleurs comme une carte (Aujourd’hui, la matrice, le calendrier), avec « +n après » sous son titre. Ici, dans le projet, toutes les étapes sont listées.
+Faites glisser les étapes ouvertes d’un projet par leur poignée pour changer leur ordre. Quand une étape en attend une autre, seule la première apparaît ailleurs comme une carte (Aujourd’hui, la matrice), avec « +n après » sous son titre. Ici, dans le projet, toutes les étapes sont listées.
 
 Si vos lieux ont des zones, les projets d’une famille sont groupés sous la zone de leur lieu.
 

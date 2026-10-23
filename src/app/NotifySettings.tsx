@@ -5,7 +5,8 @@
 import { useState } from 'preact/hooks';
 import { saveSettings, settings, toast } from './store';
 import { disablePush, enablePush, pushBusy, pushError, pushHeld, pushLastAt, pushOn, pushState, sendTest } from './push';
-import { NOTIFY_TYPES, type NotifyText, type NotifyType } from '../data/settings';
+import { More, Fold, countSet } from './More';
+import { NOTIFY_TYPES, DEFAULT_SETTINGS, type NotifyText, type NotifyType } from '../data/settings';
 import { t, locale, type Key } from '../i18n';
 
 const TYPE_LABEL: Record<NotifyType, Key> = {
@@ -65,8 +66,7 @@ export function NotifySettings() {
   };
   const when = pushLastAt.value ? new Date(pushLastAt.value).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '';
   return (
-    <section class="set" data-testid="notify">
-      <h2>{t('notifySection')}</h2>
+    <Fold title={t('notifySection')} testid="notify">
       <p class="hint">{t('notifyIntro')}</p>
       <NotifySwitch />
       {on && (
@@ -78,6 +78,7 @@ export function NotifySettings() {
               <label class="tog"><input type="checkbox" checked={s.notify[k]} onChange={e => setType(k, (e.target as HTMLInputElement).checked)} data-testid={'notify-' + k} /> {t(TYPE_LABEL[k])}</label>
             ))}
           </div>
+          <More n={countSet(s.notifyText !== DEFAULT_SETTINGS.notifyText, s.notifyLead !== DEFAULT_SETTINGS.notifyLead)} testid="notify-more">
           <p class="field-label">{t('notifyTextLabel')}</p>
           <div class="seg" role="group" aria-label={t('notifyTextLabel')} style="flex-wrap:wrap">
             {(['generic', 'titles'] as NotifyText[]).map(v => (
@@ -92,8 +93,9 @@ export function NotifySettings() {
           <div class="actions">
             <button class="btn" type="button" disabled={testing || pushBusy.value} onClick={test} data-testid="notify-test">{t('notifySendTest')}</button>
           </div>
+          </More>
         </>
       )}
-    </section>
+    </Fold>
   );
 }

@@ -7,6 +7,7 @@ import { openSheet, closeSheet } from './sheet';
 import { connector, connectorNewCode, connectorOff, connectorOn, refreshConnector, spaceGone, syncOn } from './sync';
 import { RelayError } from '../sync/client';
 import { t, locale } from '../i18n';
+import { More, Fold, openFold } from './More';
 
 const when = (at: number) => new Date(at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -100,17 +101,17 @@ export function ConnectorSettings() {
   const st = connector.value;
 
   if (!on) return (
-    <section class="set" data-testid="connector">
-      <h2>{t('connectorSection')}</h2>
+    <Fold title={t('connectorSection')} testid="connector">
       <p class="hint">{t('connectorSyncFirst')}</p>
       <div class="actions">
         <button class="btn" type="button" data-testid="connector-to-sync" onClick={() => {
           const el = document.querySelector<HTMLElement>('[data-testid="sync"]');
+          openFold(el);
           el?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
           el?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
         }}>{t('connectorGoSync')}</button>
       </div>
-    </section>
+    </Fold>
   );
 
   const newCode = async () => {
@@ -122,8 +123,7 @@ export function ConnectorSettings() {
   const copyUrl = () => navigator.clipboard?.writeText(st!.url).then(() => toast(t('connectorUrlCopied')), () => undefined);
 
   return (
-    <section class="set" data-testid="connector">
-      <h2>{t('connectorSection')}</h2>
+    <Fold title={t('connectorSection')} testid="connector">
       {!st ? <p class="hint" role="status">{t('connectorChecking')}</p> : !st.on ? (
         <>
           <p>{t('connectorIntro')}</p>
@@ -142,20 +142,22 @@ export function ConnectorSettings() {
             <p class="urlbox mono" data-testid="connector-url">{st.url}</p>
             <div class="actions"><button class="btn" type="button" onClick={copyUrl} data-testid="connector-copy-url">{t('connectorCopyUrl')}</button></div>
           </div>
-          <ol class="steps-list">
-            <li>{t('connectorStep1')}</li>
-            <li>{t('connectorStep2')}</li>
-            <li>{t('connectorStep3')}</li>
-          </ol>
-          <p class="hint">{t('connectorOtherApps')}</p>
-          <PairingCode code={code} onNew={newCode} busy={busy} />
           {err && <p class="err" role="alert" data-testid="connector-error">{err}</p>}
-          <div class="actions">
-            <button class="btn" type="button" disabled={readOnly.value} data-testid="connector-off"
-              onClick={() => openSheet(<SwitchOffSheet key={'cf' + Date.now()} done={() => setCode(null)} />)}>{t('connectorOff')}</button>
-          </div>
+          <More open={!!code} testid="connector-more">
+            <ol class="steps-list">
+              <li>{t('connectorStep1')}</li>
+              <li>{t('connectorStep2')}</li>
+              <li>{t('connectorStep3')}</li>
+            </ol>
+            <p class="hint">{t('connectorOtherApps')}</p>
+            <PairingCode code={code} onNew={newCode} busy={busy} />
+            <div class="actions">
+              <button class="btn" type="button" disabled={readOnly.value} data-testid="connector-off"
+                onClick={() => openSheet(<SwitchOffSheet key={'cf' + Date.now()} done={() => setCode(null)} />)}>{t('connectorOff')}</button>
+            </div>
+          </More>
         </>
       )}
-    </section>
+    </Fold>
   );
 }

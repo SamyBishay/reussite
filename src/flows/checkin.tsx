@@ -43,12 +43,12 @@ export function planInput(k: string, shape: { start: string; preset: Preset; fix
   const fixedEvents = fixedOnDay({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value }, s, k);
   const timed = fixedEvents.map(e => ({ id: e.taskId!, at: e.time, lead: e.lead ?? 0, template: e.template }));
   const timedIds = new Set(timed.map(x => x.id)), timedRoots = new Set(fixedEvents.map(e => e.rootId!));
-  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id) && !timedIds.has(x.id));
+  const inPlan = rawPlan(k).map(id => T(id)).filter(isOpen).filter(x => !skip.has(x.id) && !timedIds.has(x.id) && !blocked(x));
   const optionalIds = new Set(dayDoc(k)?.optional ?? []);
   // Steps already on today's list (carried, or added earlier), then any swapped in by hand.
   const carried = [...inPlan.filter(x => !optionalIds.has(x.id) && x.src !== 'plan'), ...forced.map(id => T(id)).filter(isOpen)];
   const cands = candidates(k, place).filter(x => !skip.has(x.id) && !x.at && !forced.includes(x.id) && !timedIds.has(x.id));
-  const later = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
+  const later = [...tasks.value.values()].filter(x => isOpen(x) && !blocked(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
     .sort((a, b) => String(a.created).localeCompare(String(b.created)));
   // A standing item with weekdays belongs to those days only; one already on today's list isn't offered twice.
   const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place) && !skip.has(x.id) && !x.weekdays?.length && !timedRoots.has(x.id))

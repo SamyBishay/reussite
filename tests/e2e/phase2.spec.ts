@@ -263,6 +263,8 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
   await expect(page.locator('.toast')).toContainText('Broken down: 2 steps.');
   await page.getByTestId('tab-matrix').click();
   await expect(page.locator('.matrix')).toContainText('Open Mail and find the agency’s address');
+  // The steps are in this order, so one card: the second is inside it, under "+1 after".
+  await page.locator('.matrix').getByTestId('chain-toggle').click();
   await expect(page.locator('.matrix')).toContainText('Attach the signed lease as a PDF');
   await expect(page.locator('.matrix')).not.toContainText('Ask for a receipt');
 });

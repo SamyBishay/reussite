@@ -30,6 +30,15 @@ describe('the calendar’s events', () => {
     expect(evs.map(e => e.title)).not.toContain('Pay the electricity bill');
   });
 
+  it('shows only the head of a chain; a waiting step’s date and place on a list put nothing on the calendar', () => {
+    const d = data({
+      tasks: [task('a'), task('b', { after: 'a', due: '2026-10-22' }), task('c', { after: 'b', due: '2026-10-22', at: '10:00' })],
+      days: [day('2026-10-22', { plan: ['a', 'b'] })],
+    });
+    const evs = calViewEvents(d, opts(), '2026-10-22', '2026-10-22');
+    expect(evs.map(e => e.kind + ':' + e.taskId)).toEqual(['plan:a']);
+  });
+
   it('shows a step’s own short name', () => {
     const evs = calViewEvents(data({ tasks: [task('a', { title: 'Open Mail and reply', label: 'Landlord', due: '2026-10-22' })] }), opts(), '2026-10-22', '2026-10-22');
     expect(evs[0]!.title).toBe('Landlord');

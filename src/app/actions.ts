@@ -7,6 +7,7 @@ import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
+import { nextHeads } from '../domain/chains';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
@@ -61,14 +62,16 @@ export interface Finished { last: boolean; projectDone: string | null; nextId: s
  */
 export async function finishTask(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
+  const passing = nextHeads(tasks.value, tk.id);
   const wasLast = rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0;
   const { patch, session } = finishEffects(tk, { today: k, day, nowIso: nowISO(), nowMs: Date.now(), typed, minutes });
   if (session) await addSession(tk.id, session.m, session.why, session.source, session.d);
   await patchTask(tk.id, patch);
+  const passed = await placeHeads(tk.id, passing);
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
   if (tk.personId) await seeStepPerson(tk.personId, day);
-  return { last: wasLast && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
+  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
 }
 
 /** A project whose real steps are all done moves to the Completed shelf. */
@@ -86,8 +89,33 @@ export async function reopen(id: string) {
 }
 /** Drop a step for good (a repeating one stops repeating). */
 export async function dropTask(id: string) {
+  const passing = nextHeads(tasks.value, id);
   await patchTask(id, { status: 'dropped', started: null });
-  if (rawPlan(today.value).includes(id)) await removeToday(id);
+  await placeHeads(id, passing, true);
+}
+
+/**
+ * When the head of a chain leaves (done, or dropped), the step that takes its place goes on the lists the old head
+ * was on, from today on, right after it (in its place when it is dropped), unless it is already there. Today's list
+ * loses a dropped step either way. True when a step was placed or was already on one of those lists.
+ */
+async function placeHeads(id: string, heads: string[], drop = false): Promise<boolean> {
+  const k0 = today.value;
+  let placed = false;
+  for (const [k, d] of [...days.value.entries()]) {
+    if (!Array.isArray(d.plan)) continue;
+    const at = d.plan.indexOf(id);
+    if (at < 0) continue;
+    const add = k >= k0 ? heads.filter(h => !d.plan.includes(h)) : [];
+    if (k >= k0 && heads.some(h => d.plan.includes(h))) placed = true;
+    const rm = drop && k === k0;
+    if (!add.length && !rm) continue;
+    if (add.length) placed = true;
+    const next = [...d.plan];
+    next.splice(at + 1, 0, ...add);
+    await dayPatch(k, { plan: rm ? next.filter(x => x !== id) : next });
+  }
+  return placed;
 }
 
 // ---------- repeating steps ----------

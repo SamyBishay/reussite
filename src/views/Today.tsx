@@ -2,10 +2,11 @@
 // which edits any day's plan, launch points and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
-import { T, planOf, dayDoc, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, type T as Tk } from '../app/model';
+import { T, planOf, dayDoc, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, addByHand, setPlanOrder, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
+import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
@@ -25,6 +26,8 @@ export { openClose };
 
 /** The day being looked at; null is today. Device-local. */
 export const dayView = signal<string | null>(null);
+/** A day's list as shown: a step that waits for another is inside its head's card, not a row of its own. */
+const shownPlan = (k: string) => planOf(k).filter(id => !isWaiting(id));
 const hmNow = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 function FirstCard({ tk }: { tk: Tk }) {
@@ -39,6 +42,7 @@ function FirstCard({ tk }: { tk: Tk }) {
       <p class="t"><Title s={tk.title} /></p>
       {tk.starter && !run && <p class="starter">{t('starterIs', { s: tk.starter })}</p>}
       <p class="meta"><Meta tk={tk} /></p>
+      <ChainFold tk={tk} />
       {tk.resume && <p class="resume">{t('resume', { text: tk.resume })}</p>}
       <div class="go">
         {run ? (
@@ -74,6 +78,7 @@ function Row({ tk, n, k, optional }: { tk: Tk; n: number; k: string; optional?: 
       <div class="body">
         <p class="t"><Title s={tk.title} />{optional && <> <span class="tag">{t('ifRoom')}</span></>}</p>
         <p class="meta"><Meta tk={tk} />{run && <><span aria-hidden="true">·</span><Clock tk={tk} /></>}{!done && (tk.link || tk.prompt || tk.app) && <><span aria-hidden="true">·</span><GoLink tk={tk} variant="inline" /></>}</p>
+        {!done && <ChainFold tk={tk} />}
         {tk.resume && !done && <p class="resume">{t('resume', { text: tk.resume })}</p>}
       </div>
       <div class="ctrls">
@@ -206,7 +211,7 @@ function StayNotice() {
 /** Another day's plan: its list, first step and launch points, editable. Past days show their cards. */
 function OtherDay({ k }: { k: string }) {
   const past = k < today.value;
-  const plan = planOf(k);
+  const plan = shownPlan(k);
   const d = dayDoc(k);
   const cards = cardsOn(k);
   const open = plan.filter(id => isOpen(T(id)));
@@ -256,7 +261,7 @@ export function Today() {
   const listRef = useSortable<HTMLOListElement>(ids => void setPlanOrder(ids, td));
   if (k !== td) return <div><Navigator k={k} /><OtherDay k={k} /></div>;
   const d = dayDoc(k);
-  const plan = planOf(k);
+  const plan = shownPlan(k);
   const open = plan.filter(id => isOpen(T(id)));
   const fid = open[0];
   const yOpen = yesterdayOpen(k);

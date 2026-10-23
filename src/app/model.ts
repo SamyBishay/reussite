@@ -5,6 +5,7 @@ import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
+import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
@@ -25,12 +26,20 @@ export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, pr
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
 /** Obligations (standing, or a copy of one) never sit in the matrix or the planner's pool; their urgent and important flags are ignored. */
 export const isObligation = (t: T): boolean => L.isObligation(t, tasks.value);
-export const quad = (t: T): Quadrant => L.quadOf(t, today.value, settings.value.urgencyDays);
-export const urgent = (t: T) => isUrgent(t, today.value, settings.value.urgencyDays);
+/** The chains of the open steps (src/domain/chains.ts), rebuilt once whenever the steps change. */
+export const chains = computed(() => C.chainIndex(tasks.value));
+/** A chain's head carries the earliest due date of its chain, so a far deadline turns the chain urgent in time. */
+const withChainDue = (t: T): T => { const d = C.effectiveDue(chains.value, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
+export const quad = (t: T): Quadrant => L.quadOf(withChainDue(t), today.value, settings.value.urgencyDays);
+export const urgent = (t: T) => isUrgent(withChainDue(t), today.value, settings.value.urgencyDays);
+/** The chain a step heads (with "+n after"), if it has one. */
+export const chainOfHead = (id: string) => chains.value.chains.get(id);
+/** A step that waits for another in a chain: shown inside its head's card, not on its own. */
+export const isWaiting = (id: string) => C.isWaiting(chains.value, id);
 
 export const listOf = L.listOf;
 export const waitingOn = (t: T): T[] => L.waitingOn(t, tasks.value);
-export const blocked = (t: T) => L.blocked(t, tasks.value);
+export const blocked = (t: T) => isWaiting(t.id);
 
 export const dayDoc = (k: string): WithId<Day> | undefined => days.value.get(k);
 export const rawPlan = (k: string): string[] => L.rawPlan(days.value, k);
@@ -60,7 +69,7 @@ export const elapsedSec = (t: T, now = Date.now()) => (t.started ? Math.max(0, (
 
 const byOrder = L.byOrder;
 export { byOrder };
-export const byPriority = (a: T, b: T): number => L.byPriority(a, b, { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
+export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
 
 export function candidates(k = today.value, place = pagePlace.value): T[] {
   const plan = new Set(rawPlan(k));

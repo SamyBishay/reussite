@@ -4,6 +4,7 @@ import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects, pagePlace } from '../app/store';
 import { isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
+import { ChainFold } from '../app/ChainFold';
 import { openTask, openMove, moveToQuadrant, placeName, placeIds } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, suitName } from '../app/ui';
 import { t, type Key } from '../i18n';
@@ -52,12 +53,14 @@ function Item({ tk, planned }: { tk: T; planned: boolean }) {
     <div class="item" draggable data-task={tk.id} onDragStart={e => { e.dataTransfer?.setData('text/plain', tk.id); (e.currentTarget as HTMLElement).classList.add('dragging'); }}
       onDragEnd={e => (e.currentTarget as HTMLElement).classList.remove('dragging')}>
       <Suit s={tk.suit} />
-      <button type="button" class="linklike t" {...handlers} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
-        <Title s={tk.title} />
-        {tk.kind === 'decision' && <> <span class="tag">{t('decisionTag')}</span></>}
-        {planned && <> <span class="tag today">{t('today')}</span></>}
-        {blocked(tk) && <> <span class="tag">{t('waits')}</span></>}
-      </button>
+      <div class="item-body">
+        <button type="button" class="linklike t" {...handlers} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
+          <Title s={tk.title} />
+          {tk.kind === 'decision' && <> <span class="tag">{t('decisionTag')}</span></>}
+          {planned && <> <span class="tag today">{t('today')}</span></>}
+        </button>
+        <ChainFold tk={tk} />
+      </div>
       <span class="ictrls">
         <DueChip tk={tk} />
         {tk.kind === 'decision' && <button type="button" class="icon-btn sm" onClick={() => void openDecision(null, { taskId: tk.id })} aria-label={t('openDecision')} data-testid="matrix-decision">⚖</button>}
@@ -73,7 +76,8 @@ export function Matrix() {
   const f = filters.value;
   const set = (p: Partial<typeof f>) => (filters.value = { ...f, ...p });
   const placeOk = (x: T) => (f.place === 'all' ? true : f.place ? inPlace(x, f.place) : scope.value === 'all' || inPlace(x));
-  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x));
+  // A step that waits for another is inside its head's card ("+n after"), not a card of its own.
+  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x) && !blocked(x));
   const oblig = [...tasks.value.values()].filter(x => x.status === 'open' && isObligation(x) && placeOk(x)).sort((a, b) => (a.at || '99').localeCompare(b.at || '99') || a.title.localeCompare(b.title));
   const q = f.q.trim().toLowerCase();
   const vis = all.filter(x => placeOk(x) && (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit) && (!q || x.title.toLowerCase().includes(q) || (x.note || '').toLowerCase().includes(q)));

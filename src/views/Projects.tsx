@@ -3,7 +3,7 @@
 import { useState } from 'preact/hooks';
 import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace } from '../app/store';
 import { onPage } from '../domain/places';
-import { isOpen, inPlace, blocked, byOrder, waitingOn, type T } from '../app/model';
+import { isOpen, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
 import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
 import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
@@ -23,8 +23,11 @@ const openProj = new Set<string>();
 function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: boolean; sortable?: boolean }) {
   const done = tk.status === 'done';
   const w = waitingOn(tk)[0];
+  // A step that waits is greyed and indented by how far down its chain it is.
+  const waiting = !done && blocked(tk);
+  const depth = waiting ? chains.value.chains.get(chains.value.of.get(tk.id) ?? '')?.depth.get(tk.id) ?? 1 : 0;
   return (
-    <li class={done ? 'done' : ''} data-task={tk.id} {...(sortable ? { 'data-sort': '' } : {})}>
+    <li class={(done ? 'done' : '') + (waiting ? ' waiting' : '')} data-task={tk.id} {...(depth > 1 ? { style: { marginLeft: (depth - 1) * 12 + 'px' } } : {})} {...(sortable ? { 'data-sort': '' } : {})}>
       <span class={'g suit-' + tk.suit} aria-hidden="true">{tk.template ? '↻' : done ? '✓' : '·'}</span>
       <span class="stept">
         <button class="linklike" type="button" onClick={() => openTask(tk.id)}><Title s={tk.title} /></button>

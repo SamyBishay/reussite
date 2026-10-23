@@ -4,6 +4,7 @@
 import type { Address, Day, Place, Project, Task } from '../data/schema';
 import type { DayKey } from './dates';
 import type { AgendaData, AgendaEvent } from './agenda';
+import { chainIndex, isWaiting } from './chains';
 import { shortLabel } from './label';
 import { whereOf } from './lists';
 import type { IcsAllDay, IcsKey, IcsTitles, IcsTranslate } from './ics';
@@ -38,17 +39,19 @@ const openCard = (t: WithId<Task> | undefined): t is WithId<Task> => !!t && t.st
  */
 export function allDayItems(data: Pick<AgendaData, 'tasks' | 'days'>, from: DayKey, to: DayKey): AllDayItem[] {
   const out: AllDayItem[] = [];
+  // A step that waits for another is inside its head's card: no event, and its due date puts nothing on the calendar.
+  const ix = chainIndex(data.tasks);
   const planned = new Set<string>();
   const days = [...data.days.values()].filter((d: WithId<Day>) => d.date >= from && d.date <= to && Array.isArray(d.plan)).sort((a, b) => (a.date < b.date ? -1 : 1));
   for (const d of days) {
     for (const id of d.plan) {
       const t = data.tasks.get(id);
-      if (!openCard(t) || planned.has(id + ':' + d.date)) continue;
+      if (!openCard(t) || isWaiting(ix, id) || planned.has(id + ':' + d.date)) continue;
       planned.add(id + ':' + d.date);
       out.push({ id: `plan:${id}:${d.date}`, kind: 'plan', day: d.date, taskId: id });
     }
   }
-  const due = [...data.tasks.values()].filter(t => openCard(t) && t.due && t.due >= from && t.due <= to && !planned.has(t.id + ':' + t.due));
+  const due = [...data.tasks.values()].filter(t => openCard(t) && !isWaiting(ix, t.id) && t.due && t.due >= from && t.due <= to && !planned.has(t.id + ':' + t.due));
   due.sort((a, b) => (a.due! < b.due! ? -1 : a.due! > b.due! ? 1 : a.order - b.order || (a.id < b.id ? -1 : 1)));
   for (const t of due) out.push({ id: `due:${t.id}:${t.due}`, kind: 'due', day: t.due!, taskId: t.id });
   return out.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));

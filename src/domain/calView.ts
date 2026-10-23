@@ -6,6 +6,7 @@ import type { Address, Day, Decision, Place, Project, Stay, SuitId, Task } from 
 import { addDays, type DayKey } from './dates';
 import { DEFAULT_FIXED_MINUTES } from './ics';
 import { shortLabel } from './label';
+import { chainIndex, isWaiting } from './chains';
 import { fixedOn, isOpen, rawPlan } from './lists';
 import { locationOf } from './calItems';
 import { isoDow, occurrences } from './repeat';
@@ -96,6 +97,10 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
     out.push({ id: `stay:${s.id}:${s.from}`, kind: 'stay', day: s.from, date: s.from, endDate: s.to, stayId: s.id, title: data.places.get(s.placeId)?.name ?? '', movable: false });
   }
 
+  // A step that waits for another is inside its head's card, so it has no event of its own (a commitment never waits).
+  const ix = chainIndex(data.tasks);
+  const waiting = (t: WithId<Task>) => !t.fixed && isWaiting(ix, t.id);
+
   const repeats = new Map<DayKey, WithId<Task>[]>();
   for (const x of data.tasks.values()) {
     if (!isOpen(x) || !x.repeat || !x.due || !o.onPage(x)) continue;
@@ -104,7 +109,7 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
 
   const lists = { days: data.days, tasks: data.tasks };
   for (let k = from; k <= to; k = addDays(k, 1)) {
-    const timed = fixedOn(lists, k);
+    const timed = fixedOn(lists, k).filter(t => !waiting(t));
     for (const t of timed) {
       if (!HHMM.test(t.at ?? '')) continue;
       const slot = gridSlot(k, t.at!, o.dayStart);
@@ -116,13 +121,13 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
     const planned = new Set<string>();
     for (const id of rawPlan(data.days, k)) {
       const t = data.tasks.get(id);
-      if (!t || t.status === 'dropped' || t.template || t.at || planned.has(id)) continue;
+      if (!t || t.status === 'dropped' || t.template || t.at || planned.has(id) || waiting(t)) continue;
       planned.add(id);
       if (t.status === 'done') out.push(task('done', t, k, { id: `done:${t.id}:${k}`, done: true, movable: true }));
       else out.push(task('plan', t, k, { movable: true }));
     }
     for (const t of data.tasks.values()) {
-      if (!isOpen(t) || t.due !== k || planned.has(t.id) || t.at || !o.onPage(t)) continue;
+      if (!isOpen(t) || t.due !== k || planned.has(t.id) || t.at || !o.onPage(t) || waiting(t)) continue;
       out.push(task('due', t, k, { movable: true }));
     }
     if (k <= o.today) {

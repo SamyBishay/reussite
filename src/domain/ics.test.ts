@@ -291,3 +291,12 @@ describe('golden file', () => {
     parse(text);
   });
 });
+
+describe('chains in the exports', () => {
+  it('a step that waits is no all-day event, planned or due', () => {
+    const t = (id: string, o: object = {}) => [id, { id, title: id, status: 'open', template: false, fixed: false, at: null, order: 0, due: null, after: null, ...o }] as const;
+    const tasks = new Map([t('a'), t('b', { after: 'a', due: '2026-10-22' }), t('c', { due: '2026-10-22' })]) as unknown as Parameters<typeof allDayItems>[0]['tasks'];
+    const days = new Map([['2026-10-22', { id: '2026-10-22', date: '2026-10-22', plan: ['a', 'b'] }]]) as unknown as Parameters<typeof allDayItems>[0]['days'];
+    expect(allDayItems({ tasks, days }, '2026-10-22', '2026-10-22').map(i => i.taskId)).toEqual(['a', 'c']);
+  });
+});

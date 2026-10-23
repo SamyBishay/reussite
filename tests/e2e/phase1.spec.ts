@@ -394,9 +394,8 @@ test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and
   await up.focus();
   await expect(up).toBeVisible();
   await page.keyboard.press('Enter');
-  const swapped = await planIds(page);
-  expect(swapped[1]).toBe(after[2]);
-  expect(swapped[2]).toBe(after[1]);
+  await expect.poll(async () => (await planIds(page))[1]).toBe(after[2]);
+  expect((await planIds(page))[2]).toBe(after[1]);
 });
 
 test('a step added by hand goes right after the one running, not at the bottom', async ({ page }) => {

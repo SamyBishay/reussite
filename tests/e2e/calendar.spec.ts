@@ -30,7 +30,8 @@ test('the task sheet has a Short name under the title: placeholder is the derive
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); if (new Date().getHours() < 5) x.setDate(x.getDate() - 1); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
 
-test('the Calendar opens on Week on a computer, and has Day, Week, Month and Agenda views', async ({ page }) => {
+test('the Calendar opens on Week on a computer, and has Day, Week, Month and Agenda views', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a phone opens on Day, and its Week is 3 days');
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
   await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', 'week');
@@ -70,6 +71,7 @@ test('the all-day row has cards by short name, with no launch points; a timed st
   await sheet(page).getByTestId('label').fill('Lease');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('cal-week').click();
   const grid = page.getByTestId('calendar-grid');
   // Short names, not the sentences the steps are titled with; the leading verb and filler are gone.
   await expect(grid.locator('.sx__date-grid-event', { hasText: 'Doctolib' }).first()).toBeVisible();

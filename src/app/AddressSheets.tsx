@@ -1,6 +1,7 @@
 // The sheets of Addresses and people (brief §5, phase 4): a new address from a pasted Maps link, an address's
 // page with its visits, the one-screen after-visit note, a person. Reads the signals live; writes through
 // actions.ts. Nothing here is sent anywhere.
+import { More, countSet } from './More';
 import { useRef, useState } from 'preact/hooks';
 import { here, readOnly, toast, today, tasks } from './store';
 import { addressById, categories, categoryName, personById, type A } from './model';
@@ -139,20 +140,22 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
         </label>
         <label class="field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       </div>
-      <label class="field"><span>{t('addrLink')}</span>
-        <input type="text" inputMode="url" value={url} placeholder="https://…" autocomplete="off" onInput={e => setUrl(val(e))} data-testid="addr-link" />
-      </label>
-      <label class="field"><span>{t('addrStreet')}</span>
-        <input type="text" value={street} autocomplete="off" onInput={e => setStreet(val(e))} data-testid="addr-street" />
-      </label>
       <div class="field"><span>{t('addrState')}</span>
         <div class="seg" role="group" aria-label={t('addrState')}>
           <button type="button" aria-pressed={state === 'want'} onClick={() => setState('want')} data-testid="addr-want">{t('addrWant')}</button>
           <button type="button" aria-pressed={state === 'been'} onClick={() => setState('been')} data-testid="addr-been">{t('addrBeen')}</button>
         </div>
       </div>
-      <label class="field"><span>{t('note')}</span><textarea value={note} onInput={e => setNote(val(e))} data-testid="addr-note" /></label>
       {err && <p class="err">{err}</p>}
+      <More n={countSet(url, street, note)} testid="addr-more">
+      <label class="field"><span>{t('addrLink')}</span>
+        <input type="text" inputMode="url" value={url} placeholder="https://…" autocomplete="off" onInput={e => setUrl(val(e))} data-testid="addr-link" />
+      </label>
+      <label class="field"><span>{t('addrStreet')}</span>
+        <input type="text" value={street} autocomplete="off" onInput={e => setStreet(val(e))} data-testid="addr-street" />
+      </label>
+      <label class="field"><span>{t('note')}</span><textarea value={note} onInput={e => setNote(val(e))} data-testid="addr-note" /></label>
+      </More>
       {cur?.mapsUrl && isAllowedLink(cur.mapsUrl) && <div class="actions" style="margin-top:var(--s3)"><ExtLink href={cur.mapsUrl} class="btn" testid="addr-open-maps">{t('addrOpenMaps')}</ExtLink></div>}
       <div class="actions">
         <button class="btn primary" type="submit" disabled={off} data-testid="addr-save">{t('save')}</button>
@@ -329,6 +332,8 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
         </div>
       )}
       <p class="hint">{t('personReachHint')}</p>
+      {err && <p class="err">{err}</p>}
+      <More n={countSet(note, seen)} testid="person-more">
       <label class="field"><span>{t('note')}</span><textarea value={note} onInput={e => setNote(val(e))} data-testid="person-note" /></label>
       <div class="field"><span>{t('personLastSeen')}</span>
         <div class="row-inline">
@@ -338,7 +343,7 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
         </div>
         <p class="hint">{seen ? t('personSeenOn', { date: fmtDate(seen, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }) : t('personNotSeen')}</p>
       </div>
-      {err && <p class="err">{err}</p>}
+      </More>
       <div class="actions">
         <button class="btn primary" type="submit" disabled={off} data-testid="person-save">{t('save')}</button>
         {cur?.reach && isAllowedLink(cur.reach) && <ExtLink href={cur.reach} class="btn" testid="person-open">{t('personOpen', { app: reachLabel(cur.reach) })}</ExtLink>}

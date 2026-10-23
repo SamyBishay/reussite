@@ -457,6 +457,8 @@ export const en = {
   labelHint: 'What calendars show for this step. Leave it empty to use the one made from the title.',
   starterField: 'Starter: the smallest first action',
   starterPh: 'Open the app on the right screen…',
+  moreLabel: 'More',
+  moreSet: { one: '{n} set', other: '{n} set' } as P,
   moreFields: 'More: kind, waits for, app and link, repeats, fixed time',
   kindField: 'Kind',
   kindTask: 'A step',

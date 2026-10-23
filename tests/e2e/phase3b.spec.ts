@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, expandSettings, expandSheet } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 // The app's day starts at 05:00; before that it is still the day before.
@@ -18,6 +18,7 @@ async function addChoir(page: Page) {
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
   await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
   await sheet(page).locator('details.more summary').click();
+  await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
   await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('19:00');
@@ -36,6 +37,7 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
   // It is now a standing obligation: open it again to give it days and a lead.
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
   await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
+  await expandSheet(page);
   await expect(sheet(page).getByTestId('weekdays')).toBeVisible();
   await sheet(page).getByTestId('weekdays').getByLabel(todayName(), { exact: true }).check();
   await sheet(page).getByTestId('lead').fill('30');
@@ -105,7 +107,7 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
     await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', m);
     await noSideways(page, 'calendar ' + m);
   }
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('calendar-settings')).toBeVisible();
   await noSideways(page, 'settings');
 });
@@ -114,11 +116,12 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
 test('the calendar feed: generic titles, short names when asked, places and links in full, a new address replaces the old, off removes it', async ({ page, request }) => {
   await addChoir(page);
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
+  await expandSheet(page);
   await sheet(page).getByTestId('weekdays').getByLabel(todayName(), { exact: true }).check();
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
 
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   const feed = page.getByTestId('calendar-feed');
   await expect(feed.getByTestId('feed-url')).toHaveCount(0);
   await feed.getByTestId('feed-switch').check();
@@ -139,6 +142,7 @@ test('the calendar feed: generic titles, short names when asked, places and link
   expect(generic).not.toContain('Choir');
   expect(generic).not.toContain('VALARM');
 
+  await page.getByTestId('feed-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
   await feed.getByTestId('feed-detail').selectOption('labels');
   await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('SUMMARY:Choir'), { timeout: 20_000 }).toBe(true);
   expect(await (await fetchFeed(first)).text()).not.toContain('URL:');
@@ -163,10 +167,11 @@ for (const width of [320, 375, 430]) {
 test(`the feed block does not scroll sideways at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
   await importSample(page);
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   const feed = page.getByTestId('calendar-feed');
   await feed.getByTestId('feed-switch').check();
   await expect(feed.getByTestId('feed-url')).toContainText('/cal/');
+  await page.getByTestId('feed-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
   await feed.getByTestId('feed-regenerate').click();
   await noSideways(page, 'feed block');
   for (const id of ['feed-webcal', 'feed-copy', 'feed-detail', 'feed-regenerate-confirm']) {

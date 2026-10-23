@@ -5,7 +5,7 @@
 // VAPID header; the test decrypts what arrived. The relay's local D1 file shows what it holds.
 import { test, expect, type Page } from '@playwright/test';
 import { E2E_VAPID } from './vapid';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, expandSettings, expandSheet } from './helpers';
 import { openedText, pushId, relayHeld, runCron, startPushStub, stubSubscription, type PushStub } from './pushstub';
 import { newReceiver } from '../../src/push/testing';
 import { decryptPush, type ReceiverKeys } from '../../src/push/encrypt';
@@ -27,10 +27,11 @@ test.afterEach(async () => { await stub.close(); });
 const sheet = (page: Page) => page.getByTestId('sheet');
 
 async function switchOn(page: Page) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('notify')).toBeVisible();
   await page.getByTestId('notify-master').check();
   await expect(page.getByTestId('notify-held')).toBeVisible();
+  await expandSettings(page);
   await expect.poll(() => pushId(page)).not.toBeNull();
   return (await pushId(page))!;
 }
@@ -65,8 +66,11 @@ test('Delete everywhere also removes the notifications and calendar feed from th
   await expect(page.locator('svg.qr')).toBeVisible();
   await page.getByTestId('sync-key-saved').click();
   await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+  await expandSettings(page);
+  await expandSettings(page);
   await page.getByTestId('sync-delete').click();
   await page.getByTestId('sync-delete-word').fill('delete');
+  await expandSettings(page);
   await page.getByTestId('sync-delete-confirm').click();
   await expect(page.getByTestId('sync-setup')).toBeVisible();
 
@@ -92,6 +96,7 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
   await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
   await sheet(page).locator('details.more summary').click();
+  await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
   await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill(hhmm);
@@ -99,6 +104,7 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
+  await expandSheet(page);
   for (const d of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) await sheet(page).getByTestId('weekdays').getByLabel(d, { exact: true }).check();
   await sheet(page).getByTestId('lead').fill('0');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -164,19 +170,25 @@ test('the settings switches take a type out of the schedule and back; the lead a
   await page.getByTestId('notify-checkin').check();
   await expect.poll(() => has('close:') && has('checkin:'), { timeout: 15_000 }).toBe(true);
   // the lead time is a setting, saved
+  await expandSettings(page);
   await page.getByTestId('notify-lead').fill('15');
   await page.getByTestId('notify-lead').blur();
   await page.reload();
+  await expandSettings(page);
+  await expandSettings(page);
   await expect(page.getByTestId('notify-lead')).toHaveValue('15');
   // the choice is kept across a reload, and the relay still holds the list
   await expect(page.getByTestId('notify-master')).toBeChecked();
+  await expandSettings(page);
   await expect(page.getByTestId('notify-text-generic')).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('notify-text-titles').click();
+  await expandSettings(page);
   await expect(page.getByTestId('notify-text-titles')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('"Send a test notification" posts one to the push service', async ({ page }) => {
   await switchOn(page);
+  await expandSettings(page);
   await page.getByTestId('notify-test').click();
   await expect(page.locator('.toast')).toContainText('Test sent');
   await expect.poll(() => stub.received.length, { timeout: 15_000 }).toBe(1);
@@ -189,7 +201,7 @@ test('"Send a test notification" posts one to the push service', async ({ page }
 test('offers nothing to switch on when permission is blocked, and says how to allow it', async ({ page, context }) => {
   await context.clearPermissions();
   await context.addInitScript(() => { Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'denied' }); });
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('notify-denied')).toBeVisible();
   await expect(page.getByTestId('notify-master')).toBeHidden();
 });
@@ -210,7 +222,7 @@ for (const width of [320, 375, 430]) {
 test.describe('on an iPhone outside the Home Screen app', () => {
   test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
   test('it asks to add the app to the Home Screen first, with no switch', async ({ page }) => {
-    await page.goto('/#settings');
+    await page.goto('/#settings'); await expandSettings(page);
     await expect(page.getByTestId('notify-install')).toContainText('Add Réussite to your Home Screen first');
     await expect(page.getByTestId('notify-master')).toBeHidden();
     await noSideways(page, 'install explanation');

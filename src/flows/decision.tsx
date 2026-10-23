@@ -8,7 +8,8 @@ import { createTask, newTaskDoc, addToday } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
 import { openDone, showMoment } from '../app/sheets';
 import { celebrate } from '../app/celebrate';
-import { SmartEditor } from '../app/smart';
+import { SmartEditor, smartFilled } from '../app/smart';
+import { More, countSet } from '../app/More';
 import { DayPick } from '../app/due';
 import { t, fmtDate, fmtIfDay, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -106,15 +107,17 @@ function ProblemScreen({ d, next }: { d: D; next: () => void }) {
     await createDoc<Decision>('decisions', normDecision({ title: '', projectId: d.projectId, taskId: null, status: 'draft' }));
     toast(t('splitDone'));
   };
+  const field = ([k, label, ph]: (typeof PROBLEM)[number]) => (
+    <label class="field"><span>{t(label)}</span><textarea rows={2} defaultValue={d.problem[k]} placeholder={t(ph)} onChange={e => set(k, (e.target as HTMLTextAreaElement).value)} data-testid={'dw-prob-' + k} /></label>
+  );
   return (
     <div>
       <h3>{t('dwProblemQ')}</h3>
       <DecisionAi d={d} what="problem" label={t('aiDraftProblem')} onApplied={() => setV(v + 1)} />
       <div key={v}>
       <label class="field"><span>{t('decisionTitle')}</span><input type="text" defaultValue={d.title} placeholder={t('decisionTitlePh')} onChange={e => void save(d.id, { title: (e.target as HTMLInputElement).value.trim() })} data-testid="dw-title" /></label>
-      {PROBLEM.map(([k, label, ph]) => (
-        <label class="field"><span>{t(label)}</span><textarea rows={2} defaultValue={d.problem[k]} placeholder={t(ph)} onChange={e => set(k, (e.target as HTMLTextAreaElement).value)} data-testid={'dw-prob-' + k} /></label>
-      ))}
+      {PROBLEM.slice(0, 2).map(field)}
+      <More n={countSet(...PROBLEM.slice(2).map(([k]) => d.problem[k]))} testid="dw-more">{PROBLEM.slice(2).map(field)}</More>
       </div>
       <div class="actions">
         <button class="btn primary" type="button" onClick={next} data-testid="dw-next">{t('next_')}</button>
@@ -301,8 +304,10 @@ function ChoiceScreen({ d, back, next }: { d: D; back: () => void; next: () => v
         <select value={chosen} onChange={e => setChosen((e.target as HTMLSelectElement).value)}>{live.map(o => <option value={o.id}>{o.name} ({score(o)})</option>)}</select>
       </label>
       <label class="field"><span>{t('whyField')}</span><textarea name="why" rows={2} defaultValue={d.why} /></label>
-      <label class="field"><span>{t('mustBeTrue')}</span><textarea name="must" rows={2} defaultValue={d.mustBeTrue} /></label>
-      <label class="field"><span>{t('falsifierField')}</span><textarea name="falsifier" rows={2} defaultValue={d.falsifier} /></label>
+      <More n={countSet(d.mustBeTrue, d.falsifier)} testid="dw-choice-more">
+        <label class="field"><span>{t('mustBeTrue')}</span><textarea name="must" rows={2} defaultValue={d.mustBeTrue} /></label>
+        <label class="field"><span>{t('falsifierField')}</span><textarea name="falsifier" rows={2} defaultValue={d.falsifier} /></label>
+      </More>
       <div class="field"><span>{t('checkOnField')}</span>
         <DayPick value={review} onPick={k => k && setReview(k)} extra={[[t('inWeeks', { n: 2 }), addDays(today.value, 14)], [t('inMonths', { n: 1 }), addDays(today.value, 30)], [t('inMonths', { n: 3 }), addDays(today.value, 91)]]} />
         <p class="hint">{t('checkOn', { date: fmtDate(review) })}</p>
@@ -378,7 +383,7 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
       </form>
       {smartRv ? <ReviewList plan={smartRv.plan} note={smartRv.note} inline onApplied={() => { setSmartRv(null); setSv(sv + 1); }} />
         : <AiAction ai={ai} label={t('aiDraftSteps')} onClick={() => void draft_()} testid="ai-dw-steps" />}
-      {pid && <details class="more" open={sv > 0}><summary>{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</summary><SmartEditor key={sv} projectId={pid} /></details>}
+      {pid && <More open={sv > 0} n={countSet(projects.value.get(pid)?.goal, smartFilled(projects.value.get(pid)?.smart) > 0)} testid="dw-smart-more"><p class="field-label">{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</p><SmartEditor key={sv} projectId={pid} /></More>}
       <div class="field"><span>{t('firstStepWhen')}</span>
         <div class="seg" role="group" style="flex-wrap:wrap">
           {(['today', 'tomorrow', 'none'] as const).map(w => <button type="button" aria-pressed={when === w} onClick={() => setWhen(w)}>{t(w === 'today' ? 'pickToday' : w === 'tomorrow' ? 'pickTomorrow' : 'notYet')}</button>)}

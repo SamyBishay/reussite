@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { t } from '../i18n';
 import { saveSettings, settings, toast, readOnly } from './store';
 import { relayBase } from './sync';
+import { More, Fold } from './More';
 import { FEED_DETAILS, type FeedDetail } from '../domain/calItems';
 import { feedBusy, feedError, feedId, feedLinks, feedOff, feedOn, regenerateFeed } from './feed';
 
@@ -39,6 +40,8 @@ function Feed() {
             </div>
           )}
           {feedError.value && <p class="err" role="status" data-testid="feed-error">{feedError.value}</p>}
+          {s.feedDetail !== 'times' && <p class="warnline" data-testid="feed-titles-warn">{t('feedDetailWarn')}</p>}
+          <More n={s.feedDetail !== 'times' ? 1 : 0} testid="feed-more">
           <label class="field"><span>{t('feedDetailLabel')}</span>
             <select value={s.feedDetail} data-testid="feed-detail" disabled={readOnly.value}
               onChange={e => void saveSettings({ feedDetail: (e.target as HTMLSelectElement).value as FeedDetail })}>
@@ -46,7 +49,6 @@ function Feed() {
             </select>
           </label>
           <p class="hint" data-testid="feed-detail-hint">{t(DETAIL_HINT[s.feedDetail] ?? 'feedDetailTimesHint')}</p>
-          {s.feedDetail !== 'times' && <p class="warnline" data-testid="feed-titles-warn">{t('feedDetailWarn')}</p>}
           <p class="hint">{t('feedRefresh')}</p>
           {ask ? (
             <div role="group">
@@ -60,6 +62,7 @@ function Feed() {
           ) : (
             <div class="actions"><button class="btn" type="button" data-testid="feed-regenerate" onClick={() => setAsk(true)}>{t('feedRegenerate')}</button></div>
           )}
+          </More>
         </>
       )}
     </div>
@@ -68,10 +71,9 @@ function Feed() {
 
 export function CalendarSettings() {
   return (
-    <section class="set" data-testid="calendar-settings">
-      <h2>{t('calendarSection')}</h2>
+    <Fold title={t('calendarSection')} testid="calendar-settings">
       <p class="hint">{t('calendarExportHint')}</p>
       <Feed />
-    </section>
+    </Fold>
   );
 }

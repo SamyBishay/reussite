@@ -337,6 +337,8 @@ export const fr: Partial<Strings> = {
   // phase 1: the task sheet
   starterField: 'Démarreur : la plus petite première action',
   starterPh: 'Ouvrir l’appli au bon écran…',
+  moreLabel: 'Plus',
+  moreSet: { one: '{n} renseigné', other: '{n} renseignés' },
   moreFields: 'Plus : type, attente, appli et lien, répétition, heure fixe',
   kindField: 'Type',
   kindTask: 'Une étape',

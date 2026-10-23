@@ -38,9 +38,9 @@ If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date
 
 ## Steps
 
-A step has a title, written as the **first action**: the app or place, then what to do there ("Open Mail and reply to…"). It also has a starter, an estimate, an optional due date, a project and a suit. A step can also have a **short name** (five or six words, like "Choir · Hill House"). That is what calendars show. Leave it empty and Réussite makes one from the title.
+A step has a title, written as the **first action**: the app or place, then what to do there ("Open Mail and reply to…"). It also has an estimate and an optional due date, and you say whether it is urgent and important. A starter, a project and a suit, a place, a note and the rest are under **More**. A step can also have a **short name** (five or six words, like "Choir · Hill House"). That is what calendars show. Leave it empty and Réussite makes one from the title.
 
-Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Drop and the others) in a row under the title, always in reach. Beside the title is a **Time** chip: tap it to give the step a fixed time. Under **More** you will find the kind (a step or a decision), "Waits for", the app and link, repeats, and the length and "leave early" that go with a time.
+Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Drop and the others) in a row under the title, always in reach. Beside the title is a **Time** chip: tap it to give the step a fixed time. Under **More** you will find the short name, the starter, the suit, the place, the project, the note, the kind (a step or a decision), "Waits for", the app and link, repeats, and what a standing item needs (its weekdays). When something under More is set, it says so ("More · 3 set"). The length and "leave early" that go with a time are right under the Time chip.
 
 **Research says:** untested here. `[E?]`
 

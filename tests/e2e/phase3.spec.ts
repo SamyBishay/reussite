@@ -1,11 +1,11 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { deflateRawSync } from 'node:zlib';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
 import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
   await importSample(page);
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('about').getByTestId('diagnostics-open').click();
   const block = page.getByTestId('diagnostics-text');
   await expect(block).toContainText('version: 2.');
@@ -26,7 +26,7 @@ async function secondDevice(browser: Browser, info: TestInfo) {
 }
 
 async function setUp(page: Page): Promise<string> {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('sync-setup').click();
   await page.getByTestId('sync-make-key').click();
   await expect(page.locator('svg.qr')).toBeVisible();
@@ -34,7 +34,7 @@ async function setUp(page: Page): Promise<string> {
 }
 
 async function addPlace(page: Page, name: string) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByPlaceholder('Name of the new place').fill(name);
   await page.getByTestId('add-place').click();
   await expect(page.getByLabel('Current place')).toContainText(name);
@@ -66,7 +66,7 @@ test('sync: set up on one device, join on another by typing the key, edits trave
   await addPlace(pa, 'Cabin');
 
   // B joins with the key typed in lower case, with spaces
-  await pb.goto('/#settings');
+  await pb.goto('/#settings'); await expandSettings(pb);
   await pb.getByTestId('sync-join').click();
   await pb.getByTestId('sync-join-key').fill(key.toLowerCase().replace(/-/g, ' '));
   await pb.getByTestId('sync-join-go').click();
@@ -80,7 +80,7 @@ test('sync: set up on one device, join on another by typing the key, edits trave
   // an edit on B reaches A
   await addPlace(pb, 'Harbour');
   await pb.waitForTimeout(2600); // two seconds after the last edit
-  await pa.goto('/#settings');
+  await pa.goto('/#settings'); await expandSettings(pa);
   await eventually(pa, async () => { await expect(pa.getByLabel('Current place')).toContainText('Harbour', { timeout: 500 }); });
   // the devices list shows both devices, with this one named
   await pa.getByTestId('sync-device-name').fill('Desk');
@@ -98,7 +98,7 @@ test('sync: set up on one device, join on another by typing the key, edits trave
 });
 
 test('sync: a mistyped key says what is wrong', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('sync-join').click();
   const input = page.getByTestId('sync-join-key');
   await input.fill('ABCD-EFGH');
@@ -115,7 +115,7 @@ test('sync: a mistyped key says what is wrong', async ({ page }) => {
 });
 
 test('sync: a valid key with no list on the relay warns first, and "go back" joins nothing', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   // Generated in the page with the app's own encoder, never sent anywhere before.
   const key = await page.evaluate(async () => {
     const A = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -145,8 +145,10 @@ test('sync: turning it off keeps the list and forgets the key; delete everywhere
   await page.getByTestId('sync-key-saved').click();
   await expect(page.getByTestId('sync-status')).toContainText('Synced at');
   // turn off needs the confirmation
+  await expandSettings(page);
   await page.getByTestId('sync-off').click();
   await expect(page.getByTestId('sync-off-confirm')).toBeDisabled();
+  await expandSettings(page);
   await page.getByTestId('sync-off-saved').check();
   await page.getByTestId('sync-off-confirm').click();
   await expect(page.getByTestId('sync-setup')).toBeVisible();
@@ -156,10 +158,13 @@ test('sync: turning it off keeps the list and forgets the key; delete everywhere
   await setUp(page);
   await page.getByTestId('sync-key-saved').click();
   await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+  await expandSettings(page);
   await page.getByTestId('sync-delete').click();
   await expect(page.getByTestId('sync-delete-confirm')).toBeDisabled();
+  await expandSettings(page);
   await page.getByTestId('sync-delete-word').fill('delet');
   await expect(page.getByTestId('sync-delete-confirm')).toBeDisabled();
+  await expandSettings(page);
   await page.getByTestId('sync-delete-word').fill('delete');
   await page.getByTestId('sync-delete-confirm').click();
   await expect(page.getByTestId('sync-setup')).toBeVisible();
@@ -169,7 +174,8 @@ test('sync: turning it off keeps the list and forgets the key; delete everywhere
 
 test('sync: the recovery key is shown only on a tap, and an encrypted backup needs the key', async ({ page }) => {
   await importSample(page);
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
+  await expandSettings(page);
   await expect(page.getByTestId('export-encrypted')).toBeHidden(); // sync off: plain only
   await setUp(page);
   await page.getByTestId('sync-key-saved').click();
@@ -177,6 +183,7 @@ test('sync: the recovery key is shown only on a tap, and an encrypted backup nee
   await page.getByTestId('sync-show-key-btn').click();
   await expect(page.getByTestId('recovery-key')).toBeVisible();
   await page.keyboard.press('Escape');
+  await expandSettings(page);
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-encrypted').click()]);
   const text = await (await import('node:fs/promises')).readFile((await dl.path())!, 'utf8');
   expect(JSON.parse(text).format).toBe('reussite-backup-encrypted');
@@ -212,7 +219,7 @@ test('sync: a backup reminder appears after two weeks with sync off, and can be 
 for (const w of WIDTHS) {
   test(`sync screens don't scroll sideways at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
-    await page.goto('/#settings');
+    await page.goto('/#settings'); await expandSettings(page);
     await noSideways(page, 'sync off');
     await page.getByTestId('sync-join').click();
     await page.getByTestId('sync-join-key').fill('0123-4567-89AB-CDEF-GHJK-MNPQ-RSTV-WXYZ-0123-4567-89AB-CDEF-GHJK-MNPQ');
@@ -223,9 +230,11 @@ for (const w of WIDTHS) {
     await page.getByTestId('sync-key-saved').click();
     await expect(page.getByTestId('sync-status')).toContainText('Synced at');
     await noSideways(page, 'sync on');
+    await expandSettings(page);
     await page.getByTestId('sync-off').click();
     await noSideways(page, 'turn off');
     await page.keyboard.press('Escape');
+    await expandSettings(page);
     await page.getByTestId('sync-delete').click();
     await noSideways(page, 'delete everywhere');
   });
@@ -234,7 +243,7 @@ for (const w of WIDTHS) {
 // ---- The connector (Settings → Connector). The relay started by playwright.config.ts has a throwaway wrap key.
 
 test('connector: needs sync first; then switch on shows an address and a code, switch off returns to off', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('connector')).toContainText('sync comes first');
   await expect(page.getByTestId('connector-on')).toBeHidden();
   await page.getByTestId('connector-to-sync').click();
@@ -256,6 +265,7 @@ test('connector: needs sync first; then switch on shows an address and a code, s
   await expect(page.getByTestId('connector-state')).toContainText('The connector is on');
   await expect(page.getByTestId('connector-state')).toContainText('Not used yet');
   await expect(page.getByTestId('connector-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
+  await expandSettings(page);
   const code1 = (await page.getByTestId('connector-code').innerText()).replace(/\s+/g, '');
   expect(code1).toMatch(/^[A-Z0-9]{8}$/);
   await expect(page.getByTestId('connector-expiry')).toContainText(/[0-9]:[0-5][0-9]/);
@@ -263,6 +273,7 @@ test('connector: needs sync first; then switch on shows an address and a code, s
   await expect(page.getByTestId('device-connector')).toContainText('Connector', { timeout: 10_000 });
   await noSideways(page, 'connector on');
 
+  await expandSettings(page);
   await page.getByTestId('connector-new-code').click();
   await expect.poll(async () => (await page.getByTestId('connector-code').innerText()).replace(/\s+/g, '')).not.toBe(code1);
 
@@ -274,14 +285,18 @@ test('connector: needs sync first; then switch on shows an address and a code, s
   await page.keyboard.press('Escape');
 
   // turning sync off while it is on says so
+  await expandSettings(page);
   await page.getByTestId('sync-off').click();
   await expect(page.getByTestId('sync-off-connector')).toBeVisible();
   await page.keyboard.press('Escape');
 
+  await expandSettings(page);
   await page.getByTestId('connector-off').click();
   await noSideways(page, 'connector off confirmation');
+  await expandSettings(page);
   await page.getByTestId('connector-off-confirm').click();
   await expect(page.getByTestId('connector-on')).toBeVisible();
+  await expandSettings(page);
   await expect(page.getByTestId('connector-code')).toBeHidden();
   await expect(page.getByTestId('device-connector')).toBeHidden({ timeout: 10_000 });
   await expect(page.getByTestId('about').getByTestId('privacy')).toContainText('your whole list while the connector is on');
@@ -290,7 +305,7 @@ test('connector: needs sync first; then switch on shows an address and a code, s
 for (const w of WIDTHS) {
   test(`connector and one-tap link settings don't scroll sideways at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
-    await page.goto('/#settings');
+    await page.goto('/#settings'); await expandSettings(page);
     await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
     await noSideways(page, 'sync off');
     await setUp(page);
@@ -300,6 +315,7 @@ for (const w of WIDTHS) {
     await noSideways(page, 'drop address');
     await page.getByTestId('connector-on').click();
     await page.getByTestId('connector-on-confirm').click();
+    await expandSettings(page);
     await expect(page.getByTestId('connector-code')).toBeVisible();
     await noSideways(page, 'connector on');
     await expect(page.getByTestId('privacy')).toBeVisible();
@@ -316,7 +332,7 @@ const cs = (title: string) => ({ v: 1, note: 'From my AI', changes: [{ op: 'task
 const linkFor = (address: string, change: unknown) => address.trim() + 'z.' + deflateRawSync(Buffer.from(JSON.stringify(change))).toString('base64url');
 
 async function dropAddress(page: Page): Promise<string> {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('drop-address')).toContainText('/drop#');
   return (await page.getByTestId('drop-address').innerText()).trim();
 }
@@ -329,7 +345,7 @@ async function inboxSize(recovery: string): Promise<number> {
 }
 
 test('one-tap link: Settings → AI shows the drop address and the sentence to paste; Ask any AI then asks for the link', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
   await page.getByTestId('tab-today').click();
   await page.getByTestId('ask-any').click();

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
 import { settings, saveSettings, toast } from '../app/store';
 import { t } from '../i18n';
+import { More, Fold, countSet } from '../app/More';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import { ask, getKey, setKey, forgetSeen, spent, loadSpent } from './ask';
@@ -124,8 +125,7 @@ export function AiSettings() {
     set({ aiModels: { ...s.aiModels, [p]: { ...s.aiModels[p], [slot]: v.trim() || DEFAULT_SETTINGS.aiModels[p][slot] } } });
   };
   return (
-    <section class="set" data-testid="ai-settings">
-      <h2>{t('aiSection')}</h2>
+    <Fold title={t('aiSection')} testid="ai-settings">
       <p class="hint">{t('aiIntro')}</p>
       <div class="field"><span>{t('aiProvider')}</span>
         <div class="seg" role="group" aria-label={t('aiProvider')} style="flex-wrap:wrap">
@@ -133,19 +133,8 @@ export function AiSettings() {
             <button type="button" aria-pressed={p === v} onClick={() => set({ aiProvider: v })} data-testid={'ai-' + v}>{t(k)}</button>)}
         </div>
       </div>
-      {p === 'openai' && (
-        <label class="field"><span>{t('aiBaseUrl')}</span>
-          <input type="url" inputMode="url" value={s.aiBaseUrl} onChange={e => set({ aiBaseUrl: (e.target as HTMLInputElement).value.trim() || DEFAULT_SETTINGS.aiBaseUrl })} data-testid="ai-base" />
-          <small class="hint">{t('aiBaseUrlHint')}</small>
-        </label>
-      )}
       {models && (
         <>
-          <div class="row2">
-            <label class="field"><span>{t('aiQuick')}</span><input type="text" value={models.quick} onChange={e => setModel('quick', (e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} /></label>
-            <label class="field"><span>{t('aiThinking')}</span><input type="text" value={models.thinking} onChange={e => setModel('thinking', (e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} /></label>
-          </div>
-          <p class="hint">{t('aiModelsHint')}</p>
           {p !== 'none' && <KeyField p={p} onHas={setHasKey} />}
           <div class="actions">
             <button class="btn" type="button" disabled={!hasKey || test?.busy} onClick={runTest} data-testid="ai-test">{test?.busy ? t('aiTesting') : t('aiTest')}</button>
@@ -153,13 +142,30 @@ export function AiSettings() {
           {test && !test.busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:var(--s2)">{test.msg}</p>}
         </>
       )}
-      <PreferencesEditor value={s.aiPreferences} onSave={v => set({ aiPreferences: v })} />
-      <div class="toggles" style="margin-top:var(--s4)">
-        <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
-      </div>
-      <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>
-      {p !== 'none' && <Spend />}
-      <DropAddress />
-    </section>
+      <More n={countSet(models && (models.quick !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].quick || models.thinking !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].thinking), p === 'openai' && s.aiBaseUrl !== DEFAULT_SETTINGS.aiBaseUrl, s.aiPreferences !== DEFAULT_SETTINGS.aiPreferences, s.aiAlwaysShow, s.aiMonthlyCap)} testid="ai-more">
+        {p === 'openai' && (
+          <label class="field"><span>{t('aiBaseUrl')}</span>
+            <input type="url" inputMode="url" value={s.aiBaseUrl} onChange={e => set({ aiBaseUrl: (e.target as HTMLInputElement).value.trim() || DEFAULT_SETTINGS.aiBaseUrl })} data-testid="ai-base" />
+            <small class="hint">{t('aiBaseUrlHint')}</small>
+          </label>
+        )}
+        {models && (
+          <>
+            <div class="row2">
+              <label class="field"><span>{t('aiQuick')}</span><input type="text" value={models.quick} onChange={e => setModel('quick', (e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} /></label>
+              <label class="field"><span>{t('aiThinking')}</span><input type="text" value={models.thinking} onChange={e => setModel('thinking', (e.target as HTMLInputElement).value)} autocomplete="off" spellcheck={false} /></label>
+            </div>
+            <p class="hint">{t('aiModelsHint')}</p>
+          </>
+        )}
+        <PreferencesEditor value={s.aiPreferences} onSave={v => set({ aiPreferences: v })} />
+        <div class="toggles" style="margin-top:var(--s4)">
+          <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
+        </div>
+        <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>
+        {p !== 'none' && <Spend />}
+        <DropAddress />
+      </More>
+    </Fold>
   );
 }

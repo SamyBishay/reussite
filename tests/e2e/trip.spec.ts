@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu } from './helpers';
+import { noSideways, openMenu, expandSettings } from './helpers';
 
 // Phase 4, step 3: the planner's offers (address or person) and "Plan this trip". Every name, link and number here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -17,11 +17,12 @@ type Seed = Record<string, [string, Record<string, unknown>][]>;
 async function seed(page: Page, data: Seed) {
   const stamp = (id: string, f: Record<string, unknown>) => ({ id, _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, HLC])), ...f });
   const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: Object.fromEntries(Object.entries(data).map(([c, ds]) => [c, ds.map(([id, f]) => stamp(id, f))])) };
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   page.once('dialog', d => void d.accept());
   await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.locator('.toast')).toContainText('Backup restored');
   await page.reload();
+  await expandSettings(page);
 }
 const task = (title: string, o: Record<string, unknown> = {}) => ({
   title, project: 'p1', suit: 'H', kind: 'task', urgent: false, important: true, due: null, est: 30, est0: null, estBy: 'me', status: 'open', doneDay: null, doneAt: null,
@@ -157,7 +158,7 @@ const tripSeed = (): Seed => ({
 });
 
 async function openTrip(page: Page) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('stays').getByTestId('plan-trip').click();
   await expect(sheet(page).getByTestId('trip-sheet')).toBeVisible();
 }
@@ -283,7 +284,7 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await seed(page, { ...tripSeed(), tasks: [...tripSeed().tasks!, ['ob1', task('Go out somewhere in the city with a very long name', { template: true, offer: 'address', est: 60 })]],
       addresses: [...tripSeed().addresses!, ['a9', address('A very long name for a place that someone saved from Maps one rainy afternoon in the old town')]] });
     if (french) {
-      await page.goto('/#settings');
+      await page.goto('/#settings'); await expandSettings(page);
       await page.getByRole('button', { name: 'Français' }).click();
       await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     }

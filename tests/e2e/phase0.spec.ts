@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { sampleExport } from './fixture';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
 
 test('imports a v1 export, with a summary first', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
+  await expandSettings(page);
   await page.getByTestId('open-import').click();
   await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(sampleExport())) });
   const summary = page.getByTestId('import-summary');
@@ -51,6 +52,7 @@ for (const width of [320, 375, 430]) {
     await noSideways(page, 'pause');
     await page.keyboard.press('Escape');
     await goTab(page, 'settings');
+    await expandSettings(page);
     await page.getByTestId('open-import').click();
     await noSideways(page, 'import');
   });
@@ -76,7 +78,7 @@ test('the wheel and "didn’t time it" also finish the step', async ({ page }) =
 });
 
 test('theme and accent colour change and persist', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('appearance').getByRole('button', { name: 'Dark', exact: true }).click();
   await page.getByTestId('appearance').locator('input[type=color]').first().evaluate((el: HTMLInputElement) => {
     el.value = '#225588';

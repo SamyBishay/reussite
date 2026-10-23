@@ -2,6 +2,8 @@
 
 Ouvrez **Réglages** depuis le menu de l’accueil. C’est une page simple, avec son propre titre. Tout ce que vous choisissez ici est un réglage qui reste : une mise à jour ne le réinitialise jamais.
 
+Chaque section est repliée : seule **Apparence** est ouverte au début, et un toucher sur un titre en ouvre une autre. Dans une section, les quelques commandes que la plupart des gens utilisent sont visibles et le reste est sous **Plus**. Si quelque chose sous Plus a reçu une valeur, Plus dit combien (« Plus · 2 renseignés »), de sorte que rien de ce qui est réglé n’est jamais caché.
+
 ![Les réglages](shot:settings)
 
 ## Langue

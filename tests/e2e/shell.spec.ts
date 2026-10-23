@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
 
 // The shell (phase 2b): five tabs at the bottom, Home's menu, the Log inside Calendar, decisions inside Projects.
 const TABS = ['home', 'today', 'matrix', 'projects', 'calendar'] as const;
@@ -100,7 +100,8 @@ test('a desktop keeps the tab bar while typing', async ({ page, isMobile }) => {
 });
 
 test('#settings opens Settings, and Home’s menu reaches Settings, Places, Memory and History', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
+  await expandSettings(page);
   await expect(page.getByTestId('open-import')).toBeVisible();
   // Settings belongs to Home: the Home tab stays marked and leads back.
   await expect(current(page)).toHaveAttribute('data-testid', 'tab-home');
@@ -118,6 +119,7 @@ test('#settings opens Settings, and Home’s menu reaches Settings, Places, Memo
   await openMenu(page, 'history');
   await expect(page.locator('main h2')).toHaveText('History');
   await openMenu(page, 'settings');
+  await expandSettings(page);
   await expect(page.getByTestId('open-import')).toBeVisible();
   await expect(page.locator('.mast, .side, .foot')).toHaveCount(0); // Settings is a plain page now
 });
@@ -182,7 +184,7 @@ test('a decision\'s deadline that is a day is shown like other dates, not as 202
   };
   const doc = { id: 'dec1', _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, hlc])), ...f };
   const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: { decisions: [doc] } };
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   page.once('dialog', d => void d.accept());
   await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.locator('.toast')).toBeVisible();
@@ -209,7 +211,7 @@ test('the manifest starts at Home; the gentle banner shows on every tab but Home
 
 test('every tab label fits at 320px in French', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByRole('button', { name: 'Français' }).click();
   await expect(page.getByTestId('tab-today')).toContainText('Aujourd’hui');
   const fit = await page.locator('.tabbar .tab span').evaluateAll(els => els.map(l => [l.textContent, l.scrollWidth, l.clientWidth]));

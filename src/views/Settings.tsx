@@ -9,7 +9,8 @@ import { addPlace, saveStay, removeStay } from '../app/actions';
 import changelog from '../../CHANGELOG.md?raw';
 import { t, lang, type Key } from '../i18n';
 import { PRESETS, contrast, AA, lightCard } from '../app/theme';
-import { SUIT_ORDER, type Settings as S, type ThemeMode, type Celebrations, type TextSize } from '../data/settings';
+import { More, Fold, openFold } from '../app/More';
+import { SUIT_ORDER, DEFAULT_SETTINGS, type Settings as S, type ThemeMode, type Celebrations, type TextSize } from '../data/settings';
 import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
@@ -32,6 +33,9 @@ import { markFull, readBackupFile, syncOn } from '../app/sync';
 const openManual = () => void import('../manual/Manual').then(m => openSheet(<m.ManualSheet />, true));
 
 const set = (p: Partial<S>) => void saveSettings(p);
+
+/** How many of these settings differ from their defaults: the count a folded "More" shows. */
+const changedFrom = (s: S, keys: (keyof S)[]): number => keys.filter(k => JSON.stringify(s[k]) !== JSON.stringify(DEFAULT_SETTINGS[k])).length;
 
 function Seg<V extends string>({ value, options, onChange, label }: { value: V; options: [V, Key][]; onChange: (v: V) => void; label: string }) {
   return (
@@ -61,6 +65,7 @@ function ColorField({ label, value, onSave }: { label: string; value: string; on
 
 function Appearance() {
   const s = settings.value;
+  const changed = (...keys: (keyof S)[]) => changedFrom(s, keys);
   const importTheme = async (e: Event) => {
     const f = (e.target as HTMLInputElement).files?.[0];
     if (!f) return;
@@ -73,8 +78,7 @@ function Appearance() {
     (e.target as HTMLInputElement).value = '';
   };
   return (
-    <section class="set" data-testid="appearance">
-      <h2>{t('appearance')}</h2>
+    <Fold title={t('appearance')} testid="appearance" open>
       <div class="field"><span>{t('theme')}</span>
         <Seg<ThemeMode> label={t('theme')} value={s.theme} onChange={v => set({ theme: v })} options={[['system', 'themeSystem'], ['light', 'themeLight'], ['dark', 'themeDark'], ['time', 'themeTime']]} />
       </div>
@@ -90,29 +94,31 @@ function Appearance() {
           {s.preset === 'custom' && <option value="custom">—</option>}
         </select>
       </label>
-      <div class="field"><span>{t('accent')} · {t('suitColours')}</span>
-        <div class="colors">
-          <ColorField label={t('accent')} value={s.accent} onSave={v => set({ accent: v, preset: 'custom' })} />
-          {SUIT_ORDER.map(k => <ColorField label={s.suits[k].glyph + ' ' + suitName(k, true)} value={s.suitColors[k]} onSave={v => set({ suitColors: { ...s.suitColors, [k]: v }, preset: 'custom' })} />)}
-        </div>
-      </div>
       <div class="field"><span>{t('textSize')}</span>
         <Seg<TextSize> label={t('textSize')} value={s.textSize} onChange={v => set({ textSize: v })} options={[['S', 'sizeS'], ['M', 'sizeM'], ['L', 'sizeL']]} />
       </div>
       <div class="field"><span>{t('celebrations')}</span>
         <Seg<Celebrations> label={t('celebrations')} value={s.celebrations} onChange={v => set({ celebrations: v })} options={[['off', 'celOff'], ['calm', 'celCalm'], ['lively', 'celLively']]} />
       </div>
-      <div class="toggles" style="margin-top:var(--s4)">
-        <label class="tog"><input type="checkbox" checked={s.reduceMotion} onChange={e => set({ reduceMotion: (e.target as HTMLInputElement).checked })} /> {t('reduceMotion')}</label>
-        <label class="tog"><input type="checkbox" checked={s.linksInApp} onChange={e => set({ linksInApp: (e.target as HTMLInputElement).checked })} /> {t('linksInApp')}</label>
-        <label class="tog"><input type="checkbox" checked={s.sound} onChange={e => set({ sound: (e.target as HTMLInputElement).checked })} /> {t('soundLabel')}</label>
-      </div>
-      {s.sound && <label class="field"><span>{t('volume')}</span><input type="range" min="0" max="1" step="0.1" value={s.volume} onChange={e => set({ volume: Number((e.target as HTMLInputElement).value) })} /></label>}
-      <div class="actions">
-        <button class="btn small" type="button" onClick={() => saveFile('reussite-theme.json', JSON.stringify({ format: 'reussite-theme', accent: s.accent, suitColors: s.suitColors }, null, 1))}>{t('exportTheme')}</button>
-        <label class="btn small">{t('importTheme')}<input type="file" accept="application/json,.json" hidden onChange={importTheme} /></label>
-      </div>
-    </section>
+      <More n={changed('reduceMotion', 'linksInApp', 'sound', 'volume') + (s.preset === 'custom' ? 1 : 0)} testid="appearance-more">
+        <div class="field"><span>{t('accent')} · {t('suitColours')}</span>
+          <div class="colors">
+            <ColorField label={t('accent')} value={s.accent} onSave={v => set({ accent: v, preset: 'custom' })} />
+            {SUIT_ORDER.map(k => <ColorField label={s.suits[k].glyph + ' ' + suitName(k, true)} value={s.suitColors[k]} onSave={v => set({ suitColors: { ...s.suitColors, [k]: v }, preset: 'custom' })} />)}
+          </div>
+        </div>
+        <div class="toggles" style="margin-top:var(--s4)">
+          <label class="tog"><input type="checkbox" checked={s.reduceMotion} onChange={e => set({ reduceMotion: (e.target as HTMLInputElement).checked })} /> {t('reduceMotion')}</label>
+          <label class="tog"><input type="checkbox" checked={s.linksInApp} onChange={e => set({ linksInApp: (e.target as HTMLInputElement).checked })} /> {t('linksInApp')}</label>
+          <label class="tog"><input type="checkbox" checked={s.sound} onChange={e => set({ sound: (e.target as HTMLInputElement).checked })} /> {t('soundLabel')}</label>
+        </div>
+        {s.sound && <label class="field"><span>{t('volume')}</span><input type="range" min="0" max="1" step="0.1" value={s.volume} onChange={e => set({ volume: Number((e.target as HTMLInputElement).value) })} /></label>}
+        <div class="actions">
+          <button class="btn small" type="button" onClick={() => saveFile('reussite-theme.json', JSON.stringify({ format: 'reussite-theme', accent: s.accent, suitColors: s.suitColors }, null, 1))}>{t('exportTheme')}</button>
+          <label class="btn small">{t('importTheme')}<input type="file" accept="application/json,.json" hidden onChange={importTheme} /></label>
+        </div>
+      </More>
+    </Fold>
   );
 }
 
@@ -258,16 +264,13 @@ function Method() {
     const next = field === 'glyph' ? { ...cur, glyph: v || cur.glyph } : { ...cur, [field]: { ...cur[field], [lang.value]: v || cur[field][lang.value] } };
     set({ suits: { ...s.suits, [k]: next } });
   };
+  const placeCount = placeRows(places.value).filter(r => !r.area).length;
+  const stayCount = [...stays.value.values()].filter(x => x.to >= addDays(today.value, -60)).length;
   return (
-    <section class="set" data-testid="method">
-      <h2>{t('method')}</h2>
+    <Fold title={t('method')} testid="method">
       <div class="row2">
-        <NumberField label={t('urgencyWindow')} value={s.urgencyDays} min={1} max={120} onSave={n => set({ urgencyDays: n })} />
         <label class="field"><span>{t('dayStartsAt')}</span><input type="time" value={s.dayStart} onChange={e => set({ dayStart: (e.target as HTMLInputElement).value || '05:00' })} /></label>
-      </div>
-      <div class="row2">
         <NumberField label={t('maxWorkSteps')} value={s.maxWorkSteps} min={1} max={10} onSave={n => set({ maxWorkSteps: n })} />
-        <NumberField label={t('planningTime')} value={s.planningMin} min={0} max={120} onSave={n => set({ planningMin: n })} />
       </div>
       <div class="row2">
         <label class="field"><span>{t('defaultStart')}</span><input type="time" value={s.launchDefaults.start} onChange={e => set({ launchDefaults: { ...s.launchDefaults, start: (e.target as HTMLInputElement).value } })} /></label>
@@ -277,36 +280,40 @@ function Method() {
         </label>
       </div>
       <p class="hint" id="restartsHint">{t('restartsHint')}</p>
-      <div class="field"><span>{t('suits')}</span>
-        {SUIT_ORDER.map(k => (
-          <div class="suitrow" key={k + lang.value}>
-            <label class="field" style="margin:0"><span>{t('suitGlyph')}</span><input type="text" maxLength={2} defaultValue={s.suits[k].glyph} onChange={e => saveSuit(k, 'glyph', (e.target as HTMLInputElement).value.trim())} /></label>
-            <label class="field" style="margin:0"><span>{t('suitName')}</span><input type="text" defaultValue={s.suits[k].name[lang.value]} onChange={e => saveSuit(k, 'name', (e.target as HTMLInputElement).value.trim())} /></label>
-            <label class="field" style="margin:0"><span>{t('suitShort')}</span><input type="text" defaultValue={s.suits[k].short[lang.value]} onChange={e => saveSuit(k, 'short', (e.target as HTMLInputElement).value.trim())} /></label>
-          </div>
-        ))}
-      </div>
-      <div class="row2">
-        <label class="field"><span>{t('obligationAt')}</span><input type="time" value={s.obligationAt} onChange={e => set({ obligationAt: (e.target as HTMLInputElement).value || '18:00' })} /></label>
-        <label class="field"><span>{t('reviewDay')}</span>
-          <select value={String(s.reviewDay)} onChange={e => set({ reviewDay: Number((e.target as HTMLSelectElement).value) })}>
-            {[1, 2, 3, 4, 5, 6, 7].map(d => <option value={d}>{new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', timeZone: 'UTC' })}</option>)}
-          </select>
-        </label>
-      </div>
+      <label class="field"><span>{t('reviewDay')}</span>
+        <select value={String(s.reviewDay)} onChange={e => set({ reviewDay: Number((e.target as HTMLSelectElement).value) })}>
+          {[1, 2, 3, 4, 5, 6, 7].map(d => <option value={d}>{new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', timeZone: 'UTC' })}</option>)}
+        </select>
+      </label>
       <div class="actions"><button class="btn small ghost" type="button" data-testid="start-review-now" onClick={openReview}>{t('startReview')}</button></div>
-      <div class="row2">
-        <label class="field"><span>{t('reviewTime')}</span><input type="time" value={s.reviewTime} onChange={e => set({ reviewTime: (e.target as HTMLInputElement).value || '18:00' })} /></label>
-        <label class="field"><span>{t('morningAt')}</span><input type="time" value={s.morningAt} onChange={e => set({ morningAt: (e.target as HTMLInputElement).value || '08:30' })} /></label>
-      </div>
-      <div class="row2">
-        <label class="field"><span>{t('eveningAt')}</span><input type="time" value={s.eveningAt} onChange={e => set({ eveningAt: (e.target as HTMLInputElement).value || '21:00' })} /></label>
-      </div>
-      <p class="hint">{t('remindersLater')}</p>
-      <PlacesEditor />
-      <StaysEditor />
-      <AddressesSettings />
-    </section>
+      <More n={changedFrom(s, ['urgencyDays', 'planningMin', 'suits', 'obligationAt', 'reviewTime', 'morningAt', 'eveningAt', 'addressesPeople', 'addressCategories']) + placeCount + stayCount} testid="method-more">
+        <div class="row2">
+          <NumberField label={t('urgencyWindow')} value={s.urgencyDays} min={1} max={120} onSave={n => set({ urgencyDays: n })} />
+          <NumberField label={t('planningTime')} value={s.planningMin} min={0} max={120} onSave={n => set({ planningMin: n })} />
+        </div>
+        <div class="row2">
+          <label class="field"><span>{t('obligationAt')}</span><input type="time" value={s.obligationAt} onChange={e => set({ obligationAt: (e.target as HTMLInputElement).value || '18:00' })} /></label>
+          <label class="field"><span>{t('reviewTime')}</span><input type="time" value={s.reviewTime} onChange={e => set({ reviewTime: (e.target as HTMLInputElement).value || '18:00' })} /></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>{t('morningAt')}</span><input type="time" value={s.morningAt} onChange={e => set({ morningAt: (e.target as HTMLInputElement).value || '08:30' })} /></label>
+          <label class="field"><span>{t('eveningAt')}</span><input type="time" value={s.eveningAt} onChange={e => set({ eveningAt: (e.target as HTMLInputElement).value || '21:00' })} /></label>
+        </div>
+        <p class="hint">{t('remindersLater')}</p>
+        <div class="field"><span>{t('suits')}</span>
+          {SUIT_ORDER.map(k => (
+            <div class="suitrow" key={k + lang.value}>
+              <label class="field" style="margin:0"><span>{t('suitGlyph')}</span><input type="text" maxLength={2} defaultValue={s.suits[k].glyph} onChange={e => saveSuit(k, 'glyph', (e.target as HTMLInputElement).value.trim())} /></label>
+              <label class="field" style="margin:0"><span>{t('suitName')}</span><input type="text" defaultValue={s.suits[k].name[lang.value]} onChange={e => saveSuit(k, 'name', (e.target as HTMLInputElement).value.trim())} /></label>
+              <label class="field" style="margin:0"><span>{t('suitShort')}</span><input type="text" defaultValue={s.suits[k].short[lang.value]} onChange={e => saveSuit(k, 'short', (e.target as HTMLInputElement).value.trim())} /></label>
+            </div>
+          ))}
+        </div>
+        <PlacesEditor />
+        <StaysEditor />
+        <AddressesSettings />
+      </More>
+    </Fold>
   );
 }
 
@@ -376,18 +383,21 @@ function Data() {
     }
   };
   return (
-    <section class="set" data-testid="data">
-      <h2>{t('data')}</h2>
+    <Fold title={t('data')} testid="data">
       <div class="actions" style="margin-top:var(--s2)">
         <button class="btn" type="button" onClick={() => void saveBackupFile()} data-testid="export-backup">{t('exportBackup')}</button>
-        {syncOn.value && <button class="btn" type="button" onClick={() => void saveBackupFile(true)} data-testid="export-encrypted">{t('backupEncrypted')}</button>}
         <label class="btn">{t('importBackup')}<input type="file" accept="application/json,.json" hidden onChange={restore} /></label>
-        <button class="btn" type="button" onClick={() => openSheet(<ImportSheet key={'imp' + Date.now()} />)} data-testid="open-import">{t('importV1')}</button>
       </div>
-      {syncOn.value && <p class="hint" style="margin-top:var(--s3)">{t('backupEncryptedHint')}</p>}
-      {persisted !== null && <p class="hint" style="margin-top:var(--s3)" data-testid="storage">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
-      {persisted === false && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
-    </section>
+      <More n={persisted === false ? 1 : 0} testid="data-more">
+        <div class="actions" style="margin-top:var(--s2)">
+          {syncOn.value && <button class="btn" type="button" onClick={() => void saveBackupFile(true)} data-testid="export-encrypted">{t('backupEncrypted')}</button>}
+          <button class="btn" type="button" onClick={() => openSheet(<ImportSheet key={'imp' + Date.now()} />)} data-testid="open-import">{t('importV1')}</button>
+        </div>
+        {syncOn.value && <p class="hint" style="margin-top:var(--s3)">{t('backupEncryptedHint')}</p>}
+        {persisted !== null && <p class="hint" style="margin-top:var(--s3)" data-testid="storage">{t('storage')}: {persisted ? t('storagePersisted') : t('storageNotPersisted')}</p>}
+        {persisted === false && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={keep}>{t('keepData')}</button></div>}
+      </More>
+    </Fold>
   );
 }
 
@@ -395,37 +405,37 @@ export function Settings() {
   return (
     <div data-testid="settings">
       <h2 class="sec" style="margin-top:0">{t('tabSettings')}</h2>
-      <section class="set">
-        <h2>{t('language')}</h2>
+      <Appearance />
+      <Method />
+      <NotifySettings />
+      <CalendarSettings />
+      <AiSettings />
+      <SyncSettings />
+      <ConnectorSettings />
+      <Data />
+      <Fold title={t('language')} testid="language">
         <div class="seg" role="group" aria-label={t('language')} style="margin-top:var(--s2)">
           <button type="button" aria-pressed={settings.value.language === 'en'} onClick={() => set({ language: 'en' })} lang="en">English</button>
           <button type="button" aria-pressed={settings.value.language === 'fr'} onClick={() => set({ language: 'fr' })} lang="fr">Français</button>
         </div>
-      </section>
-      <Appearance />
-      <Method />
-      <AiSettings />
-      <SyncSettings />
-      <ConnectorSettings />
-      <NotifySettings />
-      <CalendarSettings />
-      <Data />
-      <section class="set" data-testid="about">
-        <h2>{t('about')}</h2>
+      </Fold>
+      <Fold title={t('about')} testid="about">
         <p class="hint">{t('version', { v: __APP_VERSION__ })}</p>
-        <div class="actions"><DiagnosticsButton ghost={false} /></div>
         {settings.value.credit?.[lang.value] && <p>{settings.value.credit[lang.value]}</p>}
-        <p class="hint" data-testid="paintings-credit">{t('paintingsCredit')}</p>
-        <p class="hint">{t('notTherapy')}</p>
-        <div data-testid="privacy"><h3 class="privacy-h">{t('privacyTitle')}</h3>
-          <p>{t('privacyRelay')}</p>
-          <p>{t('privacyAi')}</p>
-          <p>{t('privacyLoss')}</p>
-        </div>
         <p class="hint">{t('manualHint')}</p>
         <div class="actions"><button class="btn" type="button" onClick={openManual} data-testid="open-manual">{t('manualOpen')}</button></div>
-        <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
-      </section>
+        <More testid="about-more">
+          <p class="hint" data-testid="paintings-credit">{t('paintingsCredit')}</p>
+          <p class="hint">{t('notTherapy')}</p>
+          <div data-testid="privacy"><h3 class="privacy-h">{t('privacyTitle')}</h3>
+            <p>{t('privacyRelay')}</p>
+            <p>{t('privacyAi')}</p>
+            <p>{t('privacyLoss')}</p>
+          </div>
+          <div class="actions"><DiagnosticsButton ghost={false} /></div>
+          <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
+        </More>
+      </Fold>
     </div>
   );
 }

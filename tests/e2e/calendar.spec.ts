@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { importSample } from './helpers';
+import { importSample, expandSheet } from './helpers';
 
 const sheet = (page: import('@playwright/test').Page) => page.getByTestId('sheet');
 
 test('the task sheet has a Short name under the title: placeholder is the derived one, saving writes it, empty clears it', async ({ page }) => {
   await importSample(page);
   await page.goto('/#task/t1');
+  await expandSheet(page);
   const field = sheet(page).getByTestId('label');
   await expect(field).toBeVisible();
   await expect(field).toHaveValue('');
@@ -20,6 +21,7 @@ test('the task sheet has a Short name under the title: placeholder is the derive
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.goto('/#task/t1');
+  await expandSheet(page);
   await expect(sheet(page).getByTestId('label')).toHaveValue('Plumber');
   await sheet(page).getByTestId('label').fill('');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -68,6 +70,7 @@ test('the calendar names steps by their short name, with no launch points; a tim
   await page.goto('/#task/t2');
   await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('14:30');
+  await expandSheet(page);
   await sheet(page).getByTestId('label').fill('Lease');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();

@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways, goTab, openWeeklyReview } from './helpers';
+import { importSample, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -18,7 +18,7 @@ async function mockAnthropic(page: Page, text: string | (() => string)) {
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
 
 async function setUpAnthropic(page: Page) {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('ai-anthropic').click();
   await page.getByTestId('ai-key').fill('sk-ant-test');
   await page.getByTestId('ai-key-save').click();
@@ -49,8 +49,9 @@ test('Test the connection, through OpenRouter', async ({ page }) => {
     auth = route.request().headers()['authorization'] ?? '';
     await route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ choices: [{ message: { content: '{"ok": true}' } }] }) });
   });
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('ai-openai').click();
+  await expandSettings(page);
   await expect(page.getByTestId('ai-base')).toHaveValue('https://openrouter.ai/api/v1');
   await page.getByTestId('ai-key').fill('sk-or-test');
   await page.getByTestId('ai-key-save').click();

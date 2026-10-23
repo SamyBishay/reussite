@@ -9,6 +9,7 @@ import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
 import { SmartEditor, smartFilled } from '../app/smart';
+import { More, countSet } from '../app/More';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
 import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
@@ -122,21 +123,23 @@ function ProjectSheet({ id }: { id: string }) {
         </label>
         <label class="field"><span>{t('where')}</span><PlaceSelect value={where} onChange={v => { setWhere(v); set({ where: v }); }} /></label>
       </div>
-      <div class="row2">
-        <label class="field"><span>{t('dueField')}</span><input type="date" defaultValue={p.due ?? ''} onChange={e => set({ due: (e.target as HTMLInputElement).value || null })} /></label>
-        <label class="field"><span>{t('status')}</span>
-          <select value={p.status} onChange={e => { const v = (e.target as HTMLSelectElement).value as Project['status']; set({ status: v, doneAt: v === 'done' ? new Date().toISOString() : null }); }}>
-            {STATUSES.map(s => <option value={s}>{t(('pst_' + s) as Key)}</option>)}
-          </select>
-        </label>
-      </div>
-      <div class="actions" style="margin-top:var(--s3)">
-        <button class="btn small" type="button" onClick={() => moveProject(id, -1)}>{t('earlier')}</button>
-        <button class="btn small" type="button" onClick={() => moveProject(id, 1)}>{t('later')}</button>
-      </div>
-      <h2 class="sec">{t('smartGoal')}</h2>
-      <p class="hint">{t('smartHint')}</p>
-      <SmartEditor projectId={id} />
+      <More n={countSet(p.due, p.status !== 'active', (smartFilled(p.smart) > 0 || !!p.goal))} testid="project-more">
+        <div class="row2">
+          <label class="field"><span>{t('dueField')}</span><input type="date" defaultValue={p.due ?? ''} onChange={e => set({ due: (e.target as HTMLInputElement).value || null })} /></label>
+          <label class="field"><span>{t('status')}</span>
+            <select value={p.status} onChange={e => { const v = (e.target as HTMLSelectElement).value as Project['status']; set({ status: v, doneAt: v === 'done' ? new Date().toISOString() : null }); }}>
+              {STATUSES.map(s => <option value={s}>{t(('pst_' + s) as Key)}</option>)}
+            </select>
+          </label>
+        </div>
+        <div class="actions" style="margin-top:var(--s3)">
+          <button class="btn small" type="button" onClick={() => moveProject(id, -1)}>{t('earlier')}</button>
+          <button class="btn small" type="button" onClick={() => moveProject(id, 1)}>{t('later')}</button>
+        </div>
+        <h2 class="sec">{t('smartGoal')}</h2>
+        <p class="hint">{t('smartHint')}</p>
+        <SmartEditor projectId={id} />
+      </More>
       <div class="actions"><button class="btn primary" type="button" onClick={closeSheet}>{t('doneButton')}</button><button class="btn" type="button" onClick={() => void openDecision(null, { projectId: id })}>{t('newDecision')}</button></div>
     </div>
   );

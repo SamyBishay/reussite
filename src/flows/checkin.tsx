@@ -1,5 +1,6 @@
 // The morning check-in (brief §5, METHOD "Morning check-in"), one question per screen:
 // yesterday, what's carried, today's shape, then the rule-based plan.
+import { More } from '../app/More';
 import { useState } from 'preact/hooks';
 import { today, settings, tasks, here, days, places, stays, decisions, createDoc } from '../app/store';
 import { areaOfStep } from '../app/areas';
@@ -161,6 +162,7 @@ function Checkin() {
           <div class="chips-pick">{PRESETS.map(([p, key]) => <button type="button" aria-pressed={preset === p} onClick={() => { setPreset(p); if (p === 'afternoon' && start < '13:00') setStart('14:00'); }}>{t(key)}</button>)}</div>
         </div>
         <label class="field"><span>{t('ciStartAt')}</span><input type="time" value={start} onInput={e => setStart((e.target as HTMLInputElement).value || start)} /></label>
+        <More n={fixed.length + dayHalves.length} testid="ci-more">
         {areaChoices.length > 0 && (
           <div class="field" data-testid="ci-halves"><span>{t('halfWhere')}</span>
             <p class="hint">{t('halfHint')}</p>
@@ -182,6 +184,7 @@ function Checkin() {
             <button class="btn small" type="submit">{t('add')}</button>
           </form>
         </div>
+        </More>
         <div class="actions"><button class="btn primary" type="button" onClick={() => setScreen('plan')} data-testid="ci-next">{t('ciSeePlan')}</button></div>
       </div>
     );

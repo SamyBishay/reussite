@@ -2,6 +2,8 @@
 
 Open **Settings** from Home's menu. It is a plain page with its own heading. Everything you choose here is a setting that stays: an update never resets it.
 
+Each section is folded: only **Appearance** is open to begin with, and a tap on a heading opens another. Inside a section, the few controls most people use are in view and the rest are under **More**. If something under More has been set to a value, More says how many ("More · 2 set"), so nothing set is ever out of sight.
+
 ![Settings](shot:settings)
 
 ## Language

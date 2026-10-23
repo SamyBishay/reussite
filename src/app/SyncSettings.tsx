@@ -11,6 +11,8 @@ import { saveFile } from '../data/backup';
 import { feedId, feedOff } from './feed';
 import { disablePush, pushOn } from './push';
 import { t, locale, type Key } from '../i18n';
+import { More, Fold, countSet } from './More';
+import { DEFAULT_SETTINGS } from '../data/settings';
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 
@@ -234,8 +236,7 @@ export function SyncSettings() {
   const s = settings.value;
   const base = relayBase();
   return (
-    <section class="set" data-testid="sync">
-      <h2>{t('syncSection')}</h2>
+    <Fold title={t('syncSection')} testid="sync">
       {!syncOn.value ? (
         <>
           <p class="hint">{t('syncIntro')}</p>
@@ -244,13 +245,13 @@ export function SyncSettings() {
             <button class="btn primary" type="button" disabled={!base || readOnly.value} onClick={() => openSheet(<SetUpSheet key={'su' + Date.now()} />, true)} data-testid="sync-setup">{t('syncSetUp')}</button>
             <button class="btn" type="button" disabled={!base || readOnly.value} onClick={() => openSheet(<JoinSheet key={'sj' + Date.now()} />, true)} data-testid="sync-join">{t('syncJoin')}</button>
           </div>
-          <details class="more" open={!base}><summary>{t('syncRelayLabel')}</summary>
+          <More open={!base} n={countSet(s.relayUrl !== DEFAULT_SETTINGS.relayUrl && s.relayUrl.trim())} testid="sync-more">
             <label class="field"><span>{t('syncRelayLabel')}</span>
               <input type="url" inputMode="url" value={s.relayUrl} autocomplete="off" spellcheck={false} data-testid="sync-relay"
                 onChange={e => void saveSettings({ relayUrl: (e.target as HTMLInputElement).value.trim() })} />
               <small class="hint">{t('syncRelayHint')}</small>
             </label>
-          </details>
+          </More>
         </>
       ) : (
         <>
@@ -262,14 +263,16 @@ export function SyncSettings() {
             <button class="btn" type="button" disabled={syncBusy.value || readOnly.value || spaceGone.value} onClick={() => void syncNow()} data-testid="sync-now">{t('syncNow')}</button>
             <button class="btn" type="button" onClick={openShowKey} data-testid="sync-show-key-btn">{t('syncShowKey')}</button>
           </div>
-          {!spaceGone.value && <Devices />}
-          <div class="actions">
-            <button class="btn" type="button" onClick={() => openSheet(<TurnOffSheet key={'to' + Date.now()} />)} data-testid="sync-off">{t('syncTurnOff')}</button>
-            <button class="btn ghost" type="button" onClick={() => openSheet(<DeleteSheet key={'dl' + Date.now()} />)} data-testid="sync-delete">{t('syncDelete')}</button>
-          </div>
+          <More testid="sync-more">
+            {!spaceGone.value && <Devices />}
+            <div class="actions">
+              <button class="btn" type="button" onClick={() => openSheet(<TurnOffSheet key={'to' + Date.now()} />)} data-testid="sync-off">{t('syncTurnOff')}</button>
+              <button class="btn ghost" type="button" onClick={() => openSheet(<DeleteSheet key={'dl' + Date.now()} />)} data-testid="sync-delete">{t('syncDelete')}</button>
+            </div>
+          </More>
         </>
       )}
-    </section>
+    </Fold>
   );
 }
 

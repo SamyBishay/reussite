@@ -1,5 +1,5 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
 
 // First-run onboarding (phase 4): a new device is one that has no data and no record of having finished. Every other
 // test runs as a device that has (playwright.config.ts puts the record in localStorage); these ask for a new one.
@@ -105,6 +105,7 @@ test.describe('on a new device', () => {
     await expect(page.locator('.pile[data-suit=S] .big')).toHaveText('★');
     await goTab(page, 'settings');
     await expect(page.getByTestId('ai-openai')).toHaveAttribute('aria-pressed', 'true');
+    await expandSettings(page);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Things to know about how I work: I start better with a time/);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Level of detail: very short\./);
     await expect(page.getByTestId('ai-key')).toHaveAttribute('placeholder', /replace/i);
@@ -138,6 +139,7 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('places').locator('input')).toHaveCount(1); // only the "add a place" field: no place was made
     await expect(page.getByTestId('addresses-switch')).toBeChecked();
     await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true');
+    await expandSettings(page);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/One question at a time/);
   });
 
@@ -214,7 +216,7 @@ const nudge = (page: Page) => page.evaluate(() => document.dispatchEvent(new Eve
 test('"I already use Réussite on another device" goes to pairing and skips the questions the space fills', async ({ browser }, info) => {
   test.slow();
   const a = await device(browser, info, false);
-  await a.page.goto('/#settings');
+  await a.page.goto('/#settings'); await expandSettings(a.page);
   await a.page.getByPlaceholder('Name of the new place').fill('Cabin');
   await a.page.getByTestId('add-place').click();
   await a.page.getByTestId('sync-setup').click();
@@ -255,7 +257,7 @@ test('"I already use Réussite on another device" goes to pairing and skips the 
 test('a device that pairs by the usual way never sees onboarding, even before any data arrives', async ({ browser }, info) => {
   test.slow();
   const a = await device(browser, info, false);
-  await a.page.goto('/#settings');
+  await a.page.goto('/#settings'); await expandSettings(a.page);
   await a.page.getByTestId('sync-setup').click();
   await a.page.getByTestId('sync-make-key').click();
   const key = (await a.page.getByTestId('recovery-key').innerText()).trim();
@@ -287,7 +289,7 @@ test('a device with data never sees it, even with no record of having finished',
 });
 
 test('a device with only a changed setting never sees it', async ({ page }) => {
-  await page.goto('/#settings');
+  await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('addresses-switch').click();
   await page.evaluate(() => localStorage.removeItem('reussite.onboarded'));
   await page.reload();

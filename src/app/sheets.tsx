@@ -11,6 +11,7 @@ import {
 } from './actions';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
+import { More, countSet } from './More';
 import { bigMoment, celebrate } from './celebrate';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
 import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../domain/duration';
@@ -429,6 +430,9 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const open = tk.status === 'open';
   const typed = Number(estV) || null;
   const pe = typed ? personal({ ...tk, est: typed }) : null;
+  const proj = projects.value.get(tk.project);
+  // Optional fields live under More; the summary counts the ones that have a value.
+  const hiddenSet = countSet(tk.label, tk.starter, tk.note, where !== 'any' ? where : '', tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, tk.kind === 'decision', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -556,8 +560,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
         <button type="button" class={'btn small chip' + (atV ? ' on' : '')} aria-expanded={timeOpen} onClick={() => setTimeOpen(!timeOpen)} data-testid="time-chip">{atV || t('timeChip')}</button>
       </div>
-      <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
-      <p class="hint">{t('labelHint')}</p>
       <div class="timebox" hidden={!timeOpen}>
         <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
         {atV && (
@@ -571,7 +573,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         )}
       </div>
       {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => { setAtV(seen.at); setTimeOpen(true); }}>{t('setTimeHint', { t: seen.at })}</button></p>}
-      <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
       <div class="field"><span>{t('urgImp')}</span>
         <div class="toggles">
           <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>
@@ -584,31 +585,34 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <label class="field"><span>{t('dueField')}</span><input type="date" name="due" defaultValue={tk.due ?? ''} disabled={!!rule} /></label>
       </div>
       {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
+      {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
+      {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
+      {err && <p class="err">{err}</p>}
+      <More n={hiddenSet} testid="task-more">
+      <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
+      <p class="hint">{t('labelHint')}</p>
+      <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
       <div class="row2">
         <label class="field"><span>{t('suit')}</span>
-          <select name="suit" defaultValue={tk.suit}>{SUIT_ORDER.map(s => <option value={s}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
+          <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
         </label>
         <label class="field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       </div>
       <label class="field"><span>{t('project')}</span>
-        <select name="project" defaultValue={tk.project}>{projs.map(p => <option value={p.id}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
+        <select name="project">{projs.map(p => <option value={p.id} selected={p.id === tk.project}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
       {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
-      {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
-      {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
-      <details class="more" open={!!(tk.repeat || tk.at || tk.dueRule || tk.weekdays?.length || after.length)}>
-        <summary>{t('moreFields')}</summary>
         <div class="row2">
           <label class="field"><span>{t('kindField')}</span>
-            <select name="kind" defaultValue={tk.kind}><option value="task">{t('kindTask')}</option><option value="decision">{t('kindDecision')}</option></select>
+            <select name="kind"><option value="task" selected={tk.kind !== 'decision'}>{t('kindTask')}</option><option value="decision" selected={tk.kind === 'decision'}>{t('kindDecision')}</option></select>
           </label>
           <div class="field"><span>{t('standingField')}</span><label class="tog"><input type="checkbox" name="template" defaultChecked={!!tk.template} /> {t('standingLabel')}</label></div>
         </div>
         {feedOn && tk.template && (
           <label class="field"><span>{t('offerField')}</span>
-            <select name="offer" defaultValue={tk.offer ?? ''} data-testid="offer">
-              <option value="">{t('offerNone')}</option><option value="address">{t('offerAddress')}</option><option value="person">{t('offerPerson')}</option>
+            <select name="offer" data-testid="offer">
+              <option value="" selected={!tk.offer}>{t('offerNone')}</option><option value="address" selected={tk.offer === 'address'}>{t('offerAddress')}</option><option value="person" selected={tk.offer === 'person'}>{t('offerPerson')}</option>
             </select>
             <small class="hint">{t('offerHint')}</small>
           </label>
@@ -618,7 +622,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <label class="field"><span>{t('appField')}</span><input type="text" name="app" defaultValue={tk.app ?? ''} placeholder="Mail, WhatsApp…" autocomplete="off" /></label>
           <label class="field"><span>{t('linkField')}</span><input type="text" name="link" inputMode="url" defaultValue={tk.link ?? ''} placeholder="https://…" autocomplete="off" /></label>
         </div>
-        {err && <p class="err">{err}</p>}
         <label class="field"><span>{t('promptField')}</span><textarea name="prompt" defaultValue={tk.prompt ?? ''} /></label>
         <RepeatField value={repeat} onChange={setRepeat} />
         {tk.template && (
@@ -638,7 +641,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
             </div>
           </div>
         )}
-      </details>
+      </More>
       {tk.status === 'done' && tk.doneDay && (
         <label class="field"><span>{t('doneOnField')}</span>
           <input type="date" defaultValue={tk.doneDay} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void moveDone(id, v); }} data-testid="done-day" />

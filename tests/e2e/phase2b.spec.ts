@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSheet } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const quickTitle = (page: Page) => page.getByPlaceholder(/The app and the first action/);
@@ -73,6 +73,7 @@ test('an existing step offers a time written in its title or note', async ({ pag
   // A length is not a time.
   await sheet(page).locator('input[name=title]').fill('Open Mail and write for 1h');
   await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
+  await expandSheet(page);
   await sheet(page).locator('textarea[name=note]').fill('rendez-vous à 9h30');
   await expect(sheet(page).getByTestId('set-time')).toHaveText('Set 09:30 as the time');
   await sheet(page).getByTestId('set-time').click();
@@ -111,6 +112,7 @@ test('the choir phrase makes a standing item with its time and weekday, and Undo
   await page.locator('[data-project=inbox] [data-task]', { hasText: 'Choir' }).getByRole('button', { name: /Choir/ }).click();
   await expect(sheet(page).locator('input[name=title]')).toHaveValue('Choir, Hill House 602');
   await expect(sheet(page).locator('input[name=at]')).toHaveValue('19:00');
+  await expandSheet(page);
   await expect(sheet(page).locator('input[name=template]')).toBeChecked();
   await expect(sheet(page).getByTestId('weekdays').getByLabel('Mon')).toBeChecked();
   await expect(sheet(page).getByTestId('weekdays').getByLabel('Tue')).not.toBeChecked();

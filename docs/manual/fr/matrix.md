@@ -38,9 +38,9 @@ Si vous déplacez une étape dans un quadrant urgent, Réussite demande : «�
 
 ## Les étapes
 
-Une étape a un titre, écrit comme la **première action** : l’appli ou le lieu, puis ce qu’il faut y faire (« Ouvrir Mail et répondre à… »). Elle a aussi un démarreur, une estimation, une échéance facultative, un projet et une famille. Une étape peut aussi avoir un **nom court** (cinq ou six mots, comme « Chorale · Hill House »). C’est ce que montrent les calendriers. Laissez-le vide et Réussite en fait un à partir du titre.
+Une étape a un titre, écrit comme la **première action** : l’appli ou le lieu, puis ce qu’il faut y faire (« Ouvrir Mail et répondre à… »). Elle a aussi une estimation et une échéance facultative, et vous dites si elle est urgente et importante. Un démarreur, un projet et une famille, un lieu, une note et le reste sont sous **Plus**. Une étape peut aussi avoir un **nom court** (cinq ou six mots, comme « Chorale · Hill House »). C’est ce que montrent les calendriers. Laissez-le vide et Réussite en fait un à partir du titre.
 
-Quand vous ouvrez une étape, ses boutons (Enregistrer, Marquer comme fait, Déplacer vers…, La découper, Abandonner et les autres) sont sur une rangée sous le titre, toujours à portée. À côté du titre, une pastille **Heure** : touchez-la pour donner une heure fixe à l’étape. Sous **Plus**, vous trouverez le type (une étape ou une décision), « Attend », l’appli et le lien, la répétition, et la durée et le « partir plus tôt » qui vont avec une heure.
+Quand vous ouvrez une étape, ses boutons (Enregistrer, Marquer comme fait, Déplacer vers…, La découper, Abandonner et les autres) sont sur une rangée sous le titre, toujours à portée. À côté du titre, une pastille **Heure** : touchez-la pour donner une heure fixe à l’étape. Sous **Plus**, vous trouverez le nom court, le démarreur, la famille, le lieu, le projet, la note, le type (une étape ou une décision), « Attend », l’appli et le lien, la répétition, et ce qu’il faut à un élément permanent (ses jours de la semaine). Quand quelque chose sous Plus est réglé, il le dit (« Plus · 3 renseignés »). La durée et le « partir plus tôt » qui vont avec une heure sont juste sous la pastille Heure.
 
 **La recherche dit :** non testé ici. `[E?]`
 

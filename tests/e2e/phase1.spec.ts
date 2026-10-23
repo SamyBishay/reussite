@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openWeeklyReview } from './helpers';
+import { importSample, noSideways, goTab, openWeeklyReview, expandSheet } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -338,6 +338,7 @@ test('a standing obligation is not in the four quadrants: it is on the Obligatio
   await expect(page.getByTestId('obligations')).not.toContainText('scanned receipts');
   await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.matrix')).not.toContainText('scanned receipts');

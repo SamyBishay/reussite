@@ -20,6 +20,7 @@ import { moveTo, firstCalmDay } from '../domain/moves';
 import { stillOnDue, minutesBetween } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
+import { deriveLabel } from '../domain/label';
 import { dueBeforeEnd } from '../domain/places';
 import { SUIT_ORDER } from '../data/settings';
 import { OfferChips, offerFieldsFor, type OfferChoice } from './OfferChips';
@@ -430,6 +431,8 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
     const title = v('title').trim();
     if (title) setIf('title', title, tk.title);
     setIf('starter', v('starter').trim() || null, tk.starter);
+    // The short name calendars show; empty clears it (one is then derived from the title).
+    if (v('label').trim() !== (tk.label ?? '').trim()) p.label = v('label').trim();
     setIf('urgent', c('urgent'), !!tk.urgent);
     setIf('important', c('important'), !!tk.important);
     if (!rule) setIf('due', v('due') || null, tk.due);
@@ -531,6 +534,8 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
         <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
         <button type="button" class={'btn small chip' + (atV ? ' on' : '')} aria-expanded={timeOpen} onClick={() => setTimeOpen(!timeOpen)} data-testid="time-chip">{atV || t('timeChip')}</button>
       </div>
+      <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
+      <p class="hint">{t('labelHint')}</p>
       <div class="timebox" hidden={!timeOpen}>
         <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
         {atV && (

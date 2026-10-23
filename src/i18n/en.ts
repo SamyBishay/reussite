@@ -442,6 +442,8 @@ export const en = {
   basisAll: 'All your steps',
   learningPace: 'Learning your pace: {n} of {of} timed.',
   // phase 1: the task sheet
+  labelField: 'Short name',
+  labelHint: 'What calendars show for this step. Leave it empty to use the one made from the title.',
   starterField: 'Starter: the smallest first action',
   starterPh: 'Open the app on the right screen…',
   moreFields: 'More: kind, waits for, app and link, repeats, fixed time',

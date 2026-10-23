@@ -245,3 +245,19 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   await page.getByTestId('tab-calendar').click();
   await expect(page.getByTestId('wday-' + iso(0))).toContainText('Walk to the park');
 });
+
+test('a standing obligation is not in the four quadrants: it is on the Obligations line, folded', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-matrix').click();
+  await expect(page.getByTestId('obligations')).not.toContainText('scanned receipts');
+  await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
+  await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.matrix')).not.toContainText('scanned receipts');
+  const ob = page.getByTestId('obligations');
+  await expect(ob).toBeVisible();
+  expect(await ob.evaluate(d => (d as HTMLDetailsElement).open)).toBe(false);
+  await ob.locator('summary').click();
+  await expect(ob).toContainText('scanned receipts');
+});

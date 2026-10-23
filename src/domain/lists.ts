@@ -34,6 +34,8 @@ export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, proje
 };
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed;
+/** A standing obligation, daily ones above all, or a copy of one placed on a day (choir, a walk, seeing someone): it has a time, not a quadrant. */
+export const isObligation = (t: Pick<Task, 'template' | 'from'>, tasks: ReadonlyMap<string, Pick<Task, 'template'>>): boolean => !!t.template || (!!t.from && !!tasks.get(t.from)?.template);
 export const quadOf = (t: Pick<Task, 'urgent' | 'important' | 'due'>, today: DayKey, urgencyDays: number): Quadrant => quadrant(t, today, urgencyDays);
 
 export const waitingOn = (t: Pick<Task, 'after'>, tasks: ReadonlyMap<string, TaskW>): TaskW[] =>

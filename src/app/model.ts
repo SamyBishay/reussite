@@ -22,6 +22,8 @@ export const whereOf = (t: T): string => L.whereOf(t, projects.value);
 export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value);
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
+/** Obligations (standing, or a copy of one) never sit in the matrix or the planner's pool; their urgent and important flags are ignored. */
+export const isObligation = (t: T): boolean => L.isObligation(t, tasks.value);
 export const quad = (t: T): Quadrant => L.quadOf(t, today.value, settings.value.urgencyDays);
 export const urgent = (t: T) => isUrgent(t, today.value, settings.value.urgencyDays);
 
@@ -61,7 +63,7 @@ export const byPriority = (a: T, b: T): number => L.byPriority(a, b, { today: to
 
 export function candidates(k = today.value, place = pagePlace.value): T[] {
   const plan = new Set(rawPlan(k));
-  return [...tasks.value.values()].filter(t => isOpen(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
+  return [...tasks.value.values()].filter(t => isOpen(t) && !isObligation(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
 }
 export const sessionsOf = (id: string): WithId<Session>[] =>
   [...sessions.value.values()].filter(s => s.taskId === id).sort((a, b) => String(a.d + a.at).localeCompare(String(b.d + b.at)));

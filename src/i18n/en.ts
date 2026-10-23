@@ -16,6 +16,8 @@ export const en = {
   tabSettings: 'Settings',
   views: 'Views',
   menu: 'Menu',
+  obligationsTitle: 'Obligations',
+  obligationsHint: 'Standing items and what they place on a day. They have a time, not a quadrant.',
   notifTitle: 'Notifications',
   notifEmpty: 'Nothing is waiting.',
   memoryTitle: 'Memory',

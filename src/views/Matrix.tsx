@@ -3,7 +3,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects, pagePlace } from '../app/store';
-import { isOpen, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
+import { isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
 import { openTask, openMove, moveToQuadrant, placeName, placeIds } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, suitName } from '../app/ui';
 import { t, type Key } from '../i18n';
@@ -72,8 +72,9 @@ export function Matrix() {
   const [over, setOver] = useState<number | null>(null);
   const f = filters.value;
   const set = (p: Partial<typeof f>) => (filters.value = { ...f, ...p });
-  const all = [...tasks.value.values()].filter(isOpen);
   const placeOk = (x: T) => (f.place === 'all' ? true : f.place ? inPlace(x, f.place) : scope.value === 'all' || inPlace(x));
+  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x));
+  const oblig = [...tasks.value.values()].filter(x => x.status === 'open' && isObligation(x) && placeOk(x)).sort((a, b) => (a.at || '99').localeCompare(b.at || '99') || a.title.localeCompare(b.title));
   const q = f.q.trim().toLowerCase();
   const vis = all.filter(x => placeOk(x) && (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit) && (!q || x.title.toLowerCase().includes(q) || (x.note || '').toLowerCase().includes(q)));
   const hidden = all.filter(x => !placeOk(x)).length;
@@ -114,6 +115,15 @@ export function Matrix() {
           );
         })}
       </div>
+      {oblig.length > 0 && (
+        <details class="more obligations" data-testid="obligations">
+          <summary>{t('obligationsTitle')} · {oblig.length}</summary>
+          <p class="hint">{t('obligationsHint')}</p>
+          <ul class="items">{oblig.map(x => (
+            <li key={x.id}><div class="item"><Suit s={x.suit} /><button type="button" class="linklike t" onClick={() => openTask(x.id)}><Title s={x.title} /></button><span class="ictrls">{x.at && <span class="due">{x.at}</span>}</span></div></li>
+          ))}</ul>
+        </details>
+      )}
       <p class="hint axis-note">{t('axisNote')} {t('moveHint')}</p>
     </div>
   );

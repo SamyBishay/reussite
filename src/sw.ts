@@ -53,6 +53,29 @@ registerRoute(
   },
 );
 
+// The Dove's cut-outs (src/assets/dove, WebP, not in the precache's patterns): fetched the first time St George plays
+// or the onboarding mark shows, then always served from here (their names carry a hash, so a hit is never stale). A
+// new version of a picture replaces the old one.
+const DOVE = 'dove';
+const doveName = (p: string) => p.replace(/-[\w-]{8}\.webp$/, ''); // Vite's hash: 8 characters
+registerRoute(
+  ({ url }) => url.origin === self.location.origin && url.pathname.startsWith(new URL('assets/', self.registration.scope).pathname) && url.pathname.endsWith('.webp'),
+  async ({ request, url }) => {
+    const cache = await caches.open(DOVE);
+    const hit = await cache.match(request);
+    if (hit) return hit;
+    const r = await fetch(request);
+    if (r.ok) {
+      for (const old of await cache.keys()) {
+        const p = new URL(old.url).pathname;
+        if (p !== url.pathname && doveName(p) === doveName(url.pathname)) void cache.delete(old);
+      }
+      void cache.put(request, r.clone());
+    }
+    return r;
+  },
+);
+
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 // /manual/… are the public manual's own pages (src/manual/site.ts), not the app: they go to the network.

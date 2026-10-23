@@ -387,7 +387,7 @@ export const en = {
   backupDueNotNow: 'Not now',
   about: 'About',
   /** Brief §16. The artist's name goes in this one string when it is known. */
-  paintingsCredit: 'Colours and motifs inspired by Hilma af Klint, The Dove (1915).',
+  paintingsCredit: 'The heart, the knight, the dragon and the colours are Hilma af Klint’s, cut out of The Dove (1915, public domain).',
   diagTitle: 'Copy diagnostics',
   diagHint: 'This is what will be copied, so a friend can help with a bug. It has versions, states and error text only: never your steps, notes, names, places, keys or recovery key.',
   diagCopy: 'Copy diagnostics',

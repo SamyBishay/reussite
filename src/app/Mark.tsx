@@ -1,13 +1,14 @@
-// Logo A (brief §16): a heart with the dragon's concentric rings at its centre, in the theme's colours.
-// The app icon is the same drawing (public/icons/icon.svg).
+// The mark: the heart of Hilma af Klint's The Dove (1915), cut out of the painting (scripts/dove, docs/dev/dove.md).
+// The light painting's heart on the light ground, the dark one's on the dark; the hidden one is never fetched.
+// The app icon is the dark heart (public/icons).
+const DARK = new URL('../assets/dove/mark-dark.webp', import.meta.url).href;
+const LIGHT = new URL('../assets/dove/mark-light.webp', import.meta.url).href;
+
 export function Mark({ size = 64, class: cls }: { size?: number; class?: string }) {
   return (
-    <svg class={cls} width={size} height={size} viewBox="0 0 512 512" aria-hidden="true" focusable="false">
-      <path d="M256 456C148 384 60 306 60 196A100 100 0 0 1 256 142A100 100 0 0 1 452 196C452 306 364 384 256 456Z" style="fill:var(--mark-heart)" />
-      <circle cx="256" cy="258" r="112" style="fill:var(--ground)" />
-      <circle cx="256" cy="258" r="86" style="fill:var(--mark-ring)" />
-      <circle cx="256" cy="258" r="50" style="fill:var(--ground)" />
-      <circle cx="256" cy="258" r="22" style="fill:var(--mark-dot)" />
-    </svg>
+    <span class={'mark' + (cls ? ' ' + cls : '')} style={{ height: size + 'px' }} aria-hidden="true">
+      <img class="mark-l" src={LIGHT} alt="" height={size} loading="lazy" decoding="async" />
+      <img class="mark-d" src={DARK} alt="" height={size} loading="lazy" decoding="async" />
+    </span>
   );
 }

@@ -295,15 +295,29 @@ test('History is empty at first, and says what it will hold', async ({ page }) =
   await expect(page.getByTestId('history-empty')).toBeVisible();
 });
 
-test('the card holds one nudge: yesterday’s carry-over, with its button', async ({ page }) => {
+test('what is waiting is behind the bell: Home has a dot, the page lists it with its button', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'home');
-  const card = page.getByTestId('home-card');
-  await expect(card).toHaveCount(1);
-  await expect(card).toContainText('from yesterday');
-  await expect(page.locator('[data-testid=home] > *')).toHaveCount(3); // greeting, card, input
-  await card.getByRole('button').click();
   await expect(page.getByTestId('home-card')).toHaveCount(0);
+  await expect(page.locator('[data-testid=home] > *')).toHaveCount(2); // greeting, input
+  await expect(page.getByTestId('bell-dot')).toBeVisible();
+  await page.getByTestId('home-bell').click();
+  await expect(page).toHaveURL(/#notifications$/);
+  await expect(page.locator('.mast')).toHaveCount(0);
+  const n = page.getByTestId('carry-nudge');
+  await expect(n).toContainText('from yesterday');
+  await n.getByRole('button').click();
+  await expect(page.getByTestId('carry-nudge')).toHaveCount(0);
+  await expect(page.getByTestId('notifications-empty')).toBeVisible();
+  await goTab(page, 'home');
+  await expect(page.getByTestId('bell-dot')).toHaveCount(0);
+});
+
+test('Settings is a plain page titled Settings', async ({ page }) => {
+  await page.goto('/');
+  await goTab(page, 'settings');
+  await expect(page.getByRole('heading', { name: 'Settings', level: 2 }).first()).toBeVisible();
+  await expect(page.locator('.mast, .side, .foot')).toHaveCount(0);
 });
 
 for (const width of [320, 375, 430]) {

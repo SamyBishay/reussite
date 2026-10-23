@@ -73,8 +73,8 @@ test('a stay switches the current place on its first day', async ({ page }) => {
   await form.locator('input[name=from]').fill(iso(0));
   await form.locator('input[name=to]').fill(iso(3));
   await form.getByRole('button', { name: 'Add' }).click();
-  await expect(page.getByTestId('place-pill')).toContainText('Away');
   await page.getByTestId('tab-today').click();
+  await expect(page.getByTestId('place-pill')).toContainText('Away');
   await expect(page.getByTestId('stay-notice')).toContainText('Away');
 });
 

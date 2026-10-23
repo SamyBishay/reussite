@@ -22,6 +22,7 @@ import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
 import { Projects } from '../views/Projects';
 import { Calendar } from '../views/Calendar';
+import { Notifications } from '../views/Notifications';
 import { Settings } from '../views/Settings';
 import { Home } from '../views/Home';
 import { Memory } from '../views/Memory';
@@ -99,7 +100,7 @@ const TAB_ICON: Record<string, string> = {
 /** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
 function Tabs() {
   const v = view.value;
-  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' : v === x);
+  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' || v === 'notifications' : v === x);
   return (
     <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
       <div class="tabbar-in">
@@ -140,7 +141,7 @@ function Runbar() {
   return <div id="runbar" />;
 }
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || (view.value === 'calendar' && calMode.value === 'log')) return null;
+  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
       <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
@@ -173,9 +174,9 @@ function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
 
-/** Home and the screens behind its menu have no masthead, suit piles or footer; the others keep them. */
-const BARE: View[] = ['home', 'memory', 'history', 'addresses'];
-const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses };
+/** Home, Settings and the screens behind Home's bell and menu have no masthead, suit piles or footer; the others keep them. */
+const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses'];
+const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications };
 
 export function App() {
   useEffect(() => { void start().then(async () => { await decideOnboarding(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);

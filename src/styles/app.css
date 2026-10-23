@@ -76,6 +76,9 @@ body.kb .tabbar{display:none}
 /* ---------- home ---------- */
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .homebar .dateline{margin-top:0}
+.homebtns{display:flex;gap:8px}
+.icon-btn.bell{position:relative}
+.icon-btn .dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--ink);border:2px solid var(--card)}
 .home{display:grid;gap:14px;align-content:start}
 .greeting .first{margin-top:6px;margin-bottom:0}
 .homecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:10px}

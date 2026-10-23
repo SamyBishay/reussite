@@ -386,7 +386,8 @@ function Data() {
 
 export function Settings() {
   return (
-    <div>
+    <div data-testid="settings">
+      <h2 class="sec" style="margin-top:0">{t('tabSettings')}</h2>
       <section class="set">
         <h2>{t('language')}</h2>
         <div class="seg" role="group" aria-label={t('language')} style="margin-top:8px">

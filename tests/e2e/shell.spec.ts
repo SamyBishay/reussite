@@ -99,7 +99,7 @@ test('#settings opens Settings, and Home’s menu reaches Settings, Places, Memo
   await expect(page.locator('main h2')).toHaveText('History');
   await openMenu(page, 'settings');
   await expect(page.getByTestId('open-import')).toBeVisible();
-  await expect(page.locator('.foot')).toBeVisible();
+  await expect(page.locator('.mast, .side, .foot')).toHaveCount(0); // Settings is a plain page now
 });
 
 test('the old #log and a stored log view open the Calendar’s Log', async ({ page }) => {

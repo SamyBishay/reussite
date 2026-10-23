@@ -16,6 +16,8 @@ export const en = {
   tabSettings: 'Settings',
   views: 'Views',
   menu: 'Menu',
+  notifTitle: 'Notifications',
+  notifEmpty: 'Nothing is waiting.',
   memoryTitle: 'Memory',
   historyTitle: 'History',
   // masthead and places

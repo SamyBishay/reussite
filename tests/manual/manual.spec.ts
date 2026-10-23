@@ -125,6 +125,8 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
     /** The screen as it is, without the scrollbar a desktop browser draws and without a focused field. */
     async function shot(page: Page, name: string, keepScroll = false) {
+      const update = page.locator('.banner[role=status] .ghost');
+      if (await update.count()) await update.first().click();
       if (!keepScroll) await page.evaluate(() => window.scrollTo(0, 0));
       await page.addStyleTag({ content: 'html{scrollbar-width:none}' });
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());
@@ -146,6 +148,7 @@ for (const lang of LANGS) for (const theme of THEMES) {
     });
 
     test('the app', async ({ page }) => {
+      test.setTimeout(120_000);
       await seed(page, list(lang));
 
       // The morning check-in and its plan, then the list it made.
@@ -190,7 +193,8 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await shot(page, 'calendar');
       await page.getByTestId('cal-day').click();
       await page.waitForTimeout(300);
-      await shot(page, 'calendar-day');
+      await atTop(page, 'calendar');
+      await shot(page, 'calendar-day', true);
       await page.getByTestId('cal-log').click();
       await expect(page.getByTestId('log')).toBeVisible();
       await shot(page, 'log');

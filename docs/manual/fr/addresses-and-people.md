@@ -31,6 +31,10 @@ Touchez **+ Proche**. Seulement ce dont le plan a besoin : un nom, comment le 
 - **Comment le joindre :** un lien, un numéro de téléphone ou un e-mail. Un numéro ou un e-mail devient un bouton qui ouvre WhatsApp, Messages, Téléphone ou Mail.
 - **Dernière fois :** renseignée quand vous marquez comme faite une étape liée à cette personne. Elle s’affiche comme une date, jamais comme un retard.
 
+## Ce qui est en cours
+
+Ouvrez un proche et touchez **Ce qui est en cours**. Vous voyez les étapes ouvertes qui lui sont destinées, puis celles dont le titre ou la note le ou la nomme, chacune à une touche de sa feuille. Les étapes faites ou abandonnées n’y sont pas. Si la personne est dans une zone, une étape qui lui est destinée propose un bouton pour mettre le lieu de l’étape sur cette zone. Il ne le fait jamais tout seul.
+
 ## Les étapes qui les alimentent
 
 Dans les détails d’une étape, **Alimente** relie l’étape à une adresse ou à un proche. La marquer comme faite demande alors la note de visite, ou met à jour la dernière fois que vous avez vu la personne.

@@ -20,7 +20,7 @@ Ces pages sont courtes et écrites en mots simples. Vous pouvez les lire dans n�
 - [Les décisions](decisions.md) : une façon de choisir et d’arrêter de tourner en rond.
 - [Lieux et voyages](places-and-trips.md) : où vous êtes, et vos séjours ailleurs.
 - [Adresses et proches](addresses-and-people.md) : les bonnes adresses et les personnes que vous voulez voir.
-- [Le calendrier](calendar.md) : semaine, mois et votre propre Journal.
+- [Le calendrier](calendar.md) : jour, semaine, mois et votre propre Journal.
 - [Durées et estimations](timing-and-estimates.md) : le temps que les choses prennent vraiment.
 
 ## Réglages, IA, synchronisation

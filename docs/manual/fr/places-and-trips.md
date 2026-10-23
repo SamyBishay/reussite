@@ -14,6 +14,16 @@ La pastille en haut d’Aujourd’hui, de la Matrice et des autres onglets dit o
 
 Vous pouvez aussi ajouter des lieux dans Réglages → Méthode.
 
+## Zones
+
+Une **zone** est un endroit à l’intérieur d’un lieu : Héliopolis au Caire. Ajoutez-en une sous le lieu dans Réglages → Méthode → Lieux, ou dans la feuille Lieux (**+ Ajouter une zone**). Une zone n’a pas de fuseau horaire propre : elle prend celui de son lieu. Retirer une zone remet ce qui y était sur le lieu.
+
+Partout où vous choisissez un lieu, la liste montre chaque lieu suivi de ses zones. Une étape d’une zone est aussi sur la page de son lieu.
+
+Quand un lieu a des zones, une rangée de **pastilles** apparaît dans Aujourd’hui, la matrice et le calendrier. Touchez-en une pour ne voir que les étapes de cette zone, plus celles marquées Partout. Touchez-la de nouveau pour l’enlever. Le choix dure jusqu’à la fermeture de l’appli. Les listes sont groupées sous le nom de la zone.
+
+**Demi-journées.** Au point du matin, **Où serez-vous ?** vous laisse choisir un lieu ou l’une de ses zones pour le matin et pour l’après-midi. Le plan puise alors d’abord dans cette zone et garde ses étapes ensemble. Aujourd’hui et le calendrier montrent « Après-midi · Héliopolis ».
+
 ## Les séjours
 
 Un **séjour** est un lieu avec un premier et un dernier jour. Ajoutez-en un dans Réglages → Méthode, sous Séjours. Le premier jour, Réussite passe tout seul à ce lieu, dans son fuseau horaire. Hors séjour, vous êtes là où vous avez dit être.

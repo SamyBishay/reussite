@@ -1,0 +1,119 @@
+/* The big celebration (brief §16): St George and the dragon, ported from the design round's prototype.
+   Dark is the struggle, light the calm after the victory. One 2.5 s timeline (percent = seconds / 2.5);
+   transforms and opacity only. The stage is a 9:16 box centred on the screen; the grounds cover the screen. */
+.sg{position:fixed;inset:0;z-index:60;overflow:hidden;cursor:pointer;isolation:isolate;-webkit-tap-highlight-color:transparent;
+  --g-dark:#0B0C10;--g-light:#EBEBE6;--ink-on-dark:#ECE8F0;--ink-on-light:#1F2E2E;
+  --rose:#C6708E;--rose-deep:#AD4E67;--blue:#4064B3;--blue-2:#6A96D7;--sg-lilac:#C6B3C9;--violet:#423752;
+  --gold:#D2BE8C;--gold-deep:#9B8855;--teal:#649996;--teal-deep:#3C4F4F;--navy:#2E3F7C;--steel:#E9E6DA;
+  background:var(--start-ground)}
+.sg.from-light{--start-ground:var(--g-light);--end-ink:var(--ink-on-light);--calm-1:var(--teal);--calm-2:var(--gold-deep);--calm-3:#BDC6C0;--heart-line:var(--rose-deep)}
+.sg.from-dark{--start-ground:var(--g-dark);--end-ink:var(--ink-on-dark);--calm-1:var(--blue-2);--calm-2:var(--blue);--calm-3:var(--violet);--heart-line:var(--rose)}
+.sg.leaving{pointer-events:none}
+.sg-shake{position:absolute;inset:0}
+.sg-stage{position:absolute;left:50%;top:50%;width:min(100vw,56.25vh,520px);aspect-ratio:9/16;transform:translate(-50%,-50%)}
+.sg-l{position:absolute;pointer-events:none}
+.sg-c{left:50%;top:62%}
+
+.sg-disc{width:300vmax;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%) scale(0);will-change:transform,opacity}
+.sg-disc.dark{background:var(--g-dark)}
+.sg-disc.light{background:var(--g-light)}
+
+.sg-ring{border-radius:50%;border-style:solid;transform:translate(-50%,-50%);opacity:0;will-change:transform,opacity}
+.sg-ring.r1{width:78%;aspect-ratio:1;border-width:10px;border-color:var(--blue)}
+.sg-ring.r2{width:62%;aspect-ratio:1;border-width:10px;border-color:var(--blue-2)}
+.sg-ring.r3{width:46%;aspect-ratio:1;border-width:8px;border-color:var(--sg-lilac)}
+.sg-ring.r4{width:30%;aspect-ratio:1;border-width:8px;border-color:var(--blue-2)}
+.sg-ring.r5{width:12%;aspect-ratio:1;border-width:10px;border-color:var(--blue)}
+
+.sg-calm{border-radius:50%;border-style:solid;transform:translate(-50%,-50%) scale(.7);opacity:0}
+.sg-calm.k1{width:60%;aspect-ratio:1;border-width:6px;border-color:var(--calm-1)}
+.sg-calm.k2{width:44%;aspect-ratio:1;border-width:6px;border-color:var(--calm-2)}
+.sg-calm.k3{width:28%;aspect-ratio:1;border-width:6px;border-color:var(--calm-3)}
+
+.sg-lines{width:0;height:0}
+.sg-line{position:absolute;left:0;top:0;height:3px;width:var(--len);border-radius:2px;background:#F4F1FA;transform-origin:0 50%;
+  transform:rotate(var(--a)) translateX(var(--r));opacity:0}
+.sg-streaks{inset:0}
+.sg-streak{position:absolute;top:-30%;width:2px;height:40%;background:#F4F1FA;opacity:0;left:var(--x)}
+
+.sg-knight{left:50%;top:9%;width:30%;transform:translateX(-50%);opacity:0}
+.sg-knight>div{transform-origin:50% 70%;will-change:transform}
+.sg-dragon{left:50%;top:62%;width:58%;transform:translate(-50%,-50%);opacity:0}
+.sg-dragon>div{transform-origin:50% 50%;will-change:transform,opacity}
+.sg-slash{left:50%;top:56%;width:70%;transform:translate(-50%,-50%) scale(.4);opacity:0}
+.sg-star{left:50%;top:58%;width:44%;transform:translate(-50%,-50%) scale(0);opacity:0}
+.sg-flash{position:fixed;inset:0;background:#FFFFFF;opacity:0;pointer-events:none}
+.sg-heart{left:50%;top:47%;width:94%;transform:translate(-50%,-50%) scale(.85);opacity:0}
+.sg svg{display:block;width:100%;height:auto}
+.sg-words{left:0;right:0;bottom:6%;text-align:center;color:var(--end-ink);opacity:0;padding:0 var(--s5);font-family:var(--sans)}
+.sg-words b{display:block;font-size:26px;line-height:1.2;overflow-wrap:anywhere}
+.sg-words span{display:block;margin-top:var(--s1);font-size:15px;opacity:.85;overflow-wrap:anywhere}
+
+/* the timeline */
+.sg.play .sg-a{animation-duration:2.5s;animation-fill-mode:both;animation-timing-function:linear}
+.sg.play.from-light .sg-disc.dark{animation-name:sgDarkRises}
+.sg.play.from-light .sg-disc.light{animation-name:sgLightReturns}
+.sg.play.from-dark .sg-disc.light{animation-name:sgLightBreaks}
+.sg.play .sg-ring{animation-name:sgRingBurst}
+.sg.play .sg-ring.r2{animation-delay:.02s}.sg.play .sg-ring.r3{animation-delay:.04s}.sg.play .sg-ring.r4{animation-delay:.06s}.sg.play .sg-ring.r5{animation-delay:.08s}
+.sg.play .sg-calm{animation-name:sgCalmIn}
+.sg.play .sg-calm.k2{animation-delay:.08s}.sg.play .sg-calm.k3{animation-delay:.16s}
+.sg.play .sg-line{animation-name:sgSpeed}
+.sg.play .sg-streak{animation-name:sgStreak}
+.sg.play .sg-knight,.sg.play .sg-dragon{animation-name:sgFadeIn}
+.sg.play .sg-knight>div{animation-name:sgKnight}
+.sg.play .sg-dragon>div{animation-name:sgDragon}
+.sg.play .sg-slash{animation-name:sgSlash}
+.sg.play .sg-star{animation-name:sgStar}
+.sg.play .sg-flash{animation-name:sgFlash}
+.sg.play .sg-shake{animation-name:sgShake}
+.sg.play .sg-heart{animation-name:sgHeartIn}
+.sg.play .sg-words{animation-name:sgWordsIn}
+
+@keyframes sgDarkRises{0%{transform:translate(-50%,-50%) scale(0);animation-timing-function:cubic-bezier(.5,0,.9,.5)}14%,100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes sgLightReturns{0%,48%{transform:translate(-50%,-50%) scale(0);animation-timing-function:cubic-bezier(.2,.7,.3,1)}64%,100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes sgLightBreaks{0%,48%{transform:translate(-50%,-50%) scale(0);opacity:1;animation-timing-function:cubic-bezier(.1,.8,.3,1)}58%{transform:translate(-50%,-50%) scale(1);opacity:1}68%{opacity:1;animation-timing-function:ease-in-out}86%,100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@keyframes sgRingBurst{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}
+  14%{opacity:.95;transform:translate(-50%,-50%) scale(1)}
+  36%{opacity:.95;transform:translate(-50%,-50%) scale(.94)}
+  42%,48%{opacity:1;transform:translate(-50%,-50%) scale(1);animation-timing-function:cubic-bezier(.1,.7,.3,1)}
+  66%,100%{opacity:0;transform:translate(-50%,-50%) scale(2.8)}}
+@keyframes sgCalmIn{0%,70%{opacity:0;transform:translate(-50%,-50%) scale(.7);animation-timing-function:cubic-bezier(.2,.7,.3,1)}92%,100%{opacity:.9;transform:translate(-50%,-50%) scale(1)}}
+@keyframes sgSpeed{
+  0%,34%{opacity:0;transform:rotate(var(--a)) translateX(calc(var(--r) * 1.6))}
+  40%{opacity:.9;transform:rotate(var(--a)) translateX(var(--r))}
+  42%,48%{opacity:1;transform:rotate(var(--a)) translateX(calc(var(--r) * .9))}
+  58%,100%{opacity:0;transform:rotate(var(--a)) translateX(calc(var(--r) * 1.8))}}
+@keyframes sgStreak{0%,33%{opacity:0;transform:translateY(0)}37%{opacity:.7}42%,100%{opacity:0;transform:translateY(260%)}}
+@keyframes sgFadeIn{0%{opacity:0}12%,100%{opacity:1}}
+@keyframes sgKnight{
+  0%{transform:translateY(-24px) scale(.92)}
+  14%{transform:translateY(0) scale(1);animation-timing-function:cubic-bezier(.3,0,.2,1)}
+  36%{transform:translate(-4%,-12%) rotate(-11deg) scale(1.05,.95);animation-timing-function:cubic-bezier(.9,0,1,.6)}
+  40%{transform:translateY(55%) rotate(5deg) scale(.92,1.14)}
+  42%,48%{transform:translateY(98%) rotate(7deg) scale(1.03,.97);animation-timing-function:cubic-bezier(.2,.8,.3,1)}
+  60%{transform:translateY(58%) rotate(-2deg) scale(1)}
+  72%,100%{transform:translateY(54%) rotate(0) scale(1)}}
+@keyframes sgDragon{
+  0%{transform:scale(.7);opacity:0}
+  14%{transform:scale(1);opacity:1;animation-timing-function:ease-in-out}
+  36%{transform:rotate(-9deg) scale(1.08)}
+  42%,48%{transform:translate(2%,3%) rotate(-3deg) scale(.97);opacity:1;animation-timing-function:cubic-bezier(.3,.6,.4,1)}
+  62%{transform:translate(14%,10%) rotate(28deg) scale(.6);opacity:.5}
+  70%,100%{transform:translate(20%,18%) rotate(40deg) scale(.35);opacity:0}}
+@keyframes sgSlash{0%,39%{opacity:0;transform:translate(-50%,-50%) rotate(-20deg) scale(.4)}41.5%,48%{opacity:1;transform:translate(-50%,-50%) rotate(0) scale(1)}56%,100%{opacity:0;transform:translate(-50%,-50%) rotate(6deg) scale(1.2)}}
+@keyframes sgStar{0%,41.5%{opacity:0;transform:translate(-50%,-50%) scale(0)}42%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(0)}48%{opacity:1;transform:translate(-50%,-50%) scale(1.2) rotate(8deg)}56%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.7) rotate(14deg)}}
+@keyframes sgFlash{0%,41.8%{opacity:0}42%{opacity:.95}45%{opacity:.5}47%{opacity:.75}53%,100%{opacity:0}}
+@keyframes sgShake{0%,48%{transform:translate(0,0)}50%{transform:translate(-11px,7px)}52%{transform:translate(10px,-8px)}54%{transform:translate(-8px,6px)}56%{transform:translate(6px,-4px)}58%{transform:translate(-3px,2px)}60%,100%{transform:translate(0,0)}}
+@keyframes sgHeartIn{0%,68%{opacity:0;transform:translate(-50%,-50%) scale(.85);animation-timing-function:cubic-bezier(.2,.7,.3,1)}90%,100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes sgWordsIn{0%,76%{opacity:0;transform:translateY(10px);animation-timing-function:cubic-bezier(.2,.7,.3,1)}94%,100%{opacity:1;transform:translateY(0)}}
+
+/* Calm, and reduced motion: the last frame on the person's own ground, faded in and out softly (by script). */
+.sg.still .sg-a{animation:none!important}
+.sg.still .sg-disc,.sg.still .sg-ring,.sg.still .sg-line,.sg.still .sg-streak,.sg.still .sg-slash,.sg.still .sg-star,.sg.still .sg-flash,.sg.still .sg-dragon{opacity:0}
+.sg.still .sg-knight{opacity:1}
+.sg.still .sg-knight>div{transform:translateY(54%)}
+.sg.still .sg-calm{opacity:.9;transform:translate(-50%,-50%) scale(1)}
+.sg.still .sg-heart{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.sg.still .sg-words{opacity:1}

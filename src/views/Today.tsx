@@ -8,6 +8,7 @@ import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openSta
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
+import { Rings, TimerRings } from '../app/Rings';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
 import { openReview } from '../flows/review';
@@ -72,7 +73,7 @@ function FirstCard({ tk }: { tk: Tk }) {
       <div class="go">
         {run ? (
           <>
-            <Clock tk={tk} big />
+            <span class="timerbox"><TimerRings tk={tk} /><Clock tk={tk} big /></span>
             <button class="btn" type="button" onClick={() => openPause(tk.id)}>{t('pause')}</button>
             <button class="btn primary" type="button" onClick={() => openDone(tk.id)}>{t('done')}</button>
             <GoLink tk={tk} variant="small" />
@@ -312,6 +313,7 @@ export function Today() {
       {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
       {fid ? <FirstCard tk={T(fid)!} /> : !every.length ? (
         <section class="first" data-testid="first">
+          <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
           <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>
@@ -324,7 +326,7 @@ export function Today() {
       ) : af && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : (
-        <section class="first"><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
+        <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
       {yOpen.length > 0 && (
         <div class="carry"><p>{t('carryText', { n: yOpen.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: yOpen.length })}</button></div>

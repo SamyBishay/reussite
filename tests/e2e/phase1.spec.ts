@@ -154,6 +154,60 @@ test('close of the day: the cards land readable, then the summary', async ({ pag
   await expect(page.getByTestId('show')).toBeHidden();
 });
 
+test('the close of the day ends on St George: a tap skips it at once; Calm is a still frame, Off nothing', async ({ page }) => {
+  await importSample(page);
+  const sg = page.getByTestId('stgeorge');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await page.getByTestId('skip').click();
+  await expect(sg).toBeVisible();
+  await expect(sg).toHaveClass(/play/);
+  await expect(sg).toContainText('The day is played.');
+  // Transforms and opacity only.
+  const props = await sg.evaluate(el => [...new Set(el.getAnimations({ subtree: true }).flatMap(a => ((a.effect as KeyframeEffect).getKeyframes()).flatMap(k => Object.keys(k).filter(x => !['offset', 'easing', 'composite', 'computedOffset'].includes(x)))))]);
+  expect(props.every(p => p === 'transform' || p === 'opacity'), props.join()).toBe(true);
+  const t0 = Date.now();
+  await sg.click();
+  await expect(sg).toHaveCount(0, { timeout: 1000 });
+  expect(Date.now() - t0).toBeLessThan(1000);
+  await page.getByTestId('show').getByRole('button', { name: 'Not yet' }).click({ timeout: 1000 });
+  // Calm: the last frame, no fight.
+  await goTab(page, 'settings');
+  await page.getByTestId('appearance').getByRole('button', { name: 'Calm', exact: true }).click();
+  await goTab(page, 'today');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await page.getByTestId('skip').click();
+  await expect(sg).toHaveClass(/still/);
+  await expect(sg).not.toHaveClass(/play/);
+  await expect(sg).toHaveCount(0, { timeout: 4000 });
+  await page.getByTestId('show').getByRole('button', { name: 'Not yet' }).click();
+  // Off: the summary, and nothing over it.
+  await goTab(page, 'settings');
+  await page.getByTestId('appearance').getByRole('button', { name: 'Off', exact: true }).click();
+  await goTab(page, 'today');
+  await page.locator('main').getByRole('button', { name: 'Close the day' }).click();
+  await expect(page.getByTestId('close-summary')).toBeVisible();
+  await expect(sg).toHaveCount(0);
+});
+
+test('an ordinary Done never brings St George; the day’s last card does', async ({ page }) => {
+  await importSample(page);
+  const sg = page.getByTestId('stgeorge');
+  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already done' });
+  let seen = false;
+  for (let i = 0; i < 12 && await doneBtn.count() > 0; i++) {
+    await doneBtn.click();
+    await page.getByRole('button', { name: 'I didn’t time it' }).click();
+    if (await page.locator('main').getByText('List played').count() > 0) {
+      await expect(sg).toBeVisible();
+      await expect(sg).toContainText('List played');
+      seen = true;
+      break;
+    }
+    await expect(sg).toHaveCount(0);
+  }
+  expect(seen).toBe(true);
+});
+
 test('personal estimates wait for five timed steps', async ({ page }) => {
   await importSample(page);
   await page.locator('.row:not(.done)').getByTestId('details').first().click();

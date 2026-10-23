@@ -11,7 +11,7 @@ import {
 } from './actions';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
-import { celebrate } from './celebrate';
+import { bigMoment, celebrate } from './celebrate';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
 import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../domain/duration';
 import { addDays, daysBetween } from '../domain/dates';
@@ -21,6 +21,7 @@ import { stillOnDue, minutesBetween } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { deriveLabel } from '../domain/label';
+import { nextHeads } from '../domain/chains';
 import { dueBeforeEnd, isArea } from '../domain/places';
 import { placePath, placeRows } from '../domain/areas';
 import { SUIT_ORDER } from '../data/settings';
@@ -52,12 +53,15 @@ export function showMoment(kind: 'project' | 'decision', name: string) {
 /** Done, with its feedback: proportional to the moment (a step, the day's last card, a project). */
 export async function complete(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
-  const isLast = day === k && rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0;
-  if (day === k) celebrate(isLast ? 'last' : 'step', tk.id, tk.suit, cardsOn(k).length + 1);
+  const isLast = day === k && rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0
+    && !nextHeads(tasks.value, tk.id).length; // a step it frees takes its place on the list, so the list is not played
+  if (day === k) celebrate(isLast ? 'last' : 'step', tk.id, tk.suit, cardsOn(k).length + 1, isLast ? { title: t('listPlayed'), sub: t('allDone') } : undefined);
   const r = await finishTask(tk, typed, day, minutes);
   if (r.projectDone) {
     celebrate('project', null, tk.suit, 0);
-    showMoment('project', projects.value.get(r.projectDone)?.name ?? '');
+    const name = projects.value.get(r.projectDone)?.name ?? '';
+    // St George when celebrations are on (its words change if the last card's is already playing); else the banner.
+    if (!bigMoment({ title: t('projectComplete'), sub: name })) showMoment('project', name);
   }
   if (r.nextId) { const nx = T(r.nextId); if (nx?.due) toast(t('repeatNext', { date: fmtDate(nx.due) })); }
   // A step that feeds an address asks how it was (skippable); nothing is written until the person answers.

@@ -55,6 +55,8 @@ export const en = {
   chooseFromList: 'Choose from your list',
   noListHint: 'Pick a first step to begin. Planning the whole day by hand arrives in the next update.',
   listPlayed: 'List played',
+  /** The words at the end of St George's celebration at the close of the day. */
+  dayIsPlayed: 'The day is played.',
   allDone: 'Everything on today’s list is done.',
   addOneOrClose: 'Add one more, or close the day.',
   carryText: { one: '{n} from yesterday is still open. It goes to the end of today’s list.', other: '{n} from yesterday are still open. They go to the end of today’s list.' } as P,

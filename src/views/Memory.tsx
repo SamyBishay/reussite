@@ -1,5 +1,6 @@
 // Memory: what the app knows about the person's life, in notes they can read, edit and forget (brief §4,
 // §10). Notes by kind with the profile on top, a search, a note sheet, and import and export of Markdown.
+import { Rings } from '../app/Rings';
 import { useState } from 'preact/hooks';
 import { memory, readOnly, toast, type WithId } from '../app/store';
 import { openSheet, closeSheet } from '../app/ui';
@@ -41,7 +42,7 @@ export function Memory() {
         <button class="btn" type="button" onClick={() => openSheet(<ExportSheet key={'me' + Date.now()} />)} data-testid="memory-export">{t('memExport')}</button>
       </div>
       {all.length > 0 && <input type="search" value={q} placeholder={t('memSearch')} aria-label={t('memSearch')} style="margin-top:var(--s4)" onInput={e => setQ(input(e))} data-testid="memory-search" />}
-      {!all.length && <p class="hint" data-testid="memory-empty" style="margin-top:var(--s4)">{t('memEmpty')}</p>}
+      {!all.length && <div class="empty"><Rings /><p class="hint" data-testid="memory-empty">{t('memEmpty')}</p></div>}
       {all.length > 0 && !shown.length && <p class="hint" style="margin-top:var(--s4)">{t('memNoMatch', { q })}</p>}
       {MEMORY_KINDS.map(kind => {
         const group = shown.filter(n => n.kind === kind).sort(byName);

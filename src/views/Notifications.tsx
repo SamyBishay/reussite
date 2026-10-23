@@ -1,5 +1,6 @@
 // Notifications: everything that is waiting, one row each with its button. Home shows only a bell with a dot
 // when this list is not empty (no number, no red).
+import { Rings } from '../app/Rings';
 import { today, settings } from '../app/store';
 import { dayDoc, decisionsToCheck, yesterdayOpen } from '../app/model';
 import { carryOver } from '../app/actions';
@@ -27,7 +28,7 @@ export function Notifications() {
   return (
     <div data-testid="notifications">
       <h2 class="sec" style="margin-top:0">{t('notifTitle')}</h2>
-      {list.length ? list : <p class="hint" data-testid="notifications-empty">{t('notifEmpty')}</p>}
+      {list.length ? list : <div class="empty"><Rings /><p class="hint" data-testid="notifications-empty">{t('notifEmpty')}</p></div>}
     </div>
   );
 }

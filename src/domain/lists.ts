@@ -5,6 +5,7 @@ import type { Point } from './estimates';
 import { SOURCE_WEIGHT } from './estimates';
 import type { DayKey } from './dates';
 import { quadrant, type Quadrant } from './tasks';
+import { onPage, type PlaceMap } from './places';
 
 type WithId<T> = T & { id: string };
 export type TaskW = WithId<Task>;
@@ -27,10 +28,13 @@ export interface Data {
 export const listOf = (a: unknown): string[] => (a == null || a === '' ? [] : Array.isArray(a) ? a.map(String) : [String(a)]);
 
 export const whereOf = (t: Pick<Task, 'where' | 'project'>, projects: ReadonlyMap<string, Pick<Project, 'where'>>): string => t.where || projects.get(t.project)?.where || 'any';
-/** On a place's page: its own steps plus everything marked Anywhere. */
-export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, projects: ReadonlyMap<string, Pick<Project, 'where'>>) => {
+/**
+ * On a place's page: its own steps plus everything marked Anywhere. With `places`, an area counts as its
+ * parent place (a step set to Heliopolis is on Cairo's page, and the other way round).
+ */
+export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, projects: ReadonlyMap<string, Pick<Project, 'where'>>, places?: PlaceMap) => {
   const w = whereOf(t, projects);
-  return w === 'any' || w === place;
+  return places ? onPage(places, w, place) : w === 'any' || w === place;
 };
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed;

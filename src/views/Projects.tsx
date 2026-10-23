@@ -1,7 +1,8 @@
 // Projects by suit (brief §5, Projects): the project editor with its SMART goal, steps in
 // order with what waits for what, linked decisions, progress bars, and the Completed shelf.
 import { useState } from 'preact/hooks';
-import { tasks, projects, settings, decisions, createDoc, toast, pagePlace } from '../app/store';
+import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace } from '../app/store';
+import { onPage } from '../domain/places';
 import { isOpen, inPlace, blocked, byOrder, waitingOn, type T } from '../app/model';
 import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
 import { openTask, PlaceSelect, placeName } from '../app/sheets';
@@ -210,7 +211,7 @@ export function Projects() {
   const page = pagePlace.value;
   let hidden = 0;
   const vis = projs.filter(p => {
-    const ok = scope.value === 'all' || !p.where || p.where === 'any' || p.where === page || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x));
+    const ok = scope.value === 'all' || !p.where || onPage(places.value, p.where, page) || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x));
     if (!ok) hidden++;
     return ok;
   });

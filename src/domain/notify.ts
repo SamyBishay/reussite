@@ -8,7 +8,7 @@ import { stillOnDue, withTime } from './calendar';
 import { addDays } from './dates';
 import { fit, predict } from './estimates';
 import { estPointsOf, isOpen } from './lists';
-import { whereNow } from './places';
+import { whereNow, zoneOfPlace } from './places';
 import { atOnDay, validZone, wallOf } from './zone';
 
 /** The words a notification can use; the app passes its `t`. */
@@ -101,7 +101,7 @@ function stillItems(data: NotifyState, s: NotifySettings, today: string, zone: s
  * `settings.notifyText`; `tr` supplies the words.
  */
 export function buildSchedule(data: NotifyState, now: number, s: NotifySettings, tr: Translate): ScheduleItem[] {
-  const zoneOf = (id: string) => data.places.get(id)?.timeZone;
+  const zoneOf = (id: string) => zoneOfPlace(data.places, id);
   const { today, here } = whereNow(new Date(now), s, zoneOf, data.stays.values());
   const titles = s.notifyText === 'titles';
   const events = agenda(data, s, addDays(today, -1), addDays(today, WINDOW_DAYS + 1));

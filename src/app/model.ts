@@ -10,6 +10,7 @@ import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
 import { greeting } from '../domain/greeting';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
+import { onPage } from '../domain/places';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
 
@@ -19,7 +20,7 @@ export const T = (id: string): T | undefined => tasks.value.get(id);
 // The rules themselves live in src/domain/lists.ts (the connector uses them too); these read the signals.
 export const whereOf = (t: T): string => L.whereOf(t, projects.value);
 /** On the page being viewed (or `place`): its own steps plus everything marked Anywhere. */
-export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value);
+export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value, places.value);
 /** An open work step: not a standing obligation, not a fixed commitment. */
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
 /** Obligations (standing, or a copy of one) never sit in the matrix or the planner's pool; their urgent and important flags are ignored. */
@@ -132,11 +133,11 @@ export const lastVisitOf = lastVisit;
 
 /** Addresses on a place's page (its own plus Anywhere), by name. */
 export const addressesIn = (place = pagePlace.value): A[] =>
-  [...addresses.value.values()].filter(a => a.placeId === 'any' || a.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+  [...addresses.value.values()].filter(a => onPage(places.value, a.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
 export const peopleIn = (place = pagePlace.value): P[] =>
-  [...people.value.values()].filter(p => p.placeId === 'any' || p.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+  [...people.value.values()].filter(p => onPage(places.value, p.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
 
 /** What the planner offers for a leisure obligation: up to three addresses in the current place (`place`), `category` narrowing them. */
-export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category }) : []);
+export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category, places: places.value }) : []);
 /** What the planner offers for a people obligation: up to three people in the current place, seen least recently first. */
-export const offerPeopleNow = (place = here.value): P[] => (addressesOn() ? offerPeople(people.value.values(), { place }) : []);
+export const offerPeopleNow = (place = here.value): P[] => (addressesOn() ? offerPeople(people.value.values(), { place, places: places.value }) : []);

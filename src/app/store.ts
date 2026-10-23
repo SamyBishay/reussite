@@ -7,7 +7,7 @@ import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange, type Address, type Person } from '../data/schema';
 import { normAddress, normDecision, normExchange, normNote, normPerson } from '../data/normalize';
-import { whereNow } from '../domain/places';
+import { whereNow, zoneOfPlace } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { writeMerged, type Write } from '../data/syncstore';
@@ -49,13 +49,13 @@ export const clockNow = now;
 const where = computed(() => {
   void now.value;
   const s = settings.value;
-  return whereNow(new Date(), s, id => places.value.get(id)?.timeZone, stays.value.values());
+  return whereNow(new Date(), s, id => zoneOfPlace(places.value, id), stays.value.values());
 });
 export const today = computed(() => where.value.today);
 /** The place the person is in now: the planner and reminders follow it. */
 export const here = computed(() => where.value.here);
 export const currentStay = computed(() => where.value.stay);
-export const hereZone = computed(() => places.value.get(here.value)?.timeZone);
+export const hereZone = computed(() => zoneOfPlace(places.value, here.value));
 
 /** The place page being looked at (brief §5): Today, Matrix, Projects and Calendar follow it. Device-local. */
 const viewed = signal<string | null>(null);

@@ -9,6 +9,7 @@ import {
 import { addDays } from '../../../src/domain/dates';
 import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
 import { findByName, norm } from '../../../src/domain/names';
+import { onPage } from '../../../src/domain/places';
 import type { View } from './view';
 
 export const MAX_LINES = 50;
@@ -106,7 +107,7 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
     if (status !== 'all' && t.status !== status) return false;
     if (q.quadrant && quadOf(t, d.today, d.urgencyDays) !== q.quadrant) return false;
     if (ids.project && t.project !== ids.project) return false;
-    if (ids.place) { const w = t.where || v.projects.get(t.project)?.where || 'any'; if (w !== 'any' && w !== ids.place) return false; }
+    if (ids.place) { const w = t.where || v.projects.get(t.project)?.where || 'any'; if (!onPage(v.places, w, ids.place)) return false; }
     if (q.dueFrom && !(t.due && t.due >= q.dueFrom)) return false;
     if (q.dueTo && !(t.due && t.due <= q.dueTo)) return false;
     if (words.length) {
@@ -132,7 +133,7 @@ export function taskText(v: View, t: TaskW): string {
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
     f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}` : null),
     f('where', t.where && t.where !== 'any' ? v.places.get(t.where)?.name ?? t.where : null),
-    f('starter', t.starter), f('resume', t.resume), f('note', t.note),
+    f('label', t.label), f('starter', t.starter), f('resume', t.resume), f('note', t.note),
     f('app', t.app), f('link', t.link), f('prompt', t.prompt),
     f('waiting on', listOf(t.after).map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`)),
     f('repeats', t.repeat), f('carried', t.carried || null), f('stuck', t.stalls || null), f('frictions', t.friction),

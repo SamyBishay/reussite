@@ -1,6 +1,7 @@
 // What the planner offers when it places a leisure or a people obligation (brief §5, Addresses and people).
 // Deterministic, never random: the same list gives the same three, so the person can trust what they see.
 import { norm } from './names';
+import { onPage, type PlaceMap } from './places';
 import type { Address, DayKey, Person, Visit } from '../data/schema';
 
 export const MAX_OFFERS = 3;
@@ -9,8 +10,8 @@ type WithId<T> = T & { id: string };
 type AddressLike = WithId<Pick<Address, 'name' | 'placeId' | 'category' | 'state' | 'visits'>>;
 type PersonLike = WithId<Pick<Person, 'name' | 'placeId' | 'lastSeen'>>;
 
-/** A place's page: its own entries plus everything marked Anywhere (the same rule as steps). */
-export const inPlace = (placeId: string, place: string) => placeId === 'any' || placeId === place;
+/** A place's page: its own entries plus everything marked Anywhere (the same rule as steps). With `places`, an area counts as its parent place. */
+export const inPlace = (placeId: string, place: string, places?: PlaceMap) => (places ? onPage(places, placeId, place) : placeId === 'any' || placeId === place);
 
 /** The most recent visit: the latest day, and among visits on one day the last one written. */
 export function lastVisit(a: Pick<Address, 'visits'>): Visit | null {
@@ -32,10 +33,10 @@ const byName = (a: { name: string; id: string }, b: { name: string; id: string }
  * An address that was been to and left at *maybe*, or with no word, is not offered either: the person did not
  * ask to see it again.
  */
-export function offerAddresses<A extends AddressLike>(all: Iterable<A>, o: { place: string; category?: string | null; max?: number }): A[] {
+export function offerAddresses<A extends AddressLike>(all: Iterable<A>, o: { place: string; category?: string | null; max?: number; places?: PlaceMap }): A[] {
   const tiers: [A[], A[]] = [[], []];
   for (const a of all) {
-    if (!inPlace(a.placeId, o.place) || (o.category && a.category !== o.category)) continue;
+    if (!inPlace(a.placeId, o.place, o.places) || (o.category && a.category !== o.category)) continue;
     const verdict = lastVisit(a)?.verdict;
     if (verdict === 'not-again') continue;
     if (verdict === 'again') tiers[0].push(a);
@@ -46,9 +47,9 @@ export function offerAddresses<A extends AddressLike>(all: Iterable<A>, o: { pla
 }
 
 /** Up to three people in a place, seen least recently first (never seen before any date), ties by name and then id. */
-export function offerPeople<P extends PersonLike>(all: Iterable<P>, o: { place: string; max?: number }): P[] {
+export function offerPeople<P extends PersonLike>(all: Iterable<P>, o: { place: string; max?: number; places?: PlaceMap }): P[] {
   return [...all]
-    .filter(p => inPlace(p.placeId, o.place))
+    .filter(p => inPlace(p.placeId, o.place, o.places))
     .sort((x, y) => cmp(x.lastSeen ?? '', y.lastSeen ?? '') || byName(x, y))
     .slice(0, o.max ?? MAX_OFFERS);
 }

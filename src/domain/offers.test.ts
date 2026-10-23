@@ -77,3 +77,15 @@ describe('visits and last seen', () => {
     expect(seenAfter('2026-10-20', '2026-10-10')).toBe('2026-10-20');
   });
 });
+
+describe('areas', () => {
+  const places = new Map<string, { parentId?: string | null }>([['cairo', {}], ['heli', { parentId: 'cairo' }], ['paris', {}]]);
+  it('an address or a person set to an area is offered in its parent place, and the other way round', () => {
+    const list = [addr('h', 'In the area', { placeId: 'heli' }), addr('c', 'In the city', { placeId: 'cairo' }), addr('p', 'Paris', { placeId: 'paris' })];
+    expect(ids(offerAddresses(list, { place: 'cairo', places }))).toEqual(['h', 'c']);
+    expect(ids(offerAddresses(list, { place: 'heli', places }))).toEqual(['h', 'c']);
+    expect(ids(offerAddresses(list, { place: 'cairo' }))).toEqual(['c']); // no places given: exact match as before
+    const ppl = [{ id: 'a', name: 'A', placeId: 'heli', lastSeen: null }, { id: 'b', name: 'B', placeId: 'paris', lastSeen: null }];
+    expect(ids(offerPeople(ppl, { place: 'cairo', places }))).toEqual(['a']);
+  });
+});

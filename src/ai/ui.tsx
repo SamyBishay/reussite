@@ -1,7 +1,8 @@
 // AI on screen: "Show me what's sent", the command box, "Ask any AI" and "Paste the reply".
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
-import { projects, decisions, stays, people, toast } from '../app/store';
+import { projects, decisions, stays, people, places, toast } from '../app/store';
+import { onPage } from '../domain/places';
 import { placeName } from '../app/sheets';
 import { t, lang, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
@@ -162,7 +163,7 @@ function TripAsk({ stayId }: { stayId: string }) {
   const pack = tripPack(stayId, q, { people: withPeople, drop: dropBase.value });
   const st = stays.value.get(stayId);
   if (!pack || !st) return <p class="hint">{t('tripGone')}</p>;
-  const n = [...people.value.values()].filter(p => p.placeId === st.placeId || p.placeId === 'any').length;
+  const n = [...people.value.values()].filter(p => onPage(places.value, p.placeId, st.placeId)).length;
   return (
     <div data-testid="trip-sheet">
       <h3>{t('tripTitle')}</h3>

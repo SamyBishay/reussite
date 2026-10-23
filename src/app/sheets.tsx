@@ -489,12 +489,42 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
     <form onSubmit={submit} data-testid="task-sheet">
       <h3><Title s={tk.title} /></h3>
       <p class="hint">{t(hint)}</p>
-      {inPlan && open && (
-        <div class="actions" style="margin-top:12px">
-          <button class="btn small" type="button" onClick={() => { void movePlan(id, -1); closeSheet(); }}>{t('earlier')}</button>
-          <button class="btn small" type="button" onClick={() => { void movePlan(id, 1); closeSheet(); }}>{t('later')}</button>
-        </div>
-      )}
+      <div class="actionbar" data-testid="task-actions">
+        <button class="btn small primary" type="submit">{t('save')}</button>
+        {draft ? null : tk.template ? (
+          <button class="btn small" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
+        ) : open ? (
+          <>
+            {inPlan
+              ? <button class="btn small" type="button" onClick={() => { void removeToday(id); closeSheet(); }}>{t('takeOffToday')}</button>
+              : <button class="btn small" type="button" onClick={() => { void addToday(id); closeSheet(); }}>{t('addToToday')}</button>}
+            <button class="btn small" type="button" onClick={() => openDone(id)}>{t('markDone')}</button>
+            <button class="btn small" type="button" onClick={() => openDoneOn(id)}>{t('doneOn')}</button>
+          </>
+        ) : (
+          <button class="btn small" type="button" onClick={() => { void reopen(id); closeSheet(); }}>{t('reopen')}</button>
+        )}
+        {inPlan && open && (
+          <>
+            <button class="btn small" type="button" onClick={() => { void movePlan(id, -1); closeSheet(); }}>{t('earlier')}</button>
+            <button class="btn small" type="button" onClick={() => { void movePlan(id, 1); closeSheet(); }}>{t('later')}</button>
+          </>
+        )}
+        {open && !tk.template && !draft && (
+          <>
+            <button class="btn small" type="button" onClick={() => openMove(id)}>{t('moveTo')}</button>
+            <button class="btn small" type="button" onClick={() => flows.breakDown(id)}>{t('breakItDown')}</button>
+            {tk.kind === 'decision' && <button class="btn small" type="button" onClick={() => flows.decide(null, { taskId: id })}>{t('openDecision')}</button>}
+            {tk.repeat && <button class="btn small" type="button" onClick={() => { void skipThisTime(id); closeSheet(); toast(t('skipped')); }}>{t('skipThisTime')}</button>}
+            {tk.repeat && <button class="btn small ghost" type="button" onClick={() => { void stopRepeating(id); closeSheet(); }}>{t('stopRepeating')}</button>}
+          </>
+        )}
+        {tk.status !== 'dropped' && !draft && (
+          <button class="btn ghost small" type="button" onClick={() => { if (!armed) return setArmed(true); void dropTask(id); closeSheet(); toast(t('dropped')); }}>
+            {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
+          </button>
+        )}
+      </div>
       <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
       {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => setAtV(seen.at)}>{t('setTimeHint', { t: seen.at })}</button></p>}
       <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
@@ -577,38 +607,6 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
       )}
       {(spent > 0 || sessionsOf(id).length > 0 || tk.status === 'done') && <Sessions tk={tk} />}
       {spent > 0 && <p class="hint" style="margin-top:10px">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
-      <div class="actions">
-        <button class="btn primary" type="submit">{t('save')}</button>
-        {draft ? null : tk.template ? (
-          <button class="btn" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
-        ) : open ? (
-          <>
-            {inPlan
-              ? <button class="btn" type="button" onClick={() => { void removeToday(id); closeSheet(); }}>{t('takeOffToday')}</button>
-              : <button class="btn" type="button" onClick={() => { void addToday(id); closeSheet(); }}>{t('addToToday')}</button>}
-            <button class="btn" type="button" onClick={() => openDone(id)}>{t('markDone')}</button>
-            <button class="btn" type="button" onClick={() => openDoneOn(id)}>{t('doneOn')}</button>
-          </>
-        ) : (
-          <button class="btn" type="button" onClick={() => { void reopen(id); closeSheet(); }}>{t('reopen')}</button>
-        )}
-      </div>
-      {open && !tk.template && !draft && (
-        <div class="actions" style="margin-top:8px">
-          <button class="btn small" type="button" onClick={() => openMove(id)}>{t('moveTo')}</button>
-          <button class="btn small" type="button" onClick={() => flows.breakDown(id)}>{t('breakItDown')}</button>
-          {tk.kind === 'decision' && <button class="btn small" type="button" onClick={() => flows.decide(null, { taskId: id })}>{t('openDecision')}</button>}
-          {tk.repeat && <button class="btn small" type="button" onClick={() => { void skipThisTime(id); closeSheet(); toast(t('skipped')); }}>{t('skipThisTime')}</button>}
-          {tk.repeat && <button class="btn small ghost" type="button" onClick={() => { void stopRepeating(id); closeSheet(); }}>{t('stopRepeating')}</button>}
-        </div>
-      )}
-      {tk.status !== 'dropped' && !draft && (
-        <div class="actions" style="margin-top:8px">
-          <button class="btn ghost small" type="button" onClick={() => { if (!armed) return setArmed(true); void dropTask(id); closeSheet(); toast(t('dropped')); }}>
-            {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
-          </button>
-        </div>
-      )}
     </form>
   );
 }

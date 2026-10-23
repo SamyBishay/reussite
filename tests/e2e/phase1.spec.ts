@@ -261,3 +261,17 @@ test('a standing obligation is not in the four quadrants: it is on the Obligatio
   await ob.locator('summary').click();
   await expect(ob).toContainText('scanned receipts');
 });
+
+test('a card’s actions are in a bar at the top of its sheet, which stays in view while the fields scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 560 });
+  await importSample(page);
+  await page.getByTestId('tab-matrix').click();
+  await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
+  const bar = sheet(page).getByTestId('task-actions');
+  await expect(bar.getByRole('button', { name: 'Save' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Mark done' })).toBeVisible();
+  await sheet(page).evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(bar.getByRole('button', { name: 'Save' })).toBeInViewport();
+  const [b, s] = await Promise.all([bar.boundingBox(), sheet(page).boundingBox()]);
+  expect(b!.y - s!.y).toBeLessThan(4);
+});

@@ -670,3 +670,7 @@ textarea.mono{letter-spacing:.04em}
 .manual .shot-alt{color:var(--ink-3);font-size:14px}
 .manual .lnk.wrap{white-space:normal}
 .manual .man-nav{margin:14px 0}
+
+/* The task sheet's actions: a bar under the title that stays in view while the fields scroll under it. */
+.sheet .actionbar{position:sticky;top:-20px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;margin:10px -16px 6px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.sheet .actionbar>*{min-width:0}

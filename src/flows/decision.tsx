@@ -10,7 +10,7 @@ import { openDone, showMoment } from '../app/sheets';
 import { celebrate } from '../app/celebrate';
 import { SmartEditor } from '../app/smart';
 import { DayPick } from '../app/due';
-import { t, fmtDate, fmtMin, type Key } from '../i18n';
+import { t, fmtDate, fmtIfDay, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
 import { COLUMNS, score, ranked, tooClose, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
@@ -446,7 +446,7 @@ function Page({ id, check }: { id: string; check: boolean }) {
       {d.mustBeTrue && <p class="meta">{t('mustBeTrue')}: {d.mustBeTrue}</p>}
       {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}</p>}
       {Object.values(d.problem).some(Boolean) && (
-        <dl class="problem">{PROBLEM.filter(([k]) => d.problem[k]).map(([k, label]) => <><dt>{t(label)}</dt><dd>{d.problem[k]}</dd></>)}</dl>
+        <dl class="problem">{PROBLEM.filter(([k]) => d.problem[k]).map(([k, label]) => <><dt>{t(label)}</dt><dd>{k === 'deadline' ? fmtIfDay(d.problem[k]) : d.problem[k]}</dd></>)}</dl>
       )}
       <h2 class="sec">{t('dwScores')}</h2>
       <Bars d={d} />

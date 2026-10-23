@@ -5,7 +5,7 @@ import { openSheet, closeSheet, suitName } from '../app/ui';
 import { placeName, weekdayNames } from '../app/sheets';
 import { projects, tasks, toast, readOnly } from '../app/store';
 import { categoryLabel } from '../app/AddressSheets';
-import { t, fmtDate, fmtMin, type Key } from '../i18n';
+import { t, fmtDate, fmtIfDay, fmtMin, type Key } from '../i18n';
 import { planChanges, applyPlanned, createsNote, isRef, type Plan, type Planned } from './apply';
 import { recordWrites } from '../app/store';
 import { appWriter, snapshot, gen } from './writer';
@@ -58,8 +58,9 @@ function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () =>
           {it.diffs.map(d => {
             if (d.field === 'line' && d.after === undefined) return <span class="diff">{t('chgForget')}: <s>{fmt('line', d.before, refs)}</s></span>;
             const f = d.field.startsWith('problem.') ? 'problem' : d.field;
+            const show = (v: unknown) => (d.field === 'problem.deadline' && typeof v === 'string' && v ? fmtIfDay(v) : fmt(f, v, refs));
             const label = (FIELD[f] ? t(FIELD[f]) : f) + (f === 'problem' ? ' · ' + d.field.slice(8) : '');
-            return <span class="diff">{label}: {d.before !== undefined && it.kind !== 'create' ? <>{fmt(f, d.before, refs)} → </> : null}<b>{fmt(f, d.after, refs)}</b></span>;
+            return <span class="diff">{label}: {d.before !== undefined && it.kind !== 'create' ? <>{show(d.before)} → </> : null}<b>{show(d.after)}</b></span>;
           })}
         </span>
       </label>

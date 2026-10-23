@@ -37,7 +37,7 @@ beforeAll(async () => {
   d.add('tasks', 't5', task('Old thing', { status: 'done', doneDay: day(-3), est0: 10, est: 10 }));
   d.add('tasks', 't6', task('Choir rehearsal', { at: '19:00', dur: 90, due: TODAY }));
   d.add('sessions', 's1', { taskId: 't5', d: day(-3), m: 14, why: 'done', at: '2026-10-16T10:00:00.000Z', source: 'timer' });
-  d.add('days', TODAY, { date: TODAY, plan: ['t1', 't3'], launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }], first: null, checkin: null, closed: null, summary: null });
+  d.add('days', TODAY, { date: TODAY, plan: ['t1', 't3'], launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }], areas: [{ half: 'pm', placeId: 'pl1' }], first: null, checkin: null, closed: null, summary: null });
   d.add('days', day(-1), { date: day(-1), plan: ['t2', 't4'], launches: [], first: null, checkin: null, closed: null, summary: null });
   const line = (id: string, text: string) => ({ id, text, at: '2026-10-01T00:00:00.000Z', by: 'me' });
   d.add('memory', 'm0', { kind: 'profile', name: 'Me', aliases: [], lines: [line('l1', 'Works best in the morning')], private: false, updated: '2026-10-02T00:00:00.000Z' });
@@ -80,6 +80,7 @@ describe('reading', () => {
     expect(r.text.indexOf('1. t1')).toBeLessThan(r.text.indexOf('2. t3'));
     expect(r.text).toMatch(/estimated 20m/);
     expect(r.text).toContain('Launch points: 09:30 start, 14:00 restart');
+    expect(r.text).toContain('Half days: afternoon in Paris');
     expect(r.text).toContain('Fixed times:\n19:00 (1h30) t6 | Choir rehearsal');
     expect(r.text).toContain("Carried from yesterday, not on today's list yet (2)");
   });

@@ -5,8 +5,8 @@ import { useState } from 'preact/hooks';
 import { pagePlace, people, addresses, readOnly } from '../app/store';
 import { addressesIn, peopleIn, addressesOn, lastVisitOf, type A, type P } from '../app/model';
 import { ExtLink } from '../app/ui';
-import { placeIds, placeName } from '../app/sheets';
-import { openNewAddress, openAddress, openNewPerson, openPerson, categoryLabel, reachLabel, VERDICT_KEY } from '../app/AddressSheets';
+import { placeName, placeOptions } from '../app/sheets';
+import { openNewAddress, openAddress, openNewPerson, openPerson, openPersonPage, categoryLabel, reachLabel, VERDICT_KEY } from '../app/AddressSheets';
 import { openTakeout } from '../app/TakeoutSheet';
 import { go } from '../app/nav';
 import { isAllowedLink } from '../domain/links';
@@ -47,6 +47,7 @@ function PersonRow({ p, showPlace }: { p: P; showPlace: boolean }) {
         </p>
       </div>
       <div class="go">
+        <button type="button" class="btn small" onClick={() => openPersonPage(p.id)} data-testid="person-page-open">{t('personPage')}</button>
         {p.reach && isAllowedLink(p.reach) && <ExtLink href={p.reach} class="btn small" testid="person-reach-open">{reachLabel(p.reach)}</ExtLink>}
       </div>
     </li>
@@ -80,7 +81,7 @@ export function Addresses() {
       </div>
       <label class="field"><span>{t('addrShowing')}</span>
         <select value={scope} onChange={e => setScope((e.target as HTMLSelectElement).value)} data-testid="addr-scope">
-          {[...placeIds(), 'any'].map(id => <option value={id}>{placeName(id)}</option>)}
+          {placeOptions()}
           <option value={ALL}>{t('addrEverywhere')}</option>
         </select>
       </label>

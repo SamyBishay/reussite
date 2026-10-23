@@ -12,6 +12,7 @@ import { addDays } from '../domain/dates';
 import { weekOf } from '../domain/calendar';
 import { addToCalendar } from '../app/addToCalendar';
 import type { GridProps } from './CalendarGrid';
+import { AreaChips } from '../app/AreaUi';
 
 const anchor = signal<string | null>(null);
 
@@ -68,6 +69,7 @@ export function Calendar() {
         <button class="btn small ghost" type="button" data-testid="ics-today" onClick={() => void addToCalendar(td, td)}>{t('addToCalendarToday')}</button>
         <button class="btn small ghost" type="button" data-testid="ics-week" onClick={() => void addToCalendar(week[0]!, week[6]!)}>{t('addToCalendarWeek')}</button>
       </div>
+      <AreaChips view="calendar" />
       <p class="hint">{t(phone ? 'calHintPhone' : 'calHint')}</p>
       {Grid ? <Grid mode={m as Exclude<CalMode, 'log'>} date={shown} /> : <p class="hint" data-testid="calendar-loading">{t('loading')}</p>}
     </div>

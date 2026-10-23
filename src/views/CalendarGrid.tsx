@@ -24,6 +24,7 @@ import { t, lang } from '../i18n';
 import { addDays } from '../domain/dates';
 import { appSlot, calViewEvents, type CalViewEvent } from '../domain/calView';
 import { isoDow } from '../domain/repeat';
+import { areaFilter } from '../app/areas';
 
 export type GridMode = Exclude<CalMode, 'log'>;
 
@@ -47,6 +48,7 @@ function labelOf(e: CalViewEvent): string {
     case 'project': return t('projectDue', { name: e.title });
     case 'review': return t('sundayReview');
     case 'repeat': return '↻ ' + e.title;
+    case 'half': return t('halfIn', { half: t(e.half === 'am' ? 'halfAm' : 'halfPm'), area: e.title });
     default: return e.title;
   }
 }
@@ -139,7 +141,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
       const [from, to] = windowAround(latest.current.date);
       const evs = calViewEvents(
         { tasks: tasks.value, days: days.value, decisions: decisions.value, projects: projects.value, places: places.value, stays: stays.value, addresses: addresses.value },
-        { today: today.value, dayStart: settings.value.dayStart, reviewDay: settings.value.reviewDay, onPage: x => inPlace(x) },
+        { today: today.value, dayStart: settings.value.dayStart, reviewDay: settings.value.reviewDay, onPage: x => inPlace(x), area: areaFilter('calendar') },
         from, to,
       );
       byId.clear();

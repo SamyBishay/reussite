@@ -2,11 +2,12 @@
 // page with its visits, the one-screen after-visit note, a person. Reads the signals live; writes through
 // actions.ts. Nothing here is sent anywhere.
 import { useRef, useState } from 'preact/hooks';
-import { here, readOnly, toast, today } from './store';
+import { here, readOnly, toast, today, tasks } from './store';
 import { addressById, categories, categoryName, personById, type A } from './model';
 import { createAddress, editAddress, removeAddress, recordVisit, editVisit, createPerson, editPerson, removePerson } from './actions';
-import { openSheet, closeSheet, ExtLink } from './ui';
-import { PlaceSelect } from './sheets';
+import { openSheet, closeSheet, ExtLink, Title } from './ui';
+import { PlaceSelect, openTask, placeName } from './sheets';
+import { stepsOfPerson } from '../domain/people';
 import { t, fmtDate, type Key } from '../i18n';
 import { isAllowedLink } from '../domain/links';
 import { readShared, urlIn } from '../domain/mapsLink';
@@ -249,6 +250,32 @@ export function openNewPerson(place: string = here.value) {
 }
 export function openPerson(id: string) {
   openSheet(<PersonSheet key={id + Date.now()} id={id} place={here.value} />);
+}
+
+/** A person's page: what is open with them (steps that go to them or name them) and where they are. */
+export function openPersonPage(id: string) {
+  openSheet(<PersonPage key={'pp' + id + Date.now()} id={id} />);
+}
+
+function PersonPage({ id }: { id: string }) {
+  const p = personById(id);
+  if (!p) return null;
+  const steps = stepsOfPerson({ id, name: p.name }, tasks.value.values());
+  return (
+    <div data-testid="person-page" class="personpage">
+      <h3>{t('personPageTitle', { name: p.name })}</h3>
+      <p class="hint">{t('personArea', { place: placeName(p.placeId) })} · {p.lastSeen ? t('personSeenOn', { date: fmtDate(p.lastSeen, { day: 'numeric', month: 'short', year: 'numeric' }) }) : t('personNotSeen')}</p>
+      <p class="hint">{t('personPageHint')}</p>
+      {!steps.length && <p class="hint" data-testid="person-page-empty">{t('personPageEmpty', { name: p.name })}</p>}
+      <ul class="picklist">{steps.map(({ step, via }) => (
+        <li data-testid="person-page-step"><div>
+          <button type="button" class="linklike" onClick={() => openTask(step.id)}><b><Title s={step.title} /></b></button>
+          <p class="meta">{[step.due ? fmtDate(step.due, { weekday: 'short', day: 'numeric', month: 'short' }) + (step.at ? ' ' + step.at : '') : '', t(via === 'linked' ? 'personLinked' : 'personNamed')].filter(Boolean).join(' · ')}</p>
+        </div></li>
+      ))}</ul>
+      <div class="actions"><button class="btn" type="button" onClick={() => openPerson(id)}>{t('edit')}</button></div>
+    </div>
+  );
 }
 
 function PersonSheet({ id, place }: { id: string | null; place: string }) {

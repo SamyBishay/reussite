@@ -92,6 +92,7 @@ export function dayText(v: View, k: string): string {
 
   const launches = day?.launches ?? [];
   if (launches.length) L.push('Launch points: ' + launches.map(l => `${l.t} ${l.k}${l.n ? ' (' + oneLine(l.n) + ')' : ''}`).join(', '));
+  if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
   const fixed = fixedOn(d, k);
   if (fixed.length) L.push('Fixed times:\n' + fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`).join('\n'));
   if (isToday) {

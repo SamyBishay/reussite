@@ -1,7 +1,9 @@
 // The place switcher (brief §5): look at another place's page without moving there, or say you're there.
-import { settings, saveSettings, here, pagePlace, viewPlace } from './store';
+import { settings, saveSettings, here, pagePlace, viewPlace, places } from './store';
+import { AreaEditor } from './AreaUi';
+import { areasOnPage, placeRows } from '../domain/areas';
 import { openSheet, closeSheet } from './ui';
-import { placeIds, placeName } from './sheets';
+import { placeName } from './sheets';
 import { addPlace } from './actions';
 import { t } from '../i18n';
 
@@ -22,8 +24,9 @@ function PlacesSheet() {
     <div data-testid="places-sheet">
       <h3>{t('placesTitle')}</h3>
       <p class="hint">{t('placesSheetHint', { place: placeName(here.value) })}</p>
-      <ul class="picklist">{[...placeIds(), 'any'].map(id => (
-        <li><div><p>{placeName(id)}{id === here.value && <> <span class="tag today">{t('youAreHere')}</span></>}{id === pagePlace.value && id !== here.value && <> <span class="tag">{t('viewing')}</span></>}</p></div>
+      <ul class="picklist">{[...placeRows(places.value).filter(r => !r.area).map(r => r.id), 'any'].map(id => (
+        <li><div><p>{placeName(id)}{id === here.value && <> <span class="tag today">{t('youAreHere')}</span></>}{id === pagePlace.value && id !== here.value && <> <span class="tag">{t('viewing')}</span></>}</p>
+          {id !== 'any' && <details class="more"><summary>{t('areasOf', { place: placeName(id) })} · {areasOnPage(places.value, id).length}</summary><AreaEditor placeId={id} /></details>}</div>
           <div class="go">
             <button class="btn small" type="button" disabled={pagePlace.value === id} onClick={() => { viewPlace(id); closeSheet(); }}>{t('viewPage')}</button>
             <button class="btn small" type="button" disabled={settings.value.here === id && here.value === id} onClick={() => { void saveSettings({ here: id }); viewPlace(null); closeSheet(); }}>{t('imHere')}</button>

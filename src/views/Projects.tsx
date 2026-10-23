@@ -15,6 +15,10 @@ import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Task } from '../data/schema';
 import { useSortable, GRIP } from '../app/sortable';
+import { groupByArea } from '../domain/areas';
+import { AreaTag } from '../app/AreaUi';
+import { areaOfStep } from '../app/areas';
+import { areaName } from '../app/sheets';
 import { CommandBox } from '../ai/ui';
 
 type P = Project & { id: string };
@@ -31,6 +35,7 @@ function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: bo
       <span class={'g suit-' + tk.suit} aria-hidden="true">{tk.template ? '↻' : done ? '✓' : '·'}</span>
       <span class="stept">
         <button class="linklike" type="button" onClick={() => openTask(tk.id)}><Title s={tk.title} /></button>
+        {!done && areaOfStep(tk) && <> <AreaTag id={areaOfStep(tk)!} /></>}
         {!done && w && <small class="muted"> · {t('waitsFor', { what: w.title.length > 30 ? w.title.slice(0, 28) + '…' : w.title })}</small>}
       </span>
       <span class="stepctl">
@@ -228,7 +233,12 @@ export function Projects() {
         if (!ps.length) return null;
         return (
           <section class="suitsec"><h3><Suit s={s} /> {suitName(s)}</h3>
-            <div class="projs">{ps.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
+            {groupByArea(ps, p => p.where || 'any', places.value, page).map((g, i, all) => (
+              <>
+                {all.length > 1 && (g.area ? <h4 class="areahead" data-testid="area-head">{areaName(g.area)}</h4> : i > 0 && <h4 class="areahead">{t('areaOther')}</h4>)}
+                <div class="projs">{g.items.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
+              </>
+            ))}
           </section>
         );
       })}

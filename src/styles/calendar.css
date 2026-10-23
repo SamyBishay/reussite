@@ -40,6 +40,7 @@
 .sxhost .sx__event.is-done{opacity:.7}
 .sxhost .sx__event.is-done .sx__date-grid-event-text,.sxhost .sx__event.is-done .sx__month-grid-event-title,.sxhost .sx__event.is-done .sx__list-event-title{text-decoration:line-through;color:var(--ink-3)}
 .sxhost .sx__event.k-repeat{opacity:.55;font-weight:400}
+.sxhost .sx__event.k-half{font-weight:600;font-size:11.5px}
 .sxhost .sx__event.k-stay{background:var(--sea-soft);color:var(--sea-deep);font-weight:600}
 .sxhost .sx__event.k-check,.sxhost .sx__event.k-project,.sxhost .sx__event.k-review{font-weight:600}
 .sxhost .sx__event.k-check{background:var(--accent-soft)}

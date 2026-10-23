@@ -18,3 +18,9 @@ export function findByName(value: string, pool: Named[]): Found {
   if (pre.length > 1) return { many: pre };
   return { none: true };
 }
+
+/** Whether `text` has `name` in it as whole words, ignoring case, accents and punctuation ("Ibrahim's" and "d'Ibrahim" both have Ibrahim). A one-letter name is in nothing. */
+export function mentions(text: string, name: string): boolean {
+  const k = norm(name);
+  return k.length >= 2 && (' ' + norm(text) + ' ').includes(' ' + k + ' ');
+}

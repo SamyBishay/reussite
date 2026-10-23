@@ -1,5 +1,5 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
-import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, db, newId, type WithId } from './store';
+import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, type T as Tk } from './model';
 import { projects } from './store';
 import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
@@ -7,6 +7,7 @@ import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
+import { parentProblem } from '../domain/places';
 import { nextHeads } from '../domain/chains';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
@@ -295,6 +296,32 @@ export async function addPlace(name: string): Promise<string> {
   const same = [...places.value.values()].find(p => p.name.toLowerCase() === n.toLowerCase());
   if (same) return same.id;
   return createDoc<Place>('places', { name: n, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, order: places.value.size });
+}
+
+/** An area of a place (Cairo → Heliopolis): a place that has a parent. One level; the same name under the same place is the same area. Returns its id, or null when the parent can not hold areas. */
+export async function addArea(parentId: string, name: string): Promise<string | null> {
+  const n = name.trim();
+  if (!n || parentProblem(places.value, null, parentId)) return null;
+  const same = [...places.value.values()].find(p => p.parentId === parentId && p.name.toLowerCase() === n.toLowerCase());
+  if (same) return same.id;
+  const parent = places.value.get(parentId)!;
+  return createDoc<Place>('places', { name: n, timeZone: parent.timeZone, order: places.value.size, parentId });
+}
+/**
+ * Take an area away (a tombstone). What was set to it goes back to its place, so nothing falls off every page: steps, projects,
+ * addresses, people, stays, the current place, and a half day spent there is cleared.
+ */
+export async function removeArea(id: string): Promise<void> {
+  const area = places.value.get(id), up = area?.parentId;
+  if (!area || !up || !places.value.has(up)) return;
+  for (const x of tasks.value.values()) if (x.where === id) await patchTask(x.id, { where: up });
+  for (const x of projects.value.values()) if (x.where === id) await patchProject(x.id, { where: up });
+  for (const x of addresses.value.values()) if (x.placeId === id) await update<Address>('addresses', x.id, { placeId: up });
+  for (const x of people.value.values()) if (x.placeId === id) await update<Person>('people', x.id, { placeId: up });
+  for (const x of stays.value.values()) if (x.placeId === id) await update<Stay>('stays', x.id, { placeId: up });
+  for (const d of days.value.values()) if (d.areas?.some(a => a.placeId === id)) await update<Day>('days', d.date, { areas: d.areas.filter(a => a.placeId !== id) });
+  if (settings.value.here === id) await saveSettings({ here: up });
+  await removeDoc('places', id);
 }
 export async function saveStay(id: string | null, s: Stay): Promise<string> {
   const sid = id ?? await createDoc<Stay>('stays', s);

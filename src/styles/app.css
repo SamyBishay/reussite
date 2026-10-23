@@ -659,3 +659,13 @@ body > .row,body > li{list-style:none}
 .chain-list li{color:var(--ink-3);overflow-wrap:anywhere}
 .chain-list .linklike{color:var(--ink-3);text-align:left}
 .proj li.waiting .stept{color:var(--ink-3)}
+
+/* ---------- phase 4b: areas ---------- */
+.areachips{margin:10px 0 0}
+.tag.area{background:var(--sea-soft);color:var(--sea-deep)}
+.areaeditor{margin:6px 0 12px 12px;padding-left:10px;border-left:2px solid var(--line)}
+.areahint{margin:0 0 6px}
+.arearow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-top:6px}
+.areahead{margin:16px 0 4px;font:700 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.personpage li small{display:block}
+.halflabel{align-self:center;min-width:6.5em;font:600 13px var(--mono);color:var(--ink-2)}

@@ -7,7 +7,8 @@ import { addDays, type DayKey } from './dates';
 import { DEFAULT_FIXED_MINUTES } from './ics';
 import { shortLabel } from './label';
 import { chainIndex, isWaiting } from './chains';
-import { fixedOn, isOpen, rawPlan } from './lists';
+import { fixedOn, isOpen, rawPlan, whereOf } from './lists';
+import { inArea, type Half } from './areas';
 import { locationOf } from './calItems';
 import { isoDow, occurrences } from './repeat';
 
@@ -29,9 +30,11 @@ export interface CalViewOptions {
   reviewDay: number;
   /** Whether a step is on the page being viewed (its place, or Anywhere); due steps and repeat markers follow it. */
   onPage: (t: WithId<Task>) => boolean;
+  /** Narrowed to one area: its steps and Anywhere's, and the half days spent there. Every step on the calendar follows it. */
+  area?: string | null;
 }
 
-export type CalViewKind = 'fixed' | 'plan' | 'due' | 'done' | 'check' | 'project' | 'review' | 'repeat' | 'stay';
+export type CalViewKind = 'fixed' | 'plan' | 'due' | 'done' | 'check' | 'project' | 'review' | 'repeat' | 'stay' | 'half';
 
 export interface CalViewEvent {
   /** Unique in a view: `<kind>:<id>:<day>`. */
@@ -55,6 +58,8 @@ export interface CalViewEvent {
   /** The address or the place, short. */
   where?: string;
   suit?: SuitId;
+  /** A half day spent in an area: `title` is the area's name. */
+  half?: Half;
   done?: boolean;
   /** Can be dragged: planned and due steps, cards played, and fixed-time steps not yet done. */
   movable: boolean;
@@ -140,6 +145,11 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
     for (const p of data.projects.values()) if (p.due === k && p.status === 'active') out.push({ id: `project:${p.id}:${k}`, kind: 'project', day: k, date: k, projectId: p.id, title: p.name, movable: false });
     if (isoDow(k) === o.reviewDay) out.push({ id: `review:${k}`, kind: 'review', day: k, date: k, title: '', movable: false });
     for (const t of repeats.get(k) ?? []) out.push(task('repeat', t, k));
+    for (const a of data.days.get(k)?.areas ?? []) {
+      const name = data.places.get(a.placeId)?.name;
+      if (name && (!o.area || o.area === a.placeId)) out.push({ id: `half:${a.half}:${k}`, kind: 'half', day: k, date: k, half: a.half, title: name, movable: false });
+    }
   }
-  return out;
+  // Narrowed to an area: a step shows if it is set to the area or to Anywhere.
+  return o.area ? out.filter(e => !e.taskId || inArea(whereOf(data.tasks.get(e.taskId)!, data.projects), o.area!)) : out;
 }

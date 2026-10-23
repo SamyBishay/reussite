@@ -121,4 +121,30 @@ describe('where a time is drawn', () => {
     expect(endClock('09:00', null)).toBe('10:00');
     expect(endClock('23:30', 120)).toBe('23:59');
   });
+
+  describe('areas', () => {
+    const heli = { ...place('heli', 'Europe/Paris'), name: 'Heliopolis', parentId: 'cairo' };
+    const world = () => data({
+      places: [place('paris', 'Europe/Paris'), place('cairo', 'Africa/Cairo'), heli],
+      tasks: [task('h', { title: 'Buy the sim', where: 'heli', due: '2026-10-22' }), task('c', { title: 'Renew the visa', where: 'cairo', due: '2026-10-22' }), task('a', { title: 'Call home', where: 'any', due: '2026-10-22' })],
+      days: [day('2026-10-22', { areas: [{ half: 'pm', placeId: 'heli' }] })],
+    });
+    const ids = (evs: ReturnType<typeof calViewEvents>) => evs.map(e => e.kind + ':' + (e.taskId ?? e.title));
+
+    it('shows a half day as a label on the day, with the area’s name', () => {
+      const evs = calViewEvents(world(), opts(), '2026-10-22', '2026-10-22');
+      expect(evs.find(e => e.kind === 'half')).toMatchObject({ half: 'pm', title: 'Heliopolis', day: '2026-10-22', movable: false });
+      expect(ids(evs)).toContain('due:c');
+    });
+
+    it('narrowed to an area, keeps that area’s steps and Anywhere’s, not the place’s own', () => {
+      const evs = calViewEvents(world(), opts({ area: 'heli' }), '2026-10-22', '2026-10-22');
+      expect(ids(evs).sort()).toEqual(['due:a', 'due:h', 'half:Heliopolis']);
+    });
+
+    it('narrowed to another area, a half day spent elsewhere is not shown', () => {
+      const evs = calViewEvents(world(), opts({ area: 'maadi' }), '2026-10-22', '2026-10-22');
+      expect(evs.some(e => e.kind === 'half')).toBe(false);
+    });
+  });
 });

@@ -21,7 +21,8 @@ import { stillOnDue, minutesBetween } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { deriveLabel } from '../domain/label';
-import { dueBeforeEnd } from '../domain/places';
+import { dueBeforeEnd, isArea } from '../domain/places';
+import { placePath, placeRows } from '../domain/areas';
 import { SUIT_ORDER } from '../data/settings';
 import { OfferChips, offerFieldsFor, type OfferChoice } from './OfferChips';
 import type { Project, Repeat, Session, Task } from '../data/schema';
@@ -30,8 +31,12 @@ import type { Quadrant } from '../domain/tasks';
 const rankOf = (n: number) => (n <= 0 ? '' : n <= 13 ? ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][n]! : 'K+');
 export { rankOf };
 
-export const placeName = (id: string) => (id === 'any' ? t('anywhere') : places.value.get(id)?.name ?? id);
-export const placeIds = () => [...places.value.values()].sort(byOrder).map(p => p.id);
+/** A place's name; an area's as "Cairo › Heliopolis". */
+export const placeName = (id: string) => (id === 'any' ? t('anywhere') : placePath(places.value, id));
+/** An area's own name, for a heading or a tag next to its place. */
+export const areaName = (id: string) => places.value.get(id)?.name ?? id;
+/** Every place and area, a place followed by its areas (the order of a select). */
+export const placeIds = () => placeRows(places.value).map(r => r.id);
 const hm = (d: Date) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 
 /** A short-lived banner for the biggest moments (a finished project, a decision made). */
@@ -253,6 +258,12 @@ function SessionSheet({ taskId, sessionId }: { taskId: string; sessionId: string
   );
 }
 
+/** The places for a select: each followed by its areas, indented ("Cairo › Heliopolis"), then Anywhere. */
+export const placeOptions = () => [
+  ...placeRows(places.value).map(r => <option value={r.id}>{(r.area ? '\u00a0\u00a0\u00a0' : '') + placeName(r.id)}</option>),
+  <option value="any">{placeName('any')}</option>,
+];
+
 // ---------- place field (a new name creates the place) ----------
 export function PlaceSelect({ value, onChange, name }: { value: string; onChange: (v: string) => void; name?: string }) {
   const [adding, setAdding] = useState(false);
@@ -269,7 +280,7 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
   }
   return (
     <select name={name} value={value} onChange={e => { const v = (e.target as HTMLSelectElement).value; if (v === '__new') setAdding(true); else onChange(v); }}>
-      {[...placeIds(), 'any'].map(p => <option value={p}>{placeName(p)}</option>)}
+      {placeOptions()}
       <option value="__new">{t('newPlaceOption')}</option>
     </select>
   );
@@ -356,14 +367,18 @@ function AfterField({ id, value, onChange }: { id: string; value: string[]; onCh
 }
 
 /** "Goes to": the address or the person this step feeds, from the lists of its place (and Anywhere). A link to one that is gone stays selectable. */
-function FeedsField({ where, value, onChange }: { where: string; value: string; onChange: (v: string) => void }) {
+function FeedsField({ where, value, onChange, onWhere }: { where: string; value: string; onChange: (v: string) => void; onWhere: (v: string) => void }) {
   // A step marked Anywhere takes the lists of where the person is now (and Anywhere's own).
   const place = where === 'any' ? here.value : where;
   const addrs = addressesIn(place), folks = peopleIn(place);
   const gone = value && !addrs.some(a => 'a:' + a.id === value) && !folks.some(p => 'p:' + p.id === value);
   const goneName = value.startsWith('a:') ? addressById(value.slice(2))?.name : personById(value.slice(2))?.name;
   if (!addrs.length && !folks.length && !value) return null;
+  // A step that goes to a person in an area can take the area too, if the person says so: offered, never forced.
+  const who = value.startsWith('p:') ? personById(value.slice(2)) : undefined;
+  const theirs = who && who.placeId !== where && isArea(places.value, who.placeId) ? who : null;
   return (
+    <>
     <label class="field"><span>{t('feedsField')}</span>
       <select value={value} onChange={e => onChange((e.target as HTMLSelectElement).value)} data-testid="feeds-select">
         <option value="">—</option>
@@ -372,6 +387,8 @@ function FeedsField({ where, value, onChange }: { where: string; value: string; 
         {folks.length > 0 && <optgroup label={t('peopleSection')}>{folks.map(p => <option value={'p:' + p.id}>{p.name}</option>)}</optgroup>}
       </select>
     </label>
+    {theirs && <p class="hint"><button class="btn small" type="button" data-testid="use-person-area" onClick={() => onWhere(theirs.placeId)}>{t('useAreaOf', { place: placeName(theirs.placeId), name: theirs.name })}</button></p>}
+    </>
   );
 }
 
@@ -572,7 +589,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       <label class="field"><span>{t('project')}</span>
         <select name="project" defaultValue={tk.project}>{projs.map(p => <option value={p.id}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
-      {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} />}
+      {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
       {tk.prompt && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:12px"><GoLink tk={tk} variant="small" /></div>}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>

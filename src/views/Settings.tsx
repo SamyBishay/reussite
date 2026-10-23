@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import { settings, saveSettings, places, stays, db, toast, update, readOnly, today } from '../app/store';
 import { openSheet, closeSheet, suitName } from '../app/ui';
-import { placeIds, placeName } from '../app/sheets';
+import { placeIds, placeName, placeOptions } from '../app/sheets';
+import { AreaEditor } from '../app/AreaUi';
+import { placeRows } from '../domain/areas';
 import { addPlace, saveStay, removeStay } from '../app/actions';
 import changelog from '../../CHANGELOG.md?raw';
 import { t, lang, type Key } from '../i18n';
@@ -125,7 +127,7 @@ function NumberField({ label, value, min, max, onSave }: { label: string; value:
 
 
 function PlacesEditor() {
-  const ps = placeIds().map(id => places.value.get(id)!);
+  const ps = placeRows(places.value).filter(r => !r.area).map(r => places.value.get(r.id)!);
   const add = async (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
@@ -138,13 +140,17 @@ function PlacesEditor() {
   return (
     <div class="field" data-testid="places"><span>{t('places')}</span>
       <p class="hint">{t('placesHint')}</p>
+      <p class="hint">{t('areasHint')}</p>
       {ps.map(p => (
-        <div class="placerow">
-          <input type="text" aria-label={t('placeName')} defaultValue={p.name} onChange={e => update<Place>('places', p.id, { name: (e.target as HTMLInputElement).value.trim() || p.name })} />
-          <select aria-label={t('timeZone')} value={p.timeZone} onChange={e => update<Place>('places', p.id, { timeZone: (e.target as HTMLSelectElement).value })}>
-            {(ZONES.includes(p.timeZone) ? ZONES : [p.timeZone, ...ZONES]).map(z => <option value={z}>{z.replace(/_/g, ' ')}</option>)}
-          </select>
-        </div>
+        <>
+          <div class="placerow">
+            <input type="text" aria-label={t('placeName')} defaultValue={p.name} onChange={e => update<Place>('places', p.id, { name: (e.target as HTMLInputElement).value.trim() || p.name })} />
+            <select aria-label={t('timeZone')} value={p.timeZone} onChange={e => update<Place>('places', p.id, { timeZone: (e.target as HTMLSelectElement).value })}>
+              {(ZONES.includes(p.timeZone) ? ZONES : [p.timeZone, ...ZONES]).map(z => <option value={z}>{z.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+          <AreaEditor placeId={p.id} />
+        </>
       ))}
       <form class="addplace" onSubmit={add}>
         <input type="text" name="name" placeholder={t('newPlaceName')} aria-label={t('newPlaceName')} autocomplete="off" required />
@@ -152,7 +158,7 @@ function PlacesEditor() {
       </form>
       <label class="field"><span>{t('currentPlace')}</span>
         <select value={settings.value.here} onChange={e => set({ here: (e.target as HTMLSelectElement).value })}>
-          {[...placeIds(), 'any'].map(id => <option value={id}>{placeName(id)}</option>)}
+          {placeOptions()}
         </select>
       </label>
       <p class="hint">{t('currentPlaceHint')}</p>

@@ -1,5 +1,18 @@
 # What's new
 
+## 2.0 — phase 4b: a calmer look, a real calendar
+- A new look, St George: new colours, the heart logo as the app's icon, more room between things, fewer borders, and on a wide screen a centred column with the suit piles beside it. If you had chosen a palette before, you keep it. Colours and motifs are inspired by two paintings of St George and the dragon (the credit is in Settings → About). Three rings show on empty screens and beside a running timer, and St George's small celebration plays when you close the day, play the day's last card or finish a project (you can switch celebrations off).
+- Home is quieter: a small bell at the top opens a Notifications page that lists everything waiting (your recovery key, decisions to check, yesterday's steps, the review day). The dot has no number and is never red. Settings is a plain page of its own.
+- The Calendar is a real one, with Day, Week (3 days on a phone), Month and Agenda. Things with a time sit on the hours; the day's cards and what is due are in a row at the top. Drag a card to another day to plan it, or a timed step to another time. It shows short names, not long titles, and no launch points.
+- Steps have a short name (five or six words) that calendars show. Réussite makes one from the title if you leave it empty.
+- Add to calendar and the calendar feed no longer carry launch points. They carry your fixed-time items, and your planned and due steps as all-day events. The feed has three levels: times only (the default), short names, or short names with places and notes. The last two are stored in plain text on the relay, and Réussite says so.
+- Steps that wait for one another are one card: the first, with "+3 after" that unfolds the rest. When Break it down asks, choose In this order or In any order. When you finish the first, the next takes its place on your list.
+- Standing items (choir, seeing people, going out) no longer sit in the matrix; they are on a folded Obligations line under it, because a time places them, not urgency.
+- A step you add by hand to today now goes right after the one you are timing, not at the end behind the whole plan. A step opens with its buttons in a row under the title, and a Time chip beside the title. You can drag a step by its grip to reorder Today, a project's steps and the day list.
+- Areas: a place can have areas inside it (Heliopolis in Cairo). Chips on Today, the Matrix and the Calendar show one area at a time, and lists are grouped under the area. In the morning check-in you can say where you will be for the morning and the afternoon, and the plan keeps those steps together.
+- People have a What's on page: the open steps that go to them or that name them.
+- The manual has been brought up to date in English and French, with new pictures, and the French is complete.
+
 ## 2.0 — in progress
 - The manual: short pages in plain words, with pictures of the app, in Settings → About → Read the manual. It follows your language and your look, and reads offline. It is in English and French.
 - A new device now starts with a short set-up, one question per screen: language, your places, the four suits, the look, Addresses & people, an AI (or none), how an AI should work with you, sync, reminders and your recovery key. Every question can be skipped with the defaults, and it ends by offering to plan your first day. A device that already has a list never sees it, and one that joins your other device skips the questions your list already answers.

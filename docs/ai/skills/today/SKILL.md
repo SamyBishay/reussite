@@ -22,7 +22,7 @@ If you have Réussite's connector tools (`today`, `query_tasks`, `apply_changes`
 2. Judge urgency and importance separately. Urgent means a deadline within three weeks, or blocking something that has one. Set `due` and let the dates do the work; mark `urgent` by hand only for blockers. A far date is not urgent however important, and neither is anything I can't act on yet: the step is the part I control, such as asking. Important but not urgent ("Protect") gets a slot every day, or it never happens. Quadrants: Now (urgent, important), Protect (important), Quick (urgent, less important), Later.
 3. Estimate every step while scheduling, including the time to get started and the planning itself.
 4. Time it and write the real time down; it corrects the next estimate. My ratio is the median of real time over estimate for done steps. Apply it to every total.
-5. Break things down until the first step is simple and low-friction. Title it with the concrete first action: the app or place, then what to do there ("Open Mail and reply to…"). Give each step a `starter` (below), and an `app` and https `link` where they apply.
+5. Break things down until the first step is simple and low-friction. Title it with the concrete first action: the app or place, then what to do there ("Open Mail and reply to…"). Give each step a short `label` (five or six keywords, what calendars show), a `starter` (below), and an `app` and https `link` where they apply.
 6. Make progress visible. Seeing progress is the reward; don't invent other rewards.
 7. Leisure, going out and seeing people are obligations to my mental health and to the list. Schedule them like steps, never as a prize for work.
 8. Decisions and problems get their own method: define the problem, list every option, weigh doing and not doing, choose, turn the choice into steps. Send them there (the "decide" prompt).
@@ -42,7 +42,7 @@ In plans, lead with the starter and then the step: "Open the front door → pick
 2. Today's shape. Ask: when can I start, and what's fixed today? Offer short options ("From 11:00, nothing fixed", "Afternoon only", "An hour or less", "Rest day").
 3. Propose the day as a short numbered list.
    - Unblocked Now steps first (for the place I'm in), then exactly one Protect step, then any Quick steps batched. At most three work steps unless I ask for more.
-   - Every item is a first step: the concrete first action, 30 minutes or less. Break anything bigger down now, with `after` for the order, and a `starter`. Show each as "<starter> → <step>".
+   - Every item is a first step: the concrete first action, 30 minutes or less. Break anything bigger down now, with `after` for the order (steps that wait for one another show as one card in the app, the first with "+n after"), and a `starter`. Show each as "<starter> → <step>".
    - One standing obligation (leisure or people), with a time.
    - Estimates: mine where set, otherwise yours. Total them, add 15 minutes for the planning itself, and multiply by my ratio.
    - Launch points: a start and one or two restarts, the moments to begin or re-enter the list. Not a timetable; steps float between them.

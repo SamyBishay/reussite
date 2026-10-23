@@ -291,3 +291,76 @@ test('a start time is set from a Time chip next to the title; length and lead ap
   await expect(s.locator('input[name=dur]')).toBeVisible();
   await expect(s.getByTestId('lead')).toBeVisible();
 });
+
+const planIds = (page: Page) => page.locator('[data-testid=plan-list] > li').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));
+
+test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and ↓ are the keyboard way', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('plan-list').scrollIntoViewIfNeeded();
+  await page.evaluate(() => document.querySelector('[data-testid=plan-list]')!.scrollIntoView({ block: 'start' })); // the whole list in view, so the mouse can reach it
+  const before = await planIds(page);
+  expect(before.length).toBeGreaterThanOrEqual(3);
+  const last = page.locator('[data-testid=plan-list] > li').last();
+  const first = page.locator('[data-testid=plan-list] > li').nth(1); // (the first row is a step already done)
+  const g = (await last.getByTestId('grip').boundingBox())!, f = (await first.boundingBox())!;
+  await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + g.width / 2, g.y - 20, { steps: 5 });
+  await page.waitForTimeout(100);
+  await page.mouse.move(g.x + g.width / 2, f.y + 4, { steps: 15 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  await expect.poll(() => planIds(page)).not.toEqual(before);
+  const after = await planIds(page);
+  expect(after[1]).toBe(before[before.length - 1]);
+  expect(after).toHaveLength(before.length);
+  await page.reload();
+  await expect(page.getByTestId('first')).toBeVisible();
+  expect(await planIds(page)).toEqual(after);
+  // keyboard: the hidden ↑ comes into view when focused
+  const row = page.locator('[data-testid=plan-list] > li').nth(2);
+  const up = row.getByRole('button', { name: 'Earlier' });
+  await up.focus();
+  await expect(up).toBeVisible();
+  await page.keyboard.press('Enter');
+  const swapped = await planIds(page);
+  expect(swapped[1]).toBe(after[2]);
+  expect(swapped[2]).toBe(after[1]);
+});
+
+test('a step added by hand goes right after the one running, not at the bottom', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('first').getByRole('button', { name: /Start timer|Just start the timer/ }).click();
+  const ids0 = await page.evaluate(() => [...document.querySelectorAll('[data-testid=plan-list] > li')].map(e => (e as HTMLElement).dataset.task));
+  await page.locator('form.quick input[name=title]').fill('Zebra errand');
+  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  const rows = page.locator('[data-testid=plan-list] > li');
+  await expect(rows).toHaveCount(ids0.length + 1);
+  await expect(rows.nth(1)).toContainText('Zebra errand'); // the done step stays above; the running one is the first card
+});
+
+test('a project’s steps are ordered by dragging a grip, too', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-projects').click();
+  await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  const list = page.locator('ol.steps').filter({ has: page.locator('li[data-sort]:nth-of-type(3)') }).first();
+  await list.scrollIntoViewIfNeeded();
+  await list.evaluate(el => el.scrollIntoView({ block: 'start' }));
+  const ids = () => list.locator('> li[data-sort]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));
+  const before = await ids();
+  const a = (await list.locator('> li[data-sort]').nth(1).getByTestId('grip').boundingBox())!, b = (await list.locator('> li[data-sort]').first().boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2, a.y - 10, { steps: 5 });
+  await page.waitForTimeout(100);
+  await page.mouse.move(a.x + a.width / 2, b.y + 2, { steps: 12 });
+  await page.waitForTimeout(100);
+  await page.mouse.up();
+  await expect.poll(ids).not.toEqual(before);
+  const after = await ids();
+  expect(after[0]).toBe(before[1]);
+  expect(after[1]).toBe(before[0]);
+  await page.reload();
+  await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  expect(await ids()).toEqual(after);
+});

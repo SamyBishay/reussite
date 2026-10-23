@@ -10,7 +10,7 @@ for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await importSample(page);
-    const row = page.locator('.row', { hasText: 'Dentist 14:30' });
+    const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' }); // by hand with nothing running: the first card
 
     await quickTitle(page).fill('Dentist 14:30');
     await page.getByTestId('quick-details').click();
@@ -34,7 +34,7 @@ for (const width of [320, 375, 430]) {
     await expect(row).toHaveCount(1);
 
     // Saved with its time, and on today's list.
-    await row.getByTestId('details').click();
+    await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
     await sheet(page).locator('details.more summary').click();
     await expect(sheet(page).locator('input[name=at]')).toHaveValue('14:30');
     await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
@@ -61,7 +61,7 @@ test('the estimate and suit typed in the quick form carry into the draft', async
   await expect(sheet(page).locator('input[name=est]')).toHaveValue('25');
   await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.locator('.row', { hasText: 'Sort the drawer' })).toHaveCount(1);
+  await expect(page.getByTestId('first')).toContainText('Sort the drawer'); // by hand, with nothing running: the top of what is left
 });
 
 test('an existing step offers a time written in its title or note', async ({ page }) => {

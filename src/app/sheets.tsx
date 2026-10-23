@@ -6,7 +6,7 @@ import { settings, projects, today, places, toast, stays, clockNow, update, here
 import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
-  patchTask, finishTask, stopTimer, addToday, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
+  patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
   deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, type Finished,
 } from './actions';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
@@ -499,7 +499,7 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
           <>
             {inPlan
               ? <button class="btn small" type="button" onClick={() => { void removeToday(id); closeSheet(); }}>{t('takeOffToday')}</button>
-              : <button class="btn small" type="button" onClick={() => { void addToday(id); closeSheet(); }}>{t('addToToday')}</button>}
+              : <button class="btn small" type="button" onClick={() => { void addByHand(id); closeSheet(); }}>{t('addToToday')}</button>}
             <button class="btn small" type="button" onClick={() => openDone(id)}>{t('markDone')}</button>
             <button class="btn small" type="button" onClick={() => openDoneOn(id)}>{t('doneOn')}</button>
           </>
@@ -773,7 +773,7 @@ function PickSheet({ kind, k }: { kind: 'list' | 'standing'; k: string }) {
   const items = kind === 'standing'
     ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x)).sort(byOrder)
     : candidates(k).slice(0, 14);
-  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k, undefined, offerFieldsFor(offers[id])) : addToday(id, false, k)); };
+  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k, undefined, offerFieldsFor(offers[id])) : addByHand(id, false, k)); };
   return (
     <div>
       <h3>{kind === 'standing' ? t('leisurePeopleTitle') : t('fromList')}</h3>

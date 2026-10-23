@@ -5,9 +5,10 @@ import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
 import { tasks, projects, decisions, stays, places, settings, today } from '../app/store';
 import { T, rawPlan, dayDoc, fixedOn, cardsOn, minutesOn, inPlace, isOpen, type T as Tk } from '../app/model';
-import { planOn, dueOn, moveDone } from '../app/actions';
+import { planOn, dueOn, moveDone, setPlanOrder, movePlan } from '../app/actions';
 import { openTask, openMove } from '../app/sheets';
 import { Title } from '../app/ui';
+import { useSortable, GRIP } from '../app/sortable';
 import { dayView } from './Today';
 import { openReview } from '../flows/review';
 import { openDecisionPage } from '../flows/decision';
@@ -58,7 +59,13 @@ const Pips = ({ cards }: { cards: Tk[] }) => (
   <span class="pips" aria-label={t('cardsPlayed2', { n: cards.length })}>{cards.slice(0, 6).map(c => <span class={'suit-' + c.suit}>{settings.value.suits[c.suit]?.glyph}</span>)}{cards.length > 6 && <small>+{cards.length - 6}</small>}</span>
 );
 
-function drag(e: DragEvent, id: string) { e.dataTransfer?.setData('text/plain', id); }
+// Dragging by the grip reorders the day's list (SortableJS); the rest of the entry still drags to another day.
+let gripDown = false;
+if (typeof window !== 'undefined') window.addEventListener('pointerup', () => { gripDown = false; }, true);
+function drag(e: DragEvent, id: string) {
+  if (gripDown) { e.preventDefault(); return; }
+  e.dataTransfer?.setData('text/plain', id);
+}
 function dropTo(e: DragEvent, k: string, as: 'plan' | 'due') {
   e.preventDefault();
   (e.currentTarget as HTMLElement).classList.remove('over');
@@ -72,10 +79,15 @@ function dropTo(e: DragEvent, k: string, as: 'plan' | 'due') {
 const over = (e: DragEvent) => { e.preventDefault(); (e.currentTarget as HTMLElement).classList.add('over'); };
 const leave = (e: DragEvent) => (e.currentTarget as HTMLElement).classList.remove('over');
 
-function Entry({ x, kind }: { x: Tk; kind: 'plan' | 'due' | 'fixed' }) {
+function Entry({ x, kind, k }: { x: Tk; kind: 'plan' | 'due' | 'fixed'; k?: string }) {
   return (
-    <li class={'cal-item k-' + kind + (x.status === 'done' ? ' done' : '')} draggable={kind !== 'fixed'} onDragStart={e => drag(e, x.id)} data-task={x.id}>
+    <li {...(kind === 'plan' ? { 'data-sort': '' } : {})} class={'cal-item k-' + kind + (x.status === 'done' ? ' done' : '')} draggable={kind !== 'fixed'} onDragStart={e => drag(e, x.id)} data-task={x.id}>
       {kind === 'fixed' && <time>{x.at}</time>}
+      {kind === 'plan' && k && <>
+        <span class="grip sm" aria-hidden="true" data-testid="grip" onPointerDown={() => { gripDown = true; }}>{GRIP}</span>
+        <button type="button" class="icon-btn sm kbd-only" onClick={() => void movePlan(x.id, -1, k)} aria-label={t('earlier')}>↑</button>
+        <button type="button" class="icon-btn sm kbd-only" onClick={() => void movePlan(x.id, 1, k)} aria-label={t('later')}>↓</button>
+      </>}
       <span class={'g suit-' + x.suit} aria-hidden="true">{x.status === 'done' ? '✓' : kind === 'due' ? '!' : settings.value.suits[x.suit]?.glyph}</span>
       <button type="button" class="linklike" onClick={() => openTask(x.id)}><Title s={x.title} /></button>
       {kind !== 'fixed' && <button type="button" class="icon-btn sm" onClick={() => openMove(x.id, 'calendar')} aria-label={t('moveTo')} data-testid="cal-move">⋯</button>}
@@ -88,6 +100,7 @@ function WeekDay({ k, rep }: { k: string; rep: Map<string, Tk[]> }) {
   const td = today.value;
   const inWindow = k >= td && daysBetween(td, k) <= settings.value.urgencyDays;
   const showStay = d.stay && (d.stay.from === k || isoDow(k) === 1);
+  const listRef = useSortable<HTMLUListElement>(ids => void setPlanOrder(ids, k));
   return (
     <section class={'wday' + (k === td ? ' today' : '') + (inWindow ? ' urgent-window' : '') + (k < td ? ' past' : '')} data-day={k} data-testid={'wday-' + k}>
       {d.stay && <div class="stayband" title={places.value.get(d.stay.placeId)?.name}>{showStay ? places.value.get(d.stay.placeId)?.name ?? '' : ' '}</div>}
@@ -99,8 +112,8 @@ function WeekDay({ k, rep }: { k: string; rep: Map<string, Tk[]> }) {
       </header>
       {d.fixed.length > 0 && <ul class="cal-list">{d.fixed.map(x => <Entry x={x} kind="fixed" />)}</ul>}
       {d.launches.length > 0 && <p class="cal-launch">{d.launches.map(l => (l.k === 'start' ? '▶ ' : '↻ ') + l.t).join('  ')}</p>}
-      <ul class="cal-list plan" onDragOver={over} onDragLeave={leave} onDrop={e => dropTo(e, k, 'plan')} aria-label={t('dayList')}>
-        {d.plan.map(x => <Entry x={x} kind="plan" />)}
+      <ul class="cal-list plan" ref={listRef} onDragOver={over} onDragLeave={leave} onDrop={e => dropTo(e, k, 'plan')} aria-label={t('dayList')}>
+        {d.plan.map(x => <Entry key={x.id} x={x} kind="plan" k={k} />)}
         {!d.plan.length && <li class="droplabel">{t('dropPlan')}</li>}
       </ul>
       {d.due.length > 0 && <ul class="cal-list">{d.due.map(x => <Entry x={x} kind="due" />)}</ul>}

@@ -3,7 +3,7 @@
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
 import { T, planOf, dayDoc, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, type T as Tk } from '../app/model';
-import { startTask, addLaunch, delLaunch, carryOver, addToday, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
+import { startTask, addLaunch, delLaunch, carryOver, addToday, addByHand, setPlanOrder, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { Clock } from '../app/Clock';
@@ -17,6 +17,7 @@ import { isoDow } from '../domain/repeat';
 import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
 import type { Launch, Task } from '../data/schema';
+import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 import { SyncCards } from '../app/SyncSettings';
 
@@ -68,7 +69,7 @@ function Row({ tk, n, k, optional }: { tk: Tk; n: number; k: string; optional?: 
   const done = tk.status === 'done', run = !!tk.started;
   const isToday = k === today.value;
   return (
-    <li class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id}>
+    <li data-sort class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id}>
       <span class={'num' + (done ? ' suit-' + tk.suit : '')} aria-hidden="true">{done ? settings.value.suits[tk.suit]?.glyph : n}</span>
       <div class="body">
         <p class="t"><Title s={tk.title} />{optional && <> <span class="tag">{t('ifRoom')}</span></>}</p>
@@ -76,9 +77,11 @@ function Row({ tk, n, k, optional }: { tk: Tk; n: number; k: string; optional?: 
         {tk.resume && !done && <p class="resume">{t('resume', { text: tk.resume })}</p>}
       </div>
       <div class="ctrls">
+        <span class="grip" aria-hidden="true" data-testid="grip">{GRIP}</span>
+        <button class="icon-btn kbd-only" type="button" onClick={() => movePlan(tk.id, -1, k)} aria-label={t('earlier')}>↑</button>
+        <button class="icon-btn kbd-only" type="button" onClick={() => movePlan(tk.id, 1, k)} aria-label={t('later')}>↓</button>
         {done ? <button class="icon-btn" type="button" onClick={() => reopen(tk.id)} aria-label={t('reopen')}>↺</button>
           : !isToday ? <>
-            <button class="icon-btn" type="button" onClick={() => movePlan(tk.id, -1, k)} aria-label={t('earlier')}>↑</button>
             <button class="icon-btn" type="button" onClick={() => removeToday(tk.id, k)} aria-label={t('takeOff')}>×</button>
           </>
           : run ? <><button class="icon-btn" type="button" onClick={() => openPause(tk.id)} aria-label={t('pause')}>❚❚</button><button class="icon-btn ok" type="button" onClick={() => openDone(tk.id)} aria-label={t('done')}>✓</button></>
@@ -146,7 +149,7 @@ function QuickAdd({ k }: { k: string }) {
     f.reset();
     (document.activeElement as HTMLElement | null)?.blur();
     const id = await createTask(newTaskDoc(title, suit, 'inbox', { est, estBy: est ? 'me' : null }));
-    await addToday(id, false, k);
+    await addByHand(id, false, k);
   };
   // The whole task sheet for a new step; nothing is written until Save there.
   const details = (e: Event) => {
@@ -155,7 +158,7 @@ function QuickAdd({ k }: { k: string }) {
     const prefill: Partial<Task> = { title: (f.elements.namedItem('title') as HTMLInputElement).value.trim(), suit: (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'] };
     if (est) { prefill.est = est; prefill.estBy = 'me'; }
     f.reset();
-    openNewTask(prefill, id => void addToday(id, false, k));
+    openNewTask(prefill, id => void addByHand(id, false, k));
   };
   return (
     <form class="quick" onSubmit={submit}>
@@ -208,6 +211,7 @@ function OtherDay({ k }: { k: string }) {
   const cards = cardsOn(k);
   const open = plan.filter(id => isOpen(T(id)));
   const optional = new Set(d?.optional ?? []);
+  const listRef = useSortable<HTMLOListElement>(ids => void setPlanOrder(ids, k));
   let n = 0;
   return (
     <div data-testid="other-day">
@@ -232,7 +236,7 @@ function OtherDay({ k }: { k: string }) {
       <Fixed k={k} />
       <Launches k={k} />
       <h2 class="sec">{t('dayList')}</h2>
-      {plan.length ? <ol class="tableau">{plan.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol> : <p class="hint">{t('emptyDay')}</p>}
+      {plan.length ? <ol class="tableau" ref={listRef}>{plan.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol> : <p class="hint">{t('emptyDay')}</p>}
       {!past && (
         <>
           <div class="adders">
@@ -249,6 +253,7 @@ function OtherDay({ k }: { k: string }) {
 export function Today() {
   const td = today.value;
   const k = dayView.value && dayView.value !== td ? dayView.value : td;
+  const listRef = useSortable<HTMLOListElement>(ids => void setPlanOrder(ids, td));
   if (k !== td) return <div><Navigator k={k} /><OtherDay k={k} /></div>;
   const d = dayDoc(k);
   const plan = planOf(k);
@@ -302,7 +307,7 @@ export function Today() {
               {more ? t('more', { n: more }) : t('allPlayed')}
               {est > 0 && ' · ' + (lo !== hi ? t('estimatedRange', { t: fmtMin(est), lo: fmtMin(lo), hi: fmtMin(hi) }) : t('estimatedToday', { t: fmtMin(est) }))}
             </span></h2>
-            <ol class="tableau">{rest.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol>
+            <ol class="tableau" ref={listRef} data-testid="plan-list">{rest.map(id => { const tk = T(id)!; if (tk.status === 'open') n++; return <Row key={id} tk={tk} n={n} k={k} optional={optional.has(id)} />; })}</ol>
           </>
         )}
         <div class="adders">

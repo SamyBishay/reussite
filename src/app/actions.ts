@@ -7,6 +7,7 @@ import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
+import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
 
@@ -114,6 +115,23 @@ export async function addToday(id: string, quiet = false, k = today.value) {
   await dayPatch(k, { plan: p });
   if (!quiet) toast(k === today.value ? t('addedToday') : t('plannedOn', { date: k }));
 }
+/**
+ * A step the person adds by hand. On today it goes right after the step in progress, else at the top of what
+ * is left, not at the bottom; on another day it goes last, as there is nothing in progress there.
+ */
+export async function addByHand(id: string, quiet = false, k = today.value) {
+  if (k !== today.value) return addToday(id, quiet, k);
+  const p = rawPlan(k);
+  if (p.includes(id)) return;
+  const next = insertAfterCurrent(p, id, running()?.id ?? null, x => { const tk = T(x); return !!tk && tk.status === 'open'; });
+  await dayPatch(k, { plan: next });
+  if (!quiet) toast(t('addedToday'));
+}
+/** The day's list after a drag: the steps shown take each other's places, the rest stay put. */
+export async function setPlanOrder(shown: string[], k = today.value) {
+  const p = rawPlan(k), next = reorderSubset(p, shown);
+  if (next.some((x, i) => x !== p[i])) await dayPatch(k, { plan: next });
+}
 export const removeToday = (id: string, k = today.value) => dayPatch(k, { plan: rawPlan(k).filter(x => x !== id) });
 export async function movePlan(id: string, dir: -1 | 1, k = today.value) {
   const p = rawPlan(k);
@@ -215,6 +233,11 @@ export async function moveStep(id: string, dir: -1 | 1) {
   const oa = a.order || 0, ob = b.order || 0;
   await patchTask(a.id, { order: oa === ob ? ob + dir : ob });
   await patchTask(b.id, { order: oa });
+}
+/** A project's open steps after a drag: the same `order` numbers, handed out in the new sequence. */
+export async function setStepOrder(sequence: string[]) {
+  const cur = sequence.map(id => T(id)).filter((x): x is Tk => !!x).sort((a, b) => (a.order || 0) - (b.order || 0));
+  for (const c of reslot(cur, sequence)) await patchTask(c.id, { order: c.order });
 }
 export async function moveProject(id: string, dir: -1 | 1) {
   const p = projects.value.get(id);

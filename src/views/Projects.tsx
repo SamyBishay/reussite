@@ -3,7 +3,7 @@
 import { useState } from 'preact/hooks';
 import { tasks, projects, settings, decisions, createDoc, toast, pagePlace } from '../app/store';
 import { isOpen, inPlace, blocked, byOrder, waitingOn, type T } from '../app/model';
-import { createTask, newTaskDoc, patchProject, moveStep, moveProject } from '../app/actions';
+import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
 import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
@@ -13,16 +13,17 @@ import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Task } from '../data/schema';
+import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 
 type P = Project & { id: string };
 const openProj = new Set<string>();
 
-function Step({ tk, first, last }: { tk: T; first?: boolean; last?: boolean }) {
+function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: boolean; sortable?: boolean }) {
   const done = tk.status === 'done';
   const w = waitingOn(tk)[0];
   return (
-    <li class={done ? 'done' : ''} data-task={tk.id}>
+    <li class={done ? 'done' : ''} data-task={tk.id} {...(sortable ? { 'data-sort': '' } : {})}>
       <span class={'g suit-' + tk.suit} aria-hidden="true">{tk.template ? '↻' : done ? '✓' : '·'}</span>
       <span class="stept">
         <button class="linklike" type="button" onClick={() => openTask(tk.id)}><Title s={tk.title} /></button>
@@ -32,8 +33,9 @@ function Step({ tk, first, last }: { tk: T; first?: boolean; last?: boolean }) {
         {!done && !tk.template && <DueChip tk={tk} />}
         <span class="due">{tk.template ? t('standing') : tk.est ? fmtMin(tk.est) : ''}</span>
         {!done && !tk.template && <>
-          <button type="button" class="icon-btn sm" disabled={first} onClick={() => moveStep(tk.id, -1)} aria-label={t('earlier')}>↑</button>
-          <button type="button" class="icon-btn sm" disabled={last} onClick={() => moveStep(tk.id, 1)} aria-label={t('later')}>↓</button>
+          <span class="grip sm" aria-hidden="true" data-testid="grip">{GRIP}</span>
+          <button type="button" class="icon-btn sm kbd-only" disabled={first} onClick={() => moveStep(tk.id, -1)} aria-label={t('earlier')}>↑</button>
+          <button type="button" class="icon-btn sm kbd-only" disabled={last} onClick={() => moveStep(tk.id, 1)} aria-label={t('later')}>↓</button>
         </>}
       </span>
     </li>
@@ -51,6 +53,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   const label = t('stepsDone', { d: done.length, n: total });
   const linked = [...decisions.value.values()].filter(d => d.projectId === p.id);
   const left = open.length;
+  const listRef = useSortable<HTMLOListElement>(ids => void setStepOrder(ids));
   const add = async (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
@@ -79,7 +82,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
       ))}</ul>}
       <details open={openProj.has(p.id)} onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) openProj.add(p.id); else openProj.delete(p.id); }}>
         <summary>{tmpl.length && !total ? t('standingItems') : tmpl.length ? t('stepsAndStanding') : t('steps')}</summary>
-        <ol class="steps">{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} />)}{doneSorted.map(x => <Step key={x.id} tk={x} />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
+        <ol class="steps" ref={listRef}>{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} sortable />)}{doneSorted.map(x => <Step key={x.id} tk={x} />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
         <form class="addstep" onSubmit={add}>
           <input type="text" name="title" placeholder={t('nextStepPlaceholder')} aria-label={t('newStepFor', { name: p.name })} autocomplete="off" required />
           <input type="number" name="est" min="1" max="600" placeholder={t('minShort')} aria-label={t('estimateMin')} />

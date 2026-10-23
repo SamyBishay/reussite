@@ -676,3 +676,11 @@ textarea.mono{letter-spacing:.04em}
 .sheet .actionbar>*{min-width:0}
 .titlerow{display:flex;gap:8px;align-items:flex-end}.titlerow>.field{flex:1;min-width:0}.titlerow .chip{flex:none;height:44px;border-radius:12px}.chip.on{border-color:var(--ink);font-weight:700}
 .timebox[hidden]{display:none}
+
+/* Ordering by dragging: a grip to hold, and ↑ ↓ that stay for the keyboard and screen readers, shown when focused. */
+.grip{display:inline-grid;place-items:center;width:28px;height:44px;flex:none;color:var(--ink-3);font-size:20px;line-height:1;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.grip.sm{width:24px;height:36px;font-size:17px}
+.kbd-only:not(:focus){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.drag-ghost{opacity:.4}
+.drag-chosen{box-shadow:0 6px 18px rgba(0,0,0,.2)}
+body > .row,body > li{list-style:none}

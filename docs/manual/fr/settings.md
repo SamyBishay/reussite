@@ -13,7 +13,7 @@ English ou Français. Le changement est immédiat.
 ## Apparence
 
 - **Thème :** Système, Clair, Sombre, ou Selon l’heure (vous réglez quand le clair commence et quand le sombre commence).
-- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **Saint Georges**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
+- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **af Klint**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
 - **Taille du texte :** Petit, Moyen ou Grand.
 - **Réduire les animations**.
 - **Célébrations :** Désactivées, Calmes ou Vives. **Son** et **Volume**.
@@ -75,6 +75,6 @@ Si la synchronisation est désactivée, Réussite vous rappelle toutes les deux 
 
 ## À propos
 
-La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect Saint Georges, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
+La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect af Klint, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
 
 **Copier le diagnostic** produit un court rapport (versions, appareil, erreurs) que vous pouvez envoyer à un ami quand quelque chose se casse. Il n’inclut jamais vos étapes, notes, noms, lieux ou clés.

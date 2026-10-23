@@ -13,7 +13,7 @@ English or Français. It changes at once.
 ## Appearance
 
 - **Theme:** System, Light, Dark, or By time of day (you set when light starts and dark starts).
-- **Palette** and **Accent colour**, and the **Suit colours**. New people start with the **St George** palette. If you chose one before, it stays. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
+- **Palette** and **Accent colour**, and the **Suit colours**. New people start with the **af Klint** palette. If you chose one before, it stays. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
 - **Text size:** Small, Medium or Large.
 - **Reduce motion**.
 - **Celebrations:** Off, Calm or Lively. **Sound** and **Volume**.
@@ -75,6 +75,6 @@ If sync is off, Réussite reminds you every two weeks to save a backup file. It 
 
 ## About
 
-The version, **Read the manual**, the credit for the paintings that inspired the St George look, **Copy diagnostics**, the privacy note and **What's new**.
+The version, **Read the manual**, the credit for the paintings that inspired the af Klint look, **Copy diagnostics**, the privacy note and **What's new**.
 
 **Copy diagnostics** makes a short report (versions, device, errors) that you can send to a friend when something breaks. It never includes your steps, notes, names, places or keys.

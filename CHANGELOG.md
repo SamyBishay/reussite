@@ -5,6 +5,7 @@
 - On Today, Launch points are folded into one line ("Launch points · 09:30, 14:00"); open it to change them.
 - Forms are calmer. A step shows its title, Time, urgent and important, estimate and due date; the rest (short name, starter, suit, place, project, note, kind, app and link, repeat, weekdays) is under **More**, which says how many things are set ("More · 2 set"). Projects, addresses, people, the decision steps and the morning check-in fold their optional fields the same way. Settings sections are folded, and each shows only the controls most people use, with the rest under More.
 - Fixed: opening a step and saving it could change its suit and project to the first in the list.
+- The colour scheme is now called **af Klint**, after Hilma af Klint, whose painting The Dove (1915) inspired it. It was called St George. Your settings are unchanged: if you use it, you still do.
 
 ## 2.0 — phase 4b: a calmer look, a real calendar
 - A new look, St George: new colours, the heart logo as the app's icon, more room between things, fewer borders, and on a wide screen a centred column with the suit piles beside it. If you had chosen a palette before, you keep it. Colours and motifs are inspired by two paintings of St George and the dragon (the credit is in Settings → About). Three rings show on empty screens and beside a running timer, and St George's small celebration plays when you close the day, play the day's last card or finish a project (you can switch celebrations off).

@@ -696,3 +696,4 @@ body > .row,body > li{list-style:none}
   .homein-in{max-width:720px}
   .tabbar-in{max-width:720px}
 }
+.ob-mark{display:block;margin:var(--s5) 0 var(--s5)}

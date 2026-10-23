@@ -25,6 +25,7 @@
   --sea-soft:#D5E5E2;
   --pearl:#F7F1E6;
   --ring-1:#649996;--ring-2:#9B8855;--ring-3:#BDC6C0;
+  --mark-heart:#BC7F8C;--mark-ring:#3C6F6C;--mark-dot:#9B8855;  /* logo A, light */
   --suit-a:#9C4560;
   --suit-b:#2F4C8E;
   --red:#B22330;             /* urgency only */
@@ -49,7 +50,7 @@
   :root:not([data-theme="light"]){
     --ground:#0B0C10;--panel:#111118;--card:#16161F;--card-2:#211D2D;--ink:#ECE8F0;--ink-2:#A8A0B4;--ink-3:#958DA2;
     --line:#34303F;--line-2:#211D2D;--accent:#8DB0E6;--accent-ink:#0B0C10;--accent-soft:#1A2440;--accent-2:#EC9DB8;--warm:#CDB98C;--highlight:#C6B3C9;--accent-deep:#0B0C10;
-    --lilac:#C6B3C9;--sea:#86C2BC;--sea-deep:#86C2BC;--sea-soft:#15262A;--pearl:#F7F1E6;--ring-1:#4064B3;--ring-2:#6A96D7;--ring-3:#423752;--suit-a:#EC9DB8;--suit-b:#93B4EA;
+    --lilac:#C6B3C9;--sea:#86C2BC;--sea-deep:#86C2BC;--sea-soft:#15262A;--pearl:#F7F1E6;--ring-1:#4064B3;--ring-2:#6A96D7;--ring-3:#423752;--mark-heart:#C6708E;--mark-ring:#6A96D7;--mark-dot:#C6B3C9;--suit-a:#EC9DB8;--suit-b:#93B4EA;
     --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
     --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.4);
@@ -59,7 +60,7 @@
 :root[data-theme="dark"]{
   --ground:#0B0C10;--panel:#111118;--card:#16161F;--card-2:#211D2D;--ink:#ECE8F0;--ink-2:#A8A0B4;--ink-3:#958DA2;
   --line:#34303F;--line-2:#211D2D;--accent:#8DB0E6;--accent-ink:#0B0C10;--accent-soft:#1A2440;--accent-2:#EC9DB8;--warm:#CDB98C;--highlight:#C6B3C9;--accent-deep:#0B0C10;
-  --lilac:#C6B3C9;--sea:#86C2BC;--sea-deep:#86C2BC;--sea-soft:#15262A;--pearl:#F7F1E6;--ring-1:#4064B3;--ring-2:#6A96D7;--ring-3:#423752;--suit-a:#EC9DB8;--suit-b:#93B4EA;
+  --lilac:#C6B3C9;--sea:#86C2BC;--sea-deep:#86C2BC;--sea-soft:#15262A;--pearl:#F7F1E6;--ring-1:#4064B3;--ring-2:#6A96D7;--ring-3:#423752;--mark-heart:#C6708E;--mark-ring:#6A96D7;--mark-dot:#C6B3C9;--suit-a:#EC9DB8;--suit-b:#93B4EA;
   --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
   --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.4);

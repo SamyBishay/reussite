@@ -19,6 +19,8 @@ const suit = z.enum(['S', 'D', 'C', 'H']);
 
 const taskSet = z.object({
   title: text(240).optional(),
+  /** A short name for calendars, five or six keywords ("Choir · Hill House"); empty clears it. */
+  label: text(80).optional(),
   project: id.optional(),
   suit: suit.optional(),
   urgent: z.boolean().optional(),
@@ -108,8 +110,9 @@ export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('project.create'), ref, set: projectSet.extend({ name: text(120).pipe(z.string().min(1)) }) }),
   z.object({ op: z.literal('project.update'), id, set: projectSet }),
   z.object({ op: z.literal('day.update'), date: day, plan: z.array(id).optional(), add: z.array(id).optional(), remove: z.array(id).optional(), first: id.nullable().optional(), launches: z.array(launch).optional() }),
-  z.object({ op: z.literal('place.create'), ref, set: z.object({ name: text(80).pipe(z.string().min(1)), timeZone: text(60).optional() }) }),
-  z.object({ op: z.literal('place.update'), id, set: z.object({ name: text(80).optional(), timeZone: text(60).optional() }) }),
+  // `parent` makes the place an area of another place (an id or a name; one level only); on an update, null makes it a place again.
+  z.object({ op: z.literal('place.create'), ref, set: z.object({ name: text(80).pipe(z.string().min(1)), timeZone: text(60).optional(), parent: id.optional() }) }),
+  z.object({ op: z.literal('place.update'), id, set: z.object({ name: text(80).optional(), timeZone: text(60).optional(), parent: id.nullable().optional() }) }),
   z.object({ op: z.literal('stay.create'), set: z.object({ place: id, from: day, to: day, note: text(300).optional() }) }),
   z.object({ op: z.literal('stay.update'), id, set: z.object({ place: id.optional(), from: day.optional(), to: day.optional(), note: text(300).optional() }) }),
   z.object({ op: z.literal('address.create'), set: addressSet }),

@@ -225,6 +225,47 @@ describe('a quick edit', () => {
   });
 });
 
+describe('schema 5: labels and areas', () => {
+  it('a label is accepted on a step, written, pulled by the app and shown by get_task', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Send the CAF claim letter', label: 'CAF claim letter', project: 'p1' } }] });
+    expect(r.isError).toBe(false);
+    await app.sync();
+    const made = [...(app.device.docs.get('tasks')?.values() ?? [])].find(t => t.title === 'Send the CAF claim letter')!;
+    expect(made).toMatchObject({ label: 'CAF claim letter', _v: SCHEMA_VERSION });
+    // A label on an existing step is not one of the low-risk changes: it waits for a yes.
+    const upd = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: 't4', set: { label: 'Hélène letter' } }] });
+    expect(upd.text).toContain('Change step "Écrire à Hélène" (label - → Hélène letter)');
+    await tool(access, 'apply_changes', { confirm: /"confirm": "(c\w+)"/.exec(upd.text)![1]! });
+    await app.sync();
+    expect(app.device.get('tasks', 't4')).toMatchObject({ label: 'Hélène letter' });
+    expect((await tool(access, 'get_task', { id: 't4' })).text).toContain('label: Hélène letter');
+  });
+
+  it('an area is a place with a parent: made after a yes, and its zone is its parent\'s', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'place.create', ref: 'ca', set: { name: 'Cairo', timeZone: 'Africa/Cairo' } }, { op: 'place.create', set: { name: 'Heliopolis', parent: 'ca' } }] });
+    expect(r.text).toContain("needs the person's yes");
+    const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
+    expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(false);
+    await app.sync();
+    const places = [...(app.device.docs.get('places')?.values() ?? [])];
+    const cairo = places.find(p => p.name === 'Cairo')!, heli = places.find(p => p.name === 'Heliopolis')!;
+    expect(cairo).not.toHaveProperty('parentId');
+    expect(heli).toMatchObject({ parentId: cairo.id });
+    // A fifth-level nesting is refused: an area holds no areas.
+    const deep = await tool(access, 'apply_changes', { changes: [{ op: 'place.create', set: { name: 'Deep', parent: heli.id } }] });
+    expect(deep.text).not.toMatch(/"confirm"/);
+  });
+
+  it('a place filter on query_tasks finds the steps of its areas', async () => {
+    app.device.add('places', 'ca', { name: 'Cairo', timeZone: 'Africa/Cairo', order: 1 });
+    app.device.add('places', 'he', { name: 'Heliopolis', timeZone: 'Africa/Cairo', order: 2, parentId: 'ca' });
+    app.device.edit('tasks', 't4', { where: 'he' });
+    await app.sync();
+    const q = await tool(access, 'query_tasks', { place: 'ca' });
+    expect(q.text).toContain('Écrire à Hélène');
+  });
+});
+
 describe('anything bigger waits for a yes', () => {
   const set = (id: string) => [
     { op: 'task.drop', id: 't2' },

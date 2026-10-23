@@ -85,7 +85,7 @@ The revert itself is `undoWrites` in `src/ai/undo.ts`, the same function the app
 
 ## Rolling out
 
-The relay is deployed a few minutes **after** the app (docs/dev/sync.md, "Rolling out schema 3"). A relay that is newer than the app's data writes schema 3 at once and puts every device still on schema 2 into read-only mode. An older relay reads the app's schema-3 batches as newer, and every tool says to update the relay and writes nothing.
+The relay is deployed a few minutes **after** the app (docs/dev/sync.md, "Rolling out schema 3", 4 and 5, all the same). A relay that is newer than the app's data writes the new schema at once and puts every device still on the old one into read-only mode. An older relay reads the app's new batches as newer, and every tool says to update the relay and writes nothing. The relay takes its schema number, the change-set validation (`ChangeSchema`) and the planner from the app's source, so any change to those needs the relay deployed too: schema 5 (a step's `label`, a place's `parent`) is one.
 
 ## The connector as a device
 

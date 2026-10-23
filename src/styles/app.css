@@ -691,7 +691,8 @@ body > .row,body > li{list-style:none}
   .app.wide{max-width:1360px;grid-template-columns:minmax(0,1fr) 200px}
   .app.wide .mast,.app.wide #runbar,.app.wide main{grid-column:1}
   .app.wide .side{grid-column:2;width:100%}
-  .found{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5) var(--s4);max-width:none}
+  .found{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5) var(--s4);max-width:none;align-items:start}
+  .pile{align-content:start}
   .side{gap:var(--s5)}
   .homein-in{max-width:720px}
   .tabbar-in{max-width:720px}
@@ -699,10 +700,11 @@ body > .row,body > li{list-style:none}
 .ob-mark{display:block;margin:var(--s5) 0 var(--s5)}
 /* The rings: an empty state's mark, and the running timer's progress beside its clock. */
 .rings{display:block;flex:none}
-.empty{display:grid;justify-items:start;gap:var(--s3);margin-top:var(--s5)}
+.emptystate{display:grid;justify-items:start;gap:var(--s3);margin-top:var(--s5)}
 .timerbox{display:inline-flex;align-items:center;gap:var(--s3)}
 /* The close-of-day show: a heart outline around the count, drawn in once the deal is done. */
 .show-heart-wrap{position:relative;display:grid;place-items:center;padding:var(--s5) var(--s6)}
 .show-heart{position:absolute;left:50%;top:54%;width:150px;height:auto;transform:translate(-50%,-50%) scale(.9);opacity:.25;transition:opacity .6s ease-out,transform .6s ease-out}
 .show-heart path{stroke:#C6708E}
 .show-heart.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.set>div>p+p{margin-top:var(--s3)}

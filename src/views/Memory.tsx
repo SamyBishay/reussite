@@ -42,7 +42,7 @@ export function Memory() {
         <button class="btn" type="button" onClick={() => openSheet(<ExportSheet key={'me' + Date.now()} />)} data-testid="memory-export">{t('memExport')}</button>
       </div>
       {all.length > 0 && <input type="search" value={q} placeholder={t('memSearch')} aria-label={t('memSearch')} style="margin-top:var(--s4)" onInput={e => setQ(input(e))} data-testid="memory-search" />}
-      {!all.length && <div class="empty"><Rings /><p class="hint" data-testid="memory-empty">{t('memEmpty')}</p></div>}
+      {!all.length && <div class="emptystate"><Rings /><p class="hint" data-testid="memory-empty">{t('memEmpty')}</p></div>}
       {all.length > 0 && !shown.length && <p class="hint" style="margin-top:var(--s4)">{t('memNoMatch', { q })}</p>}
       {MEMORY_KINDS.map(kind => {
         const group = shown.filter(n => n.kind === kind).sort(byName);

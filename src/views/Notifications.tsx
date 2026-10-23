@@ -28,7 +28,7 @@ export function Notifications() {
   return (
     <div data-testid="notifications">
       <h2 class="sec" style="margin-top:0">{t('notifTitle')}</h2>
-      {list.length ? list : <div class="empty"><Rings /><p class="hint" data-testid="notifications-empty">{t('notifEmpty')}</p></div>}
+      {list.length ? list : <div class="emptystate"><Rings /><p class="hint" data-testid="notifications-empty">{t('notifEmpty')}</p></div>}
     </div>
   );
 }

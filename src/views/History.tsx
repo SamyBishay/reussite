@@ -40,7 +40,7 @@ export function History() {
             </li>
           ))}
         </ul>
-      ) : <div class="empty"><Rings /><p class="hint" data-testid="history-empty">{t('historyEmpty')}</p></div>}
+      ) : <div class="emptystate"><Rings /><p class="hint" data-testid="history-empty">{t('historyEmpty')}</p></div>}
     </div>
   );
 }

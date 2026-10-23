@@ -22,7 +22,7 @@ Il ne voit jamais ce qu’il y a dans un bloc brouillé.
 
 ## Avec une IA
 
-**Ce que voit un fournisseur d’IA :** exactement ce que contient chaque demande. Vous pouvez le lire d’abord avec « Voir ce qui est envoyé ». Les notes de mémoire qui correspondent à votre demande l’accompagnent, sauf si vous les avez marquées Privées. Les proches que vous avez enregistrés n’y sont que si vous les cochez.
+**Ce que voit un fournisseur d’IA :** exactement ce que contient chaque demande. Vous pouvez le lire d’abord avec « Montrer ce qui est envoyé ». Les notes de mémoire qui correspondent à votre demande l’accompagnent, sauf si vous les avez marquées Privées. Les proches que vous avez enregistrés n’y sont que si vous les cochez.
 
 Votre clé d’API reste sur cet appareil. Elle n’est jamais synchronisée et jamais dans une sauvegarde.
 

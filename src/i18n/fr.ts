@@ -1460,7 +1460,7 @@ export const fr: Partial<Strings> = {
   obGoHome: 'Aller à l’accueil',
   clearIt: 'Effacer',
   aiPrefsTitle: 'Comment une IA doit travailler avec vous',
-  aiPrefsHint: 'Vos propres lignes. Réussite les ajoute à chaque demande qu’elle envoie et au texte que copie « Demander à une IA » ; « Voir ce qui est envoyé » les montre. Restez court et simple. Vide, rien n’est envoyé.',
+  aiPrefsHint: 'Vos propres lignes. Réussite les ajoute à chaque demande qu’elle envoie et au texte que copie « Demander à une IA » ; « Montrer ce qui est envoyé » les montre. Restez court et simple. Vide, rien n’est envoyé.',
   aiPrefsResetBtn: 'Remettre le modèle',
   aiPrefsReset: 'Modèle remis.',
   moveUp: 'Monter {what}',

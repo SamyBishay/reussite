@@ -31,7 +31,7 @@ Avec une clé, Réussite peut :
 
 La réponse peut tenir en un geste : dans Réglages → IA, **Lien en un geste** vous donne une phrase à coller dans les instructions personnalisées de votre IA. L’IA répond alors avec un lien. L’ouvrir là où se trouve votre liste montre les changements à cocher.
 
-## Voir ce qui est envoyé
+## Montrer ce qui est envoyé
 
 Avant que Réussite envoie quoi que ce soit à une IA pour la première fois, il vous montre **exactement ce qui sera envoyé** : l’adresse du service, le modèle, les instructions, vos données et votre demande, et les notes de mémoire. Rien ne quitte l’appareil avant que vous touchiez **Envoyer**. Activez **Toujours montrer ce qui est envoyé** pour le voir à chaque fois.
 

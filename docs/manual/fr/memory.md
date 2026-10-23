@@ -12,7 +12,7 @@ Touchez **Nouvelle note** pour en ajouter une. Ouvrez une note pour ajouter une 
 
 ## À quoi elle sert
 
-Si vous utilisez une IA, les notes qui correspondent à votre demande peuvent partir avec elle, pour que vous n’ayez pas à tout réexpliquer. « Voir ce qui est envoyé » les liste. Vous choisissez la quantité de mémoire qu’une demande peut emporter dans Réglages → IA.
+Si vous utilisez une IA, les notes qui correspondent à votre demande peuvent partir avec elle, pour que vous n’ayez pas à tout réexpliquer. « Montrer ce qui est envoyé » les liste. Vous choisissez la quantité de mémoire qu’une demande peut emporter dans Réglages → IA.
 
 Une IA peut suggérer une nouvelle note ou une correction. Vous la cochez d’abord, comme tout autre changement.
 

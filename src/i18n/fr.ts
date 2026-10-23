@@ -51,6 +51,7 @@ export const fr: Partial<Strings> = {
   carried: { one: '{n} reportée.', other: '{n} reportées.' },
   launchPoints: 'Points de départ',
   launchHint: 'quand vous commencez, et quand vous revenez à la liste après une pause',
+  launchNone: 'aucun',
   noLaunches: 'Aucun pour l’instant. Ajoutez un départ, et une ou deux reprises.',
   launchTime: 'Heure de départ',
   startOrRestart: 'Départ ou reprise',

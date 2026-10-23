@@ -64,6 +64,7 @@ export const en = {
   carried: { one: 'Carried over {n}.', other: 'Carried over {n}.' } as P,
   launchPoints: 'Launch points',
   launchHint: 'when you begin, and when you come back to the list after a break',
+  launchNone: 'none',
   noLaunches: 'None yet. Add a start, and a restart or two.',
   launchTime: 'Launch time',
   startOrRestart: 'Start or restart',

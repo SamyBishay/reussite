@@ -31,7 +31,7 @@ Réussite adds up the estimates and shows what the day will probably take for yo
 
 ## Launch points
 
-A launch point is a time to begin, or to come back to the list after a break. Typical: a start at 09:30 and a restart at 14:00. They are not a timetable. Steps float between them. You can change them on Today, and the defaults in Settings → Method. They live in Réussite and its notifications. They are not in the calendar, which keeps only what has a time and what is on a day.
+A launch point is a time to begin, or to come back to the list after a break. Typical: a start at 09:30 and a restart at 14:00. They are not a timetable. Steps float between them. On Today they are folded under **Launch points** (the summary lists the times); open it to add or remove one. The defaults in Settings → Method. They live in Réussite and its notifications. They are not in the calendar, which keeps only what is at a fixed time.
 
 ## Start
 

@@ -63,6 +63,24 @@ test('the calendar tab opens its views; a fixed-time step there opens its sheet'
   await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
 });
 
+test('launch points are folded on Today and in the day navigator, with their times in the summary, and stay as the person left them', async ({ page }) => {
+  await importSample(page);
+  const box = page.getByTestId('launch-box');
+  await expect(box).toBeVisible();
+  await expect(box).not.toHaveAttribute('open', '');
+  await expect(page.getByTestId('launch-summary')).toHaveText('· 09:30, 14:00');
+  await expect(page.locator('form.launch-add')).toBeHidden();
+  await box.locator('summary').click();
+  await expect(page.locator('form.launch-add')).toBeVisible();
+  // The state is kept for the session: another tab and back, and another day.
+  await page.getByTestId('tab-matrix').click();
+  await page.getByTestId('tab-today').click();
+  await expect(page.getByTestId('launch-box')).toHaveAttribute('open', '');
+  await page.getByTestId('next-day').click();
+  await expect(page.getByTestId('other-day').getByTestId('launch-box')).toHaveAttribute('open', '');
+  await expect(page.getByTestId('other-day').getByTestId('launch-summary')).toHaveText('· none');
+});
+
 test('a stay switches the current place on its first day', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'settings');

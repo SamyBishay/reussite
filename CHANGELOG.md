@@ -2,6 +2,7 @@
 
 ## Next — less clutter
 - The Calendar is only for things at a fixed time. The day's cards, what is due, decision checks, project dates and the weekly-review marker are no longer in it, nor in the feed or Add to calendar; they are in Today. Stays and half days stay as labels. The weekly review can be started from Settings → Method on any day.
+- On Today, Launch points are folded into one line ("Launch points · 09:30, 14:00"); open it to change them.
 
 ## 2.0 — phase 4b: a calmer look, a real calendar
 - A new look, St George: new colours, the heart logo as the app's icon, more room between things, fewer borders, and on a wide screen a centred column with the suit piles beside it. If you had chosen a palette before, you keep it. Colours and motifs are inspired by two paintings of St George and the dragon (the credit is in Settings → About). Three rings show on empty screens and beside a running timer, and St George's small celebration plays when you close the day, play the day's last card or finish a project (you can switch celebrations off).

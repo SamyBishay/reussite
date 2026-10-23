@@ -72,6 +72,7 @@ test('Add to calendar downloads an .ics with the day’s fixed-time items and no
   });
   await importSample(page);
   await page.getByTestId('tab-today').click();
+  await page.getByTestId('launch-box').locator('summary').click();
   await page.locator('form.launch-add input[name=time]').fill('23:30');
   await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.locator('.launches .chip', { hasText: '23:30' })).toHaveCount(1);

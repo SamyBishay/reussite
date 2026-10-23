@@ -1,6 +1,6 @@
 # Settings
 
-Open **Settings** from Home's menu. Everything you choose here is a setting that stays: an update never resets it.
+Open **Settings** from Home's menu. It is a plain page with its own heading. Everything you choose here is a setting that stays: an update never resets it.
 
 ![Settings](shot:settings)
 
@@ -11,7 +11,7 @@ English or Français. It changes at once.
 ## Appearance
 
 - **Theme:** System, Light, Dark, or By time of day (you set when light starts and dark starts).
-- **Palette** and **Accent colour**, and the **Suit colours**. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
+- **Palette** and **Accent colour**, and the **Suit colours**. New people start with the **St George** palette. If you chose one before, it stays. Réussite warns you when a colour is hard to read (aim for a contrast of 4.5 to 1).
 - **Text size:** Small, Medium or Large.
 - **Reduce motion**.
 - **Celebrations:** Off, Calm or Lively. **Sound** and **Volume**.
@@ -28,7 +28,7 @@ The numbers the method runs on, with sensible defaults:
 - **Planning time (min).** 15 by default.
 - **Default start** and **Default restarts:** your usual launch points.
 - **Suits:** rename the four kinds of cards and choose their symbols.
-- **Places** and **Stays.** See [Places and trips](places-and-trips.md).
+- **Places**, their **areas** and **Stays.** See [Places and trips](places-and-trips.md).
 - **Use Addresses & people**, and the **address categories.** See [Addresses and people](addresses-and-people.md).
 - Times for an **obligation**, the **weekly review day and time**, the **morning check-in** and **closing the day**. Notifications use them.
 
@@ -46,7 +46,7 @@ Reminders that reach your phone at the right minute, even when Réussite is clos
 
 Switch on **Notify me on this device**, then choose what to be notified about:
 
-- **Start and restart:** your launch points.
+- **Start and restart:** your launch points (notifications only; the calendar doesn't carry them).
 - **Time to leave:** before a fixed-time item, with the minutes of notice you choose.
 - **Morning check-in** and **Close the day.**
 - **Weekly review.**
@@ -59,7 +59,7 @@ Reminders are renewed each time you open the app. If you don't open it for about
 
 ## Calendar
 
-Subscribe to your launch points and fixed-time items from a calendar app. See [The calendar](calendar.md).
+Subscribe to your fixed-time items and your planned and due steps from a calendar app. Choose **What the feed says**: times only, short names, or short names, places and notes. See [The calendar](calendar.md).
 
 ## Data
 
@@ -73,6 +73,6 @@ If sync is off, Réussite reminds you every two weeks to save a backup file. It 
 
 ## About
 
-The version, **Read the manual**, **Copy diagnostics**, the privacy note and **What's new**.
+The version, **Read the manual**, the credit for the paintings that inspired the St George look, **Copy diagnostics**, the privacy note and **What's new**.
 
 **Copy diagnostics** makes a short report (versions, device, errors) that you can send to a friend when something breaks. It never includes your steps, notes, names, places or keys.

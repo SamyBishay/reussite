@@ -42,9 +42,11 @@ function list(lang: Lang): Docs {
     ['t2', task(L('Open the thesis draft and write the second paragraph of the method section', 'Ouvrir le mémoire et écrire le deuxième paragraphe de la méthode'), { project: 'p3', suit: 'S', est: 30, order: 2, starter: L('Open the draft on the method section', 'Ouvrir le brouillon à la section méthode') })],
     ['t3', task(L('Open Doctolib and book the dentist', 'Ouvrir Doctolib et prendre rendez-vous chez le dentiste'), { project: 'p2', suit: 'H', due: day(5), est: 10, app: 'Doctolib', link: 'https://www.doctolib.fr/', order: 3 })],
     ['t4', task(L('Open Messages and text Alex about Sunday', 'Ouvrir Messages et écrire à Alex pour dimanche'), { project: 'p2', suit: 'H', due: day(3), important: false, est: 5, order: 4 })],
-    ['t5', task(L('Open Files and sort the scanned receipts', 'Ouvrir Fichiers et trier les reçus scannés'), { project: 'p1', suit: 'D', important: false, est: 20, order: 5 })],
+    ['t5', task(L('Open Files and sort the scanned receipts', 'Ouvrir Fichiers et trier les reçus scannés'), { project: 'p1', suit: 'D', important: false, est: 20, order: 5, where: 'oldtown' })],
     ['t6', task(L('Open Mail and answer the landlord about the boiler', 'Ouvrir Mail et répondre au propriétaire pour la chaudière'), { project: 'p1', suit: 'D', due: day(9), est: 10, order: 6 })],
     ['t7', task(L('Open the thesis draft and read the supervisor’s comments', 'Ouvrir le mémoire et lire les commentaires de la directrice'), { project: 'p3', suit: 'S', due: day(14), est: 25, order: 7 })],
+    ['t12', task(L('Open Files and file the signed boiler form', 'Ouvrir Fichiers et classer le formulaire signé de la chaudière'), { project: 'p1', suit: 'D', est: 10, order: 12, after: 't6' })],
+    ['t13', task(L('Open Mail and send the boiler form to the agency', 'Ouvrir Mail et envoyer le formulaire de la chaudière à l’agence'), { project: 'p1', suit: 'D', est: 10, order: 13, after: 't12' })],
     ['t8', task(L('See a friend or go out', 'Voir un proche ou sortir'), { project: 'p2', suit: 'H', template: true, offer: 'address', est: 60, order: 8, at: '18:00', dur: 90 })],
     ['t9', task(L('Choir rehearsal', 'Répétition de la chorale'), { project: 'p2', suit: 'H', template: true, est: 90, at: '19:30', dur: 90, lead: 30, weekdays: [3], order: 9 })],
     ['t10', task(L('Dentist', 'Dentiste'), { project: 'p2', suit: 'H', due: day(4), at: '14:30', dur: 45, est: 45, order: 10 })],
@@ -55,7 +57,7 @@ function list(lang: Lang): Docs {
   const item = (id: string, text: string, w: number) => ({ id, text, w, by: 'me' });
   return {
     meta: [['settings', { language: lang, here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
-    places: [['home', { name: L('Home', 'Maison'), timeZone: 'Europe/Paris', order: 1 }], ['lisbon', { name: L('Lisbon', 'Lisbonne'), timeZone: 'Europe/Lisbon', order: 2 }]],
+    places: [['home', { name: L('Home', 'Maison'), timeZone: 'Europe/Paris', order: 1 }], ['lisbon', { name: L('Lisbon', 'Lisbonne'), timeZone: 'Europe/Lisbon', order: 2 }], ['oldtown', { name: L('Old town', 'Vieille ville'), timeZone: 'Europe/Paris', order: 3, parentId: 'home' }]],
     stays: [['stay1', { placeId: 'lisbon', from: day(12), to: day(16), note: '' }]],
     projects: [
       ['p1', { name: L('Housing papers', 'Papiers du logement'), suit: 'D', where: 'any', goal: L('Lease signed and filed by the end of the month', 'Bail signé et classé avant la fin du mois'), goalBy: 'me', due: day(20), order: 1, status: 'active' }],
@@ -105,8 +107,8 @@ function list(lang: Lang): Docs {
 
 /** Put the list in the app the way a restored backup does, then reload. */
 async function seed(page: Page, docs: Docs) {
-  const stamp = (id: string, f: Record<string, unknown>) => ({ id, _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, HLC])), ...f });
-  const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: Object.fromEntries(Object.entries(docs).map(([c, ds]) => [c, ds.map(([id, f]) => stamp(id, f))])) };
+  const stamp = (id: string, f: Record<string, unknown>) => ({ id, _v: 5, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, HLC])), ...f });
+  const file = { format: 'reussite-backup', schema: 5, exported: new Date().toISOString(), data: Object.fromEntries(Object.entries(docs).map(([c, ds]) => [c, ds.map(([id, f]) => stamp(id, f))])) };
   await page.goto('/#settings');
   page.once('dialog', d => void d.accept());
   await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
@@ -160,6 +162,13 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#matrix');
       await expect(page.getByTestId('quad1')).toBeVisible();
       await shot(page, 'matrix');
+      await page.getByTestId('chain-toggle').first().click();
+      await expect(page.getByTestId('chain').first()).toBeVisible();
+      await page.getByTestId('chain').first().scrollIntoViewIfNeeded();
+      await shot(page, 'chain', true);
+      await page.goto('/#matrix');
+      await page.getByTestId('area-chips').scrollIntoViewIfNeeded();
+      await shot(page, 'areas', true);
 
       await page.goto('/#projects');
       await expect(page.getByTestId('decisions')).toBeVisible();
@@ -179,6 +188,9 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#calendar');
       await expect(page.getByTestId('calendar')).toBeVisible();
       await shot(page, 'calendar');
+      await page.getByTestId('cal-day').click();
+      await page.waitForTimeout(300);
+      await shot(page, 'calendar-day');
       await page.getByTestId('cal-log').click();
       await expect(page.getByTestId('log')).toBeVisible();
       await shot(page, 'log');
@@ -212,6 +224,10 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#memory');
       await expect(page.getByTestId('memory')).toBeVisible();
       await shot(page, 'memory');
+
+      await page.goto('/#notifications');
+      await expect(page.getByTestId('notifications')).toBeVisible();
+      await shot(page, 'notifications');
 
       // Home last: the line it takes adds a step to the Inbox.
       await page.goto('/#home');

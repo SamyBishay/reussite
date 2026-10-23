@@ -14,6 +14,16 @@ The pill at the top of Today, the Matrix and the other tabs says where you are (
 
 You can also add places in Settings → Method.
 
+## Areas
+
+An **area** is somewhere inside a place: Heliopolis in Cairo. Add one under the place in Settings → Method → Places, or in the Places sheet (**+ Add an area**). An area has no time zone of its own; it uses its place's. Removing an area puts what was set to it back on the place.
+
+Where you choose a place, the list shows each place followed by its areas. A step in an area is on its place's page too.
+
+When a place has areas, a row of **chips** appears on Today, the matrix and the calendar. Tap one to see only that area's steps, plus those set to Anywhere. Tap it again to clear. The choice lasts until you close the app. Lists are grouped under the area's name.
+
+**Half days.** In the morning check-in, **Where will you be?** lets you pick a place or one of its areas for the morning and for the afternoon. The plan then draws on that area first and keeps its steps together. Today and the calendar show "Afternoon · Heliopolis".
+
 ## Stays
 
 A **stay** is a place with a first and a last day. Add one in Settings → Method, under Stays. On the first day Réussite switches to that place by itself, in its time zone. Outside a stay, you're wherever you said you were.

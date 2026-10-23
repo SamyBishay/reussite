@@ -15,7 +15,7 @@ Your list is scrambled on your device first. **What the relay can see:**
 - your list as scrambled blobs, their sizes and when they arrive;
 - IP addresses;
 - the push address of each device, and the times its notifications are due (their text is scrambled, so the relay can't read it);
-- the calendar feed, only if you switch it on, with generic titles unless you include step titles;
+- the calendar feed, only if you switch it on. At **Times only** it says only "Fixed time" and "Planned step". At **Short names**, and at **Short names, places and notes**, what it says (short names, and then places, notes and links) is stored in plain text, and whoever runs the relay can read it;
 - your whole list, **while the connector is on**.
 
 It never sees what is inside a scrambled blob.

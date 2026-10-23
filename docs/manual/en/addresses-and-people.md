@@ -31,6 +31,10 @@ Tap **+ Person**. Only what the plan needs: a name, how to reach them and a note
 - **How to reach them:** a link, a phone number or an email. A phone number or an email becomes a button that opens WhatsApp, Messages, Phone or Mail.
 - **Last seen:** set when you mark done a step linked to them. It is shown as a date, never as overdue.
 
+## What's on
+
+Open a person and tap **What's on**. You see the open steps that go to them, then the steps whose title or note names them, each one tap from its sheet. Done and dropped steps are not there. If the person is in an area, a step that goes to them offers a button to set its place to that area. It never does it by itself.
+
 ## Steps that feed them
 
 In a step's details, **Goes to** links the step to an address or a person. Marking it done then asks for the visit note, or updates when you last saw the person.

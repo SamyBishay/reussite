@@ -118,7 +118,7 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
       {!cur && (
         <div data-testid="addr-paste-box">
           <p class="hint">{t('addrPasteHint')}</p>
-          <div class="actions" style="margin-top:10px"><button class="btn primary" type="button" onClick={() => void paste()} data-testid="addr-paste">{t('addrPaste')}</button></div>
+          <div class="actions" style="margin-top:var(--s3)"><button class="btn primary" type="button" onClick={() => void paste()} data-testid="addr-paste">{t('addrPaste')}</button></div>
           {manual && (
             <label class="field"><span>{t('addrPasteField')}</span>
               <textarea rows={2} value={pasted} placeholder="https://maps.app.goo.gl/…" autocomplete="off" onInput={e => { setPasted(val(e)); if (val(e).trim()) take(val(e)); }} data-testid="addr-paste-field" />
@@ -153,14 +153,14 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
       </div>
       <label class="field"><span>{t('note')}</span><textarea value={note} onInput={e => setNote(val(e))} data-testid="addr-note" /></label>
       {err && <p class="err">{err}</p>}
-      {cur?.mapsUrl && isAllowedLink(cur.mapsUrl) && <div class="actions" style="margin-top:12px"><ExtLink href={cur.mapsUrl} class="btn" testid="addr-open-maps">{t('addrOpenMaps')}</ExtLink></div>}
+      {cur?.mapsUrl && isAllowedLink(cur.mapsUrl) && <div class="actions" style="margin-top:var(--s3)"><ExtLink href={cur.mapsUrl} class="btn" testid="addr-open-maps">{t('addrOpenMaps')}</ExtLink></div>}
       <div class="actions">
         <button class="btn primary" type="submit" disabled={off} data-testid="addr-save">{t('save')}</button>
         {cur && <button class="btn" type="button" disabled={off} onClick={() => openVisit(cur.id, {})} data-testid="addr-visit">{t('addrRecordVisit')}</button>}
       </div>
       {cur && <Visits a={cur} />}
       {cur && (
-        <div class="actions" style="margin-top:8px">
+        <div class="actions" style="margin-top:var(--s2)">
           <button class="btn ghost small" type="button" disabled={off} onClick={() => void remove()} data-testid="addr-remove">{armed ? t('deleteAgain') : t('addrRemove')}</button>
         </div>
       )}
@@ -343,7 +343,7 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
         <button class="btn primary" type="submit" disabled={off} data-testid="person-save">{t('save')}</button>
         {cur?.reach && isAllowedLink(cur.reach) && <ExtLink href={cur.reach} class="btn" testid="person-open">{t('personOpen', { app: reachLabel(cur.reach) })}</ExtLink>}
       </div>
-      {cur && <div class="actions" style="margin-top:8px"><button class="btn ghost small" type="button" disabled={off} onClick={() => void remove()} data-testid="person-remove">{armed ? t('deleteAgain') : t('personRemove')}</button></div>}
+      {cur && <div class="actions" style="margin-top:var(--s2)"><button class="btn ghost small" type="button" disabled={off} onClick={() => void remove()} data-testid="person-remove">{armed ? t('deleteAgain') : t('personRemove')}</button></div>}
     </form>
   );
 }

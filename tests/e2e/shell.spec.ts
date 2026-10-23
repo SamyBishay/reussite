@@ -46,6 +46,26 @@ for (const width of [320, 375, 430]) {
   });
 }
 
+// Brief §16: above 1024 px the content is a centred column of about 720 px, the suit piles beside it.
+for (const [width, height] of [[1440, 900], [1280, 800]] as const) {
+  test(`at ${width}×${height} the main column is centred and narrow, and nothing scrolls sideways`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await importSample(page);
+    for (const v of ['home', 'today', 'settings'] as const) {
+      await goTab(page, v);
+      await noSideways(page, v + ' at ' + width);
+      const m = await page.locator('main').boundingBox();
+      expect(m!.width, v + ': the column is narrow').toBeLessThanOrEqual(760);
+      expect(m!.width, v + ': and not squeezed').toBeGreaterThanOrEqual(600);
+      expect(Math.abs(m!.x + m!.width / 2 - width / 2), v + ': the column is centred').toBeLessThanOrEqual(2);
+    }
+    // The piles are a column of their own beside the list, not a strip above it.
+    await goTab(page, 'today');
+    const side = await page.locator('.side').boundingBox(), main = await page.locator('main').boundingBox();
+    expect(side!.x).toBeGreaterThanOrEqual(main!.x + main!.width + 24);
+  });
+}
+
 test('a sheet covers the tab bar', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('details').first().click();

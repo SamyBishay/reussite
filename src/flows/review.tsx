@@ -58,7 +58,7 @@ function Resort({ tk }: { tk: Tk }) {
           {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" aria-pressed={quad(tk) === q} onClick={() => go(q)}>{quadName(q)}</button>)}
         </div>
         {ask && (
-          <div class="row-inline" style="margin-top:6px">
+          <div class="row-inline" style="margin-top:var(--s2)">
             <input type="date" aria-label={t('dueField')} defaultValue={ask.kind === 'newDue' ? firstCalmDay(k, w) : addDays(k, 7)} onChange={e => { const v = (e.target as HTMLInputElement).value; void patchTask(tk.id, { ...ask.patch, due: v || null, dueRule: null }); setAsk(null); }} />
             {ask.kind === 'dueOrBlocker' ? <button class="btn small" type="button" onClick={() => { void patchTask(tk.id, { ...ask.patch, urgent: true }); setAsk(null); }}>{t('itBlocks')}</button>
               : <button class="btn small" type="button" onClick={() => { void patchTask(tk.id, { ...ask.patch, due: null }); setAsk(null); }}>{t('pickClear')}</button>}
@@ -155,7 +155,7 @@ function Review() {
         <p class="hint">{t('rvLaterHint')}</p>
         {stale.length > 0 && <div class="notice"><p><b>{t('laterStale')}</b></p><ul class="picklist">{stale.map(x => (
           <li><div><p><Title s={x.title} /></p>
-            <div class="go" style="margin-top:6px">
+            <div class="go" style="margin-top:var(--s2)">
               <button class="btn small" type="button" onClick={() => void patchTask(x.id, { important: true, laterOffers: 0 })}>{t('makeImportant')}</button>
               <button class="btn small" type="button" onClick={() => void patchTask(x.id, { template: true, laterOffers: 0 })}>{t('makeObligation')}</button>
               <button class="btn small ghost" type="button" onClick={() => void dropTask(x.id)}>{t('dropIt')}</button>
@@ -223,13 +223,13 @@ function DecisionCheck({ id }: { id: string }) {
   return (
     <li><div><p><b>{d.title}</b></p>{d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}</p>}
       {fact == null ? (
-        <div class="go" style="margin-top:6px">
+        <div class="go" style="margin-top:var(--s2)">
           <button class="btn small" type="button" onClick={() => setFact('')}>{t('yesItHappened')}</button>
           <button class="btn small" type="button" onClick={() => void reviewDecision(id, false, addDays(today.value, 30))}>{t('noCheckMonth')}</button>
           <button class="btn small ghost" type="button" onClick={() => void reviewDecision(id, false, null)}>{t('closeDecision')}</button>
         </div>
       ) : (
-        <div class="row-inline" style="margin-top:6px"><input type="text" value={fact} placeholder={t('newFactQ')} aria-label={t('newFactQ')} onInput={e => setFact((e.target as HTMLInputElement).value)} />
+        <div class="row-inline" style="margin-top:var(--s2)"><input type="text" value={fact} placeholder={t('newFactQ')} aria-label={t('newFactQ')} onInput={e => setFact((e.target as HTMLInputElement).value)} />
           <button class="btn small" type="button" disabled={!fact.trim()} onClick={() => void reviewDecision(id, true, fact)}>{t('reopenDecision')}</button></div>
       )}
     </div></li>
@@ -265,7 +265,7 @@ function WeekNumbers({ onFinish }: { onFinish: () => Promise<void> }) {
         <div class="stat"><b>{x(overall)}</b><span>{t('realOverEst')}</span></div>
       </div>
       {apps.size > 0 && <ul class="mini">{[...apps].map(([a, xs]) => <li><span>{a}: {x(medianRatio(xs))} ({xs.length})</span></li>)}</ul>}
-      {Object.keys(why).length > 0 && <p class="friction" style="margin-top:10px">{t('stoppedEarly', { list: Object.entries(why).sort((a, b) => b[1] - a[1]).map(([k, n]) => (WHY[k] ? t(WHY[k]!) : k) + ' ' + n).join(' · ') })}</p>}
+      {Object.keys(why).length > 0 && <p class="friction" style="margin-top:var(--s3)">{t('stoppedEarly', { list: Object.entries(why).sort((a, b) => b[1] - a[1]).map(([k, n]) => (WHY[k] ? t(WHY[k]!) : k) + ' ' + n).join(' · ') })}</p>}
       <div class="actions"><button class="btn primary" type="button" onClick={() => void onFinish()} data-testid="rv-finish">{t('finishReview')}</button></div>
     </div>
   );

@@ -97,7 +97,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
           <input type="number" name="est" min="1" max="600" placeholder={t('minShort')} aria-label={t('estimateMin')} />
           <button class="btn small" type="submit">{t('add')}</button>
         </form>
-        {p.id !== 'inbox' && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={() => void openDecision(null, { projectId: p.id })}>{t('newDecision')}</button></div>}
+        {p.id !== 'inbox' && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={() => void openDecision(null, { projectId: p.id })}>{t('newDecision')}</button></div>}
       </details>
     </article>
   );
@@ -130,7 +130,7 @@ function ProjectSheet({ id }: { id: string }) {
           </select>
         </label>
       </div>
-      <div class="actions" style="margin-top:10px">
+      <div class="actions" style="margin-top:var(--s3)">
         <button class="btn small" type="button" onClick={() => moveProject(id, -1)}>{t('earlier')}</button>
         <button class="btn small" type="button" onClick={() => moveProject(id, 1)}>{t('later')}</button>
       </div>
@@ -243,14 +243,14 @@ export function Projects() {
         );
       })}
       {inbox.some(x => x.status === 'open' && !x.fixed) && (
-        <section class="suitsec"><h3>{t('inbox')}</h3><p class="hint" style="margin-bottom:10px">{t('inboxHint')}</p>
+        <section class="suitsec"><h3>{t('inbox')}</h3><p class="hint" style="margin-bottom:var(--s3)">{t('inboxHint')}</p>
           <div class="projs"><ProjectCard p={(projects.value.get('inbox') as P) ?? ({ id: 'inbox', name: t('inbox') } as P)} ts={inbox.filter(x => !x.fixed && x.src !== 'plan')} /></div>
         </section>
       )}
       <Decisions />
       <NewProject />
       <Shelf done={[...projects.value.values()].filter(p => p.status === 'done')} by={by} />
-      <p class="hint" style="margin-top:10px">{t('placePageNote', { place: placeName(page) })}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('placePageNote', { place: placeName(page) })}</p>
     </div>
   );
 }

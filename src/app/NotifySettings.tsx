@@ -40,7 +40,7 @@ export function NotifySwitch() {
       {st === 'norelay' && <p data-testid="notify-norelay">{t('notifyNoRelay')}</p>}
       {st === 'denied' && <p class="err" data-testid="notify-denied">{t('notifyDenied')}</p>}
       {ready && (
-        <div class="toggles" style="margin-top:14px">
+        <div class="toggles" style="margin-top:var(--s4)">
           <label class="tog"><input type="checkbox" checked={pending ?? on} disabled={pending !== null || pushBusy.value} onChange={flip} data-testid="notify-master" /> {t('notifyMaster')}</label>
         </div>
       )}

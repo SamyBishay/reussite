@@ -140,7 +140,7 @@ export function DurationPicker({ base, onPick, saveLabel }: { base: number | nul
   const [m, setM] = useState(w.m);
   return (
     <>
-      <div class="chips-pick" style="margin-top:14px">
+      <div class="chips-pick" style="margin-top:var(--s4)">
         {durationButtons(base).map(v => <button type="button" data-testid="dur" onClick={() => onPick(v)}>{fmtMin(v)}</button>)}
       </div>
       <div class="field"><span>{t('orPick')}</span>
@@ -194,7 +194,7 @@ export function openStartedEarlier(id: string) {
     <div key={'early' + id}>
       <h3>{t('startedEarlier')}</h3>
       <p class="hint">{t('startedEarlierHint')}</p>
-      <div class="chips-pick" style="margin-top:14px">{[5, 10, 15, 30].map(m => <button type="button" onClick={() => start(m)}>{t('minAgo', { n: m })}</button>)}</div>
+      <div class="chips-pick" style="margin-top:var(--s4)">{[5, 10, 15, 30].map(m => <button type="button" onClick={() => start(m)}>{t('minAgo', { n: m })}</button>)}</div>
       <DurationPicker base={45} onPick={start} saveLabel={t('startedThen')} />
     </div>,
   );
@@ -248,7 +248,7 @@ function SessionSheet({ taskId, sessionId }: { taskId: string; sessionId: string
           <select value={why ?? 'done'} onChange={e => setWhy((e.target as HTMLSelectElement).value)}>{WHY_ALL.map(([v, k]) => <option value={v}>{t(k)}</option>)}</select>
         </label>
       </div>
-      {s && <p class="hint" style="margin-top:8px">{t('nowRecorded', { t: fmtMin(s.m) })}</p>}
+      {s && <p class="hint" style="margin-top:var(--s2)">{t('nowRecorded', { t: fmtMin(s.m) })}</p>}
       <DurationPicker base={s?.m ?? personal(tk)?.value ?? tk.est ?? null} onPick={m => void save(m)} />
       <div class="actions">
         <button class="btn ghost" type="button" onClick={back}>{t('back')}</button>
@@ -332,12 +332,12 @@ function RepeatField({ value, onChange }: { value: Repeat | null; onChange: (r: 
             </div>
           )}
           {r.unit === 'week' && (
-            <div class="toggles" style="margin-top:10px" role="group" aria-label={t('repOnDays')}>
+            <div class="toggles" style="margin-top:var(--s3)" role="group" aria-label={t('repOnDays')}>
               {DOW.map(([d, name]) => <label class="tog small"><input type="checkbox" checked={!!r.weekdays?.includes(d)} onChange={e => set({ weekdays: (e.target as HTMLInputElement).checked ? [...(r.weekdays ?? []), d].sort() : (r.weekdays ?? []).filter(x => x !== d) })} /> {name}</label>)}
             </div>
           )}
           {r.unit === 'month' && <label class="field"><span>{t('repMonthDay')}</span><input type="number" min="1" max="31" value={r.monthDay ?? ''} onChange={e => set({ monthDay: Number((e.target as HTMLInputElement).value) || undefined })} /></label>}
-          <div class="seg" role="group" aria-label={t('repFrom')} style="margin-top:10px;flex-wrap:wrap">
+          <div class="seg" role="group" aria-label={t('repFrom')} style="margin-top:var(--s3);flex-wrap:wrap">
             <button type="button" aria-pressed={r.from === 'due'} onClick={() => set({ from: 'due' })}>{t('repFromDue')}</button>
             <button type="button" aria-pressed={r.from === 'done'} onClick={() => set({ from: 'done' })}>{t('repFromDone')}</button>
           </div>
@@ -590,8 +590,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <select name="project" defaultValue={tk.project}>{projs.map(p => <option value={p.id}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
       {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
-      {tk.prompt && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
-      {!tk.prompt && <div class="actions" style="margin-top:12px"><GoLink tk={tk} variant="small" /></div>}
+      {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
+      {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
       <details class="more" open={!!(tk.repeat || tk.at || tk.dueRule || tk.weekdays?.length || after.length)}>
         <summary>{t('moreFields')}</summary>
@@ -641,7 +641,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         </label>
       )}
       {(spent > 0 || sessionsOf(id).length > 0 || tk.status === 'done') && <Sessions tk={tk} />}
-      {spent > 0 && <p class="hint" style="margin-top:10px">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
+      {spent > 0 && <p class="hint" style="margin-top:var(--s3)">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
     </form>
   );
 }

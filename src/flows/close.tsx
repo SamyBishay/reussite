@@ -203,10 +203,10 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
   return (
     <form onSubmit={submit} class="summary-form" data-testid="close-summary">
       {!inShow && <p class="eyebrow">{fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
-      {!inShow && <h3 style="font-size:56px;line-height:1;margin-top:8px">{deck.length}</h3>}
+      {!inShow && <h3 style="font-size:56px;line-height:1;margin-top:var(--s2)">{deck.length}</h3>}
       {!inShow && <p class="bigsub">{t('cardsPlayed', { n: deck.length })}</p>}
       <div class="minifound">{SUIT_ORDER.map(s => <span><Suit s={s} /> {by[s]}</span>)}</div>
-      <p class="meta" style="margin-top:6px">{t('timed', { t: fmtMin(minutesOn(k)) })}{r.v ? ' · ' + t('estimatesRun', { r: r.v.toFixed(1) }) : ''}</p>
+      <p class="meta" style="margin-top:var(--s2)">{t('timed', { t: fmtMin(minutesOn(k)) })}{r.v ? ' · ' + t('estimatesRun', { r: r.v.toFixed(1) }) : ''}</p>
       {!inShow && deck.length > 0 && <ul class="pilelist">{deck.map((c, i) => <li><span class={'rk suit-' + c.suit}>{rankOf(deck.slice(0, i + 1).filter(x => x.suit === c.suit).length)}</span><span><Title s={c.title} /></span><span class="tm" /></li>)}</ul>}
       <label class="field"><span>{t('tomorrowFirst')}</span>
         <select value={sel} onChange={e => setSel((e.target as HTMLSelectElement).value)}>

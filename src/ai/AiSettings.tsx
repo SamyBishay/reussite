@@ -44,7 +44,7 @@ function Spend() {
   useEffect(() => { void loadSpent(); }, []);
   const usd = m ? (m.usd < 1 ? m.usd.toFixed(3) : m.usd.toFixed(2)) : '0';
   return (
-    <div data-testid="ai-spend" style="margin-top:14px"><p class="field-label">{t('aiSpendTitle')}</p>
+    <div data-testid="ai-spend" style="margin-top:var(--s4)"><p class="field-label">{t('aiSpendTitle')}</p>
       <p class="hint" style="margin:0" data-testid="ai-spend-line">
         {m && m.calls ? t('aiSpendTokens', { n: m.calls, tokens: monthTokens(m).toLocaleString() }) : t('aiSpendNone')}
         {m && m.priced ? ' ' + t('aiSpendUsd', { usd: '$' + usd }) : ''}
@@ -150,11 +150,11 @@ export function AiSettings() {
           <div class="actions">
             <button class="btn" type="button" disabled={!hasKey || test?.busy} onClick={runTest} data-testid="ai-test">{test?.busy ? t('aiTesting') : t('aiTest')}</button>
           </div>
-          {test && !test.busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:8px">{test.msg}</p>}
+          {test && !test.busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:var(--s2)">{test.msg}</p>}
         </>
       )}
       <PreferencesEditor value={s.aiPreferences} onSave={v => set({ aiPreferences: v })} />
-      <div class="toggles" style="margin-top:14px">
+      <div class="toggles" style="margin-top:var(--s4)">
         <label class="tog"><input type="checkbox" checked={s.aiAlwaysShow} onChange={e => set({ aiAlwaysShow: (e.target as HTMLInputElement).checked })} /> {t('aiAlwaysShow')}</label>
       </div>
       <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>

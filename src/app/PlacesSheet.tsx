@@ -36,7 +36,7 @@ function PlacesSheet() {
         <input type="text" name="name" placeholder={t('newPlaceName')} aria-label={t('newPlaceName')} autocomplete="off" required />
         <button class="btn" type="submit" data-testid="add-place">{t('addPlaceBtn')}</button>
       </form>
-      <p class="hint" style="margin-top:10px">{t('staysInSettings')}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('staysInSettings')}</p>
     </div>
   );
 }

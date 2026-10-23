@@ -103,7 +103,7 @@ export function ReviewList({ plan, note, request, onApplied, inline, record }: {
         <button class="btn primary" type="button" disabled={busy || !n || readOnly.value} onClick={go} data-testid="apply-changes">{t('chgApply', { n })}</button>
         <button class="btn ghost" type="button" onClick={() => (inline ? onApplied?.(0, []) : closeSheet())}>{t('cancel')}</button>
       </div>
-      <p class="hint" style="margin-top:10px">{t('chgUntick')}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('chgUntick')}</p>
     </div>
   );
 }

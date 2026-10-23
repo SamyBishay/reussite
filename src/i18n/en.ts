@@ -384,6 +384,8 @@ export const en = {
   backupDueSave: 'Save a backup file',
   backupDueNotNow: 'Not now',
   about: 'About',
+  /** Brief §16. The artist's name goes in this one string when it is known. */
+  paintingsCredit: 'Colours and motifs inspired by two paintings of St George and the dragon.',
   diagTitle: 'Copy diagnostics',
   diagHint: 'This is what will be copied, so a friend can help with a bug. It has versions, states and error text only: never your steps, notes, names, places, keys or recovery key.',
   diagCopy: 'Copy diagnostics',

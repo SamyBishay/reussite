@@ -1,6 +1,7 @@
 // Settings are data (brief §7): one synced document, `meta/settings`. An update adds
 // defaults for new keys and never overwrites what the person chose.
 import type { SuitId } from './schema';
+import { parse } from './hlc';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import type { FeedDetail } from '../domain/calItems';
 
@@ -109,9 +110,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   lightAt: '07:00',
   darkAt: '20:00',
-  preset: 'lilac-sea',
-  accent: '#6B4BA6',
-  suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' },
+  preset: 'st-george',
+  accent: '#2D6A67',
+  suitColors: { S: '#2F4C8E', D: '#735C1F', C: '#2B6964', H: '#9C4560' },
   textSize: 'M',
   reduceMotion: false,
   celebrations: 'lively',
@@ -159,9 +160,29 @@ export const DEFAULT_SETTINGS: Settings = {
   relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };
 
-/** Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value. */
-export function withDefaults(saved: Partial<Settings> | undefined): Settings {
-  const out: Record<string, unknown> = { ...DEFAULT_SETTINGS };
+/**
+ * St George became the default palette on this day. A settings document first written before it, with no
+ * palette ever chosen, keeps the one it was shown until then (Lilac & sea): the default changes for new
+ * people only. Nothing is written; the document's oldest field clock tells.
+ */
+export const ST_GEORGE_FROM = Date.parse('2026-10-23T00:00:00Z');
+/** The wall time of a document's oldest field clock (ms); Infinity for none. */
+export function firstWritten(hlc: Record<string, string> | undefined): number {
+  let min = Infinity;
+  for (const h of Object.values(hlc ?? {})) { const w = parse(h).wall; if (w < min) min = w; }
+  return min;
+}
+export const LEGACY_LOOK: Pick<Settings, 'preset' | 'accent' | 'suitColors'> = {
+  preset: 'lilac-sea', accent: '#6B4BA6', suitColors: { S: '#1E7568', D: '#7A55B8', C: '#1E7568', H: '#7A55B8' },
+};
+
+/**
+ * Fill in defaults for missing keys, one level deep for nested objects. Never overwrites a set value.
+ * `since`: when the stored document was first written (ms), to keep an older document's palette.
+ */
+export function withDefaults(saved: Partial<Settings> | undefined, since?: number): Settings {
+  const legacy = saved && since != null && since < ST_GEORGE_FROM && saved.preset === undefined && saved.accent === undefined && saved.suitColors === undefined;
+  const out: Record<string, unknown> = { ...DEFAULT_SETTINGS, ...(legacy ? LEGACY_LOOK : {}) };
   for (const [k, v] of Object.entries(saved ?? {})) {
     const d = (DEFAULT_SETTINGS as Record<string, unknown>)[k];
     out[k] = isPlainObject(d) && isPlainObject(v) ? { ...d, ...v } : v;

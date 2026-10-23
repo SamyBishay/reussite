@@ -102,7 +102,7 @@ export function Matrix() {
       {!f.place && <Scope hidden={hidden} />}
       <CommandBox scope={{ kind: 'matrix' }} />
       <AreaChips view="matrix" />
-      {pageAreas.value.length > 0 && <label class="tog" style="margin-top:8px"><input type="checkbox" checked={byArea.value} onChange={e => (byArea.value = (e.target as HTMLInputElement).checked)} data-testid="sort-area" /> {t('sortByArea')}</label>}
+      {pageAreas.value.length > 0 && <label class="tog" style="margin-top:var(--s2)"><input type="checkbox" checked={byArea.value} onChange={e => (byArea.value = (e.target as HTMLInputElement).checked)} data-testid="sort-area" /> {t('sortByArea')}</label>}
       <div class="filters" data-testid="filters">
         <input type="search" value={f.q} placeholder={t('search')} aria-label={t('search')} onInput={e => set({ q: (e.target as HTMLInputElement).value })} />
         <select aria-label={t('project')} value={f.project} onChange={e => set({ project: (e.target as HTMLSelectElement).value })}>

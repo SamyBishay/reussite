@@ -65,7 +65,7 @@ export function Calendar() {
           {a !== td && <button class="btn small ghost" type="button" onClick={() => (anchor.value = null)}>{t('pickToday')}</button>}
         </div>
       </div>
-      <div class="actions" style="margin-top:8px" data-testid="add-to-calendar" role="group" aria-label={t('addToCalendar')}>
+      <div class="actions" style="margin-top:var(--s2)" data-testid="add-to-calendar" role="group" aria-label={t('addToCalendar')}>
         <button class="btn small ghost" type="button" data-testid="ics-today" onClick={() => void addToCalendar(td, td)}>{t('addToCalendarToday')}</button>
         <button class="btn small ghost" type="button" data-testid="ics-week" onClick={() => void addToCalendar(week[0]!, week[6]!)}>{t('addToCalendarWeek')}</button>
       </div>

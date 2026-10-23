@@ -118,7 +118,7 @@ function Checkin() {
             {x.id in ticked && <button type="button" onClick={() => { const n = { ...ticked }; delete n[x.id]; setTicked(n); }}>{t('notDone')}</button>}
           </div></div></li>
       ))}</ul>
-      <p class="hint" style="margin-top:10px">{t('ciCarryNote')}</p>
+      <p class="hint" style="margin-top:var(--s3)">{t('ciCarryNote')}</p>
       <div class="actions"><button class="btn primary" type="button" onClick={() => void yesterdayDone()} data-testid="ci-next">{t('next_')}</button></div>
     </div>
   );
@@ -129,7 +129,7 @@ function Checkin() {
       <p class="hint">{t('ciHeavyHint')}</p>
       <ul class="picklist">{heavy.map(id => T(id)).filter(isOpen).map(x => (
         <li><div><p><Title s={x.title} /></p><p class="meta">{t('carriedTag', { n: x.carried })}</p>
-          <div class="go" style="margin-top:6px">
+          <div class="go" style="margin-top:var(--s2)">
             <button class="btn small" type="button" onClick={() => flows.breakDown(x.id)}>{t('shrinkIt')}</button>
             <button class="btn small" type="button" onClick={() => { void patchTask(x.id, { kind: 'decision' }); flows.decide(null, { taskId: x.id }); }}>{t('makeDecision')}</button>
           </div></div></li>
@@ -315,18 +315,18 @@ function Checkin() {
           <p class="planmeta" data-testid="plan-total">{p.total.lo !== p.total.hi ? t('planTotalRange', { t: fmtMin(p.total.est), lo: fmtMin(p.total.lo), hi: fmtMin(p.total.hi) }) : t('planTotal', { t: fmtMin(p.total.est) })}</p>
           <p class="planmeta">{t('launchPoints')}: {p.launches.map(l => (l.k === 'start' ? '▶ ' : '↻ ') + l.t).join(' · ')}</p>
           {p.offerLater && !extra.includes(p.offerLater) && (
-            <div class="banner" style="margin-top:12px"><p>{t('roomFor', { title: T(p.offerLater)?.title ?? '' })}</p><button class="btn small" type="button" onClick={() => setExtra([...extra, p.offerLater!])}>{t('add')}</button></div>
+            <div class="banner" style="margin-top:var(--s3)"><p>{t('roomFor', { title: T(p.offerLater)?.title ?? '' })}</p><button class="btn small" type="button" onClick={() => setExtra([...extra, p.offerLater!])}>{t('add')}</button></div>
           )}
           <div class="actions">
             <button class="btn primary" type="button" disabled={busy} onClick={() => void accept()} data-testid="go-with-this">{t('goWithThis')}</button>
             <button class="btn" type="button" onClick={() => setCutting(!cutting)}>{cutting ? t('doneCutting') : t('tooMuch')}</button>
           </div>
           {proposed && (
-            <div class="banner" style="margin-top:12px"><p>{t('aiPlanChanges', { n: proposed.items.length })}</p><button class="btn small" type="button" onClick={() => setReviewing(true)} data-testid="ai-plan-review">{t('aiReview')}</button></div>
+            <div class="banner" style="margin-top:var(--s3)"><p>{t('aiPlanChanges', { n: proposed.items.length })}</p><button class="btn small" type="button" onClick={() => setReviewing(true)} data-testid="ai-plan-review">{t('aiReview')}</button></div>
           )}
           {aiPlan ? <div class="actions"><button class="btn small ghost" type="button" onClick={() => { setAiPlan(null); setProposed(null); }} data-testid="ai-plan-undo">{t('aiPlanUndo')}</button></div>
             : <AiAction ai={ai} label={t('aiImprovePlan')} onClick={() => void improve()} testid="ai-improve" />}
-          <p class="hint" style="margin-top:8px">{quadName(2)}: {t('protectRule')}</p>
+          <p class="hint" style="margin-top:var(--s2)">{quadName(2)}: {t('protectRule')}</p>
         </>
       )}
     </div>

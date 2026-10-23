@@ -53,7 +53,7 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
   return (
     <div class="ai-err" data-testid="ai-error" role="alert">
       <p class="err">{message}</p>
-      <div class="actions" style="margin-top:6px">
+      <div class="actions" style="margin-top:var(--s2)">
         {manual && <button class="btn small" type="button" onClick={manual}>{manualLabel ?? t('aiManual')}</button>}
         <DiagnosticsButton />
         {toSettings && <button class="btn small ghost" type="button" onClick={() => { closeSheet(); location.hash = '#settings'; }}>{t('aiOpenSettings')}</button>}
@@ -121,7 +121,7 @@ function PackBlock({ pack }: { pack: string }) {
         {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
         <button class="btn" type="button" onClick={() => openPaste()} data-testid="pack-paste">{t('pasteReply')}</button>
       </div>
-      {copied && <p class="hint" style="margin-top:10px">{t('packNext')}</p>}
+      {copied && <p class="hint" style="margin-top:var(--s3)">{t('packNext')}</p>}
     </>
   );
 }
@@ -203,7 +203,7 @@ function Paste() {
       <label class="field"><span>{t('pasteLabel')}</span>
         <textarea rows={8} value={text} onInput={e => setText((e.target as HTMLTextAreaElement).value)} data-testid="paste-text" />
       </label>
-      {err && <p class="err" role="alert" data-testid="paste-error" style="margin-top:8px">{err}</p>}
+      {err && <p class="err" role="alert" data-testid="paste-error" style="margin-top:var(--s2)">{err}</p>}
       <div class="actions">
         <button class="btn primary" type="submit" disabled={!text.trim()} data-testid="paste-go">{t('pasteGo')}</button>
         {typeof navigator.clipboard?.readText === 'function' && <button class="btn" type="button" onClick={fromClipboard}>{t('pasteFromClipboard')}</button>}

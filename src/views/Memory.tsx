@@ -40,9 +40,9 @@ export function Memory() {
         <button class="btn" type="button" disabled={readOnly.value} onClick={() => openSheet(<ImportSheet key={'mi' + Date.now()} />, true)} data-testid="memory-import">{t('memImport')}</button>
         <button class="btn" type="button" onClick={() => openSheet(<ExportSheet key={'me' + Date.now()} />)} data-testid="memory-export">{t('memExport')}</button>
       </div>
-      {all.length > 0 && <input type="search" value={q} placeholder={t('memSearch')} aria-label={t('memSearch')} style="margin-top:14px" onInput={e => setQ(input(e))} data-testid="memory-search" />}
-      {!all.length && <p class="hint" data-testid="memory-empty" style="margin-top:14px">{t('memEmpty')}</p>}
-      {all.length > 0 && !shown.length && <p class="hint" style="margin-top:14px">{t('memNoMatch', { q })}</p>}
+      {all.length > 0 && <input type="search" value={q} placeholder={t('memSearch')} aria-label={t('memSearch')} style="margin-top:var(--s4)" onInput={e => setQ(input(e))} data-testid="memory-search" />}
+      {!all.length && <p class="hint" data-testid="memory-empty" style="margin-top:var(--s4)">{t('memEmpty')}</p>}
+      {all.length > 0 && !shown.length && <p class="hint" style="margin-top:var(--s4)">{t('memNoMatch', { q })}</p>}
       {MEMORY_KINDS.map(kind => {
         const group = shown.filter(n => n.kind === kind).sort(byName);
         if (!group.length) return null;
@@ -129,7 +129,7 @@ function NoteSheet({ id }: { id: string }) {
           <button class="btn" type="submit" disabled={off || !alias.trim()}>{t('memAliasAdd')}</button>
         </form>
       </div>
-      <label class="tog" style="margin-top:14px"><input type="checkbox" checked={n.private} disabled={off} onChange={e => void setPrivate(id, (e.target as HTMLInputElement).checked)} data-testid="memory-private" /> {t('memPrivate')}</label>
+      <label class="tog" style="margin-top:var(--s4)"><input type="checkbox" checked={n.private} disabled={off} onChange={e => void setPrivate(id, (e.target as HTMLInputElement).checked)} data-testid="memory-private" /> {t('memPrivate')}</label>
       <p class="hint">{t('memPrivateHint')}</p>
 
       <h4 class="sec">{t('memLines')}</h4>
@@ -190,7 +190,7 @@ function ImportSheet() {
         <textarea rows={5} value={pasted} onInput={e => setPasted((e.target as HTMLTextAreaElement).value)} data-testid="memory-import-text" />
       </label>
       {sources.length > 0 && (
-        <div data-testid="memory-import-summary" style="margin-top:14px">
+        <div data-testid="memory-import-summary" style="margin-top:var(--s4)">
           <p class="hint">{t('memFilesRead', { n: sources.length })}{skipped > 0 && ' · ' + t('memFilesSkipped', { n: skipped })}</p>
           {(c.created || c.merged || c.same) ? (
             <>

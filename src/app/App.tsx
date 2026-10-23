@@ -176,6 +176,8 @@ function Toast() {
 
 /** Home, Settings and the screens behind Home's bell and menu have no masthead, suit piles or footer; the others keep them. */
 const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses'];
+/** Views that get a wider column above 1024 px (brief §16). */
+const WIDE: View[] = ['matrix', 'calendar'];
 const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications };
 
 /** A link with `#task/<id>` (an event in a calendar app) opens that step's sheet, if it still exists. */
@@ -209,7 +211,7 @@ export function App() {
   );
   return (
     <>
-      <div class={'app' + (bare ? ' bare' : '')}>
+      <div class={'app' + (bare ? ' bare' : '') + (WIDE.includes(view.value) ? ' wide' : '')} data-view={view.value}>
         {!bare && <Mast />}
         {!bare && <Side />}
         <Runbar />
@@ -217,7 +219,7 @@ export function App() {
           <UpdateBanner />
           <PlaceBanner />
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
-          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
+          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>
       </div>

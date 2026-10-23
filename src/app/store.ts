@@ -8,7 +8,7 @@ import { createClock, tick, type Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange, type Address, type Person } from '../data/schema';
 import { normAddress, normDecision, normExchange, normNote, normPerson } from '../data/normalize';
 import { whereNow, zoneOfPlace } from '../domain/places';
-import { withDefaults, type Settings } from '../data/settings';
+import { withDefaults, firstWritten, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { writeMerged, type Write } from '../data/syncstore';
 import { lang, t } from '../i18n';
@@ -111,7 +111,7 @@ export async function start(): Promise<void> {
   }
   first.push(new Promise(res => {
     liveQuery(() => db.meta.get('settings')).subscribe({
-      next: d => { const s = withDefaults(d ? (fieldsOf(d) as Partial<Settings>) : undefined); batch(() => { settings.value = s; lang.value = s.language; }); res(); },
+      next: d => { const s = withDefaults(d ? (fieldsOf(d) as Partial<Settings>) : undefined, d ? firstWritten(d._hlc) : undefined); batch(() => { settings.value = s; lang.value = s.language; }); res(); },
       error: e => console.error(e),
     });
   }));

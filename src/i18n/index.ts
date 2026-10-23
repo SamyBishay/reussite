@@ -57,6 +57,11 @@ export function fmtDate(k: string, o: Intl.DateTimeFormatOptions = { day: 'numer
   }
 }
 
+/** A free-text field that may hold a day (an AI or a person wrote "2026-11-22"): shown like any other date; anything else as typed. */
+export function fmtIfDay(s: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s.trim()) ? fmtDate(s.trim()) : s;
+}
+
 export function fmtMin(m: number | null | undefined): string {
   const v = Math.round(m ?? 0);
   if (v < 60) return t('min', { n: v });

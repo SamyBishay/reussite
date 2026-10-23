@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { tasks, projects, memory, settings } from '../app/store';
+import { tasks, projects, memory, settings, addresses, people } from '../app/store';
 import { withDefaults } from '../data/settings';
 import { buildRequest, systemText, type AiConfig } from './adapters';
 import { breakDownPrompt, stuckPrompt, reviewPrompt } from './prompts';
@@ -85,6 +85,34 @@ describe('memory in prompts', () => {
     expect((ra.body.system as { text: string }[])[0]!.text).toBe((rb.body.system as { text: string }[])[0]!.text);
     expect(systemText(a)).toBe(ra.system);
   });
+  it('puts the preferences in the stable part of every feature, before the language line, and drops them when emptied', () => {
+    setMemory(profile);
+    settings.value = withDefaults({ aiPreferences: '- Be brief.\n- No emojis.' });
+    const all = [commandPrompt('add milk'), homePrompt('what is next?'), stuckPrompt('t1', 'start'), breakDownPrompt('t1'), reviewPrompt('p1')].map(x => x.system);
+    for (const x of all) {
+      expect(x.stable).toContain('- Be brief.\n- No emojis.');
+      expect(x.stable).toBe(all[0]!.stable);
+      expect(x.stable).toMatch(/- No emojis\.\n\nAnswer in English\.$/);
+      expect(x.rest).not.toContain('No emojis');
+    }
+    // The default is the template; an installation that never chose has it.
+    settings.value = withDefaults(undefined);
+    expect(commandPrompt('add milk').system.stable).toContain('One question at a time');
+    settings.value = withDefaults({ aiPreferences: '' });
+    const none = commandPrompt('add milk').system.stable;
+    expect(none).not.toContain('How the person wants an AI');
+    expect(none).toMatch(/\n\nAnswer in English\.$/);
+  });
+  it('puts the preferences in the Ask any AI pack and shows them in what is sent', () => {
+    settings.value = withDefaults({ aiPreferences: '- Be brief.' });
+    expect(contextPack({ kind: 'matrix' }, 'What first?')).toContain('## How I want you to work with me\n\n- Be brief.');
+    settings.value = withDefaults({ aiPreferences: '' });
+    expect(contextPack({ kind: 'matrix' }, 'What first?')).not.toContain('How I want you to work');
+    // "Show me what's sent" prints the request as it is built, system part included.
+    settings.value = withDefaults({ aiPreferences: '- Be brief.' });
+    const sys = commandPrompt('add milk').system;
+    expect(buildRequest(cfg('anthropic'), 'quick', sys, 'u').system).toContain('- Be brief.');
+  });
   it('is byte-identical whatever order the notes were stored in', () => {
     const p2 = note('n9', { kind: 'profile', name: 'Work', lines: [line('l1', 'Teaches Tuesdays')] });
     setMemory(profile, p2);
@@ -150,5 +178,24 @@ describe('memory in prompts', () => {
     expect(rest).toContain('put the answer in "note"');
     expect(rest).toContain('"outside": true');
     expect(rest).toContain('never write a conclusion about their health, character or anyone\'s private life'.replace('never', 'Never'));
+  });
+});
+
+describe('addresses and people stay out of ordinary requests', () => {
+  it('are in no prompt, pack or request, even when a step, the question or the notes name them', () => {
+    settings.value = withDefaults(undefined);
+    projects.value = new Map([['p1', { id: 'p1', name: 'Life', suit: 'H', where: 'any', goal: null, goalBy: null, due: null, order: 1, status: 'active' }]]);
+    tasks.value = new Map([['t1', { ...task(1), title: 'Coffee with Théophile Marchand at Brasserie Aubergine', personId: 'pe1', addressId: 'a1' } as never]]);
+    memory.value = new Map([['n1', note('n1', { name: 'Théophile', aliases: ['Marchand'], lines: [line('l1', 'Likes tea')] })]]);
+    addresses.value = new Map([['a1', { id: 'a1', name: 'Brasserie Aubergine', category: 'food', placeId: 'any', mapsUrl: null, street: '9 Impasse des Lilas', state: 'been', by: 'me', note: '', visits: [{ id: 'v1', day: '2026-10-01', note: 'Soup was cold', verdict: 'maybe' }] }]]);
+    people.value = new Map([['pe1', { id: 'pe1', name: 'Théophile Marchand', placeId: 'any', reach: 'whatsapp://send?phone=33612345678', note: 'Allergic to hazelnuts', lastSeen: '2026-10-02' }]]);
+    const q = 'Who should I see, Marchand, and where, Brasserie Aubergine, Impasse des Lilas?';
+    const texts = [
+      contextPack({ kind: 'today' }, q), contextPack({ kind: 'matrix' }, q), contextPack({ kind: 'project', id: 'p1' }, q),
+      JSON.stringify(commandPrompt(q)), JSON.stringify(homePrompt(q, [{ text: 'and him?', reply: 'ok' }])),
+      JSON.stringify(stuckPrompt('t1', 'start')), JSON.stringify(breakDownPrompt('t1')), JSON.stringify(reviewPrompt('p1')),
+    ].map(t => t.replace(q, ''));
+    // The step's own title is the person's words about a step, not the people list; what must be absent is every field of an address or a person.
+    for (const t of texts) for (const s of ['Impasse des Lilas', 'hazelnuts', '33612345678', 'Soup was cold', 'whatsapp://', 'pe1', 'a1 |']) expect(t, s).not.toContain(s);
   });
 });

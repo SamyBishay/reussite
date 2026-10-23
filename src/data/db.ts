@@ -23,6 +23,8 @@ export class ReussiteDb extends Dexie {
   stays!: Table<Stored<Record<string, unknown>>, string>;
   memory!: Table<Stored<Record<string, unknown>>, string>;
   exchanges!: Table<Stored<Record<string, unknown>>, string>;
+  addresses!: Table<Stored<Record<string, unknown>>, string>;
+  people!: Table<Stored<Record<string, unknown>>, string>;
   meta!: Table<Stored<Record<string, unknown>>, string>;
   local!: Table<{ key: string; value: unknown }, string>;
   backups!: Table<Backup, number>;
@@ -45,6 +47,11 @@ export class ReussiteDb extends Dexie {
     this.version(2).stores({
       memory: 'id, kind',
       exchanges: 'id, at',
+    });
+    // Phase 4: addresses and people. Added tables only, as in version 2.
+    this.version(3).stores({
+      addresses: 'id, placeId, state',
+      people: 'id, placeId',
     });
   }
 

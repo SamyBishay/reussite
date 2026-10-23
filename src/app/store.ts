@@ -5,8 +5,8 @@ import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
 import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
 import { createClock, tick, type Clock } from '../data/hlc';
-import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange } from '../data/schema';
-import { normDecision, normExchange, normNote } from '../data/normalize';
+import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange, type Address, type Person } from '../data/schema';
+import { normAddress, normDecision, normExchange, normNote, normPerson } from '../data/normalize';
 import { whereNow } from '../domain/places';
 import { withDefaults, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
@@ -28,6 +28,8 @@ export const places = signal(new Map<string, WithId<Place>>());
 export const stays = signal(new Map<string, WithId<Stay>>());
 export const memory = signal(new Map<string, WithId<MemoryNote>>());
 export const exchanges = signal(new Map<string, WithId<Exchange>>());
+export const addresses = signal(new Map<string, WithId<Address>>());
+export const people = signal(new Map<string, WithId<Person>>());
 export const settings = signal<Settings>(withDefaults(undefined));
 export const ready = signal(false);
 /** Data written by a newer version: look but don't touch, and ask to reload. */
@@ -73,7 +75,7 @@ const live = <T>(c: Collection) => (docs: Stored<Record<string, unknown>>[]) => 
   for (const d of docs) {
     if (d._del) continue;
     const f = fieldsOf(d);
-    const norm = c === 'decisions' ? normDecision : c === 'memory' ? normNote : c === 'exchanges' ? normExchange : null;
+    const norm = c === 'decisions' ? normDecision : c === 'memory' ? normNote : c === 'exchanges' ? normExchange : c === 'addresses' ? normAddress : c === 'people' ? normPerson : null;
     m.set(d.id, { ...((norm ? norm(f) : f) as T), id: d.id });
   }
   return m;
@@ -98,6 +100,8 @@ export async function start(): Promise<void> {
     ['stays', v => (stays.value = v)],
     ['memory', v => (memory.value = v)],
     ['exchanges', v => (exchanges.value = v)],
+    ['addresses', v => (addresses.value = v)],
+    ['people', v => (people.value = v)],
   ];
   const first: Promise<void>[] = [];
   for (const [c, set] of subs) {
@@ -169,7 +173,10 @@ export async function applyUndo(undo: UndoDoc[], at = Date.now()): Promise<{ res
   const used = (c: Collection, id: string) =>
     c === 'tasks' ? [...sessions.value.values()].some(s => s.taskId === id && !made.has('sessions/' + s.id))
       : c === 'projects' ? [...tasks.value.values()].some(x => x.project === id && !made.has('tasks/' + x.id))
-        : false;
+        // An address or a person a step made since feeds stays: taking it away would leave that step pointing at nothing.
+        : c === 'addresses' ? [...tasks.value.values()].some(x => x.addressId === id && !made.has('tasks/' + x.id))
+          : c === 'people' ? [...tasks.value.values()].some(x => x.personId === id && !made.has('tasks/' + x.id))
+            : false;
   let restored = 0, kept = 0;
   for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id), { now: at, used })) {
     if (u.remove) { await removeDoc(u.c, u.id); restored++; }

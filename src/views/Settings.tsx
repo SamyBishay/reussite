@@ -12,6 +12,11 @@ import { parseBackup, restoreBackup, saveFile } from '../data/backup';
 import { importV1, writeImport, type ImportSummary, type V2Data } from '../data/import-v1';
 import type { Place, Stay, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
+import { ZONES } from '../domain/zones';
+import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
+import { categoryName, addressesOn } from '../app/model';
+import { openTrip } from '../ai/ui';
+import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
@@ -19,6 +24,9 @@ import { ConnectorSettings } from '../app/ConnectorSettings';
 import { CalendarSettings } from '../app/CalendarSettings';
 import { NotifySettings } from '../app/NotifySettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
+
+// The manual and its pages are a chunk of their own, fetched the first time it is opened.
+const openManual = () => void import('../manual/Manual').then(m => openSheet(<m.ManualSheet />, true));
 
 const set = (p: Partial<S>) => void saveSettings(p);
 const CARD_LIGHT = '#FFFFFF';
@@ -115,7 +123,6 @@ function NumberField({ label, value, min, max, onSave }: { label: string; value:
   );
 }
 
-const ZONES: string[] = (() => { try { return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf('timeZone'); } catch { return []; } })();
 
 function PlacesEditor() {
   const ps = placeIds().map(id => places.value.get(id)!);
@@ -171,12 +178,15 @@ export function StaysEditor() {
     <div class="field" data-testid="stays"><span>{t('stays')}</span>
       <p class="hint">{t('staysHint')}</p>
       {list.map(st => (
+        <>
         <div class="stayrow">
           <select aria-label={t('placeName')} value={st.placeId} onChange={e => void saveStay(st.id, { ...st, placeId: (e.target as HTMLSelectElement).value })}>{ps.map(id => <option value={id}>{placeName(id)}</option>)}</select>
           <input type="date" aria-label={t('stayFrom')} value={st.from} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, from: v }); }} />
           <input type="date" aria-label={t('stayTo')} value={st.to} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, to: v }); }} />
           <button class="btn small ghost" type="button" onClick={() => void removeStay(st.id)} aria-label={t('remove', { what: placeName(st.placeId) })}>×</button>
         </div>
+        {addressesOn() && st.to >= today.value && <div class="stayact"><button class="btn small" type="button" onClick={() => openTrip(st.id)} data-testid="plan-trip">{t('tripBtn')}</button></div>}
+      </>
       ))}
       {ps.length ? (
         <form class="stayrow" onSubmit={add}>
@@ -187,6 +197,50 @@ export function StaysEditor() {
           <button class="btn small" type="submit">{t('add')}</button>
         </form>
       ) : <p class="hint">{t('addPlaceFirst')}</p>}
+    </div>
+  );
+}
+
+/** The module's switch and the address categories (brief §5). Off hides every screen, button and offer; what is stored stays. */
+function AddressesSettings() {
+  const s = settings.value;
+  const list = s.addressCategories;
+  const save = (next: S['addressCategories']) => set({ addressCategories: next });
+  const add = (e: Event) => {
+    e.preventDefault();
+    const f = e.currentTarget as HTMLFormElement;
+    const input = f.elements.namedItem('name') as HTMLInputElement;
+    // An id an address still carries (from a category removed earlier) is never reused for another name.
+    const next = addCategory(list, input.value, [...addresses.value.values()].map(a => a.category));
+    if (next.length === list.length) return;
+    save(next);
+    f.reset();
+  };
+  return (
+    <div class="field" data-testid="addresses-settings"><span>{t('addrTitle')}</span>
+      <label class="tog"><input type="checkbox" checked={s.addressesPeople} onChange={e => set({ addressesPeople: (e.target as HTMLInputElement).checked })} data-testid="addresses-switch" /> {t('addrSwitch')}</label>
+      <p class="hint">{t('addrSwitchHint')}</p>
+      {s.addressesPeople && (
+        <>
+          <p class="field-label">{t('addrCategories')}</p>
+          <ul class="catlist" data-testid="categories">
+            {list.map((c, i) => (
+              <li key={c.id + lang.value + c.name}>
+                <input type="text" aria-label={t('addrCategoryName')} defaultValue={categoryName(c.id)} placeholder={categoryName(c.id)} autocomplete="off"
+                  onChange={e => save(renameCategory(list, c.id, (e.target as HTMLInputElement).value))} data-testid="category-name" />
+                <button class="btn small ghost" type="button" disabled={i === 0} aria-label={t('moveUp', { what: categoryName(c.id) })} onClick={() => save(moveCategory(list, c.id, -1))}>↑</button>
+                <button class="btn small ghost" type="button" disabled={i === list.length - 1} aria-label={t('moveDown', { what: categoryName(c.id) })} onClick={() => save(moveCategory(list, c.id, 1))}>↓</button>
+                <button class="btn small ghost" type="button" aria-label={t('remove', { what: categoryName(c.id) })} onClick={() => { save(removeCategory(list, c.id)); toast(t('addrCategoryRemoved')); }} data-testid="category-remove">×</button>
+              </li>
+            ))}
+          </ul>
+          <form class="addplace" onSubmit={add}>
+            <input type="text" name="name" placeholder={t('addrCategoryNew')} aria-label={t('addrCategoryNew')} autocomplete="off" required />
+            <button class="btn" type="submit" data-testid="category-add">{t('add')}</button>
+          </form>
+          <p class="hint">{t('addrCategoriesHint')}</p>
+        </>
+      )}
     </div>
   );
 }
@@ -244,6 +298,7 @@ function Method() {
       <p class="hint">{t('remindersLater')}</p>
       <PlacesEditor />
       <StaysEditor />
+      <AddressesSettings />
     </section>
   );
 }
@@ -358,6 +413,8 @@ export function Settings() {
           <p>{t('privacyAi')}</p>
           <p>{t('privacyLoss')}</p>
         </div>
+        <p class="hint">{t('manualHint')}</p>
+        <div class="actions"><button class="btn" type="button" onClick={openManual} data-testid="open-manual">{t('manualOpen')}</button></div>
         <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
       </section>
     </div>

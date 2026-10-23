@@ -1,7 +1,7 @@
 // Home (brief §5): where the person types. It holds a greeting, one card, the last receipt and the input,
 // and never more. The greeting is only the next step; the card is what an open exchange has to say, else
 // the one most pressing nudge; the receipt is the last thing applied, with Undo. The menu icon holds what
-// has no tab: Settings, Places, Memory and History.
+// has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, clockNow, settings } from '../app/store';
 import { T, dayDoc, greetingNow, decisionsToCheck, yesterdayOpen, planEst } from '../app/model';
@@ -9,6 +9,8 @@ import { startTask, carryOver } from '../app/actions';
 import { openSheet, closeSheet, Title, Est } from '../app/ui';
 import { openPause, openDone, DurationPicker } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
+import { openNewAddress } from '../app/AddressSheets';
+import { addressesOn } from '../app/model';
 import { go, type View } from '../app/nav';
 import { Clock } from '../app/Clock';
 import { isTouch } from '../app/keyboard';
@@ -31,6 +33,8 @@ function HomeMenu() {
       <ul class="picklist menu">
         <li><button type="button" class="linklike" onClick={() => to('settings')} data-testid="menu-settings"><b>{t('tabSettings')}</b></button></li>
         <li><button type="button" class="linklike" onClick={() => { closeSheet(); openPlaces(); }} data-testid="menu-places"><b>{t('placesTitle')}</b></button></li>
+        {addressesOn() && <li><button type="button" class="linklike" onClick={() => to('addresses')} data-testid="menu-addresses"><b>{t('addrTitle')}</b></button></li>}
+        {addressesOn() && <li><button type="button" class="linklike" onClick={() => { closeSheet(); openNewAddress(); }} data-testid="menu-add-address"><b>{t('addrNewBtn')}</b></button></li>}
         <li><button type="button" class="linklike" onClick={() => to('memory')} data-testid="menu-memory"><b>{t('memoryTitle')}</b></button></li>
         <li><button type="button" class="linklike" onClick={() => to('history')} data-testid="menu-history"><b>{t('historyTitle')}</b></button></li>
       </ul>

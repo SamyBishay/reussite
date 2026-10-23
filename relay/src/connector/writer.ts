@@ -4,6 +4,7 @@
 import type { Writer } from '../../../src/ai/apply';
 import type { Collection, Day, Project, Session, Stay, Task } from '../../../src/data/schema';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../../../src/domain/effects';
+import { seenAfter } from '../../../src/domain/offers';
 import type { Edits } from './space';
 import type { View } from './view';
 
@@ -45,6 +46,9 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
       const { patch, session } = finishEffects(tk, { today, day, nowIso: t.toISOString(), nowMs: t.getTime() });
       if (session) create('sessions', { taskId: id, d: session.d, m: session.m, why: session.why, at: t.toISOString(), source: session.source } satisfies Session);
       e.update('tasks', id, patch);
+      // A step that feeds a person sets their last seen, as ticking it by hand does. Nothing of the person is read out.
+      const who = tk.personId ? e.get('people', tk.personId) : undefined;
+      if (who) { const seen = seenAfter(typeof who.lastSeen === 'string' ? who.lastSeen : null, day); if (seen !== who.lastSeen) e.update('people', who.id, { lastSeen: seen }); }
       if (tk.repeat) {
         const next = nextOccurrence(tk, day, liveTasks());
         if (next && 'fields' in next) {

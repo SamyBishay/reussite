@@ -256,3 +256,28 @@ describe('exchange writes pushed late', () => {
     expect(lateExchanges([{ ...ex(NOW - 3 * DAY), c: 'tasks' }], NOW)).toBe(false);
   });
 });
+
+describe('addresses and people', () => {
+  const all = syntheticSpace(TODAY);
+  const old = format(NOW - 200 * DAY, 0, 'phone0001');
+  const mk = (id: string, fields: Record<string, unknown>) => create<Record<string, unknown>>(id, fields, SCHEMA_VERSION, old) as unknown as StoredDoc;
+  const docs: Docs = {
+    ...all,
+    addresses: [mk('a1', { name: 'Chez Zed', state: 'been', visits: [] }), { ...mk('a2', { name: 'Gone' }), _del: format(NOW - 100 * DAY, 0, 'phone0001') } as StoredDoc],
+    people: [mk('p1', { name: 'Ibrahim', lastSeen: '2025-01-01' }), { ...mk('p2', { name: 'Gone' }), _del: format(NOW - DAY, 0, 'phone0001') } as StoredDoc],
+  };
+
+  it('keeps every live address and person hot, however old; an old tombstone goes cold, a recent one stays hot', () => {
+    const { hot, cold } = split(docs, cut);
+    expect(ids(hot, 'addresses')).toEqual(new Set(['a1']));
+    expect(ids(cold, 'addresses')).toEqual(new Set(['a2']));
+    expect(ids(hot, 'people')).toEqual(new Set(['p1', 'p2']));
+    expect(cold.people ?? []).toEqual([]);
+  });
+  it('holds all of it across the two parts, the cold ids indexed', () => {
+    const p = buildParts(docs, 7, { now: NOW });
+    sameAs(union(p.hot.docs, p.cold!.docs), docs);
+    expect(inCold(p.hot.cold, 'addresses', 'a2')).toBe(true);
+    expect(p.hot.cold!.people).toBeUndefined();
+  });
+});

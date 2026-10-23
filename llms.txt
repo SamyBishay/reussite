@@ -15,4 +15,12 @@
 - [docs/dev/home.md](docs/dev/home.md): Home: the line parser's grammar (English and French), the greeting, the card, exchanges and Undo, the AI route, spend and the monthly limit.
 - [docs/dev/push.md](docs/dev/push.md): Web Push: the schedule, encryption, the reconciler, what the relay sees.
 - [docs/dev/feed.md](docs/dev/feed.md): the calendar feed: ids, limits and the text.
+- [docs/manual/en/index.md](docs/manual/en/index.md): the manual for friends, one short page per topic, in English and French (`docs/manual/fr/`); shown in the app under Settings → About.
+- [docs/dev/manual.md](docs/dev/manual.md): the manual: the pages, the viewer, and how the screenshots are made (`npm run manual:shots`).
 - [docs/dev/infra.md](docs/dev/infra.md): names, ids and URLs of the hosting, the relay, its database and its stores (no secrets).
+- [README.md](README.md): for friends: what Réussite is, how to install it, the not-therapy line.
+- [CUSTOMIZING.md](CUSTOMIZING.md): fork, keep changes in a branch, take upstream updates, run your own relay and app Worker.
+- [docs/ai/skills/today.md](docs/ai/skills/today.md): the daily loop as a plain prompt to paste into any chatbot; `docs/ai/skills/today/SKILL.md` is the same as a Claude skill.
+- [docs/ai/skills/decide.md](docs/ai/skills/decide.md): the decision method as a plain prompt; `docs/ai/skills/decide/SKILL.md` is the Claude skill.
+- [docs/ai/preferences.md](docs/ai/preferences.md): the template for how an AI should behave with the person.
+- [docs/ai/CHANGESET.md](docs/ai/CHANGESET.md): the change-set contract in short, for a chatbot.

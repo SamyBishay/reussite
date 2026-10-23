@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,ico}'],
+          // The manual's screenshots (public/manual/shots) are fetched when a page shows one and kept by the worker's own runtime cache (src/sw.ts).
+          globIgnores: ['manual/shots/**'],
           rollupFormat: 'iife',
         },
       }),

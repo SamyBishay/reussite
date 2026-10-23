@@ -1,6 +1,6 @@
 // On-device error log (brief §11): the last 50 errors, kept in `local` (never synced), with
 // anything that looks like the person's own text scrubbed. Read by Copy diagnostics.
-import { db, tasks, projects, places, decisions, stays, memory, exchanges, settings } from './store';
+import { db, tasks, projects, places, decisions, stays, memory, exchanges, addresses, people, settings } from './store';
 import { getLocal, setLocal } from '../data/db';
 
 export interface LoggedError { at: string; message: string; stack: string; where: string }
@@ -32,6 +32,10 @@ function secrets(): string[] {
   // Memory and what was typed on Home: the words only, not the kinds, ids and undo records around them.
   for (const n of memory.value.values()) collect([n.name, n.description, n.aliases, n.lines.map(l => l.text)], out);
   for (const e of exchanges.value.values()) collect([e.text, e.turns.map(t => [t.text, t.reply])], out);
+  // Addresses and people: names, notes, visit notes, the street and the links (a link can hold a name or a number).
+  for (const a of addresses.value.values()) collect([a.name, a.note, a.street, a.mapsUrl, a.visits.map(v => v.note)], out);
+  for (const p of people.value.values()) collect([p.name, p.note, p.reach], out);
+  collect(settings.value.addressCategories.map(c => c.name), out);
   collect(settings.value.credit, out);
   collect(settings.value.suits, out);
   return [...out].sort((a, b) => b.length - a.length);

@@ -26,6 +26,8 @@ import { Settings } from '../views/Settings';
 import { Home } from '../views/Home';
 import { Memory } from '../views/Memory';
 import { History } from '../views/History';
+import { Addresses } from '../views/Addresses';
+import { openVisit } from './AddressSheets';
 import { openBreakDown } from '../flows/breakdown';
 import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
@@ -34,11 +36,14 @@ import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
+import { decideOnboarding, onboarding } from './onboarding';
+import { Onboarding } from '../flows/onboarding';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
 flows.stuck = openStuck;
 flows.decide = (id, link) => void openDecision(id, link);
+flows.visit = openVisit;
 
 effect(() => { applyTheme(settings.value); });
 // "By time of day" re-checks every minute.
@@ -94,7 +99,7 @@ const TAB_ICON: Record<string, string> = {
 /** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
 function Tabs() {
   const v = view.value;
-  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' : v === x);
+  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' : v === x);
   return (
     <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
       <div class="tabbar-in">
@@ -135,7 +140,7 @@ function Runbar() {
   return <div id="runbar" />;
 }
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || (view.value === 'calendar' && calMode.value === 'log')) return null;
+  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
       <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
@@ -169,11 +174,11 @@ function Toast() {
 }
 
 /** Home and the screens behind its menu have no masthead, suit piles or footer; the others keep them. */
-const BARE: View[] = ['home', 'memory', 'history'];
-const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History };
+const BARE: View[] = ['home', 'memory', 'history', 'addresses'];
+const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses };
 
 export function App() {
-  useEffect(() => { void start().then(() => { void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); void pruneExchanges(); void startFeed(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; };
@@ -183,6 +188,16 @@ export function App() {
   void lang.value;
   const V = SCREENS[view.value];
   const bare = BARE.includes(view.value);
+  // A new device starts here, with no tabs and no masthead, until the person finishes or skips.
+  if (ready.value && onboarding.value === 'show') return (
+    <>
+      <div class="app bare onboard"><main><Onboarding /></main></div>
+      <SheetHost />
+      <OverlayHost />
+      <PreviewHost />
+      <Toast />
+    </>
+  );
   return (
     <>
       <div class={'app' + (bare ? ' bare' : '')}>
@@ -193,7 +208,7 @@ export function App() {
           <UpdateBanner />
           <PlaceBanner />
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
-          {ready.value ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
+          {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:24px">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>
       </div>

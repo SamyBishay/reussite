@@ -20,7 +20,7 @@ function Groups({ text }: { text: string }) {
 }
 
 /** The key on screen: groups, QR code, copy, and what to do with it. */
-function KeyView({ text }: { text: string }) {
+export function KeyView({ text }: { text: string }) {
   const copy = () => navigator.clipboard?.writeText(text).then(() => toast(t('syncKeyCopied')), () => undefined);
   return (
     <>
@@ -82,7 +82,8 @@ function ShowKeySheet() {
 
 const KEY_ERR: Record<string, Key> = { length: 'keyErrLength', char: 'keyErrChar', checksum: 'keyErrChecksum' };
 
-function JoinSheet() {
+/** Enter or scan the key from the other device. Used in the Join sheet and in onboarding; `onJoined` runs once sync has started. */
+export function JoinPanel({ onJoined }: { onJoined: () => void }) {
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -99,7 +100,7 @@ function JoinSheet() {
     }
     setBusy(false);
   };
-  const go = async (recovery: Uint8Array<ArrayBuffer>) => { await joinSync(recovery); closeSheet(); toast(t('syncJoining')); };
+  const go = async (recovery: Uint8Array<ArrayBuffer>) => { await joinSync(recovery); onJoined(); };
 
   if (empty) return (
     <div class="flow" data-testid="sync-empty">
@@ -130,6 +131,10 @@ function JoinSheet() {
       )}
     </div>
   );
+}
+
+function JoinSheet() {
+  return <JoinPanel onJoined={() => { closeSheet(); toast(t('syncJoining')); }} />;
 }
 
 // ---------- turn off, delete

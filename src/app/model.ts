@@ -1,7 +1,7 @@
 // Read-side helpers, ported from v1. They read the signals, so views that call them re-render.
 import { computed } from '@preact/signals';
-import { tasks, sessions, projects, days, settings, today, pagePlace, here, decisions, places, stays, clockNow, type WithId } from './store';
-import type { Task, Day, Session } from '../data/schema';
+import { tasks, sessions, projects, days, settings, today, pagePlace, here, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
+import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
@@ -9,6 +9,9 @@ import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
 import { greeting } from '../domain/greeting';
+import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
+import { en } from '../i18n/en';
+import { t as tr, type Key } from '../i18n';
 
 export type T = WithId<Task>;
 
@@ -104,3 +107,34 @@ export const greetingNow = computed(() => {
     running: running()?.id ?? null, closed: !!dayDoc(k)?.closed, planned: plan.length, next: plan.find(id => isOpen(T(id))) ?? null, tomorrow: tomorrowFirst(k),
   });
 });
+
+// ---------- addresses and people (phase 4) ----------
+/** The module is on (Settings → Addresses & People). Off hides the screens and the offers; what is stored stays. */
+export const addressesOn = () => settings.value.addressesPeople !== false;
+
+/** A category's name: what the person typed, else the app's word for it in the current language, else its id. */
+export function categoryName(id: string): string {
+  const c = settings.value.addressCategories.find(x => x.id === id);
+  if (c?.name.trim()) return c.name;
+  const key = 'addressCat_' + id;
+  return key in en ? tr(key as Key) : c?.id ?? id;
+}
+/** The categories in the person's order, with their names. A category an address still has but the list lost shows by its id. */
+export const categories = (): { id: string; name: string }[] => settings.value.addressCategories.map(c => ({ id: c.id, name: categoryName(c.id) }));
+
+export type A = WithId<Address>;
+export type P = WithId<Person>;
+export const addressById = (id: string | null | undefined): A | undefined => (id ? addresses.value.get(id) : undefined);
+export const personById = (id: string | null | undefined): P | undefined => (id ? people.value.get(id) : undefined);
+export const lastVisitOf = lastVisit;
+
+/** Addresses on a place's page (its own plus Anywhere), by name. */
+export const addressesIn = (place = pagePlace.value): A[] =>
+  [...addresses.value.values()].filter(a => a.placeId === 'any' || a.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+export const peopleIn = (place = pagePlace.value): P[] =>
+  [...people.value.values()].filter(p => p.placeId === 'any' || p.placeId === place).sort((a, b) => a.name.localeCompare(b.name));
+
+/** What the planner offers for a leisure obligation: up to three addresses in the current place (`place`), `category` narrowing them. */
+export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category }) : []);
+/** What the planner offers for a people obligation: up to three people in the current place, seen least recently first. */
+export const offerPeopleNow = (place = here.value): P[] => (addressesOn() ? offerPeople(people.value.values(), { place }) : []);

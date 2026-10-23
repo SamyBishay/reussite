@@ -151,6 +151,28 @@ test('decisions live in Projects, and a decision step in the Matrix opens its de
   await expect(page.getByTestId('dw-title')).toHaveValue(/Open a new Claude chat/);
 });
 
+test('a decision\'s deadline that is a day is shown like other dates, not as 2026-11-22', async ({ page }) => {
+  const hlc = '0000000000001:0000:seed';
+  const f = {
+    title: 'Stay in the flat or move?', projectId: null, taskId: null, status: 'decided', chosen: 'Stay', chosenId: 'o1', why: 'Cheaper', mustBeTrue: '', falsifier: '', date: '2026-10-01', reviewOn: null,
+    problem: { what: 'Rent goes up', should: '', gap: '', constraints: '', deadline: '2026-11-22', control: '' },
+    options: [{ id: 'o1', name: 'Stay', screened: null, pros: [], cons: [], prosNot: [], consNot: [] }], taskIds: [], newFacts: [], reviews: [], history: [],
+  };
+  const doc = { id: 'dec1', _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, hlc])), ...f };
+  const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: { decisions: [doc] } };
+  await page.goto('/#settings');
+  page.once('dialog', d => void d.accept());
+  await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await expect(page.locator('.toast')).toBeVisible();
+  await page.reload();
+  await goTab(page, 'projects');
+  await page.getByTestId('decisions').getByRole('button', { name: 'Stay in the flat or move?' }).click();
+  const problem = page.getByTestId('sheet').locator('dl.problem');
+  await expect(problem).toContainText('Deadline');
+  await expect(problem).toContainText('22 Nov');
+  await expect(problem).not.toContainText('2026-11-22');
+});
+
 test('the manifest starts at Home; the gentle banner shows on every tab but Home, Today and Settings', async ({ page, request }) => {
   const m = await (await request.get('/manifest.webmanifest')).json();
   expect(m.start_url).toBe('./#home');

@@ -2,8 +2,8 @@
 // moving a step, pause, swap, pick, suit piles.
 import { useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { settings, projects, today, places, toast, stays, clockNow, update, hereZone } from './store';
-import { T, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, quad, type T as Tk } from './model';
+import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
   patchTask, finishTask, stopTimer, addToday, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
@@ -22,6 +22,7 @@ import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { dueBeforeEnd } from '../domain/places';
 import { SUIT_ORDER } from '../data/settings';
+import { OfferChips, offerFieldsFor, type OfferChoice } from './OfferChips';
 import type { Project, Repeat, Session, Task } from '../data/schema';
 import type { Quadrant } from '../domain/tasks';
 
@@ -53,6 +54,8 @@ export async function complete(tk: Tk, typed: number | null, day = today.value, 
     showMoment('project', projects.value.get(r.projectDone)?.name ?? '');
   }
   if (r.nextId) { const nx = T(r.nextId); if (nx?.due) toast(t('repeatNext', { date: fmtDate(nx.due) })); }
+  // A step that feeds an address asks how it was (skippable); nothing is written until the person answers.
+  if (r.addressId && addressesOn()) flows.visit(r.addressId, { stepId: tk.id, day });
   return r;
 }
 
@@ -350,6 +353,26 @@ function AfterField({ id, value, onChange }: { id: string; value: string[]; onCh
   );
 }
 
+/** "Goes to": the address or the person this step feeds, from the lists of its place (and Anywhere). A link to one that is gone stays selectable. */
+function FeedsField({ where, value, onChange }: { where: string; value: string; onChange: (v: string) => void }) {
+  // A step marked Anywhere takes the lists of where the person is now (and Anywhere's own).
+  const place = where === 'any' ? here.value : where;
+  const addrs = addressesIn(place), folks = peopleIn(place);
+  const gone = value && !addrs.some(a => 'a:' + a.id === value) && !folks.some(p => 'p:' + p.id === value);
+  const goneName = value.startsWith('a:') ? addressById(value.slice(2))?.name : personById(value.slice(2))?.name;
+  if (!addrs.length && !folks.length && !value) return null;
+  return (
+    <label class="field"><span>{t('feedsField')}</span>
+      <select value={value} onChange={e => onChange((e.target as HTMLSelectElement).value)} data-testid="feeds-select">
+        <option value="">—</option>
+        {gone && <option value={value}>{goneName ?? t('feedsGone')}</option>}
+        {addrs.length > 0 && <optgroup label={t('addrSection')}>{addrs.map(a => <option value={'a:' + a.id}>{a.name}</option>)}</optgroup>}
+        {folks.length > 0 && <optgroup label={t('peopleSection')}>{folks.map(p => <option value={'p:' + p.id}>{p.name}</option>)}</optgroup>}
+      </select>
+    </label>
+  );
+}
+
 function TaskSheet({ id }: { id: string }) {
   const tk = T(id);
   return tk ? <TaskForm tk={tk} /> : null;
@@ -367,6 +390,9 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
   const [weekdays, setWeekdays] = useState<number[]>(tk.weekdays ?? []);
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
+  // What the step feeds (Addresses and people): one address or one person, picked from its place's lists.
+  const [feed, setFeed] = useState(tk.addressId ? 'a:' + tk.addressId : tk.personId ? 'p:' + tk.personId : '');
+  const feedOn = addressesOn();
   // A time written in the title or the note, with no fixed time set: offer to set it.
   const [titleV, setTitleV] = useState(tk.title);
   const [noteV, setNoteV] = useState(tk.note || '');
@@ -409,6 +435,11 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
     setIf('suit', v('suit') as Task['suit'], tk.suit);
     if (where !== whereOf(tk)) p.where = where;
     if (v('project')) setIf('project', v('project'), tk.project);
+    if (feedOn) {
+      setIf('addressId', feed.startsWith('a:') ? feed.slice(2) : null, tk.addressId);
+      setIf('personId', feed.startsWith('p:') ? feed.slice(2) : null, tk.personId);
+    }
+    if (el('offer')) setIf('offer', (v('offer') || null) as Task['offer'], tk.offer);
     setIf('note', v('note'), tk.note || '');
     if (el('kind')) setIf('kind', v('kind') as Task['kind'], tk.kind);
     if (el('template')) setIf('template', c('template'), !!tk.template);
@@ -488,6 +519,7 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
       <label class="field"><span>{t('project')}</span>
         <select name="project" defaultValue={tk.project}>{projs.map(p => <option value={p.id}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
+      {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} />}
       {tk.prompt && <div class="actions" style="margin-top:8px"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:12px"><GoLink tk={tk} variant="small" /></div>}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
@@ -499,6 +531,14 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
           </label>
           <div class="field"><span>{t('standingField')}</span><label class="tog"><input type="checkbox" name="template" defaultChecked={!!tk.template} /> {t('standingLabel')}</label></div>
         </div>
+        {feedOn && tk.template && (
+          <label class="field"><span>{t('offerField')}</span>
+            <select name="offer" defaultValue={tk.offer ?? ''} data-testid="offer">
+              <option value="">{t('offerNone')}</option><option value="address">{t('offerAddress')}</option><option value="person">{t('offerPerson')}</option>
+            </select>
+            <small class="hint">{t('offerHint')}</small>
+          </label>
+        )}
         <AfterField id={id} value={after} onChange={setAfter} />
         <div class="row2">
           <label class="field"><span>{t('appField')}</span><input type="text" name="app" defaultValue={tk.app ?? ''} placeholder="Mail, WhatsApp…" autocomplete="off" /></label>
@@ -578,6 +618,8 @@ export const flows = {
   breakDown: (_id: string) => {},
   decide: (_decisionId: string | null, _link?: { taskId?: string; projectId?: string }) => {},
   stuck: (_id?: string) => {},
+  /** The after-visit screen (Addresses and people). */
+  visit: (_addressId: string, _o: { stepId: string; day: string }) => {},
 };
 
 // ---------- moving a step ----------
@@ -717,17 +759,19 @@ export function openPick(kind: 'list' | 'standing', k = today.value) {
 }
 function PickSheet({ kind, k }: { kind: 'list' | 'standing'; k: string }) {
   const [added, setAdded] = useState<string[]>([]);
+  const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const items = kind === 'standing'
     ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x)).sort(byOrder)
     : candidates(k).slice(0, 14);
-  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k) : addToday(id, false, k)); };
+  const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k, undefined, offerFieldsFor(offers[id])) : addToday(id, false, k)); };
   return (
     <div>
       <h3>{kind === 'standing' ? t('leisurePeopleTitle') : t('fromList')}</h3>
       <p class="hint">{kind === 'standing' ? t('pickStandingHint') : t('pickListHint')}</p>
       <ul class="picklist">
         {items.length ? items.map(x => (
-          <li><div><p><Title s={x.title} /></p><p class="meta"><Meta tk={x} withQuad={kind !== 'standing'} /></p></div>
+          <li><div><p><Title s={x.title} /></p><p class="meta"><Meta tk={x} withQuad={kind !== 'standing'} /></p>
+            {kind === 'standing' && !added.includes(x.id) && <OfferChips offer={x.offer} value={offers[x.id]} onChange={c => setOffers({ ...offers, [x.id]: c })} />}</div>
             <button class="btn small" type="button" disabled={added.includes(x.id)} onClick={() => add(x.id)}>{added.includes(x.id) ? t('added') : t('add')}</button></li>
         )) : <li><p class="hint">{t('nothingToAdd')}</p></li>}
       </ul>

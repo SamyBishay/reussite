@@ -1,6 +1,7 @@
 // Settings are data (brief §7): one synced document, `meta/settings`. An update adds
 // defaults for new keys and never overwrites what the person chose.
 import type { SuitId } from './schema';
+import { DEFAULT_PREFERENCES } from '../domain/preferences';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
@@ -10,6 +11,12 @@ export type NotifyText = 'generic' | 'titles';
 export type NotifyType = 'launch' | 'fixed' | 'checkin' | 'close' | 'decision' | 'review' | 'still';
 export const NOTIFY_TYPES: NotifyType[] = ['launch', 'fixed', 'checkin', 'close', 'decision', 'review', 'still'];
 export type AiProvider = 'none' | 'openai' | 'anthropic';
+
+/**
+ * An address category (brief §5). `name` is what the person typed; empty means the app's own word for the
+ * default (the `addressCat_<id>` strings), so a default shows in the language chosen.
+ */
+export interface AddressCategory { id: string; name: string }
 
 export interface SuitSetting {
   name: { en: string; fr: string };
@@ -62,6 +69,11 @@ export interface Settings {
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
+  // Addresses and people (brief §5, phase 4)
+  /** The module (Addresses and People) is on. Switching it off hides the screens and offers; nothing stored is touched. */
+  addressesPeople: boolean;
+  /** The categories an address can have, in order. An array: the person's edited list replaces the defaults whole. */
+  addressCategories: AddressCategory[];
   // AI (brief §10). The key itself is device-local (db.local), never in this synced document.
   aiProvider: AiProvider;
   /** Base URL of the OpenAI-compatible adapter. */
@@ -74,6 +86,8 @@ export interface Settings {
   memoryBudget: number;
   /** A limit on the AI's cost in a month on this device, in US dollars; null = none. */
   aiMonthlyCap: number | null;
+  /** How an AI should work with the person: their own text, in every request and pack (docs/ai/preferences.md). Empty = nothing sent. */
+  aiPreferences: string;
   // Sync (brief §6). The key itself is device-local (db.local), never in this synced document.
   /** The relay's address; the build's VITE_RELAY_URL unless changed. Empty = sync can't be switched on. */
   relayUrl: string;
@@ -81,6 +95,9 @@ export interface Settings {
 }
 
 export const SUIT_ORDER: SuitId[] = ['S', 'D', 'C', 'H'];
+
+/** Ids stay fixed (addresses keep them); the names come from the strings `addressCat_<id>` until the person edits them. */
+export const DEFAULT_ADDRESS_CATEGORIES: AddressCategory[] = ['food', 'cafe', 'shopping', 'sight', 'museum', 'park', 'outing', 'other'].map(id => ({ id, name: '' }));
 
 export const DEFAULT_SETTINGS: Settings = {
   language: 'en',
@@ -121,6 +138,8 @@ export const DEFAULT_SETTINGS: Settings = {
   feedTitles: false,
   sound: true,
   volume: 0.6,
+  addressesPeople: true,
+  addressCategories: DEFAULT_ADDRESS_CATEGORIES,
   aiProvider: 'none',
   aiBaseUrl: 'https://openrouter.ai/api/v1',
   aiModels: {
@@ -130,6 +149,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiAlwaysShow: false,
   memoryBudget: 3000,
   aiMonthlyCap: null,
+  aiPreferences: DEFAULT_PREFERENCES,
   // Vite fills this in at build time; the relay (no Vite) reads the settings' shape without it.
   relayUrl: ((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_RELAY_URL ?? '').trim(),
 };

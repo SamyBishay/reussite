@@ -36,6 +36,22 @@ describe('backup', () => {
     expect((await b.exchanges.get('e1'))!._del).toBeDefined();
     expect(await b.tasks.get('t9')).toBeDefined();
   });
+  it('carries addresses and people, deletions included; a restore merges and an older backup leaves them', async () => {
+    const a = new ReussiteDb('bk-ap-a');
+    const c = '0000000000001:0000:a';
+    await a.addresses.put(create<Record<string, unknown>>('a1', { name: 'Chez Zed', state: 'been', visits: [{ id: 'v1', day: '2026-10-01', note: 'good', verdict: 'again' }], futureField: 7 }, SCHEMA_VERSION, c));
+    await a.people.put({ ...create<Record<string, unknown>>('p1', { name: 'Ibrahim', reach: 'whatsapp://send?phone=1', lastSeen: '2026-10-01' }, SCHEMA_VERSION, c), _del: '0000000000002:0000:a' });
+    const file = parseBackup(JSON.parse(JSON.stringify(await makeBackup(a))));
+    const b = new ReussiteDb('bk-ap-b');
+    // here, a newer edit of the same address
+    await b.addresses.put({ ...create<Record<string, unknown>>('a1', { name: 'Chez Zed', state: 'want', visits: [], note: 'edited here' }, SCHEMA_VERSION, '0000000000009:0000:b') });
+    expect(await restoreBackup(b, file)).toMatchObject({ addresses: 1, people: 1 });
+    expect(await b.addresses.get('a1')).toMatchObject({ name: 'Chez Zed', note: 'edited here', futureField: 7 });
+    expect((await b.people.get('p1'))!._del).toBeDefined();
+    const old = parseBackup({ format: 'reussite-backup', schema: 3, exported: '2026-10-01T00:00:00Z', data: { tasks: [] } });
+    expect(await restoreBackup(b, old)).toMatchObject({ addresses: 0, people: 0 });
+    expect(await b.addresses.get('a1')).toBeDefined();
+  });
   it('refuses other files and newer versions', () => {
     expect(() => parseBackup({ tasks: {} })).toThrow();
     expect(() => parseBackup({ format: 'reussite-backup', schema: 999, data: {} })).toThrow(/newer/);

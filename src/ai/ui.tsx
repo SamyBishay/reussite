@@ -1,14 +1,17 @@
 // AI on screen: "Show me what's sent", the command box, "Ask any AI" and "Paste the reply".
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
-import { projects, decisions, toast } from '../app/store';
-import { t, lang } from '../i18n';
+import { projects, decisions, stays, people, toast } from '../app/store';
+import { placeName } from '../app/sheets';
+import { t, lang, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, contextPack, type Scope } from './context';
+import { tripPack } from './trip';
 import { parseChangeSet, readChangeSet } from './changeset';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { openChangeReview } from './Review';
 import { dropBase } from '../app/sync';
+import { recordArrival } from '../app/home';
 import { parseDropFragment } from '../sync/droplink';
 
 /** Shown above any open sheet while a request waits for Send. Mount once, in App. */
@@ -104,17 +107,32 @@ async function copy(text: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 }
 
+/** The pack as it will leave, and the ways to take it: copy, share, then Paste the reply. */
+function PackBlock({ pack }: { pack: string }) {
+  const [copied, setCopied] = useState(false);
+  const doCopy = async () => { const ok = await copy(pack); setCopied(ok); toast(ok ? t('packCopied') : t('packCopyBlocked')); };
+  const share = async () => { try { await navigator.share({ title: 'Réussite', text: pack }); } catch { /* cancelled */ } };
+  return (
+    <>
+      <details class="more"><summary>{t('packShow', { n: pack.length.toLocaleString() })}</summary><pre class="ai-pre" data-testid="pack">{pack}</pre></details>
+      <div class="actions">
+        <button class="btn primary" type="button" onClick={doCopy} data-testid="copy-pack">{t('packCopy')}</button>
+        {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
+        <button class="btn" type="button" onClick={() => openPaste()} data-testid="pack-paste">{t('pasteReply')}</button>
+      </div>
+      {copied && <p class="hint" style="margin-top:10px">{t('packNext')}</p>}
+    </>
+  );
+}
+
 function AskAny({ scope: s0, question: q0 }: { scope: Scope; question: string }) {
   const [scope, setScope] = useState<Scope>(s0);
   const [q, setQ] = useState(q0);
-  const [copied, setCopied] = useState(false);
   const ps = [...projects.value.values()].filter(p => p.status === 'active' || p.status === 'paused');
   const ds = [...decisions.value.values()].filter(d => d.status !== 'closed');
   const pack = contextPack(scope, q || t('askAnyDefaultQ'), lang.value, dropBase.value);
   const val = scope.kind === 'project' || scope.kind === 'decision' ? scope.kind + ':' + scope.id : scope.kind;
   const pick = (v: string) => { const [k, id] = v.split(':'); setScope(id ? ({ kind: k, id } as Scope) : ({ kind: k } as Scope)); };
-  const doCopy = async () => { const ok = await copy(pack); setCopied(ok); toast(ok ? t('packCopied') : t('packCopyBlocked')); };
-  const share = async () => { try { await navigator.share({ title: 'Réussite', text: pack }); } catch { /* cancelled */ } };
   return (
     <div data-testid="ask-any-sheet">
       <h3>{t('askAnyAi')}</h3>
@@ -130,18 +148,37 @@ function AskAny({ scope: s0, question: q0 }: { scope: Scope; question: string })
       <label class="field"><span>{t('askQuestion')}</span>
         <textarea rows={3} value={q} placeholder={t('askAnyDefaultQ')} onInput={e => setQ((e.target as HTMLTextAreaElement).value)} data-testid="ask-question" />
       </label>
-      <details class="more"><summary>{t('packShow', { n: pack.length.toLocaleString() })}</summary><pre class="ai-pre" data-testid="pack">{pack}</pre></details>
-      <div class="actions">
-        <button class="btn primary" type="button" onClick={doCopy} data-testid="copy-pack">{t('packCopy')}</button>
-        {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
-        <button class="btn" type="button" onClick={() => openPaste()}>{t('pasteReply')}</button>
-      </div>
-      {copied && <p class="hint" style="margin-top:10px">{t('packNext')}</p>}
+      <PackBlock pack={pack} />
     </div>
   );
 }
 /** "Ask any AI": a context pack for any chatbot, to the clipboard or the share sheet. Works without a provider. */
 export const openAskAny = (scope: Scope = { kind: 'today' }, question = '') => openSheet(<AskAny key={'ask' + Date.now()} scope={scope} question={question} />, true);
+
+/** "Plan this trip": the pack for a stay, with the people there only if ticked for this request (default: not). */
+function TripAsk({ stayId }: { stayId: string }) {
+  const [q, setQ] = useState('');
+  const [withPeople, setWithPeople] = useState(false);
+  const pack = tripPack(stayId, q, { people: withPeople, drop: dropBase.value });
+  const st = stays.value.get(stayId);
+  if (!pack || !st) return <p class="hint">{t('tripGone')}</p>;
+  const n = [...people.value.values()].filter(p => p.placeId === st.placeId || p.placeId === 'any').length;
+  return (
+    <div data-testid="trip-sheet">
+      <h3>{t('tripTitle')}</h3>
+      <p class="hint">{t('tripHint', { place: placeName(st.placeId), from: fmtDate(st.from), to: fmtDate(st.to) })}</p>
+      <label class="field"><span>{t('askQuestion')}</span>
+        <textarea rows={3} value={q} placeholder={t('tripQuestionPh')} onInput={e => setQ((e.target as HTMLTextAreaElement).value)} data-testid="trip-question" />
+      </label>
+      <label class="tog"><input type="checkbox" checked={withPeople} onChange={e => setWithPeople((e.target as HTMLInputElement).checked)} data-testid="trip-people" /> {t('tripPeople', { n })}</label>
+      <p class="hint">{t('tripPeopleHint')}</p>
+      <p class="hint" data-testid="trip-notes">{t('aiNotesSent')}: {pack.notes.length ? pack.notes.join(', ') : t('aiNotesNone')}</p>
+      <PackBlock pack={pack.text} />
+    </div>
+  );
+}
+/** "Plan this trip", from a stay: a context pack for an AI with web search. Works without a provider. */
+export const openTrip = (stayId: string) => openSheet(<TripAsk key={'trip' + stayId} stayId={stayId} />, true);
 
 const PASTE_ERR = { noJson: 'pasteNoBlock', invalid: 'pasteInvalid', version: 'pasteVersion', empty: 'chgNoneLeft' } as const;
 function Paste() {
@@ -154,7 +191,8 @@ function Paste() {
     const r = link ? await parseDropFragment(link).then(d => readChangeSet(d.json), () => ({ ok: false as const, error: 'invalid' as const })) : parseChangeSet(text);
     if (!r.ok) { setErr(t(PASTE_ERR[r.error])); return; }
     setErr('');
-    openChangeReview(r.cs);
+    // Kept in History with its Undo, like a one-tap link (a trip plan's days and addresses come back this way).
+    openChangeReview(r.cs, { record: true, onApplied: (n, undo) => { if (n) void recordArrival(r.cs, 'paste', n, undo); } });
   };
   const fromClipboard = async () => { try { setText(await navigator.clipboard.readText()); } catch { toast(t('pasteBlocked')); } };
   return (

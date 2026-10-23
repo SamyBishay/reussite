@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { frTypo, translate } from './index';
+import { frTypo, translate, fmtIfDay, lang } from './index';
 import { en } from './en';
 import { fr } from './fr';
 
@@ -11,6 +11,15 @@ describe('i18n', () => {
     expect(frTypo('« bonjour »')).toBe(`«${NNBSP}bonjour${NNBSP}»`);
     expect(frTypo('à 14:00, ratio 4,5:1')).toBe('à 14:00, ratio 4,5:1');
     expect(frTypo('https://a.b/c')).toBe('https://a.b/c');
+  });
+  it('a field that holds a day is shown like other dates, anything else as typed', () => {
+    lang.value = 'en';
+    expect(fmtIfDay('2026-11-22')).toBe('22 Nov');
+    expect(fmtIfDay('by the end of March')).toBe('by the end of March');
+    expect(fmtIfDay('')).toBe('');
+    lang.value = 'fr';
+    expect(fmtIfDay('2026-11-22')).toBe('22 nov.');
+    lang.value = 'en';
   });
   it('plurals follow each language', () => {
     expect(translate('en', 'cardsToday', { n: 1 })).toBe('1 card today');

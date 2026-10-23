@@ -43,8 +43,15 @@ const v2: Migration = data => ({
  */
 const v3: Migration = data => data;
 
+/**
+ * 3 → 4 (phase 4): the `addresses` and `people` collections arrive, and steps may carry `addressId`,
+ * `personId` and `offer`, all optional. Nothing stored changes; the bump keeps a device on schema 3 from
+ * reading a schema 4 batch (it goes read-only instead of skipping addresses and people it doesn't know).
+ */
+const v4: Migration = data => data;
+
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3];
+export const MIGRATIONS: Migration[] = [v2, v3, v4];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;

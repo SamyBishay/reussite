@@ -94,7 +94,11 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
   await expect(page.getByTestId('ics-week')).toBeVisible();
-  await noSideways(page, 'calendar week');
+  for (const m of ['day', 'week', 'month', 'agenda']) {
+    await page.getByTestId('cal-' + m).click();
+    await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', m);
+    await noSideways(page, 'calendar ' + m);
+  }
   await page.goto('/#settings');
   await expect(page.getByTestId('calendar-settings')).toBeVisible();
   await noSideways(page, 'settings');

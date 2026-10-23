@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways, goTab } from './helpers';
+import { importSample, noSideways, goTab, calEvent } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -319,8 +319,8 @@ test('Stuck: the AI proposes a smaller starter, which the person can edit', asyn
 
 async function toProjects(page: Page) {
   await page.getByTestId('tab-calendar').click();
-  await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Week' }).click();
-  await page.locator('main').getByRole('button', { name: '☀ Weekly review' }).first().click();
+  await page.getByTestId('cal-week').click();
+  await calEvent(page, 'Weekly review').first().click();
   for (let i = 0; i < 3; i++) await page.getByTestId('rv-next').click();
   await expect(page.getByTestId('rv-3')).toBeVisible();
 }

@@ -146,6 +146,16 @@ export async function planOn(id: string, k: string) {
   await addToday(id, true, k);
 }
 export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, dueRule: null });
+/**
+ * A fixed-time step moved on the calendar's hour grid: to a day and a time. One with a due date is due that day;
+ * one that is only on a day's list is planned on the new day.
+ */
+export async function moveFixed(id: string, k: string, at: string) {
+  const tk = T(id);
+  if (!tk) return;
+  if (tk.due) await patchTask(id, { at, due: k, dueRule: null });
+  else { await planOn(id, k); await patchTask(id, { at }); }
+}
 /** A done step moved to another day changes its done date. */
 export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, doneAt: k + 'T12:00:00.000Z' });
 

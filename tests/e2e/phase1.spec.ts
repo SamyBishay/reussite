@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab } from './helpers';
+import { importSample, noSideways, goTab, calEvent } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -47,12 +47,13 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');
 });
 
-test('calendar week view: plan a step on a day, or make it due', async ({ page }) => {
+test('calendar week view: tap a card, then Move to… plans it on a day', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('cal-week').click();
   await expect(page.getByTestId('calendar')).toBeVisible();
-  const today = page.getByTestId('wday-' + iso(0));
-  await today.locator('.cal-item', { hasText: 'thesis draft and write' }).getByTestId('cal-move').click();
+  await calEvent(page, 'thesis draft second').first().click();
+  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
   await sheet(page).getByRole('button', { name: 'Plan it on…' }).click();
   await sheet(page).getByRole('button', { name: 'Tomorrow' }).click();
   // Tomorrow may fall in next week's view; open it in the day navigator instead.
@@ -60,8 +61,8 @@ test('calendar week view: plan a step on a day, or make it due', async ({ page }
   await page.getByTestId('next-day').click();
   await expect(page.getByTestId('other-day')).toContainText('thesis draft and write');
   await page.getByTestId('tab-calendar').click();
-  await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
-  await expect(page.getByTestId('month')).toBeVisible();
+  await page.getByTestId('cal-month').click();
+  await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
 });
 
 test('a stay switches the current place on its first day', async ({ page }) => {
@@ -190,8 +191,12 @@ for (const width of [320, 375, 430]) {
     // Calendar, both views; the day navigator.
     await page.getByTestId('tab-calendar').click();
     await check('calendar week');
-    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
+    await page.getByTestId('cal-month').click();
     await check('calendar month');
+    await page.getByTestId('cal-agenda').click();
+    await check('calendar agenda');
+    await page.getByTestId('cal-day').click();
+    await check('calendar day');
     await page.getByTestId('tab-today').click();
     await page.getByTestId('next-day').click();
     await check('tomorrow');
@@ -220,8 +225,8 @@ for (const width of [320, 375, 430]) {
     await page.keyboard.press('Escape');
     // The weekly review, each screen.
     await page.getByTestId('tab-calendar').click();
-    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Week' }).click();
-    await page.locator('main').getByRole('button', { name: '☀ Weekly review' }).first().click();
+    await page.getByTestId('cal-week').click();
+    await calEvent(page, 'Weekly review').first().click();
     for (let i = 0; i < 10; i++) {
       await check('review ' + i);
       if (i < 9) await page.getByTestId('rv-next').click();
@@ -244,7 +249,14 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   await expect(page.locator('ul.fixed')).toContainText('17:00');
   await expect(page.locator('ul.fixed')).toContainText('Walk to the park');
   await page.getByTestId('tab-calendar').click();
-  await expect(page.getByTestId('wday-' + iso(0))).toContainText('Walk to the park');
+  // A fixed time is on the hour grid (not in the all-day row), at its time.
+  await page.getByTestId('cal-day').click();
+  const timed = page.locator('.sx__time-grid-event', { hasText: 'park' });
+  await expect(timed).toHaveCount(1);
+  await expect(page.locator('.sx__date-grid-event', { hasText: 'park' })).toHaveCount(0);
+  const top = (await timed.boundingBox())!.y;
+  const hour = (await page.locator('.sx__week-grid__hour', { hasText: '17:00' }).boundingBox())!.y;
+  expect(Math.abs(top - hour)).toBeLessThan(30);
 });
 
 test('a standing obligation is not in the four quadrants: it is on the Obligations line, folded', async ({ page }) => {

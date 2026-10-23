@@ -113,25 +113,26 @@ test('the old #log and a stored log view open the Calendar’s Log', async ({ pa
   await expect(current(page)).toHaveAttribute('data-testid', 'tab-calendar');
 });
 
-test('the Log is a mode of Calendar, next to Week and Month', async ({ page }) => {
+test('the Log is a mode of Calendar, next to Day, Week, Month and Agenda', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'calendar');
-  await expect(page.getByTestId('month')).toHaveCount(0);
+  await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', 'week');
   await page.getByTestId('cal-log').click();
   await expect(page.getByTestId('log')).toContainText('Timed sessions');
   await expect(page.getByTestId('log')).not.toContainText('Decisions');
   const view = page.getByRole('group', { name: 'Calendar view' });
   await view.getByRole('button', { name: 'Month' }).click();
-  await expect(page.getByTestId('month')).toBeVisible();
+  await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', 'month');
+  await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
   await view.getByRole('button', { name: 'Week' }).click();
-  await expect(page.locator('.weekview')).toBeVisible();
+  await expect(page.locator('.sx__week-grid')).toBeVisible();
   // Leaving the Log for a tab and coming back keeps week or month, not the Log.
   await page.getByTestId('cal-log').click();
   await goTab(page, 'today');
   await goTab(page, 'calendar');
   await page.reload();
   await expect(page.getByTestId('log')).toHaveCount(0);
-  await expect(page.locator('.weekview')).toBeVisible();
+  await expect(page.locator('.sx__week-grid')).toBeVisible();
 });
 
 test('decisions live in Projects, and a decision step in the Matrix opens its decision', async ({ page }) => {

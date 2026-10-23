@@ -276,8 +276,9 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 }
 
 // ---------- the task sheet ----------
-export function openTask(id: string) {
-  openSheet(<TaskSheet key={id + Date.now()} id={id} />);
+/** `moveMode` 'calendar': from the Calendar, the sheet's Move to… offers "Plan it on…" and "Due on…" in place of the quadrants. */
+export function openTask(id: string, moveMode: 'matrix' | 'calendar' = 'matrix') {
+  openSheet(<TaskSheet key={id + Date.now()} id={id} moveMode={moveMode} />);
 }
 /** A new step in the task sheet, filled from `prefill`. Nothing is written until Save; then `onSaved` gets the new id. */
 export function openNewTask(prefill: Partial<Task> = {}, onSaved?: (id: string) => void) {
@@ -374,13 +375,13 @@ function FeedsField({ where, value, onChange }: { where: string; value: string; 
   );
 }
 
-function TaskSheet({ id }: { id: string }) {
+function TaskSheet({ id, moveMode }: { id: string; moveMode: 'matrix' | 'calendar' }) {
   const tk = T(id);
-  return tk ? <TaskForm tk={tk} /> : null;
+  return tk ? <TaskForm tk={tk} moveMode={moveMode} /> : null;
 }
 
 /** The sheet's body. A `draft` is a step not yet written: the same form, and Save creates it. */
-function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void }) {
+function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void; moveMode?: 'matrix' | 'calendar' }) {
   const id = tk.id;
   const [armed, setArmed] = useState(false);
   const [estV, setEstV] = useState(tk.est ? String(tk.est) : '');
@@ -517,7 +518,7 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
         )}
         {open && !tk.template && !draft && (
           <>
-            <button class="btn small" type="button" onClick={() => openMove(id)}>{t('moveTo')}</button>
+            <button class="btn small" type="button" onClick={() => openMove(id, moveMode)}>{t('moveTo')}</button>
             <button class="btn small" type="button" onClick={() => flows.breakDown(id)}>{t('breakItDown')}</button>
             {tk.kind === 'decision' && <button class="btn small" type="button" onClick={() => flows.decide(null, { taskId: id })}>{t('openDecision')}</button>}
             {tk.repeat && <button class="btn small" type="button" onClick={() => { void skipThisTime(id); closeSheet(); toast(t('skipped')); }}>{t('skipThisTime')}</button>}

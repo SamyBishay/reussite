@@ -6,9 +6,22 @@ export type View = 'home' | 'today' | 'matrix' | 'projects' | 'calendar' | 'sett
 export const TABS: View[] = ['home', 'today', 'matrix', 'projects', 'calendar'];
 const VIEWS: View[] = [...TABS, 'settings', 'memory', 'history', 'addresses', 'notifications'];
 
-/** Week and month are remembered; the Log is a mode of the Calendar that you open on purpose. */
-export type CalMode = 'week' | 'month' | 'log';
-const storedMode = (): 'week' | 'month' => { try { return localStorage.getItem('reussite.cal') === 'month' ? 'month' : 'week'; } catch { return 'week'; } };
+/** Day, Week, Month and the Agenda list are remembered; the Log is a mode of the Calendar that you open on purpose. */
+export type CalMode = 'day' | 'week' | 'month' | 'agenda' | 'log';
+export const CAL_MODES: CalMode[] = ['day', 'week', 'month', 'agenda', 'log'];
+/** Below this width (px) the Calendar is a phone's: Day and the Agenda by default, and a week is three days. */
+export const PHONE_WIDTH = 768;
+/** Days a phone's "week" shows, starting on the date shown. */
+export const PHONE_DAYS = 3;
+export const isPhone = (): boolean => typeof window !== 'undefined' && window.innerWidth < PHONE_WIDTH;
+/** What the Calendar opens on when the person never chose: Day on a phone, Week on a tablet or a computer. */
+const storedMode = (): Exclude<CalMode, 'log'> => {
+  try {
+    const m = localStorage.getItem('reussite.cal');
+    if (m === 'day' || m === 'week' || m === 'month' || m === 'agenda') return m;
+  } catch { /* fine */ }
+  return isPhone() ? 'day' : 'week';
+};
 export const calMode = signal<CalMode>(storedMode());
 export function setCalMode(m: CalMode) {
   calMode.value = m;

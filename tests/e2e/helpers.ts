@@ -58,3 +58,6 @@ export async function noSideways(page: Page, where: string) {
   expect(r.out, where + ': elements past the edge').toEqual([]);
 }
 
+
+/** A calendar event (the library's own element) by its words, in the Calendar tab's grid. */
+export const calEvent = (page: Page, text: string | RegExp) => page.getByTestId('calendar-grid').locator('.sx__event', { hasText: text });

@@ -18,7 +18,7 @@ Each project should have a concrete next step, written as a first action. Add on
 
 ## Order and chains
 
-Drag a project's open steps by their grip to change their order. When a step waits for another, only the first shows as a card elsewhere (Today, the matrix, the calendar), with "+n after" under its title. Here, in the project, every step is listed.
+Drag a project's open steps by their grip to change their order. When a step waits for another, only the first shows as a card elsewhere (Today, the matrix), with "+n after" under its title. Here, in the project, every step is listed.
 
 If your places have areas, a suit's projects are grouped under the area of their place.
 

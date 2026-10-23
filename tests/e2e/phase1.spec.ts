@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, calEvent } from './helpers';
+import { importSample, noSideways, goTab, openWeeklyReview } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -47,20 +47,18 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');
 });
 
-test('calendar week view: tap a card, then Move to… plans it on a day', async ({ page }) => {
+test('the calendar tab opens its views; a fixed-time step there opens its sheet', async ({ page }) => {
   await importSample(page);
+  await page.goto('/#task/t2');
+  await sheet(page).getByTestId('time-chip').click();
+  await sheet(page).locator('input[name=at]').fill('11:00');
+  await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-week').click();
   await expect(page.getByTestId('calendar')).toBeVisible();
-  await calEvent(page, 'thesis draft second').first().click();
-  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
-  await sheet(page).getByRole('button', { name: 'Plan it on…' }).click();
-  await sheet(page).getByRole('button', { name: 'Tomorrow' }).click();
-  // Tomorrow may fall in next week's view; open it in the day navigator instead.
-  await page.getByTestId('tab-today').click();
-  await page.getByTestId('next-day').click();
-  await expect(page.getByTestId('other-day')).toContainText('thesis draft and write');
-  await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('calendar-grid').locator('.sx__time-grid-event.k-fixed').first().click();
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Close' }).click();
   await page.getByTestId('cal-month').click();
   await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
 });
@@ -278,9 +276,7 @@ for (const width of [320, 375, 430]) {
     await check('places');
     await page.keyboard.press('Escape');
     // The weekly review, each screen.
-    await page.getByTestId('tab-calendar').click();
-    await page.getByTestId('cal-week').click();
-    await calEvent(page, 'Weekly review').first().click();
+    await openWeeklyReview(page);
     for (let i = 0; i < 10; i++) {
       await check('review ' + i);
       if (i < 9) await page.getByTestId('rv-next').click();

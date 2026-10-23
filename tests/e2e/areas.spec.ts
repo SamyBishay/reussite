@@ -18,11 +18,12 @@ async function cairoWithHeliopolis(page: Page) {
 }
 
 /** A step added by hand from the quick form's Details sheet, set to `where`. */
-async function addStep(page: Page, title: string, where: string) {
+async function addStep(page: Page, title: string, where: string, at?: string) {
   await goTab(page, 'today');
   await page.getByPlaceholder(/The app and the first action/).fill(title);
   await page.getByTestId('quick-details').click();
   await sheet(page).locator('label.field', { hasText: /^Where/ }).locator('select').selectOption({ label: where });
+  if (at) { await sheet(page).getByTestId('time-chip').click(); await sheet(page).locator('input[name=at]').fill(at); }
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
 }
@@ -58,7 +59,15 @@ test('an area is made under a place, offered in the place field, and one tap nar
   await goTab(page, 'matrix');
   await page.getByTestId('area-chips').getByRole('button', { name: 'Heliopolis' }).click();
 
-  // The Calendar: the same chips, on the day's cards.
+  // The Calendar: the same chips, on the day's fixed-time steps (give two of the steps a time first).
+  await goTab(page, 'today');
+  for (const [title, at] of [['Renew the visa', '10:00'], ['Buy a SIM card', '11:00']] as const) {
+    await page.locator('.row', { hasText: title }).getByTestId('details').click();
+    await sheet(page).getByTestId('time-chip').click();
+    await sheet(page).locator('input[name=at]').fill(at);
+    await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(sheet(page)).toBeHidden();
+  }
   await goTab(page, 'calendar');
   await page.getByTestId('cal-day').click();
   await expect(calEvent(page, 'visa')).toHaveCount(1);

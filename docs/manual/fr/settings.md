@@ -59,7 +59,7 @@ Les rappels sont renouvelés chaque fois que vous ouvrez l’appli. Si vous ne l
 
 ## Calendrier
 
-Abonnez-vous à vos éléments à heure fixe et à vos étapes prévues ou à échéance depuis une appli de calendrier. Choisissez **Ce que dit le flux** : les heures seulement, les noms courts, ou les noms courts, les lieux et les notes. Voir [Le calendrier](calendar.md).
+Abonnez-vous à vos éléments à heure fixe depuis une appli de calendrier. Choisissez **Ce que dit le flux** : les heures seulement, les noms courts, ou les noms courts, les lieux et les notes. Voir [Le calendrier](calendar.md).
 
 ## Données
 

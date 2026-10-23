@@ -39,13 +39,8 @@
 .sxhost .sx__time-grid-event .sx__time-grid-event-location,.sxhost .sx__time-grid-event-location{font-weight:400;color:var(--ink-3);font-size:12px}
 .sxhost .sx__event.is-done{opacity:.7}
 .sxhost .sx__event.is-done .sx__date-grid-event-text,.sxhost .sx__event.is-done .sx__month-grid-event-title,.sxhost .sx__event.is-done .sx__list-event-title{text-decoration:line-through;color:var(--ink-3)}
-.sxhost .sx__event.is-projected{border:1.5px dashed var(--ink-3);background:transparent;box-sizing:border-box}
-.sxhost .sx__event.is-optional{opacity:.6}
-.sxhost .sx__event.k-repeat{opacity:.55;font-weight:400}
 .sxhost .sx__event.k-half{font-weight:600;font-size:11.5px}
 .sxhost .sx__event.k-stay{background:var(--sea-soft);color:var(--sea-deep);font-weight:600}
-.sxhost .sx__event.k-check,.sxhost .sx__event.k-project,.sxhost .sx__event.k-review{font-weight:600}
-.sxhost .sx__event.k-check{background:var(--accent-soft)}
 
 /* Month */
 .sxhost .sx__month-grid-day__header-date{font-family:var(--mono);cursor:pointer;min-width:28px;min-height:28px}

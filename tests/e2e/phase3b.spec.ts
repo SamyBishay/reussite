@@ -65,7 +65,7 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
 });
 }
 
-test('Add to calendar downloads an .ics with the day’s planned steps and no launch point when sharing is unavailable', async ({ page }) => {
+test('Add to calendar downloads an .ics with the day’s fixed-time items and no planned step or launch point when sharing is unavailable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
@@ -75,6 +75,10 @@ test('Add to calendar downloads an .ics with the day’s planned steps and no la
   await page.locator('form.launch-add input[name=time]').fill('23:30');
   await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.locator('.launches .chip', { hasText: '23:30' })).toHaveCount(1);
+  await page.goto('/#task/t3'); // on today's list, no due date
+  await sheet(page).getByTestId('time-chip').click();
+  await sheet(page).locator('input[name=at]').fill('11:00');
+  await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
   const download = page.waitForEvent('download');
   await page.getByTestId('ics-today').click();
@@ -82,8 +86,9 @@ test('Add to calendar downloads an .ics with the day’s planned steps and no la
   expect(d.suggestedFilename()).toMatch(/^reussite-\d{4}-\d{2}-\d{2}\.ics$/);
   const text = readFileSync((await d.path())!, 'utf8');
   expect(text.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
-  // Planned cards are events at the times they are laid out (or, with no room left in the day, all-day ones); launch points stay in the app.
-  expect(text).toMatch(/UID:plan:t\d/);
+  // Only the fixed-time step is an event; planned cards, due steps and launch points stay in the app.
+  expect(text).toMatch(/UID:fixed:t3:/);
+  expect(text).not.toMatch(/UID:plan:|UID:due:|VALUE=DATE|TRANSPARENT/);
   expect(text).not.toMatch(/▶|Start/);
   expect(text.replace(/\r\n/g, '')).not.toMatch(/[\r\n]/);
 });

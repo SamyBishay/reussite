@@ -1,47 +1,36 @@
-// What the Calendar tab shows on each day (brief §16), as plain events for a calendar library to draw. Fixed-time
-// items sit on the hour grid at their time and length; everything else that belongs to a day with no time (the
-// day's planned cards, the steps due, cards played, decision checks, project due dates, the review, a stay) is an
-// all-day event and never gets a slot on the grid. Pure: data in, events out; the app maps them onto its library.
-import type { Address, Day, Decision, Place, Project, Session, Stay, SuitId, Task } from '../data/schema';
+// What the Calendar tab shows on each day (brief §16): only what is at a fixed time, as plain events for a calendar
+// library to draw. Items with a time (`at`, one-off and standing items on their weekdays) sit on the hour grid at their
+// time and length; a stay is a band over its days and a half day spent in an area is a label (both cheap, neither a
+// task). Planned cards, due steps, decision checks, project dates and the review are not here: the calendar is not the
+// task list. Pure: data in, events out; the app maps them onto its library.
+import type { Address, Day, Place, Project, Stay, SuitId, Task } from '../data/schema';
 import { addDays, type DayKey } from './dates';
 import { DEFAULT_FIXED_MINUTES } from './ics';
 import { shortLabel } from './label';
 import { chainIndex, isWaiting } from './chains';
-import { fixedOn, isOpen, rawPlan, whereOf } from './lists';
+import { fixedOn, rawPlan, whereOf } from './lists';
 import { inArea, type Half } from './areas';
 import { locationOf } from './calItems';
-import { isoDow, occurrences } from './repeat';
-import { makeScheduler, type Slot } from './schedule';
+import { isoDow } from './repeat';
 
 type WithId<T> = T & { id: string };
 
 export interface CalViewData {
   tasks: ReadonlyMap<string, WithId<Task>>;
   days: ReadonlyMap<string, WithId<Day>>;
-  decisions: ReadonlyMap<string, WithId<Decision>>;
   projects: ReadonlyMap<string, WithId<Project>>;
   places: ReadonlyMap<string, WithId<Place>>;
   stays: ReadonlyMap<string, WithId<Stay>>;
   addresses: ReadonlyMap<string, WithId<Address>>;
-  /** For the projected times: where done cards really were and the personal pace. */
-  sessions?: ReadonlyMap<string, WithId<Session>>;
 }
 
 export interface CalViewOptions {
-  today: DayKey;
   dayStart: string;
-  reviewDay: number;
-  /** Whether a step is on the page being viewed (its place, or Anywhere); due steps and repeat markers follow it. */
-  onPage: (t: WithId<Task>) => boolean;
   /** Narrowed to one area: its steps and Anywhere's, and the half days spent there. Every step on the calendar follows it. */
   area?: string | null;
-  /** For the projected times of planned cards (schedule.ts): the clock now, the zone the grid reads in, the default start. */
-  now?: number;
-  zone?: string;
-  launchStart?: string;
 }
 
-export type CalViewKind = 'fixed' | 'plan' | 'due' | 'done' | 'check' | 'project' | 'review' | 'repeat' | 'stay' | 'half';
+export type CalViewKind = 'fixed' | 'stay' | 'half';
 
 export interface CalViewEvent {
   /** Unique in a view: `<kind>:<id>:<day>`. */
@@ -53,14 +42,12 @@ export interface CalViewEvent {
   date: DayKey;
   /** A stay: its last date (inclusive). */
   endDate?: DayKey;
-  /** Fixed-time items, and planned or done cards that have a time: HH:MM on `date`, and the end on the same date (never past 23:59). */
+  /** Fixed-time items: HH:MM on `date`, and the end on the same date (never past 23:59). */
   time?: string;
   endTime?: string;
   taskId?: string;
-  decisionId?: string;
-  projectId?: string;
   stayId?: string;
-  /** A step's short name; for the others, the name of the decision, project or place. */
+  /** A step's short name; for a stay or a half day, the name of the place or area. */
   title: string;
   /** The address or the place, short. */
   where?: string;
@@ -68,11 +55,7 @@ export interface CalViewEvent {
   /** A half day spent in an area: `title` is the area's name. */
   half?: Half;
   done?: boolean;
-  /** Planned cards (and done ones) have a time on the grid: `time`/`endTime` of a card not yet done are a projection, not a fixed time. */
-  projected?: boolean;
-  /** "If there's room": a later step allotted to the day. */
-  optional?: boolean;
-  /** Can be dragged: planned and due steps, cards played, and fixed-time steps not yet done. */
+  /** Can be dragged: fixed-time steps not yet done (a standing item that has no copy on the day cannot). */
   movable: boolean;
 }
 
@@ -104,8 +87,8 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
   const out: CalViewEvent[] = [];
   const ctx = { addresses: data.addresses, places: data.places, projects: data.projects };
   const where = (t: WithId<Task>) => locationOf(t, ctx, true) || undefined;
-  const task = (kind: CalViewKind, t: WithId<Task>, day: DayKey, extra: Partial<CalViewEvent> = {}): CalViewEvent =>
-    ({ id: `${kind}:${t.id}:${day}`, kind, day, date: day, taskId: t.id, title: shortLabel(t), suit: t.suit, ...(where(t) ? { where: where(t) } : {}), movable: false, ...extra });
+  const task = (t: WithId<Task>, day: DayKey, extra: Partial<CalViewEvent> = {}): CalViewEvent =>
+    ({ id: `fixed:${t.id}:${day}`, kind: 'fixed', day, date: day, taskId: t.id, title: shortLabel(t), suit: t.suit, ...(where(t) ? { where: where(t) } : {}), movable: false, ...extra });
 
   // Stays: one band from the first to the last date, whatever part of it is in the window.
   for (const s of data.stays.values()) {
@@ -117,60 +100,24 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
   const ix = chainIndex(data.tasks);
   const waiting = (t: WithId<Task>) => !t.fixed && isWaiting(ix, t.id);
 
-  const repeats = new Map<DayKey, WithId<Task>[]>();
-  for (const x of data.tasks.values()) {
-    if (!isOpen(x) || !x.repeat || !x.due || !o.onPage(x)) continue;
-    for (const k of occurrences(x.repeat, x.due, to)) if (k >= from) repeats.set(k, [...(repeats.get(k) ?? []), x]);
-  }
-
   const lists = { days: data.days, tasks: data.tasks };
-  const schedule = makeScheduler(data, { today: o.today, dayStart: o.dayStart, launchStart: o.launchStart, now: o.now ?? Date.now() });
-  /** The time a card has on its day, if it has one: done ones where they were, the rest where the plan puts them. */
-  const timeOf = (slot: Slot | undefined, k: DayKey, extra: Partial<CalViewEvent> = {}): Partial<CalViewEvent> => {
-    if (!slot) return {};
-    const time = toClock(slot.start), end = toClock(Math.max(slot.end, slot.start + 5));
-    return { date: gridSlot(k, time, o.dayStart).date, time, endTime: end, projected: slot.state !== 'done', ...extra };
-  };
+  const standing = [...data.tasks.values()].filter(t => t.template && t.status === 'open' && HHMM.test(t.at ?? '') && Array.isArray(t.weekdays) && t.weekdays.length);
+  const copies = new Map<string, WithId<Task>[]>();
+  for (const c of data.tasks.values()) if (c.from) copies.set(c.from, [...(copies.get(c.from) ?? []), c]);
   for (let k = from; k <= to; k = addDays(k, 1)) {
-    const timed = fixedOn(lists, k).filter(t => !waiting(t));
+    const timed = fixedOn(lists, k).filter(t => !waiting(t) && HHMM.test(t.at ?? ''));
     for (const t of timed) {
-      if (!HHMM.test(t.at ?? '')) continue;
       const slot = gridSlot(k, t.at!, o.dayStart);
       const done = t.status === 'done';
-      out.push(task('fixed', t, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, t.dur ?? t.est), done, movable: !done }));
+      out.push(task(t, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, t.dur ?? t.est), done, movable: !done }));
     }
-    const slots = new Map(schedule(k, o.zone).slots.map(sl => [sl.id, sl]));
-    const timedIds = new Set(timed.filter(t => HHMM.test(t.at ?? '')).map(t => t.id));
-
-    const planned = new Set<string>();
-    for (const id of rawPlan(data.days, k)) {
-      const t = data.tasks.get(id);
-      if (!t || t.status === 'dropped' || t.template || t.at || planned.has(id) || waiting(t)) continue;
-      planned.add(id);
-      if (t.status === 'done') out.push(task('done', t, k, { id: `done:${t.id}:${k}`, done: true, movable: true, ...timeOf(slots.get(t.id), k) }));
-      else out.push(task('plan', t, k, { movable: true, ...timeOf(slots.get(t.id), k) }));
+    // A standing item on its weekdays, until a copy of it is placed on the day (the copy is the event then).
+    const plan = new Set(rawPlan(data.days, k));
+    for (const tpl of standing) {
+      if (!tpl.weekdays!.includes(isoDow(k)) || (copies.get(tpl.id) ?? []).some(c => c.due === k || (!c.due && plan.has(c.id)))) continue;
+      const slot = gridSlot(k, tpl.at!, o.dayStart);
+      out.push(task(tpl, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, tpl.dur ?? tpl.est) }));
     }
-    // Later steps allotted to the day come last, only if there is room.
-    for (const sl of slots.values()) {
-      const t = data.tasks.get(sl.id);
-      if (!sl.optional || !t || planned.has(t.id)) continue;
-      planned.add(t.id);
-      out.push(task('plan', t, k, { movable: true, optional: true, ...timeOf(sl, k) }));
-    }
-    for (const t of data.tasks.values()) {
-      if (!isOpen(t) || t.due !== k || planned.has(t.id) || t.at || !o.onPage(t) || waiting(t)) continue;
-      out.push(task('due', t, k, { movable: true }));
-    }
-    if (k <= o.today) {
-      for (const t of data.tasks.values()) {
-        if (t.status !== 'done' || t.template || t.doneDay !== k || planned.has(t.id) || timedIds.has(t.id)) continue;
-        out.push(task('done', t, k, { done: true, movable: true, ...timeOf(slots.get(t.id), k) }));
-      }
-    }
-    for (const d of data.decisions.values()) if (d.status === 'decided' && d.reviewOn === k) out.push({ id: `check:${d.id}:${k}`, kind: 'check', day: k, date: k, decisionId: d.id, title: d.title, movable: false });
-    for (const p of data.projects.values()) if (p.due === k && p.status === 'active') out.push({ id: `project:${p.id}:${k}`, kind: 'project', day: k, date: k, projectId: p.id, title: p.name, movable: false });
-    if (isoDow(k) === o.reviewDay) out.push({ id: `review:${k}`, kind: 'review', day: k, date: k, title: '', movable: false });
-    for (const t of repeats.get(k) ?? []) out.push(task('repeat', t, k));
     for (const a of data.days.get(k)?.areas ?? []) {
       const name = data.places.get(a.placeId)?.name;
       if (name && (!o.area || o.area === a.placeId)) out.push({ id: `half:${a.half}:${k}`, kind: 'half', day: k, date: k, half: a.half, title: name, movable: false });

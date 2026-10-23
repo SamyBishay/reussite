@@ -38,7 +38,7 @@ Touchez **J’ai commencé plus tôt** et dites quand vous avez commencé. Ou ma
 
 ## Où sont passées les heures de « départ » dans mon calendrier ?
 
-Un calendrier sert à ce qui a une heure et à ce qui tombe un jour. Les points de départ restent dans Aujourd’hui et dans les notifications. Le calendrier montre les éléments à heure fixe, et les étapes prévues ou à échéance comme événements sur toute la journée.
+Un calendrier sert à ce qui a une heure et à ce qui tombe un jour. Les points de départ restent dans Aujourd’hui et dans les notifications. Le calendrier ne montre que les éléments à heure fixe.
 
 ## Pourquoi une seule étape est-elle montrée alors que j’en ai ajouté cinq ?
 

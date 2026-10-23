@@ -18,6 +18,7 @@ import { ZONES } from '../domain/zones';
 import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
 import { categoryName, addressesOn } from '../app/model';
 import { openTrip } from '../ai/ui';
+import { openReview } from '../flows/review';
 import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
@@ -293,6 +294,7 @@ function Method() {
           </select>
         </label>
       </div>
+      <div class="actions"><button class="btn small ghost" type="button" data-testid="start-review-now" onClick={openReview}>{t('startReview')}</button></div>
       <div class="row2">
         <label class="field"><span>{t('reviewTime')}</span><input type="time" value={s.reviewTime} onChange={e => set({ reviewTime: (e.target as HTMLInputElement).value || '18:00' })} /></label>
         <label class="field"><span>{t('morningAt')}</span><input type="time" value={s.morningAt} onChange={e => set({ morningAt: (e.target as HTMLInputElement).value || '08:30' })} /></label>

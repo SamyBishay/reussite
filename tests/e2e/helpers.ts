@@ -18,6 +18,12 @@ export async function goTab(page: Page, tab: 'home' | 'today' | 'matrix' | 'proj
   await page.getByTestId('tab-' + tab).click();
 }
 
+/** The weekly review is started from Settings (Method) on any day; Today and the bell offer it on its day. */
+export async function openWeeklyReview(page: Page) {
+  await goTab(page, 'settings');
+  await page.getByTestId('start-review-now').click();
+}
+
 export async function importSample(page: Page) {
   await page.goto('/#settings');
   await page.getByTestId('open-import').click();

@@ -12,18 +12,14 @@ import '@schedule-x/theme-default/dist/index.css';
 import '../styles/calendar.css';
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
-import { addresses, clockNow, days, decisions, hereZone, places, projects, sessions, settings, stays, tasks, today } from '../app/store';
-import { inPlace } from '../app/model';
-import { moveFixed, moveDone, planOn, setPlanOrder } from '../app/actions';
+import { addresses, days, hereZone, places, projects, settings, stays, tasks, today } from '../app/store';
+import { moveFixed } from '../app/actions';
 import { openTask } from '../app/sheets';
-import { openReview } from '../flows/review';
-import { openDecisionPage } from '../flows/decision';
 import { dayView } from './Today';
 import { isPhone, PHONE_DAYS, type CalMode } from '../app/nav';
 import { t, lang } from '../i18n';
 import { addDays } from '../domain/dates';
 import { appSlot, calViewEvents, type CalViewEvent } from '../domain/calView';
-import { makeScheduler, reorderForDrop } from '../domain/schedule';
 import { isoDow } from '../domain/repeat';
 import { areaFilter } from '../app/areas';
 
@@ -44,22 +40,15 @@ export function windowAround(date: string): [string, string] {
 const plain = (k: string) => Temporal.PlainDate.from(k);
 
 function labelOf(e: CalViewEvent): string {
-  switch (e.kind) {
-    case 'check': return t('checkShort', { title: e.title });
-    case 'project': return t('projectDue', { name: e.title });
-    case 'review': return t('sundayReview');
-    case 'repeat': return '↻ ' + e.title;
-    case 'half': return t('halfIn', { half: t(e.half === 'am' ? 'halfAm' : 'halfPm'), area: e.title });
-    default: return e.title;
-  }
+  return e.kind === 'half' ? t('halfIn', { half: t(e.half === 'am' ? 'halfAm' : 'halfPm'), area: e.title }) : e.title;
 }
 
-/** A library event from ours. An event with a time (a fixed-time item, a planned card at its projected time, a done card) is on the grid at its clock reading; the rest are all-day. */
+/** A library event from ours. A fixed-time item is on the grid at its clock reading; a stay and a half day are all-day. */
 function toLibrary(e: CalViewEvent, zone: string, phone: boolean): CalendarEventExternal {
   const base = {
     id: e.id, title: labelOf(e), ...(e.where ? { location: e.where } : {}),
-    calendarId: e.kind === 'stay' ? 'stay' : e.suit && ['plan', 'due', 'done', 'fixed', 'repeat'].includes(e.kind) ? e.suit : 'neutral',
-    _options: { disableDND: phone || !e.movable, disableResize: true, additionalClasses: ['k-' + e.kind, ...(e.done ? ['is-done'] : []), ...(e.time ? ['is-timed'] : []), ...(e.projected ? ['is-projected'] : []), ...(e.optional ? ['is-optional'] : [])] },
+    calendarId: e.kind === 'stay' ? 'stay' : e.suit && e.kind === 'fixed' ? e.suit : 'neutral',
+    _options: { disableDND: phone || !e.movable, disableResize: true, additionalClasses: ['k-' + e.kind, ...(e.done ? ['is-done'] : []), ...(e.time ? ['is-timed'] : [])] },
   };
   if (e.time && e.endTime) {
     const at = (time: string) => Temporal.PlainDateTime.from(`${e.date}T${time}:00`).toZonedDateTime(zone);
@@ -114,36 +103,17 @@ export function CalendarGrid({ mode, date }: GridProps) {
       callbacks: {
         onEventClick: ev => {
           const e = byId.get(String(ev.id));
-          if (!e) return;
-          if (e.taskId) openTask(e.taskId, 'calendar');
-          else if (e.decisionId) openDecisionPage(e.decisionId, e.day <= today.value);
-          else if (e.kind === 'review') openReview();
+          if (e?.taskId) openTask(e.taskId, 'calendar');
         },
         onClickDate: d => openDay(d.toString()),
         onClickPlusEvents: d => openDay(d.toString()),
         onEventUpdate: ev => {
           const e = byId.get(String(ev.id));
-          if (!e?.taskId) return;
           const start = ev.start;
-          const k = (start instanceof Temporal.ZonedDateTime ? start.toPlainDate() : start).toString();
-          if (e.kind === 'fixed' && start instanceof Temporal.ZonedDateTime) {
-            const time = start.toPlainTime().toString().slice(0, 5);
-            const slot = appSlot(k, time, settings.value.dayStart);
-            if (slot.day !== e.day || slot.at !== e.time) void moveFixed(e.taskId, slot.day, slot.at).finally(sync);
-          } else if (e.kind === 'plan' && e.time && start instanceof Temporal.ZonedDateTime) {
-            // A projected card has no time of its own: dropping it at another time moves it in the day's list so it
-            // lands there (never writes `at`); dropping it on another day plans it there.
-            const slot = appSlot(k, start.toPlainTime().toString().slice(0, 5), settings.value.dayStart);
-            if (slot.day !== e.day) void planOn(e.taskId, slot.day).finally(sync);
-            else {
-              const placed = makeScheduler({ tasks: tasks.value, days: days.value, sessions: sessions.value, projects: projects.value }, { today: today.value, dayStart: settings.value.dayStart, launchStart: settings.value.launchDefaults?.start, now: Date.now() })(e.day, zone);
-              const [h, m] = slot.at.split(':').map(Number);
-              const next = reorderForDrop(days.value.get(e.day)?.plan ?? [], placed.slots, e.taskId, (h ?? 0) * 60 + (m ?? 0));
-              void setPlanOrder(next, e.day).finally(sync);
-            }
-          } else if (k !== e.date) {
-            void (e.kind === 'done' ? moveDone(e.taskId, k > today.value ? today.value : k) : planOn(e.taskId, k)).finally(sync);
-          } else sync();
+          if (e?.kind !== 'fixed' || !e.taskId || !(start instanceof Temporal.ZonedDateTime)) { sync(); return; }
+          const slot = appSlot(start.toPlainDate().toString(), start.toPlainTime().toString().slice(0, 5), settings.value.dayStart);
+          if (slot.day !== e.day || slot.at !== e.time) void moveFixed(e.taskId, slot.day, slot.at).finally(sync);
+          else sync();
         },
       },
     }, [controls, createDragAndDropPlugin(15), createScrollControllerPlugin({ initialScroll: '07:00' }), createCurrentTimePlugin()]);
@@ -152,8 +122,8 @@ export function CalendarGrid({ mode, date }: GridProps) {
     function sync() {
       const [from, to] = windowAround(latest.current.date);
       const evs = calViewEvents(
-        { tasks: tasks.value, days: days.value, decisions: decisions.value, projects: projects.value, places: places.value, stays: stays.value, addresses: addresses.value, sessions: sessions.value },
-        { today: today.value, dayStart: settings.value.dayStart, reviewDay: settings.value.reviewDay, onPage: x => inPlace(x), area: areaFilter('calendar'), now: Date.now(), zone, launchStart: settings.value.launchDefaults?.start },
+        { tasks: tasks.value, days: days.value, projects: projects.value, places: places.value, stays: stays.value, addresses: addresses.value },
+        { dayStart: settings.value.dayStart, area: areaFilter('calendar') },
         from, to,
       );
       byId.clear();
@@ -162,7 +132,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
     }
     api.current = { controls, sync };
     calendar.render(el);
-    const stop = effect(() => { void [tasks.value, days.value, decisions.value, projects.value, places.value, stays.value, addresses.value, sessions.value, settings.value, today.value, lang.value, Math.floor(clockNow.value / 300_000)]; sync(); });
+    const stop = effect(() => { void [tasks.value, days.value, projects.value, places.value, stays.value, addresses.value, settings.value, lang.value]; sync(); });
     move(controls, latest.current.mode, latest.current.date, phone);
     return () => { stop(); calendar.destroy(); api.current = null; };
   }, [language, zone, phone]);

@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 import { importSample } from './helpers';
 
 const sheet = (page: import('@playwright/test').Page) => page.getByTestId('sheet');
@@ -64,7 +63,7 @@ test('on a phone the Calendar opens on Day, and the week is three days', async (
   await expect(page.locator('.sx__week-grid__date').first()).toHaveAttribute('data-date', iso(3));
 });
 
-test('the calendar names cards by their short name, with no launch points; a timed step is on the hour grid', async ({ page }) => {
+test('the calendar names steps by their short name, with no launch points; a timed step is on the hour grid', async ({ page }) => {
   await importSample(page);
   await page.goto('/#task/t2');
   await sheet(page).getByTestId('time-chip').click();
@@ -74,9 +73,8 @@ test('the calendar names cards by their short name, with no launch points; a tim
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-week').click();
   const grid = page.getByTestId('calendar-grid');
-  // Short names, not the sentences the steps are titled with; the leading verb and filler are gone.
-  await expect(grid.locator('.sx__event', { hasText: 'Doctolib' }).first()).toBeVisible();
-  await expect(grid).not.toContainText('Open Doctolib and book');
+  // The day's planned cards (the sample's first is about Doctolib) are not in the calendar.
+  await expect(grid).not.toContainText('Doctolib');
   // Launch points (09:30 and 14:00 on today's list in the sample) are not in the calendar.
   await expect(grid).not.toContainText(/Start|Restart|▶/);
   // The step with a time is on the grid at its time, named by its short name, and not in the all-day row.
@@ -88,37 +86,33 @@ test('the calendar names cards by their short name, with no launch points; a tim
   await expect(timed).not.toContainText('Open Mail');
 });
 
-test('past days show the cards played, and a tap on a day number opens that day', async ({ page }) => {
+test('a tap on a day number opens that day, and past days show no cards played', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-month').click();
-  // The sample played a card yesterday (it is done, so it is struck through).
-  const played = page.getByTestId('calendar-grid').locator('.sx__event.is-done');
-  await expect(played.first()).toBeVisible();
+  // The sample played a card yesterday; the calendar is for fixed times only, so it is not there.
+  await expect(page.getByTestId('calendar-grid').locator('.sx__event.is-done')).toHaveCount(0);
   await page.getByTestId('calendar-grid').locator(`[data-date="${iso(1)}"] .sx__month-grid-day__header-date`).click();
   await expect(page.getByTestId('other-day')).toBeVisible();
 });
 
-test('dragging a planned card to another day plans it there', async ({ page }) => {
+test('the calendar shows a fixed-time item and no planned card, due step or marker', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1100 });
   await importSample(page);
+  // Today's list in the sample has planned cards (and a due date or two); none is on the calendar.
+  await page.goto('/#task/t2');
+  await sheet(page).getByTestId('time-chip').click();
+  await sheet(page).locator('input[name=at]').fill('14:30');
+  await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-week').click();
-  const ev = page.getByTestId('calendar-grid').locator('.sx__time-grid-event', { hasText: 'second paragraph' }).first();
-  await expect(ev).toBeVisible();
-  await ev.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  const b = (await ev.boundingBox())!;
-  const dayWidth = (await page.locator('.sx__week-grid__date').first().boundingBox())!.width;
-  await page.mouse.move(b.x + 10, b.y + b.height / 2);
-  await page.mouse.down();
-  // One day to the right, unless today is the last day of the week.
-  const dir = new Date(iso(0) + 'T12:00:00Z').getUTCDay() === 0 ? -1 : 1;
-  for (let i = 1; i <= 10; i++) await page.mouse.move(b.x + 10 + (dir * dayWidth * i) / 10, b.y + b.height / 2);
-  await page.mouse.up();
-  await page.getByTestId('tab-today').click();
-  if (dir === 1) { await page.getByTestId('next-day').click(); } else { await page.getByTestId('prev-day').click(); }
-  await expect(page.getByTestId('other-day')).toContainText('thesis draft and write');
+  const grid = page.getByTestId('calendar-grid');
+  await expect(grid.locator('.sx__time-grid-event.k-fixed')).toHaveCount(1);
+  await expect(grid.locator('.sx__event')).toHaveCount(1);
+  await expect(grid).not.toContainText(/second paragraph|thesis|Weekly review|Check:/);
+  await page.getByTestId('cal-month').click();
+  await expect(grid.locator('.sx__event.k-plan, .sx__event.k-due, .sx__event.k-check, .sx__event.k-review')).toHaveCount(0);
+  await expect(page.getByTestId('calendar')).not.toContainText(/dashed/i);
 });
 
 test('dragging a step with a time on the hour grid changes its time', async ({ page }) => {
@@ -143,52 +137,4 @@ test('dragging a step with a time on the hour grid changes its time', async ({ p
   await page.goto('/#task/t3');
   await sheet(page).getByTestId('time-chip').click();
   await expect(sheet(page).locator('input[name=at]')).toHaveValue('12:00');
-});
-
-/** The sample, plus a plan three days on: three 30-minute cards from a Start at 09:30. */
-async function importWithFuturePlan(page: import('@playwright/test').Page) {
-  const { sampleExport } = await import('./fixture');
-  const ex = sampleExport() as { tasks: Record<string, { est: number | null }>; days: Record<string, unknown> };
-  const k = iso(2);
-  for (const id of ['t4', 't5', 't7']) ex.tasks[id]!.est = 30;
-  ex.days[k] = { date: k, plan: ['t4', 't5', 't7'], launches: [{ t: '09:30', k: 'start' }], first: null, checkin: null, closed: null, summary: null };
-  await page.goto('/#settings');
-  await page.getByTestId('open-import').click();
-  await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(ex)) });
-  await expect(page.getByTestId('import-summary')).toBeVisible();
-  await page.getByRole('button', { name: 'Import', exact: true }).click();
-  await expect(page.getByTestId('sheet')).toBeHidden();
-  return k;
-}
-
-test('a plan with Start 09:30 and three 30-minute cards is on the grid at 09:30, 10:00 and 10:30, dashed, and in the .ics with those times', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 1100 });
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
-    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
-  });
-  const k = await importWithFuturePlan(page);
-  await page.getByTestId('tab-calendar').click();
-  await page.getByTestId('cal-day').click();
-  await page.getByTestId('cal-next').click();
-  await page.getByTestId('cal-next').click();
-  const grid = page.getByTestId('calendar-grid');
-  const events = grid.locator('.sx__time-grid-event.is-projected');
-  await expect(events).toHaveCount(3);
-  await expect(grid.locator('.sx__date-grid-event.is-projected')).toHaveCount(0);
-  await events.first().scrollIntoViewIfNeeded();
-  await page.waitForTimeout(400);
-  // 48 px an hour: 09:30, 10:00 and 10:30 are 24 px apart from the 09:00 line, then 24 px more each.
-  const hour = await page.evaluate(() => [...document.querySelectorAll('.sx__week-grid__hour')].find(h => h.textContent?.includes('09:00'))!.getBoundingClientRect().y);
-  const tops = await events.evaluateAll(els => els.map(e => e.getBoundingClientRect().y));
-  expect(Math.abs(tops[0]! - hour - 24)).toBeLessThan(6);
-  expect(Math.abs(tops[1]! - tops[0]! - 24)).toBeLessThan(3);
-  expect(Math.abs(tops[2]! - tops[1]! - 24)).toBeLessThan(3);
-
-  const download = page.waitForEvent('download');
-  await page.getByTestId('ics-week').click();
-  const text = readFileSync((await (await download).path())!, 'utf8');
-  const day = k.replace(/-/g, '');
-  for (const t of ['093000', '100000', '103000']) expect(text).toContain(`DTSTART;TZID=Europe/Paris:${day}T${t}`.replace('Europe/Paris', text.match(/DTSTART;TZID=([^:]+):/)![1]!));
-  expect(text).toContain(`DTEND;TZID=${text.match(/DTSTART;TZID=([^:]+):/)![1]}:${day}T110000`);
 });

@@ -59,7 +59,7 @@ Reminders are renewed each time you open the app. If you don't open it for about
 
 ## Calendar
 
-Subscribe to your fixed-time items and your planned and due steps from a calendar app. Choose **What the feed says**: times only, short names, or short names, places and notes. See [The calendar](calendar.md).
+Subscribe to your fixed-time items from a calendar app. Choose **What the feed says**: times only, short names, or short names, places and notes. See [The calendar](calendar.md).
 
 ## Data
 

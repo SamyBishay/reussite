@@ -254,9 +254,14 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   const timed = page.locator('.sx__time-grid-event', { hasText: 'park' });
   await expect(timed).toHaveCount(1);
   await expect(page.locator('.sx__date-grid-event', { hasText: 'park' })).toHaveCount(0);
-  const top = (await timed.boundingBox())!.y;
-  const hour = (await page.locator('.sx__week-grid__hour', { hasText: '17:00' }).boundingBox())!.y;
-  expect(Math.abs(top - hour)).toBeLessThan(30);
+  // Both are read in one frame: the grid scrolls to its first position by itself (smoothly) after it is drawn, and two
+  // separate measures taken while it moves differ by however far it went between them.
+  const gap = await page.evaluate(() => {
+    const ev = document.querySelector('.sx__time-grid-event')!.getBoundingClientRect().y;
+    const hour = [...document.querySelectorAll('.sx__week-grid__hour')].find(h => h.textContent?.includes('17:00'))!.getBoundingClientRect().y;
+    return Math.abs(ev - hour);
+  });
+  expect(gap).toBeLessThan(4);
 });
 
 test('a standing obligation is not in the four quadrants: it is on the Obligations line, folded', async ({ page }) => {

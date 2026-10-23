@@ -645,3 +645,25 @@ textarea.mono{letter-spacing:.04em}
 .preset .dots i{width:14px;height:14px;border-radius:50%;display:block}
 .ob details.more>summary{min-height:44px}
 .ob .btn.small{min-height:44px}
+
+/* The manual (src/manual): plain reading, pictures that never push the page sideways. */
+.manual{overflow-wrap:anywhere}
+.manual article>*:first-child{margin-top:0}
+.manual h2.man-h1{margin:8px 0 10px;font:700 24px/1.25 var(--serif)}
+.manual h3{margin:0 44px 6px 0}
+.manual article h3,.manual article h4,.manual article h5{margin:20px 0 6px;font:700 18px/1.3 var(--sans)}
+.manual article h4,.manual article h5{font-size:16px}
+.manual p,.manual li{font-size:16px;line-height:1.55;color:var(--ink)}
+.manual p{margin:10px 0}
+.manual ul,.manual ol{margin:10px 0;padding-left:22px}
+.manual li{margin:5px 0}
+.manual blockquote{margin:12px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+.manual blockquote{color:var(--ink)}
+.manual code{font-family:var(--mono);font-size:.92em;background:var(--card);border:1px solid var(--line-2);border-radius:5px;padding:0 4px}
+.manual pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line-2);border-radius:8px;padding:10px;font:13px/1.5 var(--mono)}
+.manual hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+.manual figure{margin:14px 0;text-align:center}
+.manual .shot{display:block;margin:0 auto;max-width:min(100%,300px);height:auto;border:1px solid var(--line);border-radius:12px}
+.manual .shot-alt{color:var(--ink-3);font-size:14px}
+.manual .lnk.wrap{white-space:normal}
+.manual .man-nav{margin:14px 0}

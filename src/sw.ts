@@ -39,6 +39,20 @@ self.addEventListener('notificationclick', (e) => {
   })());
 });
 
+// The manual's screenshots (public/manual/shots) stay out of the precache: one is kept the first time it is shown, and served from
+// there afterwards (and refreshed in the background), so a page read once has its pictures offline.
+const SHOTS = 'manual-shots';
+registerRoute(
+  ({ url, request }) => request.destination === 'image' && url.origin === self.location.origin && url.pathname.startsWith(new URL('manual/shots/', self.registration.scope).pathname),
+  async ({ request }) => {
+    const cache = await caches.open(SHOTS);
+    const hit = await cache.match(request);
+    const fresh = fetch(request).then((r) => { if (r.ok) void cache.put(request, r.clone()); return r; });
+    if (hit) { void fresh.catch(() => undefined); return hit; }
+    return fresh;
+  },
+);
+
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html')));

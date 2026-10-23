@@ -877,6 +877,13 @@ export const en = {
   eveningAt: 'Closing the day',
   remindersLater: 'Notifications use these times. Switch them on under Notifications, further down.',
   changelog: 'What’s new',
+  manualOpen: 'Read the manual',
+  manualHint: 'Short pages in plain words, with pictures of the app.',
+  manualTitle: 'Manual',
+  manualContents: 'Contents',
+  manualLoading: 'Loading…',
+  manualMissing: 'This page could not be loaded.',
+  manualNotTranslated: 'This page is not translated yet, so here it is in English.',
   // phase 2: AI
   yes: 'yes',
   no: 'no',

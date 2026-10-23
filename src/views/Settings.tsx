@@ -25,6 +25,9 @@ import { CalendarSettings } from '../app/CalendarSettings';
 import { NotifySettings } from '../app/NotifySettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
 
+// The manual and its pages are a chunk of their own, fetched the first time it is opened.
+const openManual = () => void import('../manual/Manual').then(m => openSheet(<m.ManualSheet />, true));
+
 const set = (p: Partial<S>) => void saveSettings(p);
 const CARD_LIGHT = '#FFFFFF';
 
@@ -410,6 +413,8 @@ export function Settings() {
           <p>{t('privacyAi')}</p>
           <p>{t('privacyLoss')}</p>
         </div>
+        <p class="hint">{t('manualHint')}</p>
+        <div class="actions"><button class="btn" type="button" onClick={openManual} data-testid="open-manual">{t('manualOpen')}</button></div>
         <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
       </section>
     </div>

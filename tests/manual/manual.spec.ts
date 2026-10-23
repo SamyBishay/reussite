@@ -126,7 +126,7 @@ for (const lang of LANGS) for (const theme of THEMES) {
     /** The screen as it is, without the scrollbar a desktop browser draws and without a focused field. */
     async function shot(page: Page, name: string, keepScroll = false) {
       const update = page.locator('.banner[role=status] .ghost');
-      if (await update.count()) await update.first().click();
+      if (await update.count()) await update.first().evaluate((b) => (b as HTMLElement).click());
       if (!keepScroll) await page.evaluate(() => window.scrollTo(0, 0));
       await page.addStyleTag({ content: 'html{scrollbar-width:none}' });
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());

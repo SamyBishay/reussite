@@ -75,7 +75,11 @@ body.kb .tabbar{display:none}
 
 /* ---------- home ---------- */
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
-.homebar .dateline{margin-top:0}
+.hometitle{min-width:0}
+.homebar .word.homeword{font-size:clamp(28px,7vw,36px)}
+.homebar .dateline{margin-top:var(--s1)}
+.homebar{align-items:flex-start}
+.homebtns{flex:none}
 .homebtns{display:flex;gap:var(--s2)}
 .icon-btn.bell{position:relative}
 .icon-btn .dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--ink);border:2px solid var(--card)}

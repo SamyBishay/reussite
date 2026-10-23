@@ -92,6 +92,7 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   await row.getByTestId('details').click();
   await sheet(page).locator('details.more summary').click();
   await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill(hhmm);
   await sheet(page).locator('input[name=dur]').fill('90');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();

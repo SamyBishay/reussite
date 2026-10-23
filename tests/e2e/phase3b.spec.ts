@@ -18,6 +18,7 @@ async function addChoir(page: Page) {
   await row.getByTestId('details').click();
   await sheet(page).locator('details.more summary').click();
   await sheet(page).locator('input[name=template]').check();
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('19:00');
   await sheet(page).locator('input[name=dur]').fill('90');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();

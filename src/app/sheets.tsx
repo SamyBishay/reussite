@@ -397,6 +397,7 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
   const [titleV, setTitleV] = useState(tk.title);
   const [noteV, setNoteV] = useState(tk.note || '');
   const [atV, setAtV] = useState(tk.at ?? '');
+  const [timeOpen, setTimeOpen] = useState(!!tk.at);
   const seen = atV ? null : findTime(titleV) ?? findTime(noteV);
   const inPlan = !draft && rawPlan(today.value).includes(id);
   const projs = [...projects.value.values()].filter(p => p.status !== 'dropped').sort((a, b) => SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || byOrder(a, b));
@@ -452,9 +453,10 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
     if (el('prompt')) setIf('prompt', v('prompt').trim() || null, tk.prompt);
     if (el('at')) {
       setIf('at', v('at') || null, tk.at);
-      setIf('dur', Number(v('dur')) || null, tk.dur);
+      // Length and lead are only asked once there is a time; without one they are left as they were.
+      if (el('dur')) setIf('dur', Number(v('dur')) || null, tk.dur);
       // Empty = the default from Settings; 0 = notified at the time itself.
-      setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
+      if (el('lead')) setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
       setIf('weekdays', tk.template && weekdays.length ? [...weekdays].sort() : null, tk.weekdays);
     }
     setIf('repeat', repeat, tk.repeat);
@@ -525,8 +527,23 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
           </button>
         )}
       </div>
-      <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
-      {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => setAtV(seen.at)}>{t('setTimeHint', { t: seen.at })}</button></p>}
+      <div class="titlerow">
+        <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
+        <button type="button" class={'btn small chip' + (atV ? ' on' : '')} aria-expanded={timeOpen} onClick={() => setTimeOpen(!timeOpen)} data-testid="time-chip">{atV || t('timeChip')}</button>
+      </div>
+      <div class="timebox" hidden={!timeOpen}>
+        <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
+        {atV && (
+          <>
+            <div class="row2">
+              <label class="field"><span>{t('durField')}</span><input type="number" name="dur" min="5" max="720" inputMode="numeric" defaultValue={tk.dur ? String(tk.dur) : ''} /></label>
+              <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /></label>
+            </div>
+            <p class="hint">{t('leadHint', { n: settings.value.notifyLead })}</p>
+          </>
+        )}
+      </div>
+      {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => { setAtV(seen.at); setTimeOpen(true); }}>{t('setTimeHint', { t: seen.at })}</button></p>}
       <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
       <div class="field"><span>{t('urgImp')}</span>
         <div class="toggles">
@@ -577,11 +594,6 @@ function TaskForm({ tk, draft = false, onSaved }: { tk: Tk; draft?: boolean; onS
         {err && <p class="err">{err}</p>}
         <label class="field"><span>{t('promptField')}</span><textarea name="prompt" defaultValue={tk.prompt ?? ''} /></label>
         <RepeatField value={repeat} onChange={setRepeat} />
-        <div class="row2">
-          <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
-          <label class="field"><span>{t('durField')}</span><input type="number" name="dur" min="5" max="720" inputMode="numeric" defaultValue={tk.dur ? String(tk.dur) : ''} /></label>
-        </div>
-        <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /><small class="hint">{t('leadHint', { n: settings.value.notifyLead })}</small></label>
         {tk.template && (
           <div class="field" data-testid="weekdays"><span>{t('weekdaysField')}</span>
             <div class="toggles">{weekdayNames().map(([d, name]) => <label class="tog small"><input type="checkbox" checked={weekdays.includes(d)} onChange={e => setWeekdays((e.target as HTMLInputElement).checked ? [...weekdays, d].sort() : weekdays.filter(x => x !== d))} /> {name}</label>)}</div>

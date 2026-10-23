@@ -674,3 +674,5 @@ textarea.mono{letter-spacing:.04em}
 /* The task sheet's actions: a bar under the title that stays in view while the fields scroll under it. */
 .sheet .actionbar{position:sticky;top:-20px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;margin:10px -16px 6px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
 .sheet .actionbar>*{min-width:0}
+.titlerow{display:flex;gap:8px;align-items:flex-end}.titlerow>.field{flex:1;min-width:0}.titlerow .chip{flex:none;height:44px;border-radius:12px}.chip.on{border-color:var(--ink);font-weight:700}
+.timebox[hidden]{display:none}

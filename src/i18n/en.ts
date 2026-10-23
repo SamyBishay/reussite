@@ -456,6 +456,7 @@ export const en = {
   appField: 'App',
   linkField: 'Link',
   linkRefused: 'That kind of link can’t be opened from Réussite. Use https:// or an app’s own link.',
+  timeChip: 'Time',
   atField: 'Fixed time',
   setTimeHint: 'Set {t} as the time',
   durField: 'Lasts (min)',

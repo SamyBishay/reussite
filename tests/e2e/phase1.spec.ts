@@ -235,6 +235,7 @@ test('a timed standing item added by hand shows in fixed times and on the calend
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
+  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('17:00');
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
@@ -274,4 +275,19 @@ test('a card’s actions are in a bar at the top of its sheet, which stays in vi
   await expect(bar.getByRole('button', { name: 'Save' })).toBeInViewport();
   const [b, s] = await Promise.all([bar.boundingBox(), sheet(page).boundingBox()]);
   expect(b!.y - s!.y).toBeLessThan(4);
+});
+
+test('a start time is set from a Time chip next to the title; length and lead appear once there is a time', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-today').click();
+  await page.getByTestId('quick-details').click();
+  const s = sheet(page);
+  await expect(s.getByTestId('time-chip')).toHaveText('Time');
+  await expect(s.locator('input[name=at]')).toBeHidden();
+  await s.getByTestId('time-chip').click();
+  await expect(s.locator('input[name=dur]')).toHaveCount(0);
+  await s.locator('input[name=at]').fill('16:30');
+  await expect(s.getByTestId('time-chip')).toHaveText('16:30');
+  await expect(s.locator('input[name=dur]')).toBeVisible();
+  await expect(s.getByTestId('lead')).toBeVisible();
 });

@@ -18,7 +18,7 @@ import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../doma
 import { addDays, daysBetween } from '../domain/dates';
 import { isAllowedLink } from '../domain/links';
 import { moveTo, firstCalmDay } from '../domain/moves';
-import { stillOnDue, minutesBetween } from '../domain/calendar';
+import { stillOnDue, minutesBetween, shiftTime } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { deriveLabel } from '../domain/label';
@@ -421,7 +421,9 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const [titleV, setTitleV] = useState(tk.title);
   const [noteV, setNoteV] = useState(tk.note || '');
   const [atV, setAtV] = useState(tk.at ?? '');
-  const [timeOpen, setTimeOpen] = useState(!!tk.at);
+  // The end is picked on the clock like the start; the length (`dur`) is worked out from the two.
+  const [endV, setEndV] = useState(tk.at && tk.dur ? shiftTime(tk.at, tk.dur) : '');
+  const setStart = (v: string) => { if (atV && endV && v) setEndV(shiftTime(v, minutesBetween(atV, endV))); setAtV(v); };
   const seen = atV ? null : findTime(titleV) ?? findTime(noteV);
   const inPlan = !draft && rawPlan(today.value).includes(id);
   const projs = [...projects.value.values()].filter(p => p.status !== 'dropped').sort((a, b) => SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || byOrder(a, b));
@@ -483,7 +485,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
     if (el('at')) {
       setIf('at', v('at') || null, tk.at);
       // Length and lead are only asked once there is a time; without one they are left as they were.
-      if (el('dur')) setIf('dur', Number(v('dur')) || null, tk.dur);
+      if (atV) setIf('dur', endV && endV !== atV ? minutesBetween(atV, endV) : null, tk.dur);
       // Empty = the default from Settings; 0 = notified at the time itself.
       if (el('lead')) setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
       setIf('weekdays', tk.template && weekdays.length ? [...weekdays].sort() : null, tk.weekdays);
@@ -556,23 +558,24 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           </button>
         )}
       </div>
-      <div class="titlerow">
-        <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
-        <button type="button" class={'btn small chip' + (atV ? ' on' : '')} aria-expanded={timeOpen} onClick={() => setTimeOpen(!timeOpen)} data-testid="time-chip">{atV || t('timeChip')}</button>
+      <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
+      <div class="row2 timebox" data-testid="timebox">
+        <label class="field"><span>{t('startField')}</span>
+          <span class="clockpick"><input type="time" name="at" value={atV} onInput={e => setStart((e.target as HTMLInputElement).value)} data-testid="at" />
+            {atV && <button class="chip-x" type="button" onClick={() => { setAtV(''); setEndV(''); }} aria-label={t('remove', { what: atV })}>×</button>}</span>
+        </label>
+        <label class="field"><span>{t('endField')}</span>
+          <input type="time" name="end" value={endV} disabled={!atV} onInput={e => setEndV((e.target as HTMLInputElement).value)} data-testid="end" />
+        </label>
       </div>
-      <div class="timebox" hidden={!timeOpen}>
-        <label class="field"><span>{t('atField')}</span><input type="time" name="at" value={atV} onInput={e => setAtV((e.target as HTMLInputElement).value)} /></label>
-        {atV && (
-          <>
-            <div class="row2">
-              <label class="field"><span>{t('durField')}</span><input type="number" name="dur" min="5" max="720" inputMode="numeric" defaultValue={tk.dur ? String(tk.dur) : ''} /></label>
-              <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /></label>
-            </div>
-            <p class="hint">{t('leadHint', { n: settings.value.notifyLead })}</p>
-          </>
-        )}
-      </div>
-      {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => { setAtV(seen.at); setTimeOpen(true); }}>{t('setTimeHint', { t: seen.at })}</button></p>}
+      {atV && endV && endV !== atV && <p class="hint" data-testid="length">{t('lengthIs', { t: fmtMin(minutesBetween(atV, endV)) })}{endV < atV ? ' · ' + t('endsNextDay') : ''}</p>}
+      {atV && (
+        <>
+          <label class="field"><span>{t('leadField')}</span><input type="number" name="lead" min="0" max="240" inputMode="numeric" defaultValue={tk.lead != null ? String(tk.lead) : ''} placeholder={String(settings.value.notifyLead)} data-testid="lead" /></label>
+          <p class="hint">{t('leadHint', { n: settings.value.notifyLead })}</p>
+        </>
+      )}
+      {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => setStart(seen.at)}>{t('setTimeHint', { t: seen.at })}</button></p>}
       <div class="field"><span>{t('urgImp')}</span>
         <div class="toggles">
           <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>

@@ -9,7 +9,8 @@ test('a task sheet shows only the essentials until More is opened', async ({ pag
   await page.goto('/#task/t3'); // the thesis step: no link, no app, no note
   const s = sheet(page);
   await expect(s.locator('input[name=title]')).toBeVisible();
-  await expect(s.getByTestId('time-chip')).toBeVisible();
+  await expect(s.locator('input[name=at]')).toBeVisible();
+  await expect(s.locator('input[name=end]')).toBeVisible();
   await expect(s.locator('input[name=urgent]')).toBeVisible();
   await expect(s.locator('input[name=est]')).toBeVisible();
   await expect(s.locator('input[name=due]')).toBeVisible();

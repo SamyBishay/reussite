@@ -12,7 +12,7 @@ Une IA est **facultative**. Réussite marche pleinement sans. Si vous en voulez 
 
 ## Ce qu’une IA peut faire
 
-Avec une clé, Réussite peut :
+Avec une clé, Réussite peut (sans clé enregistrée sur cet appareil, rien de tout cela n’apparaît ; Demander à n’importe quelle IA et Coller la réponse sont toujours là) :
 
 - transformer des mots simples en changements (« abandonner les jeux ; les photos sont dues vendredi ») : la boîte **Modifier la liste** dans Aujourd’hui, la Matrice et Projets, et la boîte unique de l’accueil ;
 - **Améliorer avec l’IA** : réordonner le plan du jour, choisir entre des étapes, écrire des démarreurs et découper les grosses étapes. Si son plan enfreint les règles de la méthode, Réussite dit pourquoi et garde le plan fait selon les règles ;

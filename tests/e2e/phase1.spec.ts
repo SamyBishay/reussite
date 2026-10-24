@@ -50,7 +50,6 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
 test('the calendar tab opens its views; a fixed-time step there opens its sheet', async ({ page }) => {
   await importSample(page);
   await page.goto('/#task/t2');
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('11:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
@@ -327,20 +326,20 @@ for (const width of [320, 375, 430]) {
   });
 }
 
-test('a timed standing item added by hand shows in fixed times and on the calendar', async ({ page }) => {
+test('a timed standing item added by hand is a card on Today’s list and on the calendar', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-projects').click();
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('17:00');
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
   await sheet(page).getByRole('button', { name: 'Add to today' }).click();
   await page.getByTestId('tab-today').click();
-  await expect(page.locator('ul.fixed')).toContainText('17:00');
-  await expect(page.locator('ul.fixed')).toContainText('Walk to the park');
+  // On Today it is a card of the day's list, with its time; Today has no separate list of fixed times.
+  await expect(page.locator('.row', { hasText: 'Walk to the park' })).toContainText('17:00');
+  await expect(page.locator('ul.fixed')).toHaveCount(0);
   await page.getByTestId('tab-calendar').click();
   // A fixed time is on the hour grid (not in the all-day row), at its time.
   await page.getByTestId('cal-day').click();
@@ -388,19 +387,21 @@ test('a card’s actions are in a bar at the top of its sheet, which stays in vi
   expect(b!.y - s!.y).toBeLessThan(4);
 });
 
-test('a start time is set from a Time chip next to the title; length and lead appear once there is a time', async ({ page }) => {
+test('a fixed time and its end are picked on the clock, always in view; the length and lead follow once there is a time', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-today').click();
   await page.getByTestId('quick-details').click();
   const s = sheet(page);
-  await expect(s.getByTestId('time-chip')).toHaveText('Time');
-  await expect(s.locator('input[name=at]')).toBeHidden();
-  await s.getByTestId('time-chip').click();
-  await expect(s.locator('input[name=dur]')).toHaveCount(0);
+  await expect(s.locator('input[name=at]')).toBeVisible();
+  await expect(s.locator('input[name=end]')).toBeDisabled();
+  await expect(s.getByTestId('lead')).toHaveCount(0);
   await s.locator('input[name=at]').fill('16:30');
-  await expect(s.getByTestId('time-chip')).toHaveText('16:30');
-  await expect(s.locator('input[name=dur]')).toBeVisible();
+  await s.locator('input[name=end]').fill('20:00');
+  await expect(s.getByTestId('length')).toHaveText('Lasts 3 h 30');
   await expect(s.getByTestId('lead')).toBeVisible();
+  // Moving the start keeps the length.
+  await s.locator('input[name=at]').fill('17:00');
+  await expect(s.locator('input[name=end]')).toHaveValue('20:30');
 });
 
 const planIds = (page: Page) => page.locator('[data-testid=plan-list] > li').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));

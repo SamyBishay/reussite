@@ -20,9 +20,8 @@ async function addChoir(page: Page) {
   await sheet(page).locator('details.more summary').click();
   await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('19:00');
-  await sheet(page).locator('input[name=dur]').fill('90');
+  await sheet(page).locator('input[name=end]').fill('20:30');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   return row;
@@ -62,8 +61,7 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
   await page.getByTestId('go-with-this').click();
   await expect(sheet(page)).toBeHidden();
   // Placed on the day, with its time.
-  await expect(page.locator('ul.fixed')).toContainText('19:00');
-  await expect(page.locator('ul.fixed')).toContainText('Choir, Hill House 602');
+  await expect(page.locator('main [data-task]', { hasText: 'Choir, Hill House 602' }).first()).toContainText('19:00–20:30');
 });
 }
 
@@ -79,7 +77,6 @@ test('Add to calendar downloads an .ics with the day’s fixed-time items and no
   await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.locator('.launches .chip', { hasText: '23:30' })).toHaveCount(1);
   await page.goto('/#task/t3'); // on today's list, no due date
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('11:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();

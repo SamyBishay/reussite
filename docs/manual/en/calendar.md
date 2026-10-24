@@ -8,7 +8,7 @@ The **Calendar** tab is a real calendar. It has the views **Day**, **Week** (or 
 
 ## What a day shows
 
-The calendar is only for things **at a fixed time**. Your day's steps, what is due and your launch points are in [Today](daily-loop.md), not here.
+The calendar is only for things **at a fixed time**. Your day's steps, what is due and your launch points are in [Today](daily-loop.md), not here. Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
 
 - **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays.
 - Past days show only the fixed-time items too; a done one is struck through.

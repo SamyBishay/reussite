@@ -44,6 +44,8 @@ export const blocked = (t: T) => isWaiting(t.id);
 export const dayDoc = (k: string): WithId<Day> | undefined => days.value.get(k);
 export const rawPlan = (k: string): string[] => L.rawPlan(days.value, k);
 export const planOf = (k: string) => L.planOf({ days: days.value, tasks: tasks.value }, k);
+/** A day's cards: its list and its fixed-time items (src/domain/lists.ts). */
+export const dayCards = (k: string) => L.dayCards({ days: days.value, tasks: tasks.value }, k);
 
 export const spent = computed(() => minutesByTask(sessions.value.values()));
 export const spentOf = (id: string) => spent.value.get(id) ?? 0;

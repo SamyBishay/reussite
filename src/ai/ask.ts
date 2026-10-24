@@ -2,7 +2,7 @@
 // zod schema; the reply is JSON-extracted and validated, and invalid output writes nothing.
 // "Show me what's sent": before the first call of each kind (or every call, if the person
 // asked), the exact request is shown and nothing leaves until they tap Send.
-import { computed, signal } from '@preact/signals';
+import { computed, effect, signal } from '@preact/signals';
 import type { ZodType } from 'zod';
 import { db, settings, today } from '../app/store';
 import { getLocal, setLocal } from '../data/db';
@@ -18,8 +18,10 @@ export type { Slot, ErrorKind, AiRequest };
 export type AskResult<T> = { ok: true; data: T; text: string } | { ok: false; error: ErrorKind; message: string };
 export interface AskOptions { signal?: AbortSignal; maxTokens?: number; /** The memory notes that are part of this request, listed in "Show me what's sent". */ notes?: string[]; /** Skip "Show me what's sent" (only for requests that carry nothing personal, like the connection test). */ noPreview?: boolean; fetchFn?: typeof fetch }
 
-/** A provider is chosen: AI features show. "Ask any AI" works without one. */
-export const aiOn = computed(() => settings.value.aiProvider !== 'none');
+/** Which providers have a key on this device; filled the first time a provider is chosen, and by setKey. */
+const keyed = signal<Partial<Record<Exclude<AiProvider, 'none'>, boolean>>>({});
+/** A provider is chosen and this device has its key: the features that call it show. "Ask any AI" and Paste the reply work without either. */
+export const aiOn = computed(() => { const p = settings.value.aiProvider; return p !== 'none' && !!keyed.value[p]; });
 
 const ERR: Record<ErrorKind, Key> = {
   off: 'aiErrOff', noKey: 'aiErrNoKey', noCredit: 'aiErrNoCredit', rateLimit: 'aiErrRateLimit', auth: 'aiErrAuth',
@@ -31,7 +33,12 @@ const fail = (error: ErrorKind): { ok: false; error: ErrorKind; message: string 
 // ---------- the key: device-local only ----------
 const keyName = (p: Exclude<AiProvider, 'none'>) => 'aiKey.' + p;
 export const getKey = async (p: Exclude<AiProvider, 'none'>) => (await getLocal<string>(db, keyName(p))) ?? '';
-export const setKey = (p: Exclude<AiProvider, 'none'>, key: string) => setLocal(db, keyName(p), key.trim());
+export const setKey = async (p: Exclude<AiProvider, 'none'>, key: string) => { await setLocal(db, keyName(p), key.trim()); keyed.value = { ...keyed.peek(), [p]: !!key.trim() }; };
+effect(() => {
+  const p = settings.value.aiProvider;
+  if (p === 'none' || p in keyed.peek()) return;
+  void getKey(p).then(k => { if (!(p in keyed.peek())) keyed.value = { ...keyed.peek(), [p]: !!k }; }, () => undefined);
+});
 
 export async function config(): Promise<AiConfig | ErrorKind> {
   const s = settings.value;

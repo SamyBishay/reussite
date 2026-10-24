@@ -31,10 +31,16 @@ const changeSet = JSON.stringify({ v: 1, note: 'Three changes.', changes: [
   { op: 'task.create', set: { title: 'Open Mail and thank the agency', project: 'p1', est: 5, w: 5 } },
 ] });
 
-test('the command box is hidden until a provider is chosen; Ask any AI is always there', async ({ page }) => {
+test('the command box is hidden until a provider is chosen and its key saved; Ask any AI is always there', async ({ page }) => {
   await importSample(page);
   await expect(page.getByTestId('cmd')).toHaveCount(0);
   await expect(page.getByTestId('ask-any')).toBeVisible();
+  // A provider with no key: nothing that needs the key shows.
+  await page.goto('/#settings'); await expandSettings(page);
+  await page.getByTestId('ai-anthropic').click();
+  await page.getByTestId('tab-matrix').click();
+  await expect(page.getByTestId('ask-any')).toBeVisible();
+  await expect(page.getByTestId('cmd')).toHaveCount(0);
   await setUpAnthropic(page);
   await page.getByTestId('tab-matrix').click();
   await expect(page.getByTestId('cmd')).toBeVisible();

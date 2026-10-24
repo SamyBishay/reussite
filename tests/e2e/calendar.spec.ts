@@ -68,7 +68,6 @@ test('on a phone the Calendar opens on Day, and the week is three days', async (
 test('the calendar names steps by their short name, with no launch points; a timed step is on the hour grid', async ({ page }) => {
   await importSample(page);
   await page.goto('/#task/t2');
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('14:30');
   await expandSheet(page);
   await sheet(page).getByTestId('label').fill('Lease');
@@ -104,7 +103,6 @@ test('the calendar shows a fixed-time item and no planned card, due step or mark
   await importSample(page);
   // Today's list in the sample has planned cards (and a due date or two); none is on the calendar.
   await page.goto('/#task/t2');
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('14:30');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
@@ -122,7 +120,6 @@ test('dragging a step with a time on the hour grid changes its time', async ({ p
   await page.setViewportSize({ width: 1280, height: 1100 });
   await importSample(page);
   await page.goto('/#task/t3');
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill('10:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();
@@ -138,6 +135,5 @@ test('dragging a step with a time on the hour grid changes its time', async ({ p
   // Two hours further down the grid (48 px an hour) once the write has come back.
   await expect.poll(async () => Math.round(((await ev.boundingBox())?.y ?? 0) - b.y)).toBeGreaterThan(80);
   await page.goto('/#task/t3');
-  await sheet(page).getByTestId('time-chip').click();
   await expect(sheet(page).locator('input[name=at]')).toHaveValue('12:00');
 });

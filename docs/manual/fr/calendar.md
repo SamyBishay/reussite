@@ -8,7 +8,7 @@ L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Sema
 
 ## Ce que montre un jour
 
-Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour, les échéances et vos points de départ sont dans [Aujourd’hui](daily-loop.md), pas ici.
+Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour, les échéances et vos points de départ sont dans [Aujourd’hui](daily-loop.md), pas ici. Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine.
 - Les jours passés ne montrent eux aussi que les éléments à heure fixe ; ce qui est fait est barré.

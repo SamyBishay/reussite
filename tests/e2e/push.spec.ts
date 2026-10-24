@@ -25,6 +25,7 @@ test.beforeEach(async ({ context }) => {
 test.afterEach(async () => { await stub.close(); });
 
 const sheet = (page: Page) => page.getByTestId('sheet');
+const plus90 = (hm: string) => { const m = (Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3)) + 90) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 
 async function switchOn(page: Page) {
   await page.goto('/#settings'); await expandSettings(page);
@@ -98,9 +99,8 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   await sheet(page).locator('details.more summary').click();
   await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();
-  await sheet(page).getByTestId('time-chip').click();
   await sheet(page).locator('input[name=at]').fill(hhmm);
-  await sheet(page).locator('input[name=dur]').fill('90');
+  await sheet(page).locator('input[name=end]').fill(plus90(hhmm));
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();

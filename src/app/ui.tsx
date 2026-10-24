@@ -7,6 +7,7 @@ import { OPTS } from '../domain/estimates';
 import { startTask } from './actions';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { daysBetween } from '../domain/dates';
+import { shiftTime } from '../domain/calendar';
 import { resolveLink, detectPlatform } from '../domain/links';
 import type { SuitId } from '../data/schema';
 
@@ -94,7 +95,7 @@ export function Meta({ tk, withQuad }: { tk: T; withQuad?: boolean }) {
     tk.kind === 'decision' && <span key="k" class="tag">{t('decisionTag')}</span>,
     <Est key="e" tk={tk} />,
     spent > 0 && <span key="sp">{t('timedSoFar', { t: fmtMin(spent) })}</span>,
-    tk.at && <span key="at" class="due">{tk.at}</span>,
+    tk.at && <span key="at" class="due">{tk.at}{tk.dur ? '–' + shiftTime(tk.at, tk.dur) : ''}</span>,
     tk.due ? (tk.status === 'open' ? <DueChip key="due" tk={tk} /> : <Due key="due" k={tk.due} />) : tk.urgent && tk.status === 'open' && <span key="u" class="tag urg">{t('urgent')}</span>,
     tk.repeat && <span key="r" class="tag" title={t('repeats')}>↻</span>,
     blocked(tk) && w && <span key="w" class="tag">{t('waitsFor', { what: w.title.length > 40 ? w.title.slice(0, 38) + '…' : w.title })}</span>,

@@ -35,7 +35,9 @@ Un point de départ est un moment pour commencer, ou pour revenir à la liste ap
 
 ## Démarrer
 
-Aujourd’hui montre la première étape sur une carte, **Commencez ici**. Elle affiche le démarreur de l’étape : la plus petite première action. Touchez **Lancer le chrono**, ou **Déjà fait** si c’est déjà fait. Vous avez oublié de démarrer ? **J’ai commencé plus tôt** demande deux touches.
+Aujourd’hui montre la première étape sur une carte, **Commencez ici**. Elle affiche le démarreur de l’étape : la plus petite première action. Touchez **Lancer le chrono**, ou **Déjà fait** si c’est déjà fait. Vous avez oublié de démarrer ? **J’ai commencé plus tôt** demande deux touches. Commencez ici est toujours là : quand plus rien n’est ouvert sur la liste du jour, la carte montre l’étape que votre liste choisirait ensuite, avec **Lancer le chrono**, **La mettre en premier** et **Choisir dans votre liste**.
+
+La liste du jour, ce sont les cartes du jour, y compris ce qui est à heure fixe : le dentiste à 15 h est une carte de la liste, avec son heure, et c’est la même étape que sur le calendrier. Changer l’une, c’est changer l’autre. **Depuis votre liste**, **Loisirs et proches**, **Planifier la journée** et **Je bloque** sont au-dessus de la liste.
 
 ![Aujourd’hui : la première étape et le reste de la liste](shot:today)
 

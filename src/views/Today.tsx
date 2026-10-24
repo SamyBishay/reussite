@@ -1,8 +1,8 @@
-// Today: the "Start here" card, the day's list and launch points, and the day navigator,
+// Today: the "Start here" card, the day's cards (its list and its fixed-time items, the same steps the Calendar shows) and launch points, and the day navigator,
 // which edits any day's plan, launch points and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
-import { T, planOf, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, fixedOn, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
+import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, addByHand, setPlanOrder, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
@@ -31,8 +31,8 @@ export { openClose };
 
 /** The day being looked at; null is today. Device-local. */
 export const dayView = signal<string | null>(null);
-/** A day's list as shown: a step that waits for another is inside its head's card, not a row of its own. */
-const shownPlan = (k: string) => planOf(k).filter(id => !isWaiting(id));
+/** A day's cards as shown: its list and its fixed-time items; a step that waits for another is inside its head's card, not a row of its own. */
+const shownPlan = (k: string) => dayCards(k).filter(id => !isWaiting(id));
 /** A day's list under headings: a half spent in an area reads "Afternoon · Heliopolis", other areas by name; the steps with no area need none (unless they come after one). */
 function PlanLists({ ids, k, optional, from, testid }: { ids: string[]; k: string; optional: Set<string>; from: number; testid?: string }) {
   const groups = groupPlan(ids, id => areaOfStep(T(id)!), dayDoc(k)?.areas);
@@ -91,6 +91,27 @@ function FirstCard({ tk }: { tk: Tk }) {
         <button class="btn small ghost" type="button" onClick={() => flows.stuck(tk.id)} data-testid="stuck">{t('imStuck')}</button>
       </div>
       {!run && hasGo && <p class="hint">{t('openingStartsTimer')}</p>}
+    </section>
+  );
+}
+
+/** Start here when nothing on the list is open: the step the list would pick next, one tap from started. */
+function SuggestCard({ tk, played }: { tk: Tk; played: boolean }) {
+  const start = async () => { await addToday(tk.id, true); await startTask(tk.id); };
+  return (
+    <section class="first focus" data-testid="first" data-task={tk.id}>
+      {played && <Rings />}
+      <div class="top"><p class="eyebrow">{t('startHere')}</p></div>
+      {played && <p class="hint" style="margin:0"><b>{t('listPlayed')}</b> {t('allDone')}</p>}
+      <p class="t"><Title s={tk.title} /></p>
+      {tk.starter && <p class="starter">{t('starterIs', { s: tk.starter })}</p>}
+      <p class="meta"><Meta tk={tk} /></p>
+      <div class="go">
+        <button class="btn primary" type="button" onClick={() => void start()} data-testid="suggest-start">{t('startTimer')}</button>
+        <button class="btn" type="button" onClick={() => addToday(tk.id)}>{t('putFirst')}</button>
+        <button class="btn" type="button" onClick={() => openPick('list')}>{t('chooseFromList')}</button>
+      </div>
+      {!played && <div class="go quiet"><button class="btn small ghost" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>}
     </section>
   );
 }
@@ -157,19 +178,6 @@ function Launches({ k }: { k: string }) {
         </form>
       </div>
     </details>
-  );
-}
-
-function Fixed({ k }: { k: string }) {
-  const fx = fixedOn(k);
-  if (!fx.length) return null;
-  return (
-    <>
-      <h2 class="sec">{t('fixedToday')}</h2>
-      <ul class="fixed">{fx.map(x => (
-        <li class={x.status === 'done' ? 'done' : ''}><time>{x.at}</time><button class="linklike" type="button" onClick={() => openTask(x.id)}><Title s={x.title} /></button>{x.dur ? <span class="due">{fmtMin(x.dur)}</span> : <span />}</li>
-      ))}</ul>
-    </>
   );
 }
 
@@ -266,19 +274,16 @@ function OtherDay({ k }: { k: string }) {
           </label>
         </section>
       )}
-      <Fixed k={k} />
+      {!past && (
+        <div class="adders">
+          <button class="btn" type="button" onClick={() => openPick('list', k)}>{t('fromYourList')}</button>
+          <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
+        </div>
+      )}
       <Launches k={k} />
       <h2 class="sec">{t('dayList')}</h2>
       {plan.length ? <PlanLists ids={plan} k={k} optional={optional} from={0} /> : <p class="hint">{t('emptyDay')}</p>}
-      {!past && (
-        <>
-          <div class="adders">
-            <button class="btn" type="button" onClick={() => openPick('list', k)}>{t('fromYourList')}</button>
-            <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
-          </div>
-          <QuickAdd k={k} />
-        </>
-      )}
+      {!past && <QuickAdd k={k} />}
     </div>
   );
 }
@@ -302,7 +307,8 @@ export function Today() {
   const lo = work.reduce((a, id) => { const x = T(id)!; return a + (personal(x)?.lo ?? x.est ?? 0); }, 0);
   const hi = work.reduce((a, id) => { const x = T(id)!; return a + (personal(x)?.hi ?? x.est ?? 0); }, 0);
   const more = open.length - (fid ? 1 : 0);
-  const s = !plan.length ? candidates()[0] : undefined;
+  // Nothing open on the list: Start here still shows, with the step the list would pick next.
+  const s = !fid && !(af && every.length && !plan.length) ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
   const reviewDay = isoDow(k) === settings.value.reviewDay && !d?.review;
   return (
@@ -315,20 +321,15 @@ export function Today() {
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
       {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
-      {fid ? <FirstCard tk={T(fid)!} /> : !every.length ? (
+      {fid ? <FirstCard tk={T(fid)!} /> : af && every.length && !plan.length ? (
+        <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
+      ) : s ? <SuggestCard tk={s} played={every.length > 0} /> : !every.length ? (
         <section class="first" data-testid="first">
           <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
           <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>
-          {s && <>
-            <p class="hint">{t('orStartWith')}</p>
-            <p class="meta"><Title s={s.title} /></p>
-            <div class="go"><button class="btn" type="button" onClick={() => addToday(s.id)}>{t('putFirst')}</button><button class="btn" type="button" onClick={() => openPick('list')}>{t('chooseFromList')}</button></div>
-          </>}
         </section>
-      ) : af && !plan.length ? (
-        <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
@@ -336,7 +337,12 @@ export function Today() {
         <div class="carry"><p>{t('carryText', { n: yOpen.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: yOpen.length })}</button></div>
       )}
       <div class="after-first">
-        <Fixed k={k} />
+        <div class="adders" data-testid="adders">
+          {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openCheckin}>{t('planTheDay')}</button>}
+          <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
+          <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
+          {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}
+        </div>
         <Launches k={k} />
         {rest.length > 0 && (
           <>
@@ -347,12 +353,6 @@ export function Today() {
             <PlanLists ids={rest} k={k} optional={optional} from={fid ? 1 : 0} testid="plan-list" />
           </>
         )}
-        <div class="adders">
-          {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openCheckin}>{t('planTheDay')}</button>}
-          <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
-          <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
-          {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}
-        </div>
         <QuickAdd k={k} />
         <CommandBox scope={{ kind: 'today' }} />
         <button class="btn primary close-day" type="button" onClick={openClose}>{d?.closed ? t('closeAgain') : t('closeTheDay')}</button>

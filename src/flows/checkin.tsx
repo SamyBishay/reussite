@@ -15,7 +15,7 @@ import { t, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
 import { rootOf } from '../domain/places';
 import { fixedOnDay } from '../domain/agenda';
-import { withTime } from '../domain/calendar';
+import { withTime, minutesBetween, shiftTime } from '../domain/calendar';
 import { plan as makePlan, totalOf, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
 import type { Task } from '../data/schema';
 import { ask } from '../ai/ask';
@@ -151,7 +151,7 @@ function Checkin() {
       const f = e.currentTarget as HTMLFormElement;
       const v = (n: string) => (f.elements.namedItem(n) as HTMLInputElement).value;
       if (!v('title').trim() || !v('at')) return;
-      setFixed([...fixed, { title: v('title').trim(), at: v('at'), dur: Number(v('dur')) || 60 }].sort((a, b) => a.at.localeCompare(b.at)));
+      setFixed([...fixed, { title: v('title').trim(), at: v('at'), dur: v('end') && v('end') !== v('at') ? minutesBetween(v('at'), v('end')) : 60 }].sort((a, b) => a.at.localeCompare(b.at)));
       f.reset();
     };
     return (
@@ -176,11 +176,11 @@ function Checkin() {
           </div>
         )}
         <div class="field"><span>{t('ciFixed')}</span>
-          {fixed.length > 0 && <ul class="mini">{fixed.map((f, i) => <li><span><b>{f.at}</b> {f.title} · {fmtMin(f.dur)}</span><button type="button" class="chip-x" onClick={() => setFixed(fixed.filter((_, j) => j !== i))} aria-label={t('remove', { what: f.title })}>×</button></li>)}</ul>}
+          {fixed.length > 0 && <ul class="mini">{fixed.map((f, i) => <li><span><b>{f.at}–{shiftTime(f.at, f.dur)}</b> {f.title}</span><button type="button" class="chip-x" onClick={() => setFixed(fixed.filter((_, j) => j !== i))} aria-label={t('remove', { what: f.title })}>×</button></li>)}</ul>}
           <form class="fixed-add" onSubmit={addFixed}>
             <input type="text" name="title" placeholder={t('ciFixedPh')} aria-label={t('ciFixedPh')} autocomplete="off" />
             <input type="time" name="at" aria-label={t('atField')} />
-            <input type="number" name="dur" min="5" max="720" placeholder={t('minShort')} aria-label={t('durField')} />
+            <input type="time" name="end" aria-label={t('endField')} title={t('endField')} />
             <button class="btn small" type="submit">{t('add')}</button>
           </form>
         </div>

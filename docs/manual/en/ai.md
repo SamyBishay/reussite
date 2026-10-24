@@ -12,7 +12,7 @@ An AI is **optional**. Réussite works fully without one. If you want one, you c
 
 ## What an AI can do
 
-With a key, Réussite can:
+With a key, Réussite can (without a key saved on this device, none of these show; Ask any AI and Paste the reply always do):
 
 - turn plain words into changes ("drop the games; the photos are due Friday"): the **Change the list** box on Today, the Matrix and Projects, and the one box on Home;
 - **Improve with AI**: reorder the day's plan, pick between steps, write starters and split big steps. If its plan breaks the method's rules, Réussite says why and keeps the plan made by the rules;

@@ -1,6 +1,6 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
-import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, type T as Tk } from './model';
+import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects } from './store';
 import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
 import { fieldsOf } from '../data/doc';
@@ -158,12 +158,13 @@ export async function addByHand(id: string, quiet = false, k = today.value) {
 }
 /** The day's list after a drag: the steps shown take each other's places, the rest stay put. */
 export async function setPlanOrder(shown: string[], k = today.value) {
-  const p = rawPlan(k), next = reorderSubset(p, shown);
+  // A fixed-time item shown on the list but not written on it yet joins it where it was dragged.
+  const p = rawPlan(k), next = reorderSubset([...p, ...shown.filter(id => !p.includes(id))], shown);
   if (next.some((x, i) => x !== p[i])) await dayPatch(k, { plan: next });
 }
 export const removeToday = (id: string, k = today.value) => dayPatch(k, { plan: rawPlan(k).filter(x => x !== id) });
 export async function movePlan(id: string, dir: -1 | 1, k = today.value) {
-  const p = rawPlan(k);
+  const p = rawPlan(k).includes(id) ? rawPlan(k) : dayCards(k);
   const i = p.indexOf(id), j = i + dir;
   if (i < 0 || j < 0 || j >= p.length) return;
   [p[i], p[j]] = [p[j]!, p[i]!];

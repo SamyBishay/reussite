@@ -69,6 +69,21 @@ export const fixedOn = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): TaskW[] => 
     .sort((a, b) => String(a.at).localeCompare(String(b.at)));
 };
 
+/** A day's cards: its list, with each of its fixed-time items that is not on it yet slotted in before the
+ *  first timed card that comes later (else at the end). The calendar shows the timed ones; this is the same
+ *  set of steps as a list, so a change to one is a change to the other. */
+export const dayCards = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): string[] => {
+  const out = planOf(d, k);
+  const on = new Set(out);
+  for (const f of fixedOn(d, k)) {
+    if (on.has(f.id)) continue;
+    const i = out.findIndex(id => { const at = d.tasks.get(id)?.at; return !!at && at > f.at!; });
+    out.splice(i < 0 ? out.length : i, 0, f.id);
+    on.add(f.id);
+  }
+  return out;
+};
+
 /** Steps on yesterday's list still open and not on `k`'s list. */
 export const yesterdayOpen = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey, prev: DayKey) => {
   const plan = rawPlan(d.days, k);

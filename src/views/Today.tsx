@@ -3,8 +3,8 @@
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
 import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
-import { startTask, addLaunch, delLaunch, carryOver, addToday, addByHand, setPlanOrder, createTask, newTaskDoc, reopen, removeToday, movePlan, setFirst } from '../app/actions';
-import { openTask, openNewTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
+import { startTask, addLaunch, delLaunch, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
+import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
@@ -181,42 +181,6 @@ function Launches({ k }: { k: string }) {
   );
 }
 
-function QuickAdd({ k }: { k: string }) {
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    const f = e.currentTarget as HTMLFormElement;
-    const title = (f.elements.namedItem('title') as HTMLInputElement).value.trim();
-    if (!title) return;
-    const est = Number((f.elements.namedItem('est') as HTMLInputElement).value) || null;
-    const suit = (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'];
-    f.reset();
-    (document.activeElement as HTMLElement | null)?.blur();
-    const id = await createTask(newTaskDoc(title, suit, 'inbox', { est, estBy: est ? 'me' : null }));
-    await addByHand(id, false, k);
-  };
-  // The whole task sheet for a new step; nothing is written until Save there.
-  const details = (e: Event) => {
-    const f = (e.currentTarget as HTMLElement).closest('form')!;
-    const est = Number((f.elements.namedItem('est') as HTMLInputElement).value) || null;
-    const prefill: Partial<Task> = { title: (f.elements.namedItem('title') as HTMLInputElement).value.trim(), suit: (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'] };
-    if (est) { prefill.est = est; prefill.estBy = 'me'; }
-    f.reset();
-    openNewTask(prefill, id => void addByHand(id, false, k));
-  };
-  return (
-    <form class="quick" onSubmit={submit}>
-      <label class="field" style="margin:0"><span>{t('newStep')}</span><input type="text" name="title" placeholder={t('newStepPlaceholder')} autocomplete="off" required /></label>
-      <div class="row3">
-        <select name="suit" aria-label={t('suit')}>{SUIT_ORDER.map(s => <option value={s}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
-        <input type="number" name="est" min="1" max="600" inputMode="numeric" placeholder={t('minShort')} aria-label={t('estimateMin')} />
-        <button class="btn primary" type="submit">{t('add')}</button>
-      </div>
-      <p class="hint">{t('estimateHint')}</p>
-      <div><button class="btn small ghost" type="button" data-testid="quick-details" onClick={details}>{t('details')}</button></div>
-    </form>
-  );
-}
-
 function Navigator({ k }: { k: string }) {
   const td = today.value;
   const go = (d: string | null) => { dayView.value = d === td ? null : d; };
@@ -283,7 +247,6 @@ function OtherDay({ k }: { k: string }) {
       <Launches k={k} />
       <h2 class="sec">{t('dayList')}</h2>
       {plan.length ? <PlanLists ids={plan} k={k} optional={optional} from={0} /> : <p class="hint">{t('emptyDay')}</p>}
-      {!past && <QuickAdd k={k} />}
     </div>
   );
 }
@@ -353,7 +316,6 @@ export function Today() {
             <PlanLists ids={rest} k={k} optional={optional} from={fid ? 1 : 0} testid="plan-list" />
           </>
         )}
-        <QuickAdd k={k} />
         <CommandBox scope={{ kind: 'today' }} />
         <button class="btn primary close-day" type="button" onClick={openClose}>{d?.closed ? t('closeAgain') : t('closeTheDay')}</button>
       </div>

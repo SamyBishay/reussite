@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu, expandSettings, expandSheet } from './helpers';
+import { noSideways, openMenu, expandSettings, expandSheet, newCardSheet } from './helpers';
 
 // Addresses and people (phase 4): paste a Maps link, the after-visit note, people, the module switch, the
 // Google Takeout import. Every name, link and number here is invented.
@@ -35,8 +35,7 @@ async function openAddresses(page: Page) {
 }
 async function newStep(page: Page, title: string, feeds?: string) {
   await page.goto('/#today');
-  await page.getByPlaceholder(/The app and the first action/).fill(title);
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page, title);
   await expandSheet(page);
   if (feeds) await sheet(page).getByTestId('feeds-select').selectOption({ label: feeds });
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();

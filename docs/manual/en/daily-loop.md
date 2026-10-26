@@ -41,7 +41,7 @@ Today's list is the day's cards, and that includes the things at a fixed time: t
 
 ![Today: the first step and the rest of the list](shot:today)
 
-Adding a step by hand to today (quick add, **Add to today**, **From your list**) puts it right after the step you are timing, or before the first one not done yet. It doesn't wait at the end behind the whole plan.
+Adding a step by hand to today (the round **+** button, **Add to today**, **From your list**) puts it right after the step you are timing, or before the first one not done yet. It doesn't wait at the end behind the whole plan.
 
 You can drag a step by its grip to put the list in another order. The arrows still work. When a step has areas, the list is grouped under the area's name.
 

@@ -81,3 +81,17 @@ export async function noSideways(page: Page, where: string) {
 
 /** A calendar event (the library's own element) by its words, in the Calendar tab's grid. */
 export const calEvent = (page: Page, text: string | RegExp) => page.getByTestId('calendar-grid').locator('.sx__event', { hasText: text });
+
+/** The round plus: opens the task sheet for a new step, with the title typed. */
+export async function newCardSheet(page: Page, title = '') {
+  await page.getByTestId('add-card').click();
+  const input = page.getByTestId('sheet').locator('input[name=title]');
+  if (title) await input.fill(title);
+  return input;
+}
+/** The round plus, the title, Save. */
+export async function addCard(page: Page, title: string) {
+  await newCardSheet(page, title);
+  await page.getByTestId('sheet').getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByTestId('sheet')).toBeHidden();
+}

@@ -94,6 +94,10 @@ body.kb .tabbar{display:none}
 .receipt{display:flex;align-items:center;justify-content:space-between;gap:var(--s1) var(--s2);color:var(--ink-2);font-size:14.5px;padding-inline:4px}
 .receipt .undo{min-height:44px;padding-inline:6px;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 /* The input is fixed above the tab bar (and the keyboard); its height is --inputh, set by Home. */
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + 16px);z-index:7;width:56px;height:56px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(0,0,0,.22),0 1px 3px rgba(0,0,0,.16)}
+.fab:active{transform:scale(.95)}
+body.kb .fab{display:none}
+@media (min-width:1128px){.fab{right:calc((100vw - 1080px)/2 + 16px)}}
 .homein{position:fixed;left:0;right:0;bottom:calc(var(--dock) + var(--kb));z-index:5;background:var(--ground);border-top:1px solid var(--line);padding:8px 16px}
 .homein-in{max-width:1048px;margin:0 auto;display:flex;gap:var(--s2);align-items:flex-end}
 .homein textarea{flex:1 1 auto;min-height:44px;max-height:128px;resize:none;line-height:1.4;overflow-y:auto}
@@ -183,8 +187,6 @@ a.btn{text-decoration:none}
 .row.running{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 @media (max-width:540px){.row{grid-template-columns:auto minmax(0,1fr)}.row .ctrls{grid-column:2;justify-content:flex-start}}
 .adders{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s4)}
-.quick{margin-top:var(--s4);display:grid;gap:var(--s2);background:var(--panel);border:1px solid transparent;border-radius:14px;padding:14px}
-.quick .row3{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:var(--s2)}
 .close-day{margin-top:var(--s5);width:100%;justify-content:center;min-height:52px;font-size:16px;font-weight:700}
 .runbar{display:flex;align-items:center;gap:var(--s3);background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:8px 8px 8px 14px}
 .runbar .rt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

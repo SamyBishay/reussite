@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet } from './helpers';
+import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet, addCard, newCardSheet } from './helpers';
 
 // Areas inside places, half days and people's pages (phase 4b). Every name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -20,8 +20,7 @@ async function cairoWithHeliopolis(page: Page) {
 /** A step added by hand from the quick form's Details sheet, set to `where`. */
 async function addStep(page: Page, title: string, where: string, at?: string) {
   await goTab(page, 'today');
-  await page.getByPlaceholder(/The app and the first action/).fill(title);
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page, title);
   await expandSheet(page);
   await sheet(page).locator('label.field', { hasText: /^Where/ }).locator('select').selectOption({ label: where });
   if (at) { await sheet(page).locator('input[name=at]').fill(at); }
@@ -80,8 +79,7 @@ test('the morning check-in can say "afternoon in Heliopolis": the plan puts them
   await cairoWithHeliopolis(page);
   for (const [title, where] of [['Renew the visa', 'Cairo'], ['Buy a SIM card', 'Cairo › Heliopolis'], ['Fix the shutters', 'Cairo › Heliopolis']] as const) {
     await goTab(page, 'today');
-    await page.getByPlaceholder(/The app and the first action/).fill(title);
-    await page.getByTestId('quick-details').click();
+    await newCardSheet(page, title);
     await expandSheet(page);
     await sheet(page).locator('label.field', { hasText: /^Where/ }).locator('select').selectOption({ label: where });
     await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -120,8 +118,7 @@ test('a person has a page of the open steps that go to them or name them', async
   await expect(sheet(page)).toBeHidden();
   await goTab(page, 'today');
   for (const title of ['Call Ibrahim about the flat', 'Pay the water bill']) {
-    await page.getByPlaceholder(/The app and the first action/).fill(title);
-    await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+    await addCard(page, title);
   }
   await openMenu(page, 'addresses');
   await page.getByTestId('person-page-open').click();

@@ -92,7 +92,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
   const task = (c: Ctx, value: string): TaskW => {
     const t = c.v.tasks.get(value);
     if (t) return t;
-    const f = findByName(value, [...c.v.tasks.values()].filter(x => !x.template).map(x => ({ id: x.id, name: x.title })));
+    const f = findByName(value, [...c.v.tasks.values()].filter(x => !x.template && x.status !== 'dropped').map(x => ({ id: x.id, name: x.title })));
     if ('id' in f) return c.v.tasks.get(f.id)!;
     if ('many' in f) throw new ToolError(`"${value}" matches ${f.many.length} steps; call again with the id of the one meant:\n${lines(c.v, f.many.slice(0, 8).map(m => c.v.tasks.get(m.id)!))}`);
     if (needsCold(c.s)) throw new NeedCold(); // an old finished step: not in the hot part
@@ -145,7 +145,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     if ('many' in f) throw new ToolError(`"${id}" matches several decisions:\n${f.many.map(m => `${m.id} | ${m.name}`).join('\n')}`);
     if (!('id' in f)) throw unknown('decision', id, 'Decisions:\n' + [...c.v.decisions.values()].slice(0, 30).map(d => `${d.id} | ${d.title}`).join('\n'));
     const d = c.v.decisions.get(f.id)!;
-    const steps = d.taskIds.map(i => c.v.tasks.get(i)).filter((t): t is TaskW => !!t);
+    const steps = d.taskIds.map(i => c.v.tasks.get(i)).filter((t): t is TaskW => !!t && t.status !== 'dropped');
     return { text: decisionLines(d) + (steps.length ? `\nsteps:\n${lines(c.v, steps)}` : '') };
   });
 

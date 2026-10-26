@@ -5,7 +5,7 @@
 // VAPID header; the test decrypts what arrived. The relay's local D1 file shows what it holds.
 import { test, expect, type Page } from '@playwright/test';
 import { E2E_VAPID } from './vapid';
-import { importSample, noSideways, expandSettings, expandSheet } from './helpers';
+import { importSample, noSideways, expandSettings, expandSheet, addCard } from './helpers';
 import { openedText, pushId, relayHeld, runCron, startPushStub, stubSubscription, type PushStub } from './pushstub';
 import { newReceiver } from '../../src/push/testing';
 import { decryptPush, type ReceiverKeys } from '../../src/push/encrypt';
@@ -91,8 +91,7 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   const due = new Date(Date.now() + 100_000);
   due.setSeconds(0, 0);
   const hhmm = String(due.getHours()).padStart(2, '0') + ':' + String(due.getMinutes()).padStart(2, '0');
-  await page.getByPlaceholder(/The app and the first action/).fill('Choir, Hill House 602');
-  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  await addCard(page, 'Choir, Hill House 602');
   // Added by hand with nothing running, it goes to the top of what is left: it is the first card.
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
   await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();

@@ -22,6 +22,9 @@ export const en = {
   notifEmpty: 'Nothing is waiting.',
   memoryTitle: 'Memory',
   historyTitle: 'History',
+  cemeteryTitle: 'Cemetery',
+  cemeteryIntro: 'Cards you dropped. They are kept out of every list, the planner and the AI; nothing here is deleted, so a synced device can never bring one back. Restore puts a card back among the open ones.',
+  cemeteryRestore: 'Restore',
   // masthead and places
   inPlace: 'In {place}',
   inPlaceLabel: 'You are in {place}. Switch place.',
@@ -80,6 +83,7 @@ export const en = {
   atYourRatio: 'about {t} at your usual ×{r}',
   fromYourList: '+ From your list',
   leisurePeople: '+ Leisure & people',
+  addCard: 'Add a card',
   newStep: 'New step',
   newStepPlaceholder: 'The app and the first action: Open Mail and…',
   suit: 'Suit',

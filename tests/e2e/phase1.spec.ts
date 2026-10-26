@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openWeeklyReview, expandSheet } from './helpers';
+import { importSample, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -390,7 +390,7 @@ test('a card’s actions are in a bar at the top of its sheet, which stays in vi
 test('a fixed time and its end are picked on the clock, always in view; the length and lead follow once there is a time', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-today').click();
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page);
   const s = sheet(page);
   await expect(s.locator('input[name=at]')).toBeVisible();
   await expect(s.locator('input[name=end]')).toBeDisabled();
@@ -443,8 +443,7 @@ test('a step added by hand goes right after the one running, not at the bottom',
   await importSample(page);
   await page.getByTestId('first').getByRole('button', { name: /Start timer|Just start the timer/ }).click();
   const ids0 = await page.evaluate(() => [...document.querySelectorAll('[data-testid=plan-list] > li')].map(e => (e as HTMLElement).dataset.task));
-  await page.locator('form.quick input[name=title]').fill('Zebra errand');
-  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  await addCard(page, 'Zebra errand');
   const rows = page.locator('[data-testid=plan-list] > li');
   await expect(rows).toHaveCount(ids0.length + 1);
   await expect(rows.nth(1)).toContainText('Zebra errand'); // the done step stays above; the running one is the first card

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways } from './helpers';
+import { importSample, noSideways, newCardSheet } from './helpers';
 
 // Optional fields sit under one folded "More", after the essentials; Settings sections are folded disclosures.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -23,8 +23,7 @@ test('a task sheet shows only the essentials until More is opened', async ({ pag
 test('More says how many hidden fields have a value', async ({ page }) => {
   await importSample(page);
   // A new step with an app and a link set under More, then opened again: "More · 2 set".
-  await page.getByPlaceholder(/The app and the first action/).fill('Call the plumber');
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page, 'Call the plumber');
   const more = sheet(page).getByTestId('task-more');
   await expect(more.locator('summary')).toHaveText('More');
   await more.locator('summary').click();

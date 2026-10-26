@@ -1,13 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { goTab } from './helpers';
+import { goTab, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 
 /** Three steps in one order, made with Break it down: "Gather papers", then "Fill the form", then "Post the file". */
 async function makeChain(page: Page) {
   await page.goto('/#today');
-  await page.locator('form.quick').getByLabel('New step').fill('Gather papers');
-  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  await addCard(page, 'Gather papers');
   await page.getByTestId('first').getByRole('button', { name: 'Edit' }).click();
   await sheet(page).getByRole('button', { name: 'Break it down' }).click();
   await page.getByTestId('bd-first').getByRole('textbox').first().fill('Open the drawer');

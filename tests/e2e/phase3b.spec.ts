@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { importSample, noSideways, expandSettings, expandSheet } from './helpers';
+import { importSample, noSideways, expandSettings, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 // The app's day starts at 05:00; before that it is still the day before.
@@ -12,8 +12,7 @@ const todayName = () => {
 
 async function addChoir(page: Page) {
   await importSample(page);
-  await page.getByPlaceholder(/The app and the first action/).fill('Choir, Hill House 602');
-  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  await addCard(page, 'Choir, Hill House 602');
   // Added by hand with nothing running, it goes to the top of what is left: it is the first card.
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
   await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();

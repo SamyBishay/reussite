@@ -1,5 +1,6 @@
 // The Eisenhower matrix (brief §5). Moves: drag on desktop and tablet; on phones, long-press
 // or the "Move to…" menu. Filters by project, suit and place, and search.
+import { Cemetery } from './Cemetery';
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects, pagePlace } from '../app/store';
@@ -140,6 +141,7 @@ export function Matrix() {
           ))}</ul>
         </details>
       )}
+      <Cemetery />
       <p class="hint axis-note">{t('axisNote')} {t('moveHint')}</p>
     </div>
   );

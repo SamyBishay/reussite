@@ -360,7 +360,7 @@ function AfterField({ id, value, onChange }: { id: string; value: string[]; onCh
   const found = open ? [...tasks.value.values()].filter(x => x.id !== id && x.status === 'open' && !x.template && !value.includes(x.id) && (!q || x.title.toLowerCase().includes(q.toLowerCase()))).sort(byOrder).slice(0, 8) : [];
   return (
     <div class="field"><span>{t('waitsForField')}</span>
-      {value.length > 0 && <ul class="mini">{value.map(x => <li><span>{T(x)?.title ?? x}</span><button type="button" class="chip-x" onClick={() => onChange(value.filter(y => y !== x))} aria-label={t('remove', { what: T(x)?.title ?? x })}>×</button></li>)}</ul>}
+      {value.length > 0 && <ul class="mini">{value.filter(x => T(x)?.status !== 'dropped').map(x => <li><span>{T(x)?.title ?? x}</span><button type="button" class="chip-x" onClick={() => onChange(value.filter(y => y !== x))} aria-label={t('remove', { what: T(x)?.title ?? x })}>×</button></li>)}</ul>}
       {open ? (
         <>
           <input type="text" value={q} placeholder={t('searchSteps')} aria-label={t('searchSteps')} onInput={e => setQ((e.target as HTMLInputElement).value)} />
@@ -434,7 +434,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const pe = typed ? personal({ ...tk, est: typed }) : null;
   const proj = projects.value.get(tk.project);
   // Optional fields live under More; the summary counts the ones that have a value.
-  const hiddenSet = countSet(tk.label, tk.starter, tk.note, where !== 'any' ? where : '', tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, tk.kind === 'decision', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
+  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, tk.kind === 'decision', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -587,6 +587,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
         <label class="field"><span>{t('dueField')}</span><input type="date" name="due" defaultValue={tk.due ?? ''} disabled={!!rule} /></label>
       </div>
+      <label class="field" data-testid="where-field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
       {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
@@ -595,12 +596,9 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
       <p class="hint">{t('labelHint')}</p>
       <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
-      <div class="row2">
-        <label class="field"><span>{t('suit')}</span>
-          <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
-        </label>
-        <label class="field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
-      </div>
+      <label class="field"><span>{t('suit')}</span>
+        <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
+      </label>
       <label class="field"><span>{t('project')}</span>
         <select name="project">{projs.map(p => <option value={p.id} selected={p.id === tk.project}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>

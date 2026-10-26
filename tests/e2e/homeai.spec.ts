@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu } from './helpers';
+import { importSample, noSideways, goTab, openMenu, addCard } from './helpers';
 
 // Home's AI with memory (phase 2b, step 7). OpenRouter is stubbed; every note and name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -57,8 +57,7 @@ async function setUpIn(page: Page) {
   await page.getByTestId('memory-import-go').click();
   await expect(sheet(page)).toBeHidden();
   await goTab(page, 'today');
-  await page.locator('form.quick input[name=title]').fill('Open Messages and text Ibrahim about the keys');
-  await page.locator('form.quick input[name=title]').press('Enter');
+  await addCard(page, 'Open Messages and text Ibrahim about the keys');
   await expect(page.locator('[data-task]', { hasText: 'text Ibrahim about the keys' })).toHaveCount(1);
   await goTab(page, 'home');
 }

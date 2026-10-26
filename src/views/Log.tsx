@@ -47,7 +47,7 @@ export function Log() {
   }
   const wk = week.reduce((a, b) => a + b.m, 0);
   const max = Math.max(4, ...week.map(w => w.n));
-  const sess = [...sessions.value.values()].sort((a, b) => String(b.at || b.d || '').localeCompare(String(a.at || a.d || '')));
+  const sess = [...sessions.value.values()].filter(s => tasks.value.get(s.taskId)?.status !== 'dropped').sort((a, b) => String(b.at || b.d || '').localeCompare(String(a.at || a.d || '')));
   const friction: Record<string, number> = {};
   sess.forEach(s => { const w = s.why; if (w && w !== 'done' && w !== 'switched' && w !== 'close') friction[w] = (friction[w] ?? 0) + 1; });
   const fk = Object.keys(friction).sort((a, b) => friction[b]! - friction[a]!);

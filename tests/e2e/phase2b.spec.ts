@@ -1,8 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu, expandSheet } from './helpers';
+import { newCardSheet, importSample, noSideways, goTab, openMenu, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
-const quickTitle = (page: Page) => page.getByPlaceholder(/The app and the first action/);
 
 // The task sheet as a draft: a new step is written only on Save.
 for (const width of [320, 375, 430]) {
@@ -12,13 +11,11 @@ for (const width of [320, 375, 430]) {
     await importSample(page);
     const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' }); // by hand with nothing running: the first card
 
-    await quickTitle(page).fill('Dentist 14:30');
-    await page.getByTestId('quick-details').click();
+    await newCardSheet(page, 'Dentist 14:30');
     await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
     await expect(sheet(page).locator('input[name=title]')).toHaveValue('Dentist 14:30');
     await expect(sheet(page).getByTestId('set-time')).toHaveText('Set 14:30 as the time');
-    // The form it was typed in is emptied, and nothing is written yet.
-    await expect(quickTitle(page)).toHaveValue('');
+    // Nothing is written yet.
     await expect(row).toHaveCount(0);
     await noSideways(page, 'new task sheet with the hint');
 
@@ -43,8 +40,7 @@ for (const width of [320, 375, 430]) {
 
 test('closing a new step\'s sheet writes nothing', async ({ page }) => {
   await importSample(page);
-  await quickTitle(page).fill('Never saved');
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page, 'Never saved');
   await expect(sheet(page).locator('input[name=title]')).toHaveValue('Never saved');
   await page.keyboard.press('Escape');
   await expect(sheet(page)).toBeHidden();
@@ -53,11 +49,10 @@ test('closing a new step\'s sheet writes nothing', async ({ page }) => {
   await expect(page.getByText('Never saved')).toHaveCount(0);
 });
 
-test('the estimate and suit typed in the quick form carry into the draft', async ({ page }) => {
+test('the estimate typed in the new card sheet is kept on Save', async ({ page }) => {
   await importSample(page);
-  await quickTitle(page).fill('Sort the drawer');
-  await page.locator('form.quick input[name=est]').fill('25');
-  await page.getByTestId('quick-details').click();
+  await newCardSheet(page, 'Sort the drawer');
+  await sheet(page).locator('input[name=est]').fill('25');
   await expect(sheet(page).locator('input[name=est]')).toHaveValue('25');
   await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -134,8 +129,7 @@ test('on a Monday the greeting is the next step until 18:30, then the choir with
   await say(page, 'choir every Monday 19:00 at Hill House 602');
   await expect(page.getByTestId('receipt')).toBeVisible();
   await goTab(page, 'today');
-  await page.locator('form.quick input[name=title]').fill('Call the bank');
-  await page.locator('form.quick').getByRole('button', { name: 'Add', exact: true }).click();
+  await addCard(page, 'Call the bank');
   await expect(page.getByTestId('first')).toContainText('Call the bank');
 
   await page.clock.setFixedTime(at(18, 29));

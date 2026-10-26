@@ -40,6 +40,7 @@ import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
 import { decideOnboarding, onboarding } from './onboarding';
 import { Onboarding } from '../flows/onboarding';
+import { AddCard } from './AddCard';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
@@ -225,6 +226,7 @@ export function App() {
         </main>
       </div>
       <Tabs />
+      <AddCard />
       <SheetHost />
       <OverlayHost />
       <PreviewHost />

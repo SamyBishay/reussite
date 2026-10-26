@@ -163,7 +163,7 @@ export function taskText(v: View, t: TaskW): string {
     f('where', t.where && t.where !== 'any' ? v.places.get(t.where)?.name ?? t.where : null),
     f('label', t.label), f('starter', t.starter), f('resume', t.resume), f('note', t.note),
     f('app', t.app), f('link', t.link), f('prompt', t.prompt),
-    f('waiting on', listOf(t.after).map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`)),
+    f('waiting on', listOf(t.after).filter(id => v.tasks.get(id)?.status !== 'dropped').map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`)),
     f('chain', chainLines(v, t)),
     f('repeats', t.repeat), f('carried', t.carried || null), f('stuck', t.stalls || null), f('frictions', t.friction),
     f('created', t.created), f('by', t.src === 'ai' ? 'an AI' : null),

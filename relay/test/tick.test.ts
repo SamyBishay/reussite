@@ -213,14 +213,16 @@ describe('the hourly prune', () => {
     expect(await countAll('push_items')).toBe(2);
   });
 
-  it('forgets calendar feeds not written for 60 days, and keeps the others', async () => {
-    const row = (fid: string, updated: number) => env.DB.prepare("INSERT INTO feeds (fid, auth_hash, ics, updated) VALUES (?1, 'h', 'BEGIN:VCALENDAR', ?2)").bind(fid, updated);
-    await env.DB.batch([env.DB.prepare('DELETE FROM feeds'), row('old', HOUR - FEED_KEEP_MS - MIN), row('edge', HOUR - FEED_KEEP_MS), row('fresh', HOUR - 86_400_000)]);
+  it('forgets calendar feeds not written for 60 days, and keeps the others and the aliases of a feed in use', async () => {
+    const row = (fid: string, updated: number, alias: string | null = null) => env.DB.prepare("INSERT INTO feeds (fid, auth_hash, ics, updated, alias) VALUES (?1, 'h', 'BEGIN:VCALENDAR', ?2, ?3)").bind(fid, updated, alias);
+    const long = HOUR - FEED_KEEP_MS - MIN;
+    // An alias lives as long as the feed it points at.
+    await env.DB.batch([env.DB.prepare('DELETE FROM feeds'), row('old', long), row('edge', HOUR - FEED_KEEP_MS), row('fresh', HOUR - 86_400_000), row('to-fresh', long, 'fresh'), row('to-old', long, 'old')]);
     await run(HOUR_PLUS(1), pushStub());
-    expect(await countAll('feeds')).toBe(3); // not at minute 1
+    expect(await countAll('feeds')).toBe(5); // not at minute 1
     await run(HOUR_PLUS(0), pushStub());
     const { results } = await env.DB.prepare('SELECT fid FROM feeds ORDER BY fid').all<{ fid: string }>();
-    expect(results.map(r => r.fid)).toEqual(['edge', 'fresh']);
+    expect(results.map(r => r.fid)).toEqual(['edge', 'fresh', 'to-fresh']);
     await env.DB.prepare('DELETE FROM feeds').run();
   });
 

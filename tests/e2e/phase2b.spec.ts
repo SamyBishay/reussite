@@ -267,7 +267,8 @@ test('a short line adds a step to the Inbox; History lists it with its Undo, and
 
 test('Undo in History asks first after ten minutes; a step edited since stays', async ({ page }) => {
   await importSample(page);
-  const t0 = new Date(2026, 9, 26, 10, 0, 0);
+  // Tomorrow at 10:00: the clock only ever moves forward (a time before the import's writes hides the receipt).
+  const t0 = new Date(); t0.setDate(t0.getDate() + 1); t0.setHours(10, 0, 0, 0);
   await page.clock.setFixedTime(t0);
   await goTab(page, 'home');
   await say(page, 'call the bank tomorrow');

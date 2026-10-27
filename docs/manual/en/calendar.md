@@ -32,6 +32,8 @@ If your place has areas, the **area chips** narrow the calendar to one area, plu
 
 Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your fixed-time items stay up to date there, from a week back to six weeks ahead.
 
+Your list has one feed, shared by all your devices: switch it on, off or make a new address on one, and the others follow. It is updated whenever one of your devices opens Réussite or changes something, and right after a change made through the connector. A device that has not synced leaves the feed alone, so it never shows an old copy of your list. A feed that nothing has updated for ten days shows one event today, "Réussite: this calendar is out of date", which says what to do.
+
 **What the feed says** has three levels:
 
 - **Times only.** It says only "Fixed time", and when. This is the default.
@@ -39,7 +41,7 @@ Settings → Calendar can give your calendar app an address to subscribe to (App
 - **Short names, places and notes.** Also the place or address, the title, the note and the link, and a link that opens the step in Réussite.
 
 - On the last two levels what the feed says is stored in plain text on the relay, and whoever runs it can read it. Réussite warns you.
-- Anyone who has the address can read the feed. Keep it to yourself. **Make a new address** and the old one stops working.
+- Anyone who has the address can read the feed. Keep it to yourself. **Make a new address** and the old one stops working, on every device.
 - Your calendar app decides how often it refreshes (Google Calendar can take hours). Don't rely on it for reminders. Reminders come from notifications. See [Settings](settings.md).
 
 ## The Log

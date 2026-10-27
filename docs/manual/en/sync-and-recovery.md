@@ -40,7 +40,11 @@ What was on the new device stays: it is added to your list, never replaced.
 - **Sync now**, and when it last synced.
 - **Name of this device.**
 - **Turn sync off.** Your list stays on this device. This device forgets the key and stops syncing. The scrambled copy stays for your other devices.
-- **Delete everywhere.** Deletes the scrambled copy from the relay, and sync stops on every device. Each device keeps the list it has. This also switches off notifications and the calendar feed on this device. Type "delete" to confirm. It can't be undone.
+- **Delete everywhere.** Deletes the scrambled copy from the relay, and sync stops on every device. Each device keeps the list it has. This also switches off notifications on this device, and the calendar feed on all of them. Type "delete" to confirm. It can't be undone.
+
+## When a device can't sync
+
+If a device's copy of your list is more than six hours old and it can't sync, it says so at the top of the screen, with **Sync now** and **Sync settings**. Until it syncs, what changed on your other devices or through an AI isn't there, and it leaves your calendar feed alone.
 
 ## When one device is newer
 

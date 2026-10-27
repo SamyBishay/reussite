@@ -40,7 +40,11 @@ Ce qui était sur le nouvel appareil reste : c’est ajouté à votre liste, j
 - **Synchroniser maintenant**, et la date de la dernière synchronisation.
 - **Nom de cet appareil.**
 - **Désactiver la synchronisation.** Votre liste reste sur cet appareil. Cet appareil oublie la clé et cesse de se synchroniser. La copie brouillée reste pour vos autres appareils.
-- **Supprimer partout.** Supprime la copie brouillée du relais, et la synchronisation s’arrête sur tous les appareils. Chaque appareil garde la liste qu’il a. Cela désactive aussi les notifications et le flux de calendrier sur cet appareil. Tapez « supprimer » pour confirmer. On ne peut pas revenir en arrière.
+- **Supprimer partout.** Supprime la copie brouillée du relais, et la synchronisation s’arrête sur tous les appareils. Chaque appareil garde la liste qu’il a. Cela désactive aussi les notifications sur cet appareil, et le flux de calendrier sur tous. Tapez « supprimer » pour confirmer. On ne peut pas revenir en arrière.
+
+## Quand un appareil n’arrive pas à se synchroniser
+
+Si la copie de votre liste sur un appareil a plus de six heures et qu’il n’arrive pas à se synchroniser, il le dit en haut de l’écran, avec **Synchroniser maintenant** et **Réglages de synchronisation**. Tant qu’il ne s’est pas synchronisé, ce qui a changé sur vos autres appareils ou par une IA n’y est pas, et il ne touche pas à votre flux de calendrier.
 
 ## Quand un appareil est plus récent
 

@@ -2,7 +2,7 @@
 // moments it runs: on start, when the page becomes visible, two seconds after the last local
 // write, and when the network comes back. Failures are quiet (the error log) and retried with
 // backoff. The pure parts are in src/sync; the Dexie store is in src/data/syncstore.ts.
-import { signal } from '@preact/signals';
+import { computed, signal } from '@preact/signals';
 import { db, getClock, onLocalWrite, putMerged, readOnly, settings } from './store';
 import { getLocal, setLocal } from '../data/db';
 import { dexieSyncStore, STATE_KEY } from '../data/syncstore';
@@ -39,6 +39,21 @@ export const syncOn = signal(false);
 export const keySaved = signal(true);
 export const syncBusy = signal(false);
 export const lastSyncAt = signal<number | null>(null);
+/** When this run of the app started: a sync after it means this device's copy of the list is current. */
+let startedAt = Date.now();
+export const resetSyncStart = (at = Date.now()) => { startedAt = at; };
+/** Sync is on, and this device's copy of the list has not been brought up to date since the app started (or cannot be). */
+export const syncBehind = computed(() => syncOn.value && (readOnly.value || spaceGone.value || (lastSyncAt.value ?? 0) < startedAt));
+/** The first round's chance to succeed before anyone is told, and how old a copy must be to be worth a word. */
+export const SYNC_GRACE_MS = 30_000;
+export const STALE_SYNC_MS = 6 * 3600_000;
+/**
+ * Ask the person to act: sync has not succeeded since the app started, the copy here is over STALE_SYNC_MS old,
+ * and the device is online (offline, nothing they do helps). The newer-version and deleted-list cases have their own words.
+ */
+export const syncStale = (now: number): boolean =>
+  syncBehind.value && !readOnly.value && !spaceGone.value && now - startedAt > SYNC_GRACE_MS && now - (lastSyncAt.value ?? 0) > STALE_SYNC_MS &&
+  !(typeof navigator !== 'undefined' && navigator.onLine === false);
 /** The code of the last failure (a relay error code, 'network', 'decrypt'…), null when the last round worked. */
 export const syncError = signal<string | null>(null);
 /** The space was deleted from another device: sync is paused until the person turns it off here. */

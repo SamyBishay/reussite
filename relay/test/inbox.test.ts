@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { b64uLength, MAX_INBOX_BYTES, MAX_INBOX_ITEMS } from '../../src/sync/protocol';
-import { APP, call, newSpace, push, url } from './helpers';
+import { APP, call, newSpace, push, url, freshMinute } from './helpers';
 
 const blob = (n = 80) => 'A'.repeat(n);
 const post = (k: Awaited<ReturnType<typeof newSpace>>, b: unknown = blob(), o: Parameters<typeof call>[3] = {}) =>
@@ -9,6 +9,7 @@ const post = (k: Awaited<ReturnType<typeof newSpace>>, b: unknown = blob(), o: P
 const count = async (space: string) => (await env.DB.prepare('SELECT COUNT(*) AS n FROM inbox WHERE space = ?').bind(space).first<{ n: number }>())!.n;
 
 describe('inbox', () => {
+  beforeEach(() => freshMinute());
   it('takes a blob without any secret, for a space that exists, and the owner reads and deletes it', async () => {
     const k = await newSpace();
     await push(k);

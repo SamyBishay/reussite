@@ -6,7 +6,7 @@ import { fromUtf8 } from '../../src/sync/bytes';
 import { verifyVapid } from '../../src/push/vapid';
 import type { Env } from '../src/env';
 import { checkEndpoint } from '../src/webpush';
-import { APP } from './helpers';
+import { APP, freshMinute } from './helpers';
 import { countAll, deviceRow, held, item, newDevice, pcall, pushStub, putSchedule, register } from './push.helpers';
 
 beforeEach(async () => {
@@ -285,6 +285,7 @@ describe('deleting', () => {
 });
 
 describe('rate limits', () => {
+  beforeEach(() => freshMinute());
   it('limits new devices per IP, and counts updates per device', async () => {
     const limit = { RATE_PUSH_NEW_IP_PER_MIN: '2', RATE_PUSH_UPDATE_PER_MIN: '3' };
     const codes: number[] = [];

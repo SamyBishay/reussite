@@ -28,3 +28,12 @@ export async function call(method: string, path: string, keys: SpaceKeys, o: Cal
 
 export const url = (keys: SpaceKeys, tail = '') => `/v1/spaces/${keys.spaceId}${tail}`;
 export const push = (keys: SpaceKeys, device = 'dev1', o: Call = {}) => blobOf(keys).then(blob => call('POST', url(keys, '/batches'), keys, { body: { device, blob }, ...o }));
+
+/**
+ * Rate limits count per clock minute: a test that counts up to a limit and runs across a minute's end
+ * sees two windows. Wait out the minute's last seconds before such a test.
+ */
+export async function freshMinute(margin = 5000): Promise<void> {
+  const left = 60_000 - (Date.now() % 60_000);
+  if (left < margin) await new Promise(r => setTimeout(r, left + 50));
+}

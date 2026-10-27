@@ -4,6 +4,7 @@ import type { SuitId } from './schema';
 import { parse } from './hlc';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import type { FeedDetail } from '../domain/calItems';
+import type { FeedShare } from '../feed/protocol';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
@@ -72,6 +73,8 @@ export interface Settings {
    * in the document and `withDefaults` reads it as `labels` (true) or `times` (false) until the person chooses.
    */
   feedDetail: FeedDetail;
+  /** The list's one calendar feed, shared by every device (`src/feed/protocol.ts`, docs/dev/feed.md). Holds its write secret: never shown, never sent to an AI. */
+  feedShared: FeedShare;
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
@@ -142,6 +145,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notifyText: 'generic',
   notifyLead: 30,
   feedDetail: 'times',
+  feedShared: null,
   sound: true,
   volume: 0.6,
   addressesPeople: true,

@@ -5,7 +5,7 @@ import { saveSettings, settings, toast, readOnly } from './store';
 import { relayBase } from './sync';
 import { More, Fold } from './More';
 import { FEED_DETAILS, type FeedDetail } from '../domain/calItems';
-import { feedBusy, feedError, feedId, feedLinks, feedOff, feedOn, regenerateFeed } from './feed';
+import { feedBusy, feedError, feedHeld, feedId, feedLinks, feedOff, feedOn, regenerateFeed } from './feed';
 
 const DETAIL_LABEL = { times: 'feedDetailTimes', labels: 'feedDetailLabels', full: 'feedDetailFull' } as const;
 const DETAIL_HINT = { times: 'feedDetailTimesHint', labels: 'feedDetailLabelsHint', full: 'feedDetailFullHint' } as const;
@@ -40,6 +40,7 @@ function Feed() {
             </div>
           )}
           {feedError.value && <p class="err" role="status" data-testid="feed-error">{feedError.value}</p>}
+          {feedHeld.value && <p class="warnline" role="status" data-testid="feed-held">{t('feedHeld')}</p>}
           {s.feedDetail !== 'times' && <p class="warnline" data-testid="feed-titles-warn">{t('feedDetailWarn')}</p>}
           <More n={s.feedDetail !== 'times' ? 1 : 0} testid="feed-more">
           <label class="field"><span>{t('feedDetailLabel')}</span>

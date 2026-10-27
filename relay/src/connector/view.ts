@@ -1,7 +1,7 @@
 // A loaded space seen through the app's own read rules (src/domain/lists.ts): live documents
 // (no tombstones) as Maps, today and the current place, settings with their defaults. Built lazily,
 // so a tool that only needs tasks never touches sessions.
-import type { Day, Decision, Exchange, MemoryNote, Place, Project, Session, Stay, Task } from '../../../src/data/schema';
+import type { Address, Day, Decision, Exchange, MemoryNote, Place, Project, Session, Stay, Task } from '../../../src/data/schema';
 import { fieldsOf } from '../../../src/data/doc';
 import { normDecision, normExchange, normNote } from '../../../src/data/normalize';
 import { withDefaults, type Settings } from '../../../src/data/settings';
@@ -45,6 +45,8 @@ export class View {
   get decisions() { return this.live<Decision>('decisions', normDecision); }
   get memory() { return this.live<MemoryNote>('memory', normNote); }
   get exchanges() { return this.live<Exchange>('exchanges', normExchange); }
+  /** Read only to write the calendar feed (an event's place); no tool shows addresses. */
+  get addresses() { return this.live<Address>('addresses'); }
 
   // Each of these is asked for again and again (a step line asks for `data`, which asks for today,
   // which builds an Intl formatter), so they are worked out once per View.

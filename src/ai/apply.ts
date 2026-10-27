@@ -232,9 +232,15 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       }
       case 'task.update': {
         const tk = s.tasks.get(c.id);
-        if (!tk || tk.status === 'dropped' || tk.template) break;
+        if (!tk || tk.status === 'dropped') break;
         const f = cleanTask(c.set);
         delete f.template; // only a new step becomes a standing obligation
+        if (tk.template) {
+          // A standing obligation keeps a time and its days, and has no date: the copies placed on days have those.
+          if ('at' in f && !f.at) delete f.at;
+          if ('weekdays' in f && !f.weekdays?.length) delete f.weekdays;
+          delete f.due; delete f.dueRule;
+        }
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k === 'estBy' || k === 'dueRule') continue;

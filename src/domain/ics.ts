@@ -34,6 +34,8 @@ export interface IcsOptions {
   deviceZone?: string;
   /** X-WR-CALNAME. */
   name?: string;
+  /** How often a subscribed calendar should fetch again, an ISO 8601 duration (`PT15M`): REFRESH-INTERVAL (RFC 7986) and X-PUBLISHED-TTL. The feed only. */
+  refresh?: string;
 }
 
 const pad = (n: number, w = 2) => String(n).padStart(w, '0');
@@ -147,6 +149,7 @@ export function icsFor(events: readonly AgendaEvent[], opts: IcsOptions): string
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reussite//Calendar//EN', 'CALSCALE:GREGORIAN',
     ...(opts.name ? ['X-WR-CALNAME:' + escapeText(opts.name)] : []),
+    ...(opts.refresh ? ['REFRESH-INTERVAL;VALUE=DURATION:' + opts.refresh, 'X-PUBLISHED-TTL:' + opts.refresh] : []),
     ...zones, ...body, 'END:VCALENDAR',
   ];
   return lines.flatMap(fold).join('\r\n') + '\r\n';

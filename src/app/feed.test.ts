@@ -34,6 +34,29 @@ describe('the feed text', () => {
     expect(t).not.toMatch(/plumber|bill|VALUE=DATE|TRANSPARENT/i);
   });
 
+  it('leaves out dropped and done steps, one-off or standing, and their copies', () => {
+    const w = state({
+      tasks: [
+        task('wa', { title: 'Open WhatsApp and answer your messages', template: true, weekdays: [1, 2, 3, 4, 5, 6, 7], at: '20:00', dur: 20, status: 'dropped' }),
+        choir({ status: 'done' }),
+        task('prep', { title: 'Prepare the guest room', at: '22:30', due: '2026-10-25', status: 'dropped' }),
+        task('arrive', { title: 'Farid arrives', at: '09:00', due: '2026-10-26', status: 'done' }),
+        task('gym', { title: 'Gym', template: true, weekdays: [3], at: '07:00' }),
+        task('gym-c', { title: 'Gym', from: 'gym', at: '07:00', due: '2026-10-21', status: 'dropped' }),
+        task('nour', { title: 'Go out with Nour', at: '20:00', due: '2026-10-28', dur: 120 }),
+      ],
+    });
+    const t = feedText(w, agendaSettings(), '2026-10-20', 'labels', itr, 0);
+    expect(t).not.toMatch(/WhatsApp|Choir|guest room|Farid/);
+    expect(t).toContain('UID:fixed:nour:2026-10-28@');
+    expect(t).not.toContain('UID:fixed:gym:2026-10-21@'); // the dropped copy takes that day's event away
+    expect(t).toContain('UID:fixed:gym:2026-10-28@');
+  });
+
+  it('asks calendar apps to refresh every 15 minutes', () => {
+    expect(text('times')).toMatch(/\r\nREFRESH-INTERVAL;VALUE=DURATION:PT15M\r\nX-PUBLISHED-TTL:PT15M\r\n/);
+  });
+
   it('covers a week back to 45 days ahead', () => {
     const t = feedText(world, agendaSettings(), '2026-10-20', 'times', itr, 0);
     // Mondays in range: Oct 19 and 26, Nov 2, 9, 16, 23, 30; not Oct 12 or Dec 7.

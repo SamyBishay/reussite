@@ -92,11 +92,14 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
   const task = (c: Ctx, value: string): TaskW => {
     const t = c.v.tasks.get(value);
     if (t) return t;
-    const f = findByName(value, [...c.v.tasks.values()].filter(x => !x.template && x.status !== 'dropped').map(x => ({ id: x.id, name: x.title })));
+    const pool = (keep: (x: TaskW) => boolean) => [...c.v.tasks.values()].filter(x => x.status !== 'dropped' && keep(x)).map(x => ({ id: x.id, name: x.title }));
+    // A one-off step first, then a standing one: the copies placed on days share the series' title.
+    let f = findByName(value, pool(x => !x.template));
+    if ('none' in f) f = findByName(value, pool(x => !!x.template));
     if ('id' in f) return c.v.tasks.get(f.id)!;
     if ('many' in f) throw new ToolError(`"${value}" matches ${f.many.length} steps; call again with the id of the one meant:\n${lines(c.v, f.many.slice(0, 8).map(m => c.v.tasks.get(m.id)!))}`);
     if (needsCold(c.s)) throw new NeedCold(); // an old finished step: not in the hot part
-    throw unknown('step', value, 'Use query_tasks to find it.');
+    throw unknown('step', value, 'Use query_tasks to find it (status "all" includes standing and dropped steps).');
   };
 
   tool('today', "Today: the current place, today's list in order with launch points and fixed times, the next step, steps carried from yesterday, and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
@@ -106,11 +109,12 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     return { text: dayText(c.v, date) };
   });
 
-  tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first.', z.object({
+  tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first. Standing steps (fixed times that come back on weekdays, marked "(standing, …)") are listed with status "all", or alone with standing: true.', z.object({
     quadrant: z.number().int().min(1).max(4).optional(),
     project: z.string().optional().describe('A project id or name'),
     place: z.string().optional().describe('A place id or name, or "any"; includes steps that can be done anywhere'),
     status: z.enum(['open', 'done', 'dropped', 'all']).optional(),
+    standing: z.boolean().optional().describe('Only standing steps (with status, default open)'),
     due_from: day.optional(), due_to: day.optional(),
     text: z.string().optional().describe('Words that must all appear in the title, note or project name'),
     limit: z.number().int().min(1).max(50).optional(),
@@ -125,7 +129,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
       const f = a.place === 'any' || c.v.places.has(a.place) ? { id: a.place } : findByName(a.place, [...c.v.places.values()].map(p => ({ id: p.id, name: p.name })));
       if ('id' in f) ids.place = f.id; else throw unknown('place', a.place, '');
     }
-    return { text: queryText(c.v, { quadrant: a.quadrant, status: a.status, dueFrom: a.due_from, dueTo: a.due_to, text: a.text, limit: a.limit }, ids) };
+    return { text: queryText(c.v, { quadrant: a.quadrant, status: a.status, standing: a.standing, dueFrom: a.due_from, dueTo: a.due_to, text: a.text, limit: a.limit }, ids) };
   });
 
   tool('get_task', 'One step with everything on it, and its work sessions. The id, or its title.', z.object({ id: z.string() }), read, (c, { id }) => ({ text: taskText(c.v, task(c, id)) }));

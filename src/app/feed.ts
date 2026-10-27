@@ -21,6 +21,8 @@ export const FEED_AHEAD_DAYS = 45;
 export const FEED_DEBOUNCE_MS = 4000;
 /** An unchanged feed is still written this often, so the relay's 60-day clock (tick.ts) never runs out on a feed in use. */
 export const FEED_REFRESH_MS = 7 * 86_400_000;
+/** How often the feed asks a calendar app to fetch it again (apps that honour it: Outlook, Thunderbird, macOS; iOS follows its own Fetch setting). */
+export const FEED_REFRESH_HINT = 'PT15M';
 
 const K = { id: 'feed.id', secret: 'feed.secret', on: 'feed.on', hash: 'feed.hash', at: 'feed.at', old: 'feed.old' } as const;
 interface Old { fid: string; secret: string }
@@ -43,7 +45,7 @@ export const calData = (): CalData => ({ tasks: tasks.value, days: days.value, d
  */
 export function feedText(data: CalData, s: AgendaSettings, day: string, detail: FeedDetail, tr: IcsTranslate, now: number, appUrl = ''): string {
   const events = agenda(data, s, addDays(day, -FEED_PAST_DAYS), addDays(day, FEED_AHEAD_DAYS)).filter(exported);
-  return icsFor(events, { now, titles: fixedTitles({ detail, data, tr, appUrl, clockIn }), withAlarms: false, name: 'Réussite' });
+  return icsFor(events, { now, titles: fixedTitles({ detail, data, tr, appUrl, clockIn }), withAlarms: false, name: 'Réussite', refresh: FEED_REFRESH_HINT });
 }
 
 /** What makes two feeds the same: the text without its DTSTAMP lines (they change on every build). */

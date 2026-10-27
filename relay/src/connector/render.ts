@@ -40,10 +40,18 @@ export function chains(v: View): ChainIndex {
   if (!ix) { ix = chainIndex(v.tasks); chainsOf.set(v, ix); }
   return ix;
 }
-/** A step as a line; a chain's head says "+n after" and its chain's date, a step that waits says so. */
+const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** When a standing step comes back: "every day at 20:00", "Mon Thu at 19:00". */
+export function standingText(t: Pick<Task, 'weekdays' | 'at'>): string {
+  const w = Array.isArray(t.weekdays) ? [...new Set(t.weekdays.map(Number).filter(d => Number.isInteger(d) && d >= 1 && d <= 7))].sort() : [];
+  return (w.length === 7 ? 'every day' : w.length ? w.map(d => DOW[d - 1]).join(' ') : 'on no day') + (t.at ? ' at ' + t.at : '');
+}
+
+/** A step as a line; a chain's head says "+n after" and its chain's date, a step that waits says so, a standing step when it comes back. */
 export const line = (v: View, t: TaskW) => {
   const ix = chains(v), c = ix.chains.get(t.id);
-  return stepLine(t, v.data, c ? { after: c.after, due: c.due } : isWaiting(ix, t.id) ? 'waiting' : undefined);
+  const shown = t.template ? { ...t, title: `${t.title} (standing, ${standingText(t)})` } : t;
+  return stepLine(shown, v.data, c ? { after: c.after, due: c.due } : isWaiting(ix, t.id) ? 'waiting' : undefined);
 };
 export const lines = (v: View, ts: TaskW[], max = MAX_LINES) => ts.slice(0, max).map(t => line(v, t)).join('\n');
 
@@ -112,7 +120,8 @@ export function dayText(v: View, k: string): string {
 /** A chain's head with its chain's earliest due date when that comes first, for the quadrant. */
 const effective = (t: TaskW, ix: ChainIndex): TaskW => { const d = effectiveDue(ix, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
 
-export interface Query { quadrant?: number; project?: string; place?: string; status?: 'open' | 'done' | 'dropped' | 'all'; dueFrom?: string; dueTo?: string; text?: string; limit?: number }
+/** `standing`: only standing steps; `status: 'all'` includes them with the rest; otherwise they are left out. */
+export interface Query { quadrant?: number; project?: string; place?: string; status?: 'open' | 'done' | 'dropped' | 'all'; standing?: boolean; dueFrom?: string; dueTo?: string; text?: string; limit?: number }
 
 export function queryText(v: View, q: Query, ids: { project?: string; place?: string }): string {
   const status = q.status ?? 'open';
@@ -121,7 +130,7 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
   const ix = chains(v);
   let hidden = 0;
   const hit = [...v.tasks.values()].filter(t => {
-    if (t.template) return false;
+    if (q.standing ? !t.template : t.template && status !== 'all') return false;
     // A step that waits is under its head ("+n after"); naming words finds it anyway.
     if (!words.length && isWaiting(ix, t.id)) { if (status === 'open' || status === 'all') hidden++; return false; }
     if (status !== 'all' && t.status !== status) return false;
@@ -160,6 +169,8 @@ export function taskText(v: View, t: TaskW): string {
     f('quadrant', `Q${quadOf(t, d.today, d.urgencyDays)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
     f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}` : null),
+    f('standing', t.template ? `${standingText(t)}${t.lead != null ? `, leave ${mins(t.lead)} before` : ''}; drop it to end the series` : null),
+    f('copy of', t.from ? `${t.from} ${oneLine(v.tasks.get(t.from)?.title ?? '')}` : null),
     f('where', t.where && t.where !== 'any' ? v.places.get(t.where)?.name ?? t.where : null),
     f('label', t.label), f('starter', t.starter), f('resume', t.resume), f('note', t.note),
     f('app', t.app), f('link', t.link), f('prompt', t.prompt),

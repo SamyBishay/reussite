@@ -22,13 +22,22 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
 
   const line = (id: string) => stepLine(d.tasks.get(id)!, d);
   const open = [...d.tasks.values()].filter(t => t.status === 'open' && !t.template).map(t => ({ id: t.id, name: t.title }));
-  const anyTask = [...d.tasks.values()].filter(t => !t.template).map(t => ({ id: t.id, name: t.title }));
+  const standing = [...d.tasks.values()].filter(t => t.status === 'open' && t.template).map(t => ({ id: t.id, name: t.title }));
+  const anyTask = [...d.tasks.values()].map(t => ({ id: t.id, name: t.title }));
   const projects = [...d.projects.values()].map(p => ({ id: p.id, name: p.name }));
   const places = [...d.places.values()].map(p => ({ id: p.id, name: p.name }));
 
-  function pick(kind: 'step' | 'project' | 'place', value: string, ids: ReadonlyMap<string, unknown>, pool: Named[], strict = true): string {
+  function pick(kind: 'step' | 'project' | 'place', value: string, ids: ReadonlyMap<string, unknown>, pool: Named[], strict = true, op?: Change['op']): string {
     if (ids.has(value) || refs.has(value) || (kind === 'project' && value === 'inbox') || (kind === 'place' && value === 'any')) return value;
     let f = findByName(value, pool);
+    if ('none' in f && kind === 'step') {
+      // A standing step (the series itself) is named only to drop it: a tick would close the series, and a day takes its copy.
+      f = findByName(value, standing);
+      if ('id' in f && op !== 'task.drop') {
+        problems.push({ index: at, text: `"${value}" is a standing step (${f.id}) that comes back on its days. Drop the series with task.drop, or change the copy placed on a day.` });
+        return value;
+      }
+    }
     if ('none' in f && kind === 'step') f = findByName(value, anyTask); // maybe it's already done or dropped
     if ('id' in f) return f.id;
     if ('many' in f) {
@@ -40,6 +49,8 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
     return value;
   }
   const step = (v: string) => pick('step', v, d.tasks, open);
+  /** The step a done, drop or update names: a standing step's title is answered too (see `pick`). */
+  const one = (v: string, op: Change['op']) => pick('step', v, d.tasks, open, true, op);
   const project = (v: string) => pick('project', v, d.projects, projects);
   const place = (v: string) => pick('place', v, d.places, places);
 
@@ -65,8 +76,8 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
     at = i;
     switch (c.op) {
       case 'task.create': return { ...c, set: fixTask(c.set) };
-      case 'task.update': return { ...c, id: step(c.id), set: fixTask(c.set) };
-      case 'task.done': case 'task.drop': return { ...c, id: step(c.id) };
+      case 'task.update': return { ...c, id: one(c.id, c.op), set: fixTask(c.set) };
+      case 'task.done': case 'task.drop': return { ...c, id: one(c.id, c.op) };
       case 'task.reorder': return { ...c, ids: c.ids.map(step) };
       case 'project.create': return { ...c, set: c.set.where ? { ...c.set, where: place(c.set.where) } : c.set };
       case 'project.update': return { ...c, id: project(c.id), set: c.set.where ? { ...c.set, where: place(c.set.where) } : c.set };

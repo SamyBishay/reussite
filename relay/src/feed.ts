@@ -70,6 +70,7 @@ async function remove(req: Request, env: Env, fid: string): Promise<Response> {
   return json({ ok: true, deleted: 1 });
 }
 
+export const FEED_CACHE = 'no-cache';
 const text = (status: number) => new Response(null, { status, headers: { 'Cache-Control': 'no-store' } });
 
 /** `GET /cal/:fid.ics`: no sign-in, no CORS. Only misses are counted against the IP. */
@@ -81,8 +82,9 @@ export async function serveFeed(req: Request, env: Env, fid: string): Promise<Re
     return text(404);
   }
   const etag = '"' + b64uEncode(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(row.ics))).slice(0, 16)) + '"';
-  const headers = { ETag: etag, 'Cache-Control': 'max-age=900', 'Content-Type': 'text/calendar; charset=utf-8' };
+  // Revalidate on every fetch: an unchanged feed costs a 304, a changed one shows at the calendar's next refresh.
+  const headers = { ETag: etag, 'Cache-Control': FEED_CACHE, 'Content-Type': 'text/calendar; charset=utf-8' };
   const sent = req.headers.get('If-None-Match');
-  if (sent && sent.split(',').some(v => v.trim().replace(/^W\//, '') === etag)) return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': 'max-age=900' } });
+  if (sent && sent.split(',').some(v => v.trim().replace(/^W\//, '') === etag)) return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': FEED_CACHE } });
   return new Response(req.method === 'HEAD' ? null : row.ics, { headers });
 }

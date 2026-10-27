@@ -6,7 +6,7 @@ Files: `src/app/feed.ts` (build, hash, upload, switch), `src/app/CalendarSetting
 
 ## Content
 
-Fixed-time items only, from 7 days back to 45 days ahead (`agenda` filtered by `exported`, then `icsFor`): one-off items with `at` and standing items on their weekdays (a placed copy replaces the standing item's own event). No planned cards, no due steps and no all-day events; launch points, the check-in, the close and the review are not in the feed or in Add to calendar either: they stay in Today, the planner and the notifications. Done and dropped items are not events. No reminders in the feed (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job). Nothing depends on the clock, so the text (and its hash) changes only when the data does.
+Fixed-time items only, from 7 days back to 45 days ahead (`agenda` filtered by `exported`, then `icsFor`): one-off items with `at` and standing items on their weekdays (a placed copy replaces the standing item's own event). No planned cards, no due steps and no all-day events; launch points, the check-in, the close and the review are not in the feed or in Add to calendar either: they stay in Today, the planner and the notifications. Done and dropped items are not events. No reminders in the feed (`withAlarms: false`; calendar apps decide when to refresh, so reminders are notifications' job). The calendar asks to be fetched every 15 minutes (`REFRESH-INTERVAL` and `X-PUBLISHED-TTL`, `PT15M`): Outlook, Thunderbird and macOS honour it; iOS fetches subscribed calendars on its own schedule (Settings → Calendar → Accounts → Fetch New Data). Nothing depends on the clock, so the text (and its hash) changes only when the data does.
 
 What an event says is the synced setting `feedDetail`, three levels (`calItems.ts` builds the words, `ics.ts` only formats them):
 
@@ -24,6 +24,8 @@ The device makes a feed id (`fid`, 24 random bytes = 192 bits, base64url) and a 
 
 ## When the app uploads
 
+Only the device that made a feed can write it (the secret never leaves it), and only while the app runs there. A feed whose device is no longer used (the app reinstalled or its storage cleared, which makes a new device) is an orphan: it keeps its last text until the 60-day prune, and a calendar subscribed to it shows that text, done and dropped steps included. The cure is to subscribe to the address the device in use shows in Settings → Calendar.
+
 At start, when the page becomes visible, and 4 seconds after any change to the data or settings (an `effect` on the store's signals). A hash of the text without its `DTSTAMP` lines is kept after each successful upload; an unchanged hash sends nothing, except that a feed is written again when its last write is over a week old (`FEED_REFRESH_MS`), so the 60-day prune never reaches a feed in use.
 
 ## Relay endpoints
@@ -32,7 +34,7 @@ At start, when the page becomes visible, and 4 seconds after any change to the d
 | --- | --- |
 | `PUT /v1/feed/:fid` | Body: the calendar text (`text/calendar`), at most 256 KB, must start with `BEGIN:VCALENDAR` and end with `END:VCALENDAR`. Bearer write secret. 201 new, 200 update. CORS and origin check as for sync. |
 | `DELETE /v1/feed/:fid` | Bearer. 200 `{ok, deleted}`; an unknown feed is fine. |
-| `GET /cal/:fid.ics` | No secret, no CORS, no Origin check. `Content-Type: text/calendar; charset=utf-8`, `ETag` (a hash of the text), `Cache-Control: max-age=900`; 304 on a matching `If-None-Match`; 404 for an unknown address. |
+| `GET /cal/:fid.ics` | No secret, no CORS, no Origin check. `Content-Type: text/calendar; charset=utf-8`, `ETag` (a hash of the text), `Cache-Control: no-cache` (a calendar revalidates on every fetch; unchanged, it costs a 304); 304 on a matching `If-None-Match`; 404 for an unknown address. |
 
 **Limits** (per minute): 5 new feeds per IP; 20 writes per feed; 256 KB per write; a wrong secret also counts against the shared per-IP counter. `GET` counts only **misses**, 30 per IP, then 429: a real subscriber is never limited, a scan is. Tunable with `RATE_FEED_NEW_IP_PER_MIN`, `RATE_FEED_PUT_PER_MIN`, `RATE_FEED_MISS_PER_MIN`.
 

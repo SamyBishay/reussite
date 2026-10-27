@@ -86,7 +86,7 @@ describe('reading a feed', () => {
     expect(r.status).toBe(200);
     expect(r.text).toBe(ics());
     expect(r.headers.get('Content-Type')).toBe('text/calendar; charset=utf-8');
-    expect(r.headers.get('Cache-Control')).toBe('max-age=900');
+    expect(r.headers.get('Cache-Control')).toBe('no-cache');
     expect(r.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
@@ -100,6 +100,7 @@ describe('reading a feed', () => {
     expect(same.status).toBe(304);
     expect(same.text).toBe('');
     expect(same.headers.get('ETag')).toBe(etag);
+    expect(same.headers.get('Cache-Control')).toBe('no-cache');
     await put(f, ics('two'));
     const changed = await get(f.fid, { headers: { 'If-None-Match': etag } });
     expect(changed.status).toBe(200);

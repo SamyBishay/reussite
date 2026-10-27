@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES } from '../../src/sync/protocol';
-import { APP, blobOf, call, newSpace, push, url } from './helpers';
+import { APP, blobOf, call, newSpace, push, url, freshMinute } from './helpers';
 
 const count = async (table: string, space: string, col = 'space') => (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?`).bind(space).first<{ n: number }>())!.n;
 
@@ -230,6 +230,7 @@ describe('CORS', () => {
 });
 
 describe('rate limits', () => {
+  beforeEach(() => freshMinute());
   it('limits writes per space per minute', async () => {
     const k = await newSpace();
     const limit = { RATE_SPACE_PER_MIN: '3' };

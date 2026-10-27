@@ -31,10 +31,10 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
     if (ids.has(value) || refs.has(value) || (kind === 'project' && value === 'inbox') || (kind === 'place' && value === 'any')) return value;
     let f = findByName(value, pool);
     if ('none' in f && kind === 'step') {
-      // A standing step (the series itself) is named only to drop it: a tick would close the series, and a day takes its copy.
+      // A standing step (the series itself) is named to change or drop it; a tick would close the series for good, and a day takes its copy.
       f = findByName(value, standing);
-      if ('id' in f && op !== 'task.drop') {
-        problems.push({ index: at, text: `"${value}" is a standing step (${f.id}) that comes back on its days. Drop the series with task.drop, or change the copy placed on a day.` });
+      if ('id' in f && op !== 'task.drop' && op !== 'task.update') {
+        problems.push({ index: at, text: `"${value}" is a standing step (${f.id}) that comes back on its days. Tick the copy placed on the day instead, or end the series with task.drop.` });
         return value;
       }
     }

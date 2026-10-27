@@ -19,7 +19,7 @@ import { runTick } from './tick';
 
 const SYNC_ROUTE = /^\/v1\/spaces\/([^/]+)(?:\/(batches|changes|snapshot|devices|inbox)(?:\/([^/]+))?)?$/;
 const PUSH_ROUTE = /^\/v1\/push\/([^/]+)(?:\/(schedule|send))?$/;
-const FEED_ROUTE = /^\/v1\/feed\/([^/]+)$/;
+const FEED_ROUTE = /^\/v1\/feed\/([^/]+)(?:\/(alias))?$/;
 const CAL_ROUTE = /^\/cal\/([^/]+)\.ics$/;
 const CONNECTOR_ROUTE = /^\/v1\/spaces\/([^/]+)\/connector(?:\/(code))?$/;
 
@@ -43,7 +43,7 @@ export async function handle(req: Request, env: Env, deps?: Deps): Promise<Respo
     const origin = req.headers.get('Origin');
     if (origin && !originAllowed(origin, env)) return fail('origin_not_allowed', 403);
     if (req.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
-    if (feed) return withCors(await handleFeed(req, env, feed[1]!), origin);
+    if (feed) return withCors(await handleFeed(req, env, feed[1]!, feed[2]), origin);
     if (push) return withCors(await handlePush(req, env, push[1]!, push[2] ?? '', deps), origin);
     if (connector) return withCors(await handleConnector(req, env, connector[1]!, connector[2] ?? ''), origin);
     if (sync![2] === 'inbox') return withCors(await handleInbox(req, env, sync![1]!, sync![3]), origin);

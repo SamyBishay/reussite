@@ -13,7 +13,7 @@ import { openPlaces } from './PlacesSheet';
 import { view, go, fromHash, taskFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
-import { startSync } from './sync';
+import { lastSyncAt, startSync, syncNow, syncStale } from './sync';
 import { startFeed } from './feed';
 import { watchBigMoments } from './celebrate';
 import { startPush } from './push';
@@ -33,7 +33,7 @@ import { openVisit } from './AddressSheets';
 import { openBreakDown } from '../flows/breakdown';
 import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
-import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
+import { t, lang, locale, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { DropHost, InboxHost } from './Drop';
@@ -142,6 +142,22 @@ function Runbar() {
   }
   return <div id="runbar" />;
 }
+/** This device's copy is old and sync is not bringing it up to date: say what that means here and offer the fixes. */
+function SyncStaleBanner() {
+  if (!syncStale(clockNow.value)) return null;
+  const at = lastSyncAt.value;
+  const msg = at ? t('syncStale', { when: new Date(at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('syncStaleNever');
+  return (
+    <div class="banner warn" role="status" data-testid="sync-stale">
+      <p>{msg}</p>
+      <div class="actions">
+        <button class="btn small" type="button" data-testid="sync-stale-now" onClick={() => void syncNow()}>{t('syncNow')}</button>
+        <button class="btn small" type="button" onClick={() => go('settings')}>{t('syncStaleSettings')}</button>
+      </div>
+    </div>
+  );
+}
+
 function PlaceBanner() {
   if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
@@ -221,6 +237,7 @@ export function App() {
           <UpdateBanner />
           <PlaceBanner />
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
+          <SyncStaleBanner />
           {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
           {!bare && <Footer />}
         </main>

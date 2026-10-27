@@ -43,3 +43,25 @@ describe('one low-risk change', () => {
     expect(planChanges(c, snap(), gen).skippedAt).toEqual([1, 2]);
   });
 });
+
+describe('a standing obligation', () => {
+  const tpl = task('t9', { title: 'WhatsApp', template: true, weekdays: [1, 2, 3, 4, 5, 6, 7], at: '20:00', dur: 20 });
+  const plan = (changes: unknown[]) => { const s = snap(); (s.tasks as Map<string, unknown>).set('t9', tpl); return planChanges(cs(changes), s, gen); };
+
+  it('takes a new time, days or length, never as a low-risk change', () => {
+    const p = plan([{ op: 'task.update', id: 't9', set: { at: '21:00', weekdays: [1, 3], dur: 30 } }]);
+    expect(p.items).toHaveLength(1);
+    expect(p.items[0]!.diffs.map(d => d.field).sort()).toEqual(['at', 'dur', 'weekdays']);
+    const c = cs([{ op: 'task.update', id: 't9', set: { at: '21:00' } }]);
+    const s = snap(); (s.tasks as Map<string, unknown>).set('t9', tpl);
+    expect(isLowRisk(c, planChanges(c, s, gen))).toBe(false);
+  });
+
+  it('keeps its time and days, and takes no date', () => {
+    expect(plan([{ op: 'task.update', id: 't9', set: { at: null, weekdays: [], due: '2026-10-12' } }]).items).toHaveLength(0);
+  });
+
+  it('is dropped like any step, which ends the series', () => {
+    expect(plan([{ op: 'task.drop', id: 't9' }]).items[0]).toMatchObject({ kind: 'drop', title: 'WhatsApp' });
+  });
+});

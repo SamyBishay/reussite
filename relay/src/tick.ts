@@ -101,6 +101,7 @@ export async function prune(env: Env, now: number): Promise<void> {
     env.DB.prepare('DELETE FROM push_devices WHERE updated < ?1').bind(now - DEVICE_KEEP_MS),
     env.DB.prepare('DELETE FROM push_items WHERE at < ?1 AND at + ttl * 1000 < ?1').bind(now),
     env.DB.prepare('DELETE FROM push_items WHERE pid NOT IN (SELECT pid FROM push_devices)'),
-    env.DB.prepare('DELETE FROM feeds WHERE updated < ?1').bind(now - FEED_KEEP_MS),
+    // An alias lives as long as the feed it points at.
+    env.DB.prepare('DELETE FROM feeds WHERE updated < ?1 AND (alias IS NULL OR alias NOT IN (SELECT fid FROM feeds WHERE updated >= ?1))').bind(now - FEED_KEEP_MS),
   ]);
 }

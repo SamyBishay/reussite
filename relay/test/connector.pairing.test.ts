@@ -1,6 +1,7 @@
 // The /authorize page and the pairing code: who gets a token, and who doesn't.
 import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { freshMinute } from './helpers';
 import { CODE_ALPHABET, formatCode, newCode, normalizeCode } from '../src/connector/pairing';
 import { pickLang } from '../src/connector/authorize';
 import { beginAuthorize, exchange, newApp, register, rpc, signIn, submitAuthorize, switchOn, tool } from './connector';
@@ -140,6 +141,7 @@ describe('who gets a token', () => {
 });
 
 describe('rate limits', () => {
+  beforeEach(() => freshMinute());
   beforeEach(async () => { await env.DB.exec('DELETE FROM rate'); }); // the overall counter is shared by every sign-in this minute
   it('stop guessing: per address, and overall', async () => {
     const { clientId } = await register();

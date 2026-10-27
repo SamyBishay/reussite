@@ -5,8 +5,10 @@ import type { IcsTranslate } from '../domain/ics';
 import type { FeedDetail } from '../domain/calItems';
 import { withDefaults } from '../data/settings';
 import { getLocal } from '../data/db';
-import { FEED_REFRESH_MS, feedHash, feedId, feedOff, feedOn, feedText, regenerateFeed, uploadFeed } from './feed';
+import { fieldsOf } from '../data/doc';
+import { FEED_REFRESH_MS, feedHash, feedHeld, feedId, feedOff, feedOn, feedText, reconcileFeed, regenerateFeed, uploadFeed } from './feed';
 import { db, days, settings, tasks } from './store';
+import { lastSyncAt, resetSyncStart, STALE_SYNC_MS, SYNC_GRACE_MS, syncOn, syncStale } from './sync';
 
 const itr = tr as unknown as IcsTranslate;
 const world = state({ tasks: [choir()], days: [day('2026-10-26', { launches: [] })] });
@@ -134,5 +136,95 @@ describe('uploading', () => {
     expect(calls.length).toBe(n + 1);
     vi.useRealTimers();
     await feedOff();
+  });
+});
+
+describe('one feed for the list', () => {
+  const calls: { method: string; url: string; auth: string; body?: string }[] = [];
+  const RELAY = 'http://localhost:8787';
+  const stored = async () => { const d = await db.table('meta').get('settings'); return d ? (fieldsOf(d) as Record<string, unknown>).feedShared : undefined; };
+  const other = { fid: 'O'.repeat(32), secret: 'S'.repeat(43), app: 'https://app.example/', zone: 'Africa/Cairo' };
+  const setShared = (feedShared: unknown) => { settings.value = withDefaults({ relayUrl: RELAY, feedShared } as never); };
+  beforeAll(() => {
+    vi.stubGlobal('document', Object.assign(new EventTarget(), { visibilityState: 'visible' }));
+    vi.stubGlobal('fetch', async (url: string, init: RequestInit) => {
+      calls.push({ method: init.method!, url, auth: (init.headers as Record<string, string>).Authorization!, body: init.body as string | undefined });
+      return new Response('{}', { status: 200 });
+    });
+  });
+
+  it('switching on shares a new feed with the list: its id, secret, the app address and this device\'s zone', async () => {
+    setShared(null);
+    await feedOn();
+    const f = await stored() as Record<string, string>;
+    expect(f.fid).toBe(feedId.value);
+    expect(f.secret).toBe(await getLocal(db, 'feed.secret'));
+    expect(typeof f.zone).toBe('string');
+    await feedOff();
+    expect(await stored()).toBe('off');
+  });
+
+  it('a device with a feed of its own adopts the list\'s and points its old address at it', async () => {
+    setShared(null);
+    await feedOn();
+    const mine = feedId.value!, mySecret = (await getLocal<string>(db, 'feed.secret'))!;
+    setShared(other);
+    calls.length = 0;
+    await reconcileFeed();
+    expect(feedId.value).toBe(other.fid);
+    expect(await getLocal(db, 'feed.secret')).toBe(other.secret);
+    await uploadFeed();
+    const alias = calls.find(c => c.method === 'POST')!;
+    expect(alias).toMatchObject({ url: `${RELAY}/v1/feed/${mine}/alias`, auth: 'Bearer ' + mySecret });
+    expect(JSON.parse(alias.body!)).toEqual({ to: other.fid });
+    expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: `${RELAY}/v1/feed/${other.fid}`, auth: 'Bearer ' + other.secret });
+    expect(await getLocal(db, 'feed.alias')).toEqual([]);
+  });
+
+  it('a device that was off adopts the list\'s feed with no alias, and switches off when another device does', async () => {
+    setShared('off');
+    await reconcileFeed();
+    expect(feedId.value).toBeNull();
+    calls.length = 0;
+    setShared(other);
+    await reconcileFeed();
+    expect(feedId.value).toBe(other.fid);
+    setShared('off');
+    await reconcileFeed();
+    expect(feedId.value).toBeNull();
+    expect(calls.find(c => c.method === 'POST')).toBeUndefined();
+    expect(calls.at(-1)).toMatchObject({ method: 'DELETE', url: `${RELAY}/v1/feed/${other.fid}` });
+  });
+
+  it('a device whose sync has not caught up holds the upload back, then sends it after a sync', async () => {
+    setShared(other);
+    await reconcileFeed();
+    resetSyncStart(Date.now());
+    syncOn.value = true;
+    lastSyncAt.value = Date.now() - 2 * 86_400_000;
+    calls.length = 0;
+    await uploadFeed(true);
+    expect(calls).toHaveLength(0);
+    expect(feedHeld.value).toBe(true);
+    lastSyncAt.value = Date.now() + 1;
+    expect(feedHeld.value).toBe(false);
+    await uploadFeed(true);
+    expect(calls.at(-1)).toMatchObject({ method: 'PUT', url: `${RELAY}/v1/feed/${other.fid}` });
+    syncOn.value = false;
+  });
+
+  it('asks the person to act only when sync has had its chance and the copy is hours old', () => {
+    const t0 = Date.now();
+    resetSyncStart(t0);
+    syncOn.value = true;
+    lastSyncAt.value = t0 - STALE_SYNC_MS - 60_000;
+    expect(syncStale(t0 + 1000)).toBe(false); // the first round is still running
+    expect(syncStale(t0 + SYNC_GRACE_MS + 1000)).toBe(true);
+    lastSyncAt.value = t0 - 3600_000;
+    expect(syncStale(t0 + SYNC_GRACE_MS + 1000)).toBe(false); // an hour old: not worth a word
+    lastSyncAt.value = t0 + 5000;
+    expect(syncStale(t0 + SYNC_GRACE_MS + 1000)).toBe(false); // synced since the start
+    syncOn.value = false;
+    lastSyncAt.value = null;
   });
 });

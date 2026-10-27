@@ -16,6 +16,7 @@ import { describe } from './render';
 import { resolveChanges } from './resolve';
 import type { View } from './view';
 import { docWriter, newId } from './writer';
+import { refreshFeed } from './feed';
 
 export const PENDING_MS = 60 * 60_000;
 const UNDO_KEEP_MS = 30 * 24 * 3600_000;
@@ -128,6 +129,7 @@ async function commit(c: Ctx, plan: Plan, how: string, notes: string[]): Promise
   const lines = plan.items.map(it => describe(it, c.v));
   const seq = await edits.flush(c.env);
   if (seq === null) return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
+  await refreshFeed(c.env, c.s).catch(() => false); // the calendar follows; a failure leaves it to the next device that opens
 
   const undoId = rid('u');
   const now = Date.now();
@@ -170,6 +172,7 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
   if (!edits.empty) {
     const seq = await edits.flush(c.env);
     if (seq === null) return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
+    await refreshFeed(c.env, c.s).catch(() => false);
   }
   await c.env.DB.prepare('DELETE FROM connector_undo WHERE id = ?1').bind(id).run();
   return { text: lines.length ? ['Undone.', ...lines].join('\n') : 'Nothing to put back: everything it touched has changed since.' };

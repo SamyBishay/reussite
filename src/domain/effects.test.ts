@@ -61,10 +61,11 @@ describe('repeats, projects and stays', () => {
 });
 
 describe('read rules on plain data', () => {
-  const tasks = new Map([base('t1'), base('t2', { status: 'done' }), base('t3', { at: '09:00', due: '2026-10-19' }), base('t4', { status: 'dropped' })].map(t => [t.id, t]));
+  const tasks = new Map([base('t1'), base('t2', { status: 'done', doneDay: '2026-10-18' }), base('t3', { at: '09:00', due: '2026-10-19' }), base('t4', { status: 'dropped' })].map(t => [t.id, t]));
   const days = new Map([['2026-10-18', { id: '2026-10-18', date: '2026-10-18', plan: ['t1', 't2', 't4', 'gone'] }], ['2026-10-19', { id: '2026-10-19', date: '2026-10-19', plan: ['t2'] }]]) as never;
   it('lists a day without dropped or missing steps, and what carries over', () => {
     expect(planOf({ days, tasks }, '2026-10-18')).toEqual(['t1', 't2']);
+    expect(planOf({ days, tasks }, '2026-10-19')).toEqual([]); // done on the 18th, whose list holds it: one list only
     expect(yesterdayOpen({ days, tasks }, '2026-10-19', '2026-10-18')).toEqual(['t1']);
     expect(fixedOn({ days, tasks }, '2026-10-19').map(t => t.id)).toEqual(['t3']);
     expect(isOpen(tasks.get('t2'))).toBe(false);

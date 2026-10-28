@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayCards, inPlace, isObligation, type TaskW } from './lists';
+import { dayCards, inPlace, isObligation, ownerDay, planOf, releaseFrom, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
 
@@ -45,5 +45,36 @@ describe('dayCards', () => {
   it('never repeats a card, and leaves out other days’, dropped and standing items', () => {
     const d = data(['choir'], [step('choir', { at: '10:30', due: k }), step('x', { at: '08:00', due: '2026-10-25' }), step('y', { at: '08:00', due: k, status: 'dropped' }), step('z', { at: '08:00', due: k, template: true })]);
     expect(dayCards(d, k)).toEqual(['choir']);
+  });
+});
+
+describe('one list per card', () => {
+  const y = '2026-10-23', k = '2026-10-24', n = '2026-10-25';
+  const step = (id: string, o: Partial<TaskW> = {}) => tk(id, { status: 'open', ...o } as Partial<TaskW>);
+  const data = (plans: Record<string, string[]>, ts: TaskW[]) => ({ days: new Map(Object.entries(plans).map(([d, plan]) => [d, { plan } as never])), tasks: new Map(ts.map(x => [x.id, x])) });
+  it('a card on two lists shows on the latest only', () => {
+    const d = data({ [y]: ['a', 'b'], [k]: ['a'] }, [step('a'), step('b')]);
+    expect(ownerDay(d, 'a')).toBe(k);
+    expect(planOf(d, y)).toEqual(['b']);
+    expect(planOf(d, k)).toEqual(['a']);
+    expect(ownerDay(d, 'zz')).toBeUndefined();
+  });
+  it('a done card belongs to the day it was done on, when that list holds it', () => {
+    const done = (doneDay: string) => step('a', { status: 'done', doneDay } as Partial<TaskW>);
+    expect(planOf(data({ [y]: ['a'], [k]: ['a'] }, [done(k)]), y)).toEqual([]);
+    expect(planOf(data({ [y]: ['a'], [k]: ['a'] }, [done(k)]), k)).toEqual(['a']);
+    expect(planOf(data({ [y]: ['a'], [k]: ['a'] }, [done(y)]), y)).toEqual(['a']);
+    expect(planOf(data({ [y]: ['a'], [k]: ['a'] }, [done(y)]), k)).toEqual([]);
+    // Done on a day whose list does not hold it: the latest list that does.
+    expect(planOf(data({ [y]: ['a'], [k]: ['a'] }, [done(n)]), k)).toEqual(['a']);
+  });
+  it('yesterday does not offer a card that a later list holds', () => {
+    const d = data({ [y]: ['a', 'b'], [n]: ['a'] }, [step('a'), step('b')]);
+    expect(yesterdayOpen(d, k, y)).toEqual(['b']);
+  });
+  it('releaseFrom: the other lists holding the cards, without them', () => {
+    const days: [string, { plan: string[] }][] = [[y, { plan: ['a', 'b'] }], [k, { plan: ['a'] }], [n, { plan: ['c'] }]];
+    expect(releaseFrom(days, k, ['a'])).toEqual([[y, ['b']]]);
+    expect(releaseFrom(days, k, [])).toEqual([]);
   });
 });

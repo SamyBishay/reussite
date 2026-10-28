@@ -3,6 +3,7 @@
 import { More } from '../app/More';
 import { useState } from 'preact/hooks';
 import { today, settings, tasks, here, days, places, stays, decisions, createDoc } from '../app/store';
+import { yesterdayOpen } from '../domain/lists';
 import { areaOfStep } from '../app/areas';
 import { areaName, placeName } from '../app/sheets';
 import { areasOnPage, HALF_DAY_AT, type Half, type HalfDay } from '../domain/areas';
@@ -73,7 +74,7 @@ interface FixedIn { title: string; at: string; dur: number }
 function Checkin() {
   const k = today.value, y = addDays(k, -1);
   const [started] = useState(() => Date.now());
-  const yOpen = rawPlan(y).map(id => T(id)).filter(isOpen).filter(x => !rawPlan(k).includes(x.id));
+  const yOpen = yesterdayOpen({ days: days.value, tasks: tasks.value }, k, y).map(id => T(id)).filter(isOpen); // not those a later list holds
   const [screen, setScreen] = useState<Screen>(yOpen.length ? 'yesterday' : 'shape');
   const [ticked, setTicked] = useState<Record<string, number | null>>({});
   const [heavy, setHeavy] = useState<string[]>([]);
@@ -100,7 +101,7 @@ function Checkin() {
   const yesterdayDone = async () => {
     for (const x of yOpen) if (x.id in ticked) await finishTask(x, ticked[x.id] ?? null, y);
     const rest = yOpen.filter(x => !(x.id in ticked));
-    await carry(rest.map(x => x.id), k);
+    await carry(rest.map(x => x.id), k, false); // they leave yesterday's list only if the plan keeps them
     const h = rest.filter(x => (x.carried || 0) + 1 >= 3).map(x => x.id);
     setHeavy(h);
     setScreen(h.length ? 'carry' : 'shape');
@@ -261,7 +262,7 @@ function Checkin() {
       plan: finalPlan, launches: p.launches, checkin: new Date().toISOString(), shape: { start, preset }, optional,
       ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}),
       first: first ? { id: first, title: T(first)?.title ?? '' } : null, load: p.total.est,
-    });
+    }, plan); // what the plan puts on the day leaves any other day's list (a card is on one list)
     closeSheet();
   };
 

@@ -11,7 +11,7 @@ In this order, the first that applies:
 1. **A fixed time is near.** Shortly before you need to leave, it takes over and says "leave at…".
 2. **A timer is running.** You see the step, the clock, **Pause** and **Done**.
 3. **The day is closed.** You see tomorrow's first step.
-4. **There is a next step.** You see **Start here**, the starter and **Start**.
+4. **There is a next step.** You see **Start here**, the starter and **Start**. **Drop it** drops the step if it no longer matters: tap it twice.
 5. **Nothing is planned yet.** You see **Plan the day**.
 
 Home has no counts, no list and no streaks. What waits for you is not in the way: a small **bell** at the top shows a quiet dot when something is waiting, and opens the **Notifications** page.

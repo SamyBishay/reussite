@@ -19,3 +19,21 @@ test('a dropped card leaves every list, waits in the Cemetery, and Restore bring
   await expect(page.getByTestId('cemetery-row').filter({ hasText: 'Buried errand' })).toHaveCount(0);
   await expect(page.locator('[data-task]', { hasText: 'Buried errand' }).first()).toBeVisible();
 });
+
+test('Start here drops its card on a second tap, on Today and on Home', async ({ page }) => {
+  await importSample(page);
+  await addCard(page, 'Dull errand');
+  const first = page.getByTestId('first');
+  await expect(first).toContainText('Dull errand');
+  await first.getByTestId('drop').click();
+  await expect(first.getByTestId('drop')).toHaveText('Tap again to drop it');
+  await first.getByTestId('drop').click();
+  await expect(page.locator('[data-task]', { hasText: 'Dull errand' })).toHaveCount(0);
+
+  await goTab(page, 'home');
+  const next = page.getByTestId('greeting-next');
+  const title = (await next.getByTestId('greeting-step').innerText()).trim();
+  await next.getByTestId('drop').click();
+  await next.getByTestId('drop').click();
+  await expect(next).not.toContainText(title);
+});

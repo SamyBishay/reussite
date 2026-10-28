@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, clockNow } from '../app/store';
 import { T, dayDoc, greetingNow, planEst } from '../app/model';
 import { openSheet, closeSheet, Title, Est } from '../app/ui';
-import { openPause, openDone, DurationPicker } from '../app/sheets';
+import { openPause, openDone, DurationPicker, DropButton } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
 import { openNewAddress } from '../app/AddressSheets';
 import { addressesOn } from '../app/model';
@@ -49,6 +49,7 @@ function Step({ id }: { id: string }) {
       <p class="t" data-testid="greeting-step">{tk.starter ? tk.starter + ' → ' : ''}<Title s={tk.title} /></p>
       <p class="meta"><Est tk={tk} /></p>
       <div class="go"><button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button></div>
+      <div class="go quiet"><DropButton key={tk.id} tk={tk} /></div>
     </>
   );
 }

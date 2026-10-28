@@ -11,7 +11,7 @@ Dans cet ordre, le premier cas qui s’applique :
 1. **Une heure fixe approche.** Peu avant que vous deviez partir, elle prend le dessus et dit « partir à… ».
 2. **Un chrono tourne.** Vous voyez l’étape, l’horloge, **Pause** et **Fait**.
 3. **La journée est close.** Vous voyez la première étape de demain.
-4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**.
+4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
 5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**.
 
 L’accueil n’a ni compteurs, ni liste, ni séries. Ce qui vous attend ne gêne pas : une petite **cloche** en haut montre un point discret quand quelque chose attend, et ouvre la page **Notifications**.

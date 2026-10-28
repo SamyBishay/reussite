@@ -293,6 +293,16 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 
 // ---------- the task sheet ----------
 /** `moveMode` 'calendar': from the Calendar, the sheet's Move to… offers "Plan it on…" and "Due on…" in place of the quadrants. */
+/** Drop a step, on a second tap: the step's sheet and the Start here cards. */
+export function DropButton({ tk, onDrop }: { tk: Tk; onDrop?: () => void }) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button class="btn ghost small" type="button" data-testid="drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id); onDrop?.(); toast(t('dropped')); }}>
+      {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
+    </button>
+  );
+}
+
 export function openTask(id: string, moveMode: 'matrix' | 'calendar' = 'matrix') {
   openSheet(<TaskSheet key={id + Date.now()} id={id} moveMode={moveMode} />);
 }
@@ -405,7 +415,6 @@ function TaskSheet({ id, moveMode }: { id: string; moveMode: 'matrix' | 'calenda
 /** The sheet's body. A `draft` is a step not yet written: the same form, and Save creates it. */
 function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void; moveMode?: 'matrix' | 'calendar' }) {
   const id = tk.id;
-  const [armed, setArmed] = useState(false);
   const [estV, setEstV] = useState(tk.est ? String(tk.est) : '');
   const [where, setWhere] = useState(whereOf(tk));
   const [after, setAfter] = useState<string[]>(Array.isArray(tk.after) ? tk.after : tk.after ? [String(tk.after)] : []);
@@ -553,9 +562,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           </>
         )}
         {tk.status !== 'dropped' && !draft && (
-          <button class="btn ghost small" type="button" onClick={() => { if (!armed) return setArmed(true); void dropTask(id); closeSheet(); toast(t('dropped')); }}>
-            {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
-          </button>
+          <DropButton tk={tk} onDrop={closeSheet} />
         )}
       </div>
       <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>

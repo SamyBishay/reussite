@@ -4,7 +4,7 @@ import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
 import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, startHereOf, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
-import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
+import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
@@ -89,6 +89,7 @@ function FirstCard({ tk }: { tk: Tk }) {
       <div class="go quiet">
         {!run && <button class="btn small ghost" type="button" onClick={() => openStartedEarlier(tk.id)}>{t('startedEarlier')}</button>}
         <button class="btn small ghost" type="button" onClick={() => flows.stuck(tk.id)} data-testid="stuck">{t('imStuck')}</button>
+        {!run && <DropButton key={tk.id} tk={tk} />}
       </div>
       {!run && hasGo && <p class="hint">{t('openingStartsTimer')}</p>}
     </section>
@@ -111,7 +112,10 @@ function SuggestCard({ tk, played }: { tk: Tk; played: boolean }) {
         <button class="btn" type="button" onClick={() => addToday(tk.id)}>{t('putFirst')}</button>
         <button class="btn" type="button" onClick={() => openPick('list')}>{t('chooseFromList')}</button>
       </div>
-      {!played && <div class="go quiet"><button class="btn small ghost" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>}
+      <div class="go quiet">
+        {!played && <button class="btn small ghost" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button>}
+        <DropButton key={tk.id} tk={tk} />
+      </div>
     </section>
   );
 }

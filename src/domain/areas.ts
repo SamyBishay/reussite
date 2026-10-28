@@ -41,7 +41,8 @@ export const areasOnPage = (places: PlaceMap, page: string): string[] => placeAn
 export const areaOf = (places: PlaceMap, where: string): string | null => (isArea(places, where) ? where : null);
 
 /** Whether something set to `where` shows when the page is narrowed to `area`: that area's own, and Anywhere (the base layer). */
-export const inArea = (where: string, area: string | null): boolean => !area || where === 'any' || where === area;
+/** With `exclusive` (the Matrix), only the area's own steps: Anywhere's are left out. */
+export const inArea = (where: string, area: string | null, exclusive = false): boolean => !area || (!exclusive && where === 'any') || where === area;
 
 /** The filter to use on a page: the chosen area if the page still has it, else none. */
 export const activeArea = (places: PlaceMap, page: string, chosen: string | null | undefined): string | null =>

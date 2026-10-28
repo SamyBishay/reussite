@@ -22,8 +22,8 @@ export function toggleArea(view: AreaView, id: string): void {
   chosen.value = next;
 }
 
-/** Whether a step shows in the view under its area filter (the area's own and Anywhere); with no filter, always. */
-export const showsInArea = (view: AreaView, tk: T): boolean => inArea(whereOf(tk), areaFilter(view));
+/** Whether a step shows in the view under its area filter (the area's own and Anywhere; the Matrix: the area's own only); with no filter, always. */
+export const showsInArea = (view: AreaView, tk: T): boolean => inArea(whereOf(tk), areaFilter(view), view === 'matrix');
 
 /** The area a step is set to (its own place, else its project's), if it is set to one. */
 export const areaOfStep = (tk: T): string | null => areaOf(places.value, whereOf(tk));

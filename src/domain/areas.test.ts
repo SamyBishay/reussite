@@ -33,6 +33,10 @@ describe('areas in use', () => {
     expect(inArea('cairo', 'heli')).toBe(false);
     expect(inArea('maadi', 'heli')).toBe(false);
     expect(inArea('cairo', null)).toBe(true);
+    expect(inArea('any', 'heli', true)).toBe(false);
+    expect(inArea('heli', 'heli', true)).toBe(true);
+    expect(inArea('cairo', 'heli', true)).toBe(false);
+    expect(inArea('any', null, true)).toBe(true);
   });
 
   it('a filter on an area the page no longer has is no filter', () => {

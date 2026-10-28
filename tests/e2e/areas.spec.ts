@@ -54,6 +54,7 @@ test('an area is made under a place, offered in the place field, and one tap nar
   await page.getByTestId('area-chips').getByRole('button', { name: 'Heliopolis' }).click();
   await expect(page.locator('.matrix')).not.toContainText('Renew the visa');
   await expect(page.locator('.matrix')).toContainText('Fix the shutters');
+  await expect(page.locator('.matrix')).not.toContainText('Call the bank');
   await goTab(page, 'today');
   await expect(main).toContainText('Renew the visa');
   await goTab(page, 'matrix');

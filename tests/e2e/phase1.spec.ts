@@ -34,6 +34,13 @@ test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page
   await expect(sheet(page)).toBeHidden();
   await expect(page.locator('.tableau')).toContainText('Plan the day');
   await expect(page.getByTestId('first')).toBeVisible();
+  // A card is on one day's list: yesterday's open card is on today's or still on yesterday's, never both.
+  const onToday = await page.locator('main').getByText('text Alex').count();
+  await page.getByTestId('prev-day').click();
+  await expect(page.getByTestId('prev-day')).toBeVisible();
+  await expect(page.locator('main')).toContainText('September statement'); // yesterday's view is showing
+  const onYesterday = await page.locator('main').getByText('text Alex').count();
+  expect(onToday + onYesterday).toBe(1);
 });
 
 test('moving a step into Now asks for a due date, then moves it', async ({ page }) => {

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { applyUndo, createDoc, db, exchanges, memory, projects, recordWrites, removeDoc, start, tasks, update } from './store';
-import { finishTask } from './actions';
+import { applyUndo, createDoc, db, exchanges, memory, projects, days, recordWrites, removeDoc, start, tasks, update } from './store';
+import { carry, finishTask, setFirst } from './actions';
 import { newTaskFields } from '../domain/effects';
 
 describe('memory and exchanges in the store', () => {
@@ -68,5 +68,25 @@ describe('recording writes for Undo', () => {
     await settle();
     expect(r.kept).toBe(1);
     expect(memory.value.get('mz')).toMatchObject({ name: 'Zed Q', updated: '' });
+  });
+});
+
+describe('one list per card', () => {
+  it('a card put on a day’s list leaves every other day’s, and nothing else moves', async () => {
+    await start();
+    const now = new Date().toISOString();
+    for (const id of ['oa', 'ob']) await createDoc('tasks', newTaskFields(id, 'C', null, {}, new Map(), now, 1), id);
+    await createDoc('days', { date: '2030-01-01', plan: ['oa', 'ob'], launches: [] }, '2030-01-01');
+    await createDoc('days', { date: '2030-01-03', plan: ['oa'], launches: [] }, '2030-01-03');
+    await settle();
+    await carry(['oa'], '2030-01-02');
+    await settle();
+    expect(days.value.get('2030-01-01')!.plan).toEqual(['ob']);
+    expect(days.value.get('2030-01-03')!.plan).toEqual([]);
+    expect(days.value.get('2030-01-02')!.plan).toEqual(['oa']);
+    await setFirst('ob', '2030-01-02');
+    await settle();
+    expect(days.value.get('2030-01-01')!.plan).toEqual([]);
+    expect(days.value.get('2030-01-02')!.plan).toEqual(['ob', 'oa']);
   });
 });

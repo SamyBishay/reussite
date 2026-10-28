@@ -58,14 +58,42 @@ export function byPriority(a: TaskW, b: TaskW, d: Pick<Data, 'today' | 'urgencyD
 }
 
 export const rawPlan = (days: ReadonlyMap<string, Pick<Day, 'plan'>>, k: DayKey): string[] => (Array.isArray(days.get(k)?.plan) ? [...days.get(k)!.plan] : []);
-/** A day's list without steps that no longer exist or were dropped. */
-export const planOf = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey) => rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped');
+const onPlan = (days: ReadonlyMap<string, Pick<Day, 'plan'>>, k: DayKey, id: string) => { const p = days.get(k)?.plan; return Array.isArray(p) && p.includes(id); };
+const latest = new WeakMap<object, Map<string, DayKey>>();
+/** For each step on some day's list, the latest day whose list holds it; built once per days map. */
+function latestPlanDay(days: ReadonlyMap<string, Pick<Day, 'plan'>>): Map<string, DayKey> {
+  let m = latest.get(days);
+  if (m) return m;
+  m = new Map();
+  for (const [k, d] of days) if (Array.isArray(d.plan)) for (const id of d.plan) { const c = m.get(id); if (!c || k > c) m.set(id, k); }
+  latest.set(days, m);
+  return m;
+}
+/**
+ * A card is on one day's list at most. Lists written before that rule may hold it on several days; the one that
+ * owns it is the day it was done on, when that day's list holds it, else the latest day whose list holds it.
+ * Undefined when no list holds it.
+ */
+export function ownerDay(d: Pick<Data, 'days' | 'tasks'>, id: string): DayKey | undefined {
+  const t = d.tasks.get(id);
+  if (t?.status === 'done' && t.doneDay && onPlan(d.days, t.doneDay, id)) return t.doneDay;
+  return latestPlanDay(d.days).get(id);
+}
+/** The other days whose lists hold `ids` once they are on `k`'s: each with its list without them (a card is on one list). */
+export function releaseFrom(days: Iterable<[string, Pick<Day, 'plan'>]>, k: DayKey, ids: Iterable<string>): [DayKey, string[]][] {
+  const take = new Set(ids);
+  if (!take.size) return [];
+  const out: [DayKey, string[]][] = [];
+  for (const [k2, d] of days) if (k2 !== k && Array.isArray(d.plan) && d.plan.some(x => take.has(x))) out.push([k2, d.plan.filter(x => !take.has(x))]);
+  return out;
+}
+/** A day's list without steps that no longer exist or were dropped, or that another day's list owns. */
+export const planOf = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey) => rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped' && ownerDay(d, id) === k);
 
 /** Fixed-time items on a day: commitments and timed steps due that day, and timed steps on its
  *  list with no due date (copies of timed standing items saved before they were given one). */
 export const fixedOn = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): TaskW[] => {
-  const plan = new Set(rawPlan(d.days, k));
-  return [...d.tasks.values()].filter(t => t.at && (t.due === k || (!t.due && plan.has(t.id))) && t.status !== 'dropped' && !t.template)
+  return [...d.tasks.values()].filter(t => t.at && (t.due === k || (!t.due && ownerDay(d, t.id) === k)) && t.status !== 'dropped' && !t.template)
     .sort((a, b) => String(a.at).localeCompare(String(b.at)));
 };
 
@@ -87,7 +115,7 @@ export const dayCards = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): string[] =
 /** Steps on yesterday's list still open and not on `k`'s list. */
 export const yesterdayOpen = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey, prev: DayKey) => {
   const plan = rawPlan(d.days, k);
-  return rawPlan(d.days, prev).filter(id => isOpen(d.tasks.get(id)) && !plan.includes(id));
+  return rawPlan(d.days, prev).filter(id => isOpen(d.tasks.get(id)) && !plan.includes(id) && ownerDay(d, id) === prev);
 };
 
 /** Decisions whose check date has come. */

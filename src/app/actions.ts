@@ -9,6 +9,7 @@ import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
 import { parentProblem } from '../domain/places';
 import { nextHeads } from '../domain/chains';
+import { releaseFrom, yesterdayOpen } from '../domain/lists';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
@@ -20,7 +21,15 @@ export const newTaskDoc = (title: string, suit: Task['suit'] | null, project: st
 export const createTask = (doc: Task) => createDoc('tasks', doc);
 export const patchTask = (id: string, p: Partial<Task>) => update<Task>('tasks', id, p);
 
-export async function dayPatch(k: string, p: Partial<Day>) {
+/**
+ * A day's fields. A step that joins its list leaves any other day's (a card is on one list: src/domain/lists.ts).
+ * `claim`, when given, is the steps to take off other days' lists instead of the ones that join.
+ */
+export async function dayPatch(k: string, p: Partial<Day>, claim?: string[]) {
+  if (Array.isArray(p.plan) || claim) {
+    const had = new Set(rawPlan(k));
+    for (const [k2, plan] of releaseFrom(days.value, k, claim ?? p.plan!.filter(id => !had.has(id)))) await update<Day>('days', k2, { plan });
+  }
   if (days.value.has(k)) return update<Day>('days', k, p);
   return upsert<Day>('days', k, { date: k, plan: [], launches: [], first: null, checkin: null, closed: null, summary: null, ...p });
 }
@@ -170,11 +179,8 @@ export async function movePlan(id: string, dir: -1 | 1, k = today.value) {
   [p[i], p[j]] = [p[j]!, p[i]!];
   await dayPatch(k, { plan: p });
 }
-/** "Plan it on…": put a step on a day's list (and off any other future day's). */
-export async function planOn(id: string, k: string) {
-  for (const d of days.value.values()) if (d.date !== k && d.date >= today.value && d.plan?.includes(id)) await dayPatch(d.date, { plan: d.plan.filter(x => x !== id) });
-  await addToday(id, true, k);
-}
+/** "Plan it on…": put a step on a day's list (and so off any other day's). */
+export const planOn = (id: string, k: string) => addToday(id, true, k);
 export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, dueRule: null });
 /**
  * A fixed-time step moved on the calendar's hour grid: to a day and a time. One with a due date is due that day;
@@ -210,12 +216,15 @@ export async function carryOver() {
   await carry(add, k);
   toast(t('carried', { n: add.length }));
 }
-const yesterdayCarry = (k: string) => rawPlan(addDays(k, -1)).filter(id => isOpen(T(id)) && !rawPlan(k).includes(id));
-/** Carry steps to a day's list; each carry counts (at 3, the step is too big or hides a decision). */
-export async function carry(ids: string[], k = today.value) {
+const yesterdayCarry = (k: string) => yesterdayOpen({ days: days.value, tasks: tasks.value }, k, addDays(k, -1));
+/**
+ * Carry steps to a day's list; each carry counts (at 3, the step is too big or hides a decision). `release` false
+ * leaves them on the list they come from too, for a flow that writes the day's final list itself (the check-in).
+ */
+export async function carry(ids: string[], k = today.value, release = true) {
   const plan = rawPlan(k);
   const add = ids.filter(id => !plan.includes(id));
-  if (add.length) await dayPatch(k, { plan: plan.concat(add) });
+  if (add.length) await dayPatch(k, { plan: plan.concat(add) }, release ? undefined : []);
   for (const id of add) await patchTask(id, { carried: (T(id)!.carried || 0) + 1 });
 }
 export async function setFirst(id: string, k = today.value) {

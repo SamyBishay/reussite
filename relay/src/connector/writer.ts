@@ -5,6 +5,7 @@ import type { Writer } from '../../../src/ai/apply';
 import type { Collection, Day, Project, Session, Stay, Task } from '../../../src/data/schema';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../../../src/domain/effects';
 import { seenAfter } from '../../../src/domain/offers';
+import { releaseFrom } from '../../../src/domain/lists';
 import type { Edits } from './space';
 import type { View } from './view';
 
@@ -21,7 +22,13 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
   const liveTasks = (): Iterable<TaskDoc> => e.live('tasks') as unknown as Iterable<TaskDoc>;
   const task = (id: string) => e.get('tasks', id) as unknown as TaskDoc | undefined;
   const create = (c: Collection, fields: object, id = newId(c[0]!)) => { e.createDoc(c, id, fields); made.push({ collection: c, id }); return id; };
+  // A step that joins a day's list leaves any other day's (a card is on one list), as in the app's dayPatch.
   const dayPatch = (k: string, p: Partial<Day>) => {
+    if (Array.isArray(p.plan)) {
+      const cur = e.get('days', k)?.plan, had = new Set(Array.isArray(cur) ? (cur as string[]) : []);
+      const others = [...e.live('days')].map(d => [d.id, d as unknown as Day] as [string, Day]);
+      for (const [k2, plan] of releaseFrom(others, k, p.plan.filter(id => !had.has(id)))) e.update('days', k2, { plan });
+    }
     if (e.get('days', k)) e.update('days', k, p);
     else create('days', { date: k, plan: [], launches: [], first: null, checkin: null, closed: null, summary: null, ...p }, k);
   };

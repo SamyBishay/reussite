@@ -29,7 +29,7 @@ If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date
 - Filter by project or suit, or search your steps.
 - **In Home** shows this place's steps and the ones marked Anywhere. **Everything** shows all.
 - Change a due date wherever a step appears.
-- If your place has **areas**, a row of chips narrows the matrix to one area (and Anywhere). Tap the chip again to clear it. **Group by area** sorts each quadrant by area. The choice lasts until you close the app.
+- If your place has **areas**, a row of chips narrows the matrix to the steps set to that area alone (not the place's own, not Anywhere's). Tap the chip again to clear it. **Group by area** sorts each quadrant by area. The choice lasts until you close the app.
 - A step that waits for another shows once, as one card: the first step, with "+2 after" under its title. Tap it to unfold the rest, greyed. When the first is done, the next takes its place.
 
 ![A chain, unfolded under its first step](shot:chain)

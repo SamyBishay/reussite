@@ -37,3 +37,5 @@ Your decisions are listed under the projects, grouped as **To check**, **Open**,
 ## Places
 
 A project can belong to a place, or to Anywhere. See [Places and trips](places-and-trips.md).
+
+To start a project, tap the round **+** button on Projects: give it a name and a suit (the place is under **More**). Finished projects are folded away under **Closed**; tap it to open the list.

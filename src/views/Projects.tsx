@@ -9,7 +9,7 @@ import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
 import { SmartEditor, smartFilled } from '../app/smart';
-import { More, countSet } from '../app/More';
+import { More, Fold, countSet } from '../app/More';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
 import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
@@ -145,6 +145,11 @@ function ProjectSheet({ id }: { id: string }) {
   );
 }
 
+/** The sheet the round plus opens on Projects: a name, a suit and a place. */
+export function openNewProject() {
+  openSheet(<NewProject />);
+}
+
 function NewProject() {
   const [where, setWhere] = useState('any');
   const submit = async (e: Event) => {
@@ -153,21 +158,21 @@ function NewProject() {
     const name = (f.elements.namedItem('name') as HTMLInputElement).value.trim();
     if (!name) return;
     const suit = (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'];
-    f.reset();
     const id = await createDoc<Project>('projects', { name, suit, where, goal: null, goalBy: null, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
     openProj.add(id);
+    closeSheet();
     toast(t('projectAdded'));
   };
   return (
     <form class="newproj" onSubmit={submit}>
       <h2 class="sec" style="margin-top:0">{t('newProject')}</h2>
-      <div class="row3">
-        <input type="text" name="name" placeholder={t('name')} aria-label={t('name')} autocomplete="off" required />
-        <select name="suit" aria-label={t('suit')}>{SUIT_ORDER.map(s => <option value={s}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
+      <input type="text" name="name" placeholder={t('name')} aria-label={t('name')} autocomplete="off" required />
+      <select name="suit" aria-label={t('suit')}>{SUIT_ORDER.map(s => <option value={s}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
+      <More>
         <PlaceSelect value={where} onChange={setWhere} />
-        <button class="btn primary" type="submit">{t('add')}</button>
-      </div>
+      </More>
       <p class="hint">{t('smartHint')}</p>
+      <div class="actions"><button class="btn primary" type="submit">{t('add')}</button></div>
     </form>
   );
 }
@@ -201,8 +206,7 @@ function Decisions() {
 function Shelf({ done, by }: { done: P[]; by: Map<string, T[]> }) {
   if (!done.length) return null;
   return (
-    <details class="shelf" data-testid="shelf">
-      <summary>{t('completedShelf', { n: done.length })}</summary>
+    <Fold title={t('closedProjects', { n: done.length })} testid="shelf">
       <ul class="shelf-list">{done.sort((a, b) => String(b.doneAt ?? '').localeCompare(String(a.doneAt ?? ''))).map(p => {
         const n = (by.get(p.id) ?? []).filter(x => x.status === 'done' && !x.template).length;
         return (
@@ -211,7 +215,7 @@ function Shelf({ done, by }: { done: P[]; by: Map<string, T[]> }) {
             <button type="button" class="btn small ghost" onClick={() => openProject(p.id)}>{t('edit')}</button></li>
         );
       })}</ul>
-    </details>
+    </Fold>
   );
 }
 
@@ -251,7 +255,6 @@ export function Projects() {
         </section>
       )}
       <Decisions />
-      <NewProject />
       <Shelf done={[...projects.value.values()].filter(p => p.status === 'done')} by={by} />
       <p class="hint" style="margin-top:var(--s3)">{t('placePageNote', { place: placeName(page) })}</p>
     </div>

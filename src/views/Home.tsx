@@ -13,6 +13,8 @@ import { go, type View } from '../app/nav';
 import { Clock } from '../app/Clock';
 import { isTouch } from '../app/keyboard';
 import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
+import { HomeHelp } from '../app/HomeHelp';
+import { aiOn } from '../ai/ask';
 import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
@@ -198,6 +200,7 @@ function HomeInput() {
   return (
     <form class="homein" ref={bar} onSubmit={send} data-testid="home-input-bar">
       <div class="homein-in">
+        {!aiOn.value && <button type="button" class="icon-btn" onClick={() => openSheet(<HomeHelp fill={s => { setText(s); ta.current?.focus(); }} />)} aria-label={t('homeHelpBtn')} data-testid="home-help">?</button>}
         <textarea ref={ta} rows={1} value={text} placeholder={t('homeInputPh')} aria-label={t('homeInputLabel')} enterkeyhint="send" autocomplete="off" autocapitalize="sentences"
           onInput={e => setText((e.target as HTMLTextAreaElement).value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) void send(e); }} data-testid="home-input" />

@@ -12,6 +12,7 @@ import { agenda } from '../domain/agenda';
 import { greeting, startHere } from '../domain/greeting';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
 import { onPage } from '../domain/places';
+import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
 
@@ -111,8 +112,9 @@ export function tomorrowFirst(k = today.value): { id: string; title: string } | 
   return tt ? { id: tt.id, title: tt.title } : null;
 }
 
-/** The Start here card of a day, for Home and Today alike (src/domain/greeting.ts): cards without the steps that wait for another, a running step first, else the first open. */
-export const startHereOf = (k: string, cards: readonly string[] = dayCards(k).filter(id => !isWaiting(id))) =>
+/** The Start here card of a day, for Home and Today alike (src/domain/greeting.ts): cards without the steps that wait for another,
+ *  within Today's area filter, a running step first, else the first open. */
+export const startHereOf = (k: string, cards: readonly string[] = dayCards(k).filter(id => !isWaiting(id) && showsInArea('today', T(id)!))) =>
   startHere(cards, id => isOpen(T(id)), id => !!T(id)?.started);
 
 /** What Home's greeting says now (src/domain/greeting.ts); follows the clock, so a fixed-time item takes over on time. */

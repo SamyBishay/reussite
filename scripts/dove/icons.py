@@ -3,8 +3,7 @@
     python3 -I scripts/dove/icons.py CUT_DIR ICONS_DIR
 
 The dark heart on a transparent ground: icon-512, icon-192, favicon-32 (a tighter crop: the heart's rings
-are what reads at 32 px), and the 96 px picture inside icon.svg. The light heart on its own ground (sampled
-from the light photograph's canvas), opaque: icon-maskable-512 (inside the safe zone, a circle of 40 % of
+are what reads at 32 px), and the 96 px picture inside icon.svg. The dark heart on the dark ground (#0B0C10), opaque: icon-maskable-512 (inside the safe zone, a circle of 40 % of
 the width) and apple-touch-icon (180 px).
 """
 import base64
@@ -14,7 +13,7 @@ import sys
 import cv2
 import numpy as np
 
-LIGHT_GROUND = (225, 226, 222)  # BGR: the light photograph's canvas, around the heart
+DARK_GROUND = (16, 12, 11)  # BGR: #0B0C10, the dark theme's ground, around the heart
 
 
 def load(path):
@@ -64,7 +63,7 @@ def transparent(im, n, margin):
 
 
 def opaque(im, n, radius):
-    """On the light ground, as large as fits in a circle of `radius` (the maskable safe zone)."""
+    """On the dark ground, as large as fits in a circle of `radius` (the maskable safe zone)."""
     a = im[..., 3] > 0.1
     ys, xs = np.nonzero(a)
     cy, cx = (ys.min() + ys.max()) / 2, (xs.min() + xs.max()) / 2
@@ -72,7 +71,7 @@ def opaque(im, n, radius):
     s = radius / far
     small = resize(im, round(im.shape[1] * s), round(im.shape[0] * s))
     c = np.zeros((n, n, 4), np.float32)
-    c[..., :3] = np.array(LIGHT_GROUND, np.float32) / 255
+    c[..., :3] = np.array(DARK_GROUND, np.float32) / 255
     c[..., 3] = 1
     # centre the heart's bounding box (not the image's) on the canvas
     place(c, small, n / 2 + (small.shape[1] / 2 - cx * s), n / 2 + (small.shape[0] / 2 - cy * s))
@@ -88,8 +87,8 @@ def main():
     write(os.path.join(out, 'icon-192.png'), transparent(dark, 192, 6))
     # 32 px: the whole heart still reads (pink heart, blue rings, the dark eye); a crop of the rings alone does not
     write(os.path.join(out, 'favicon-32.png'), transparent(dark, 32, 0))
-    write(os.path.join(out, 'icon-maskable-512.png'), opaque(light, 512, 200))
-    write(os.path.join(out, 'apple-touch-icon.png'), opaque(light, 180, 84))
+    write(os.path.join(out, 'icon-maskable-512.png'), opaque(dark, 512, 200))
+    write(os.path.join(out, 'apple-touch-icon.png'), opaque(dark, 180, 84))
     svg = os.path.join(out, 'icon-96.tmp.png')
     write(svg, transparent(dark, 96, 2))
     with open(svg, 'rb') as f:

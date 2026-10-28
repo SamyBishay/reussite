@@ -34,7 +34,7 @@ PY=/tmp/dove/bin/python scripts/dove/build.sh path/to/dark.png path/to/light.png
 
 `build.sh` runs the cut-outs into a temporary folder, then `scripts/dove/icons.py` (the icons, into `public/icons`) and ImageMagick (WebP, into `src/assets/dove`). Without `imagequant` the icons are full-colour PNGs, about three times larger.
 
-- **Icons** (precached): the dark heart on a transparent ground for `icon-192`, `icon-512`, `favicon-32` (the whole heart still reads at 32 px; a crop of the rings alone did not) and `icon.svg` (a 96 px PNG inside, for the manual's pages and browsers that take an SVG); the light heart on the light photograph's ground, opaque, for `icon-maskable-512` (inside the safe zone: a circle of 40 % of the width) and `apple-touch-icon`. About 200 KB in all.
+- **Icons** (precached): the dark heart on a transparent ground for `icon-192`, `icon-512`, `favicon-32` (the whole heart still reads at 32 px; a crop of the rings alone did not) and `icon.svg` (a 96 px PNG inside, for the manual's pages and browsers that take an SVG); the dark heart on the dark ground (#0B0C10), opaque, for `icon-maskable-512` (inside the safe zone: a circle of 40 % of the width) and `apple-touch-icon`. About 200 KB in all.
 - **Celebration** (`heart-dark`, `heart-light`, `knight`, `dragon`, `disc`, `wreath`, about 310 KB) and the onboarding mark (`mark-dark`, `mark-light`, about 22 KB): WebP, imported with `new URL(…, import.meta.url)` so they are hashed files in `assets/`. They are not in the precache (its patterns take no `.webp`); the service worker keeps each the first time it is fetched (`src/sw.ts`, cache `dove`, a new version replaces the old one).
 
 ## When the celebration's pictures are fetched

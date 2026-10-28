@@ -826,6 +826,7 @@ export const en = {
   smartT: 'Time-bound',
   smartTHint: 'by when',
   confirm: 'Confirm',
+  closedProjects: 'Closed ({n})',
   completedShelf: { one: 'Completed: {n} project', other: 'Completed: {n} projects' } as P,
   stepsDoneShort: { one: '{n} step', other: '{n} steps' } as P,
   // phase 1: matrix

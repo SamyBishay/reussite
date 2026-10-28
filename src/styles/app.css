@@ -251,9 +251,7 @@ details summary{cursor:pointer;color:var(--ink-2);font-weight:600;font-size:14px
 .steps li{display:grid;grid-template-columns:1.1em minmax(0,1fr) auto;gap:var(--s2);align-items:baseline;font-size:14.5px}
 .steps li.done .linklike{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
 .addstep{display:grid;grid-template-columns:minmax(0,1fr) 5.5em auto;gap:var(--s2);margin-top:var(--s3)}
-.newproj{margin-top:var(--s6);background:var(--panel);border:1px solid transparent;border-radius:14px;padding:14px}
-.newproj .row3{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto;gap:var(--s2)}
-@media (max-width:560px){.newproj .row3{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.newproj .row3 input{grid-column:1 / -1}}
+.newproj{display:grid;gap:var(--s3)}
 
 /* ---------- log ---------- */
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s3);margin-top:var(--s4)}

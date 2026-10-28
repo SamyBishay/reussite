@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { agenda } from './agenda';
-import { greeting, fixedNow, type GreetingInput } from './greeting';
+import { greeting, startHere, fixedNow, type GreetingInput } from './greeting';
 import { choir, settings, state, task } from './agenda.fixture';
 
 const S = settings();
@@ -76,5 +76,18 @@ describe('the rest of the greeting', () => {
   });
   it('everything on the list is done', () => {
     expect(greeting(base({ next: null, planned: 3 }))).toEqual({ kind: 'allDone' });
+  });
+});
+
+describe('startHere, the one card of Home and Today', () => {
+  const open = (id: string) => id !== 'd';
+  it('the first open card; done ones are skipped', () => {
+    expect(startHere(['d', 'a', 'b'], open, () => false)).toEqual({ id: 'a', running: false, planned: 3 });
+  });
+  it('a running card on the list comes first', () => {
+    expect(startHere(['a', 'b'], open, id => id === 'b')).toEqual({ id: 'b', running: true, planned: 2 });
+  });
+  it('nothing open', () => {
+    expect(startHere(['d'], open, () => false)).toEqual({ id: null, running: false, planned: 1 });
   });
 });

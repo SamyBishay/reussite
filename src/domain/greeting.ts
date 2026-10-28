@@ -49,6 +49,17 @@ export function fixedNow(fixed: readonly AgendaEvent[], now: number): AgendaEven
   return best;
 }
 
+/**
+ * The one "Start here" card, shared by Home's greeting and Today: from the day's cards (waiting steps already
+ * left out) the running step if one is on the list, else the first open one. `planned` counts the cards.
+ */
+export function startHere(cards: readonly string[], isOpen: (id: string) => boolean, isRunning: (id: string) => boolean): { id: string | null; running: boolean; planned: number } {
+  const open = cards.filter(isOpen);
+  const run = open.find(isRunning);
+  const id = run ?? open[0] ?? null;
+  return { id, running: !!run, planned: cards.length };
+}
+
 export function greeting(i: GreetingInput): Greeting {
   const e = fixedNow(i.fixed, i.now);
   if (e) return { kind: 'fixed', event: e, leave: shiftTime(e.time, -(e.lead ?? 0)) };

@@ -2,7 +2,7 @@
 // which edits any day's plan, launch points and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
-import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, type T as Tk } from '../app/model';
+import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, startHereOf, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
@@ -261,7 +261,7 @@ export function Today() {
   const af = areaFilter('today');
   const plan = af ? every.filter(id => inArea(whereOf(T(id)!), af)) : every;
   const open = plan.filter(id => isOpen(T(id)));
-  const fid = open[0];
+  const fid = startHereOf(k, plan).id ?? undefined;
   const yOpen = yesterdayOpen(k);
   const rest = plan.filter(id => id !== fid);
   const optional = new Set(d?.optional ?? []);

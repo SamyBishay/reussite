@@ -9,7 +9,7 @@ import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
-import { greeting } from '../domain/greeting';
+import { greeting, startHere } from '../domain/greeting';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
 import { onPage } from '../domain/places';
 import { en } from '../i18n/en';
@@ -111,14 +111,18 @@ export function tomorrowFirst(k = today.value): { id: string; title: string } | 
   return tt ? { id: tt.id, title: tt.title } : null;
 }
 
+/** The Start here card of a day, for Home and Today alike (src/domain/greeting.ts): cards without the steps that wait for another, a running step first, else the first open. */
+export const startHereOf = (k: string, cards: readonly string[] = dayCards(k).filter(id => !isWaiting(id))) =>
+  startHere(cards, id => isOpen(T(id)), id => !!T(id)?.started);
+
 /** What Home's greeting says now (src/domain/greeting.ts); follows the clock, so a fixed-time item takes over on time. */
 export const greetingNow = computed(() => {
   const now = clockNow.value, k = today.value;
   const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
-  const plan = planOf(k);
+  const sh = startHereOf(k);
   return greeting({
     now, fixed: agenda(data, settings.value, addDays(k, -1), addDays(k, 1)).filter(e => e.kind === 'fixed'),
-    running: running()?.id ?? null, closed: !!dayDoc(k)?.closed, planned: plan.length, next: plan.find(id => isOpen(T(id))) ?? null, tomorrow: tomorrowFirst(k),
+    running: sh.running ? sh.id : null, closed: !!dayDoc(k)?.closed, planned: sh.planned, next: sh.running ? null : sh.id, tomorrow: tomorrowFirst(k),
   });
 });
 

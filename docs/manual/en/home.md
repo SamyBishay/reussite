@@ -24,7 +24,29 @@ The **Notifications** page lists everything that waits, all of it and not only t
 
 ## The one box
 
-Type or dictate a line at the bottom. English or French, whichever you like. For example:
+Type or dictate a line at the bottom. English or French, whichever you like, and accents and capitals don't matter. If no AI is connected, a round **?** button sits next to the box: it opens **What you can type**, the list below, and tapping an example puts it in the box.
+
+**Add a step.** Just write it: "call the bank tomorrow", "dentist Friday 14h". A leading "add", "ajouter" or "remind me to" is ignored. A short line with no verb goes to your Inbox.
+
+**Tick one done.** "done the report", "finished the report", "fini le rapport", "j'ai fini le rapport". Add "yesterday" or "hier" at the end for yesterday.
+
+**Move one.** "move the photos to Monday", "push", "postpone", "reschedule", "reporter le dentiste à vendredi", "décaler", "repousser".
+
+**Drop one.** "drop the games", "abandon", "scrap", "supprimer", "abandonner". It opens a screen first so you can confirm.
+
+**A day.** today, tonight, tomorrow, the day after tomorrow, in 3 days, in 2 weeks, friday, next friday, 26/10 (day first), 26 oct, 2026-10-26; or aujourd'hui, ce soir, demain, après-demain, dans 3 jours, vendredi prochain, le 26 octobre. A weekday on its own is the next one, never today.
+
+**A time.** 19:00, 7pm, at 19h, noon; or 19h, 19h30, à 19h, midi, vers 19h. "9:00" with no day means today, or tomorrow if it has already passed. A range such as 14h-15h30 or "de 14h à 15h30" sets the time and the length.
+
+**A length.** 45 min, 2h30, for 2 hours, about 20 minutes; or pendant 2 heures, environ 20 minutes. "5h" and more, or "at 19h", is a time, not a length.
+
+**A place.** "at" or "chez", "au", "à" followed by a place you have in Places.
+
+**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in.
+
+**Anything else** (a question, several things at once, a long sentence) opens the step form, filled in as far as it could read. Connecting an AI (Settings → AI) lets you write free sentences.
+
+Examples:
 
 - "call the bank tomorrow"
 - "dentist Friday 14h"

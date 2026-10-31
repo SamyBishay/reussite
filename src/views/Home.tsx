@@ -20,6 +20,7 @@ import { aiOn } from '../ai/ask';
 import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
+import { openPlanDay, openMorning } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { withTime } from '../domain/calendar';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
@@ -44,6 +45,12 @@ function HomeMenu() {
 }
 
 // ---------- the greeting ----------
+/** With an AI on and the day not planned yet, a fixed-time item or a step added by hand is already Start here: the planning is still one tap away, in the row it already has. */
+function PlanBtn() {
+  const d = dayDoc(today.value);
+  if (!aiOn.value || d?.checkin || d?.closed) return null;
+  return <button class="btn small ghost" type="button" onClick={openMorning} data-testid="home-plan-ai">{t('planTheDay')}</button>;
+}
 /** The next step, as the Today screen's first card shows it: the starter, then the title, its estimate and Start. */
 function Step({ id }: { id: string }) {
   const tk = T(id);
@@ -53,7 +60,7 @@ function Step({ id }: { id: string }) {
       <p class="t" data-testid="greeting-step">{tk.starter ? tk.starter + ' → ' : ''}<Title s={tk.title} /></p>
       <p class="meta"><Est tk={tk} /></p>
       <div class="go"><button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button></div>
-      <div class="go quiet"><DropButton key={tk.id} tk={tk} /></div>
+      <div class="go quiet"><DropButton key={tk.id} tk={tk} /><PlanBtn /></div>
     </>
   );
 }
@@ -69,8 +76,10 @@ function FixedStep() {
         <div class="go">
           <button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button>
           <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
+          <PlanBtn />
         </div>
       )}
+      {tk.template && <div class="go quiet"><PlanBtn /></div>}
     </>
   );
 }
@@ -126,7 +135,10 @@ function GreetingBody() {
       <section class="first" data-testid="greeting-plan">
         <p class="eyebrow">{t('noListYet')}</p>
         <p class="t">{t('planTheDayQ')}</p>
-        <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="home-plan">{t('planTheDay')}</button></div>
+        <div class="go">
+          <button class="btn primary" type="button" onClick={openPlanDay} data-testid="home-plan">{t('planTheDay')}</button>
+          {aiOn.value && <button class="btn ghost" type="button" onClick={openCheckin} data-testid="home-plan-ritual">{t('mornMyself')}</button>}
+        </div>
       </section>
     );
   }

@@ -12,7 +12,7 @@ import { Clock } from '../app/Clock';
 import { MissedNow, openCarried } from '../app/CarryUi';
 import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
-import { openCheckin } from '../flows/checkin';
+import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { openReview } from '../flows/review';
 import { openDecisionPage } from '../flows/decision';
@@ -141,7 +141,7 @@ function SuggestCard({ tk, played }: { tk: Tk; played: boolean }) {
         <button class="btn" type="button" onClick={() => openPick('list')}>{t('chooseFromList')}</button>
       </div>
       <div class="go quiet">
-        {!played && <button class="btn small ghost" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button>}
+        {!played && <button class="btn small ghost" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button>}
         <DropButton key={tk.id} tk={tk} />
       </div>
     </section>
@@ -301,7 +301,7 @@ export function Today() {
           <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
-          <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="checkin">{t('planTheDay')}</button></div>
+          <div class="go"><button class="btn primary" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button></div>
         </section>
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
@@ -312,7 +312,7 @@ export function Today() {
       )}
       <div class="after-first">
         <div class="adders" data-testid="adders">
-          {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openCheckin}>{t('planTheDay')}</button>}
+          {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openPlanDay}>{t('planTheDay')}</button>}
           <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
           <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
           {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}

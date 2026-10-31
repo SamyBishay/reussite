@@ -40,6 +40,12 @@ effect(() => {
   void getKey(p).then(k => { if (!(p in keyed.peek())) keyed.value = { ...keyed.peek(), [p]: !!k }; }, () => undefined);
 });
 
+/** A provider is chosen and its key is on this device (read from the database, for a moment when the app has just started and `aiOn` is not known yet). */
+export async function aiReady(): Promise<boolean> {
+  const p = settings.value.aiProvider;
+  return p !== 'none' && !!(await getKey(p).catch(() => ''));
+}
+
 export async function config(): Promise<AiConfig | ErrorKind> {
   const s = settings.value;
   if (s.aiProvider === 'none') return 'off';

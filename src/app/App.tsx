@@ -11,7 +11,7 @@ import { OverlayHost } from './sheet';
 import { openPile, openPause, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { startTask, patchTask } from './actions';
 import { openPlaces } from './PlacesSheet';
-import { view, go, fromHash, taskFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
+import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
 import { lastSyncAt, startSync, syncNow, syncStale } from './sync';
@@ -38,6 +38,8 @@ import { openDecision } from '../flows/decision';
 import { t, lang, locale, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
+import { aiReady } from '../ai/ask';
+import { openMorning } from '../flows/morning';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
 import { decideOnboarding, onboarding } from './onboarding';
@@ -209,13 +211,26 @@ function openLinkedTask() {
   if (T(id)) openTask(id);
 }
 
+/** A tap on the morning's notification (`#plan`): the planning conversation with an AI set up, else Today, as the notification always did. */
+async function openLinkedPlan() {
+  if (!planFromHash()) return;
+  clearTaskHash();
+  if (await aiReady()) { go('home'); openMorning(); } else go('today');
+}
+
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   useEffect(() => {
-    const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) openLinkedTask(); };
+    const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) { openLinkedTask(); void openLinkedPlan(); } };
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    // The worker passes a tap on a notification to the open window.
+    const onMessage = (e: MessageEvent) => {
+      const m = e.data as { type?: unknown; url?: unknown } | null;
+      if (m?.type === 'OPEN_URL') try { location.hash = new URL(String(m.url), location.href).hash; } catch { /* fine */ }
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => { window.removeEventListener('hashchange', onHash); navigator.serviceWorker?.removeEventListener('message', onMessage); };
   }, []);
   void lang.value;
   const V = SCREENS[view.value];

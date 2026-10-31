@@ -1,11 +1,13 @@
 // What each AI feature sends (brief §10, features 2–6): the method and the feature's contract as
 // the system prompt; compact lines for at most 25 steps, and the calibration line whenever the
 // AI is asked for estimates.
-import { projects, type WithId } from '../app/store';
-import { T } from '../app/model';
+import { projects, places, settings, today, here, type WithId } from '../app/store';
+import { T, dayDoc } from '../app/model';
 import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
-import type { Plan, PlanInput } from '../domain/planner';
-import type { Decision } from '../data/schema';
+import { PILLARS, type Plan, type PlanInput } from '../domain/planner';
+import type { Proposal } from '../domain/propose';
+import { lang, fmtMin } from '../i18n';
+import type { Decision, SuitId } from '../data/schema';
 import type { DecisionAsk } from './features';
 
 /** `notes`: the names of the memory notes in the request (the profile is in the system prompt), for "Show me what's sent". */
@@ -114,3 +116,69 @@ Reply with JSON only: {"goal": "...", "smart": {"specific": "", "measurable": ""
   return { system, user, notes: memo.names };
 }
 
+
+// ---------- 7. The morning conversation ----------
+const MORNING_JSON = `{"note": "one or two sentences: the day in a nutshell, and by how much it is over if it is",
+ "must": [{"id": "...", "line": "why today, short", "cut": false}],
+ "goals": [{"project": "...", "id": "...", "line": "why this project, why this step"}],
+ "pillars": [{"suit": "S|D|C|H", "id": "...", "line": "..."}, {"suit": "C", "new": ${STEP_JSON}, "line": "..."}],
+ "here": [{"id": "...", "line": "..."}],
+ "first": "id of the step to start with",
+ "split": [{"id": "...", "steps": [${STEP_JSON}]}]}`;
+
+const MORNING_TASK = `It is the morning. Propose the person's day in five sections. You propose and the person chooses: they keep, swap or skip each item with a tap, so do not ask open questions and do not ask how they feel. Use only the ids you are given, and take each item from the candidates of its section.
+1. "must": what has to happen today, from the first section's candidates (the fixed items and the events to check stay whatever you say). Rank them; "line" says why today.
+2. "goals": the one or two projects to move today (never more than two), each with the step to start with, taken from that project's steps. "line" says why that project and that step.
+3. "pillars": one item for each of the four pillars, in the person's own words for them (given below). Take it from the pillar's candidates, or write a new step ("new") when there is none or a better one is plain from what you know of the person, for example a call to someone they care about, as a first action of 15 minutes or less. Say it in "line" in a short sentence ("For family: call your mother").
+4. "here": given where the person is today, what can be done there: take it from the place's candidates.
+5. The total: the day's load is given, as planned time against free time. When it is more than the room, say by how much in "note" and put "cut": true on the steps you would leave out first (never a fixed item, and the Protect steps last). Give "first": the step to start with, which must be one you keep.
+${STEP_RULES} Only "goals" and "pillars" may have a "new" step; a goal's new step joins that project. Use "split" for a step that is over 30 minutes or has no clear first action: the first of its steps keeps the id and is the one that goes on the day, the others wait for it. Say "pillar", "goal" or the person's own names; never the words "card" or "suit". Short lines, facts, no praise, no guilt, no counts of what was not done.
+Reply with JSON only (leave a section out only if it has no candidates):
+${MORNING_JSON}`;
+
+const pillarName = (s: SuitId) => settings.value.suits[s]?.short[lang.value] ?? s;
+
+/**
+ * The morning conversation's request (Morning point 3): the candidates of `proposeDay` in five sections, the pillars in the person's
+ * own words, the room the day has. A later turn (`o.message`) carries what the person kept and skipped and what they said.
+ */
+export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[]; skipped?: string[]; load?: Proposal['load'] } = {}): P {
+  const system = systemPrompt(MORNING_TASK);
+  const line = (id: string) => (T(id) ? stepLine(T(id)!) : id);
+  const all = [...p.must.map(m => m.id), ...p.mustMore, ...p.goals.flatMap(g => [g.step, ...g.more]), ...p.moreGoals.flatMap(g => [g.step, ...g.more]), ...p.here.ids, ...p.here.more,
+    ...PILLARS.flatMap(s => [p.pillars[s].pick, ...p.pillars[s].more, ...p.pillars[s].covered])].filter((x): x is string => !!x);
+  const ids = [...new Set(all)];
+  const withTime = (id: string) => { const tk = T(id); return line(id) + (tk?.at ? ` | at ${tk.at}` : ''); };
+  const sec = (head: string, rows: string[]) => `${head}\n${rows.length ? rows.join('\n') : '(no candidates)'}`;
+  const proj = (g: Proposal['goals'][number]) => {
+    const pr = projects.value.get(g.project);
+    return `${g.project} | ${one(pr?.name ?? g.project)} | goal: ${pr?.goal ? one(pr.goal) : '-'} | due ${pr?.due ?? '-'}\n   first step: ${line(g.step)}${g.more.length ? '\n   then: ' + g.more.map(line).join('\n         ') : ''}`;
+  };
+  const load = o.load ?? p.load;
+  const place = here.value === 'any' ? 'Anywhere (no place set for today)' : places.value.get(here.value)?.name ?? here.value;
+  const areas = (dayDoc(today.value)?.areas ?? []).map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${places.value.get(a.placeId)?.name ?? a.placeId}`);
+  const memo = memoryFor('', ids.map(id => T(id)).filter((x): x is NonNullable<ReturnType<typeof T>> => !!x));
+  const user = join([
+    header(),
+    `The room the day has: ${fmtMin(load.planned)} planned of ${fmtMin(load.free)} free${load.over ? `, ${fmtMin(load.over)} more than fits` : ''}. The planned time is the first candidate of each section below.`,
+    `The person's pillars (use these words): ${PILLARS.map(s => `${s} = ${pillarName(s)}`).join('; ')}.`,
+    sec('1. Must happen (id | title | quadrant | due | estimate | project; why):', [
+      ...p.must.map(m => `${withTime(m.id)} [${m.why}]`),
+      ...(p.mustMore.length ? ['Could replace one of these:', ...p.mustMore.map(line)] : []),
+    ]),
+    sec('2. Projects to move today, the first one first (id | name | goal | due; then steps in order):', [...p.goals.map(proj), ...(p.moreGoals.length ? ['Other projects that could replace one:', ...p.moreGoals.map(proj)] : [])]),
+    sec('3. Pillars: for each, the proposed step first, then others; "covered" are steps of that pillar already in the other sections:', PILLARS.map(s => {
+      const c = p.pillars[s];
+      return `${s} ${pillarName(s)}: ${[c.pick, ...c.more].filter((x): x is string => !!x).map(line).join(' ;; ') || '(nothing open: write a new step if one is plain)'}${c.covered.length ? ` || covered: ${c.covered.join(', ')}` : ''}`;
+    })),
+    sec(`4. Where the person is today: ${place}${areas.length ? ' (' + areas.join(', ') + ')' : ''}. Steps that belong there:`, [...p.here.ids.map(line), ...(p.here.more.length ? ['Could replace one of these:', ...p.here.more.map(line)] : [])]),
+    calibrationLine(ids.map(id => T(id)?.app)),
+    o.message !== undefined && join([
+      `The person has chosen so far. Kept: ${o.kept?.join(', ') || '(none)'}. Skipped, so never offer them again: ${o.skipped?.join(', ') || '(none)'}.`,
+      `They say: ${o.message.trim()}`,
+      'Reply with the full revised proposal in the same JSON, changed only as they ask.',
+    ]),
+    memo.text,
+  ]);
+  return { system, user, notes: memo.names };
+}

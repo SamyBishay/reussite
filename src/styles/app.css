@@ -751,4 +751,13 @@ body > .row,body > li{list-style:none}
 .pillar .picklist li{grid-template-columns:minmax(0,1fr)}
 .pillar .go{display:flex;flex-wrap:wrap;gap:var(--s2)}
 .pillar-empty,.pillar-skipped{margin:var(--s2) 0 0}
+/* ---------- the morning with an AI: a proposal to keep, swap or skip ---------- */
+.morning .picklist li>div:first-child{min-width:0;overflow-wrap:anywhere}
+.morn-skipped{opacity:.6}
+.morn-skipped p:first-child{text-decoration:line-through}
+.morn-line{margin:var(--s1) 0 0}
+.morn-pillar{margin-top:var(--s3)}
+.morn-pillar .picklist{margin-top:var(--s1)}
+.morn-say{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s2);margin-top:var(--s2)}
+.morn-say>*{min-width:0}
 .planmeta.over{color:var(--ink)}

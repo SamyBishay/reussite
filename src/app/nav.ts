@@ -40,10 +40,12 @@ export const taskFromHash = (): string | null => {
   if (!m) return null;
   try { return decodeURIComponent(m[1]!); } catch { return null; }
 };
+/** `#plan`: the morning's notification. The hash is put back to the current view once it is read. */
+export const planFromHash = (): boolean => location.hash === '#plan';
 const stored = (): View => { try { return named(localStorage.getItem('reussite.view')) ?? 'home'; } catch { return 'home'; } };
 export const view = signal<View>(fromHash() ?? stored());
 
-/** Forget a `#task/<id>` in the address bar, so a reload does not open the step again. */
+/** Forget a `#task/<id>` (or `#plan`) in the address bar, so a reload does not open the step again. */
 export function clearTaskHash() {
   try { history.replaceState(null, '', '#' + view.value); } catch { /* fine */ }
 }

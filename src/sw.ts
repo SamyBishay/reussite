@@ -33,6 +33,8 @@ self.addEventListener('notificationclick', (e) => {
     const mine = open.find((c) => c.url.startsWith(self.registration.scope));
     if (mine) {
       try { await mine.focus(); } catch { /* the browser may refuse; the page is still there */ }
+      // The morning's notification asks the open window to plan the day; every other tap only brings it forward.
+      if (new URL(url).hash === '#plan') mine.postMessage({ type: 'OPEN_URL', url });
       return;
     }
     await self.clients.openWindow(url);

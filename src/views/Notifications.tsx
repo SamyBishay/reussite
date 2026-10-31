@@ -2,8 +2,8 @@
 // when this list is not empty (no number, no red).
 import { Rings } from '../app/Rings';
 import { today, settings } from '../app/store';
-import { dayDoc, decisionsToCheck, yesterdayOpen } from '../app/model';
-import { carryOver } from '../app/actions';
+import { dayDoc, decisionsToCheck, carriedOn } from '../app/model';
+import { openCarried } from '../app/CarryUi';
 import { KeyCard } from '../app/SyncSettings';
 import { syncOn, keySaved } from '../app/sync';
 import { openReview } from '../flows/review';
@@ -12,13 +12,13 @@ import { isoDow } from '../domain/repeat';
 import { t } from '../i18n';
 import type { ComponentChild } from 'preact';
 
-/** What is waiting, most pressing first: the recovery key, decisions to check, yesterday's carry-over, the review day. */
+/** What is waiting, most pressing first: the recovery key, decisions to check, yesterday's open steps, the review day. */
 export function notifications(): ComponentChild[] {
   const k = today.value, out: ComponentChild[] = [];
   if (syncOn.value && !keySaved.value) out.push(<KeyCard />);
   for (const dc of decisionsToCheck(k)) out.push(<div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>);
-  const y = yesterdayOpen(k);
-  if (y.length) out.push(<div class="banner" data-testid="carry-nudge"><p>{t('carryText', { n: y.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: y.length })}</button></div>);
+  const y = carriedOn(k);
+  if (y.length) out.push(<div class="banner" data-testid="carry-nudge"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried}>{t('carryButton')}</button></div>);
   if (isoDow(k) === settings.value.reviewDay && !dayDoc(k)?.review) out.push(<div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>);
   return out;
 }

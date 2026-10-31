@@ -112,6 +112,33 @@ export const hereNow = () => here.value;
 
 export const yesterdayOpen = (k = today.value) => L.yesterdayOpen({ days: days.value, tasks: tasks.value }, k, addDays(k, -1));
 
+/**
+ * Yesterday's open steps to decide one at a time (Today / Another day / Drop it / Make it a decision): those still open and on no
+ * later list, but not the fixed-time items whose time has passed, which are asked on their own (Move / Remove, `missedOn`).
+ */
+export const carriedOn = (k = today.value): string[] => {
+  const missed = new Set(missedOn(addDays(k, -1)));
+  return yesterdayOpen(k).filter(id => !missed.has(id) && isOpen(T(id)));
+};
+
+/**
+ * The fixed-time items of a day whose time has passed and that are not done (`missed` of src/domain/dayOrder.ts), whatever the area
+ * chip says: a call that was not made is not an area's business. Standing items not placed on the day are never missed; for a past
+ * day it is everything of its that was not done, for a future day nothing.
+ */
+export function missedOn(k: string = today.value): string[] {
+  const s = settings.value, zone = dayZone(k);
+  const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
+  const fixed: FixedItem[] = fixedOnDay(data, s, k).filter(e => e.taskId && T(e.taskId))
+    .map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template }));
+  if (!fixed.length) return [];
+  const floor = atOnDay(k, s.dayStart, s.dayStart, zone), rid = fixed.find(f => T(f.id)?.started);
+  return dayOrder({
+    now: clockNow.value, floor, end: floor + 48 * 3_600_000, cards: [], est: () => null, fixed,
+    running: rid ? { id: rid.id, started: T(rid.id)!.started! } : null,
+  }).missed.filter(id => T(id)?.status === 'open');
+}
+
 /** Tomorrow's first step: the one chosen when the day was closed, else the first open step on its list. */
 export function tomorrowFirst(k = today.value): { id: string; title: string } | null {
   const tk = addDays(k, 1);

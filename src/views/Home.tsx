@@ -12,6 +12,7 @@ import { openNewAddress } from '../app/AddressSheets';
 import { addressesOn } from '../app/model';
 import { go, type View } from '../app/nav';
 import { Clock } from '../app/Clock';
+import { MissedNow } from '../app/CarryUi';
 import { isTouch } from '../app/keyboard';
 import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
 import { HomeHelp } from '../app/HomeHelp';
@@ -264,6 +265,7 @@ export function Home() {
         </div>
         <GreetingLine />
         <GreetingBody />
+        <MissedNow />
       </section>
       <Card />
       <Receipt />

@@ -129,7 +129,8 @@ function Runbar() {
           <button class="btn small ghost" type="button" onClick={() => void patchTask(r.id, { stillAt: new Date().toISOString() })}>{t('stillGoing')}</button></div></div></div>
     );
   }
-  // Home's greeting is the running step (clock, Pause, Done), so the bar would say it twice; a fixed-time item taking over leaves it.
+  // The Matrix is for sorting, so neither bar shows there. Home's greeting is the running step (clock, Pause, Done), so the bar would say it twice; a fixed-time item taking over leaves it.
+  if (view.value === 'matrix') return <div id="runbar" />;
   if (r && view.value !== 'today' && !(view.value === 'home' && greetingNow.value.kind === 'running')) return (
     <div id="runbar"><div class="runbar"><Clock tk={r} /><span class="rt"><Title s={r.title} /></span><button class="btn small" type="button" onClick={() => openPause(r.id)}>{t('pause')}</button></div></div>
   );

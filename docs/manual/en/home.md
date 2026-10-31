@@ -14,7 +14,7 @@ Under the line, in this order, the first that applies:
 2. **A timer is running.** You see the step, the clock, **Pause** and **Done**.
 3. **The day is closed.** You see tomorrow's first step.
 4. **There is a next step.** You see **Start here**, the starter and **Start**. It is the same step Today shows. **Drop it** drops the step if it no longer matters: tap it twice.
-5. **Nothing is planned yet.** You see **Plan the day**. With an AI set up it opens a proposal you keep, swap or skip, and **Plan it myself** beside it opens the ritual. When something at a fixed time is already first, a small **Plan the day** under it does the same until the day is planned.
+5. **Nothing is planned yet.** You see **Plan the day**. With an AI set up it opens a proposal you keep, swap or skip, and **Plan it myself** beside it opens the ritual. When something at a fixed time is already first, a small **Plan the day** among its buttons does the same until the day is planned.
 
 If something at a fixed time today has passed and is not done, one small card under the greeting says so, "“Call the bank” was at 10:00", with **Move** and **Remove**. It is never red, there is one at a time, and it has no number.
 

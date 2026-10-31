@@ -30,7 +30,7 @@ export interface CalViewOptions {
   area?: string | null;
 }
 
-export type CalViewKind = 'fixed' | 'stay' | 'half';
+export type CalViewKind = 'fixed' | 'stay' | 'half' | 'projected';
 
 export interface CalViewEvent {
   /** Unique in a view: `<kind>:<id>:<day>`. */
@@ -55,6 +55,8 @@ export interface CalViewEvent {
   /** A half day spent in an area: `title` is the area's name. */
   half?: Half;
   done?: boolean;
+  /** A projected block: a planned step laid out by the day's order (today only), drawn faded; not a fixed time, never dragged, never exported. */
+  running?: boolean;
   /** Can be dragged: fixed-time steps not yet done (a standing item that has no copy on the day cannot). */
   movable: boolean;
 }
@@ -125,4 +127,29 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
   }
   // Narrowed to an area: a step shows if it is set to the area or to Anywhere.
   return o.area ? out.filter(e => !e.taskId || inArea(whereOf(data.tasks.get(e.taskId)!, data.projects), o.area!)) : out;
+}
+
+/** A planned step of today's order (src/domain/dayOrder.ts): where it is projected to start and end, in epoch ms. `running`: its timer is on. */
+export interface ProjectedStep { taskId: string; start: number; end: number; running?: boolean }
+
+/**
+ * Today's planned steps as faded blocks between the fixed items. `steps` are the order's steps, `wall` the clock reading (HH:MM) of an
+ * instant in the day's zone; a block is drawn where `gridSlot` puts its start and ends on the same date at 23:59 at the latest. The
+ * running step ends at the clock when it overruns, so the blocks after it have moved on by themselves. Unknown or finished steps, steps with a time of their own and
+ * blocks with no room on the grid give nothing. Never movable, and not part of any export (this is not `calViewEvents`).
+ */
+export function projectedEvents(data: Pick<CalViewData, 'tasks'>, o: Pick<CalViewOptions, 'dayStart'>, day: DayKey, steps: readonly ProjectedStep[], wall: (ms: number) => string): CalViewEvent[] {
+  const out: CalViewEvent[] = [];
+  for (const s of steps) {
+    const t = data.tasks.get(s.taskId);
+    if (!t || t.status !== 'open' || HHMM.test(t.at ?? '')) continue; // a step with a time of its own is a fixed item, drawn by `calViewEvents`
+    const slot = gridSlot(day, wall(s.start), o.dayStart);
+    const end = endClock(slot.time, (s.end - s.start) / 60_000);
+    if (end <= slot.time) continue;
+    out.push({
+      id: `projected:${t.id}:${day}`, kind: 'projected', day, date: slot.date, time: slot.time, endTime: end, taskId: t.id, title: shortLabel(t), suit: t.suit,
+      ...(s.running ? { running: true } : {}), movable: false,
+    });
+  }
+  return out;
 }

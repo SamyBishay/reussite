@@ -75,8 +75,8 @@ test('the calendar names steps by their short name, with no launch points; a tim
   await page.getByTestId('tab-calendar').click();
   await page.getByTestId('cal-week').click();
   const grid = page.getByTestId('calendar-grid');
-  // The day's planned cards (the sample's first is about Doctolib) are not in the calendar.
-  await expect(grid).not.toContainText('Doctolib');
+  // The day's planned cards (the sample's first is about Doctolib) are not events of the calendar: today's only appear as faded projected blocks.
+  await expect(grid.locator('.sx__event:not(.k-projected)', { hasText: 'Doctolib' })).toHaveCount(0);
   // Launch points (09:30 and 14:00 on today's list in the sample) are not in the calendar.
   await expect(grid).not.toContainText(/Start|Restart|▶/);
   // The step with a time is on the grid at its time, named by its short name, and not in the all-day row.
@@ -109,10 +109,10 @@ test('the calendar shows a fixed-time item and no planned card, due step or mark
   await page.getByTestId('cal-week').click();
   const grid = page.getByTestId('calendar-grid');
   await expect(grid.locator('.sx__time-grid-event.k-fixed')).toHaveCount(1);
-  await expect(grid.locator('.sx__event')).toHaveCount(1);
-  await expect(grid).not.toContainText(/second paragraph|thesis|Weekly review|Check:/);
+  await expect(grid.locator('.sx__event:not(.k-projected)')).toHaveCount(1);
+  await expect(grid.locator('.sx__event:not(.k-projected)')).not.toContainText(/second paragraph|thesis|Weekly review|Check:/);
   await page.getByTestId('cal-month').click();
-  await expect(grid.locator('.sx__event.k-plan, .sx__event.k-due, .sx__event.k-check, .sx__event.k-review')).toHaveCount(0);
+  await expect(grid.locator('.sx__event.k-plan, .sx__event.k-due, .sx__event.k-check, .sx__event.k-review, .sx__event.k-projected')).toHaveCount(0);
   await expect(page.getByTestId('calendar')).not.toContainText(/dashed/i);
 });
 

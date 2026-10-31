@@ -23,6 +23,8 @@ import { stillOnDue, minutesBetween, shiftTime } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { deriveLabel } from '../domain/label';
+import { measureOf } from '../domain/goal';
+import { openGoalDone } from './smart';
 import { liveNextHeads, toEventFields } from '../domain/events';
 import { dueBeforeEnd, isArea } from '../domain/places';
 import { placePath, placeRows } from '../domain/areas';
@@ -68,6 +70,8 @@ export async function complete(tk: Tk, typed: number | null, day = today.value, 
   if (r.nextId) { const nx = T(r.nextId); if (nx?.due) toast(t('repeatNext', { date: fmtDate(nx.due) })); }
   // A step that feeds an address asks how it was (skippable); nothing is written until the person answers.
   if (r.addressId && addressesOn()) flows.visit(r.addressId, { stepId: tk.id, day });
+  // A step that moves its project's goal asks how much it added, or which milestone to tick (never over a finished project or an address's questions).
+  else if (r.goal && !r.projectDone) openGoalDone(r.goal.projectId, tk.id, r.goal.kind);
   return r;
 }
 
@@ -447,6 +451,10 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const typed = Number(estV) || null;
   const pe = typed ? personal({ ...tk, est: typed }) : null;
   const proj = projects.value.get(tk.project);
+  // "Moves the goal?": asked when the step's project has a bar (or the step already answered).
+  const [advV, setAdvV] = useState<boolean | null>(tk.advances ?? null);
+  const measure = measureOf(proj);
+  const asksGoal = !tk.template && !ev && !!proj && tk.project !== 'inbox' && (measure.kind !== 'none' || tk.advances != null);
   // Optional fields live under More; the summary counts the ones that have a value.
   const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
@@ -503,6 +511,10 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       // Empty = the default from Settings; 0 = notified at the time itself.
       if (el('lead')) setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
       setIf('weekdays', tk.template && weekdays.length ? [...weekdays].sort() : null, tk.weekdays);
+    }
+    if (asksGoal) {
+      setIf('advances', advV, tk.advances);
+      if (el('advanceBy')) { const n = Number(v('advanceBy').replace(',', '.')); setIf('advanceBy', n > 0 ? n : null, tk.advanceBy); }
     }
     setIf('repeat', repeat, tk.repeat);
     setIf('after', after.length ? after : null, Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : null);
@@ -622,6 +634,21 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <label class="field"><span>{t('dueField')}</span><input type="date" name="due" defaultValue={tk.due ?? ''} disabled={!!rule} /></label>
       </div>
       <label class="field" data-testid="where-field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
+      {asksGoal && (
+        <div class="field" data-testid="moves-goal"><span>{t('movesGoal')}</span>
+          <div class="seg small" role="group" aria-label={t('movesGoal')}>
+            <button type="button" aria-pressed={advV === true} data-testid="moves-yes" onClick={() => setAdvV(advV === true ? null : true)}>{t('movesYes')}</button>
+            <button type="button" aria-pressed={advV === false} data-testid="moves-no" onClick={() => setAdvV(advV === false ? null : false)}>{t('movesNo')}</button>
+          </div>
+          {advV === true && measure.kind === 'count' && (
+            <label class="row-inline"><span class="hint">{t('movesAdds')}</span>
+              <input type="number" name="advanceBy" min="0" step="any" inputMode="decimal" defaultValue={tk.advanceBy != null ? String(tk.advanceBy) : ''} placeholder="1" data-testid="advance-by" />
+              {measure.unit && <span class="hint">{measure.unit}</span>}
+            </label>
+          )}
+          <small class="hint">{t('movesGoalHint')}</small>
+        </div>
+      )}
       {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
       {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}

@@ -166,7 +166,8 @@ describe('Break it down, Stuck, Sunday review', () => {
     expect(cs.changes.map(c => c.op)).toEqual(['project.update', 'project.update', 'task.create', 'task.create']);
     const p = planChanges(cs, snap(), gen);
     const patch = p.items.flatMap(it => it.ops).filter(op => op.t === 'update').map(op => (op as { patch: Record<string, unknown> }).patch);
-    expect(patch[0]).toMatchObject({ goal: 'Moved by June', goalBy: 'ai' });
+    expect(patch[0]).toMatchObject({ outcome: 'Moved by June', goalBy: 'ai' });
+    expect(patch[0]).not.toHaveProperty('goal');
     expect(patch[1]).toMatchObject({ smartBy: 'ai' });
     expect(reviewChangeSet({ note: 'Looks fine.' }, { id: 'p1' })).toBeNull();
   });

@@ -21,14 +21,16 @@ When something in my list should change, end your reply with one change-set: one
 | `task.update` | `id`, `set` |
 | `task.done` / `task.drop` | `id`; `task.done` also takes `day?` (the day it was done; for a waiting-for step, the day it happened) |
 | `task.reorder` | `ids` (a project's steps, in order) |
-| `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `goal`, `due`, `status`) |
+| `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `outcome` (the goal in one sentence; `goal` still works), `measure`, `start`, `due`, `status`) |
 | `day.update` | `date`, and any of `plan`, `add`, `remove`, `first` (`launches` is accepted and stored but the app no longer uses launch points: leave it out) |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (`title`, `problem`, `options`, `chosen`, `why`, `mustBeTrue`, `falsifier`, `reviewOn`, `steps`) |
 | `address.create` | `set`: `name`, `category?`, `place?`, `mapsUrl?` (only a real Maps link), `street?`, `note?` (why, and what you checked). A place to try, saved as *want to go*; only in the app, not through the connector |
 | `place.create` / `place.update` | `ref?` or `id`, `set` (`name`, `timeZone`, `parent`: the place this is an area of; one level only; an area has its parent's time zone) |
 | `memory.add` / `memory.edit` / `memory.remove` | `note`, `text`, `line`, `kind?` (only for what I said, in my words) |
 
-A step's `set` takes: `title` (start with the first action: "Open Mail and reply to…"), `label` (a short name for calendars, five or six keywords: "Choir · Hill House"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` people, leisure, health), `urgent`, `important`, `due`, `est`, `starter`, `app`, `link` (https only), `note`, `after` (ids it waits for), `at` and `dur`, and `kind`: `task` (the default), `decision` or `event`. An `event` is something outside my hands that a step waits for (a call back, a reply): it sits in a chain with `after`, with an optional `nudge` (a day: Today asks me then whether it happened) and no `est`, `starter`, `due`, `at`, `urgent` or `important`. `task.done` on it means it happened (`day` is the day it did) and frees the steps behind it.
+A project's `measure` is `{"kind": "none"}` (no bar), `{"kind": "count", "target": 10, "unit": "pages"}` or `{"kind": "milestones", "items": ["Draft sent", {"text": "Filed", "done": true}]}` (the whole list; a milestone matched by its text keeps its tick). The bar moves only for steps marked `advances: true` (a count adds `advanceBy`, default 1, when one is done) and for milestones ticked; it never counts cards.
+
+A step's `set` takes: `title` (start with the first action: "Open Mail and reply to…"), `label` (a short name for calendars, five or six keywords: "Choir · Hill House"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` people, leisure, health), `urgent`, `important`, `due`, `est`, `starter`, `app`, `link` (https only), `note`, `after` (ids it waits for), `at` and `dur`, `advances` (does finishing it move its project's bar: `true`, `false` or `null`; only what I said) with `advanceBy` (the amount a count gains, default 1), and `kind`: `task` (the default), `decision` or `event`. An `event` is something outside my hands that a step waits for (a call back, a reply): it sits in a chain with `after`, with an optional `nudge` (a day: Today asks me then whether it happened) and no `est`, `starter`, `due`, `at`, `urgent` or `important`. `task.done` on it means it happened (`day` is the day it did) and frees the steps behind it.
 
 ## Example
 

@@ -44,11 +44,15 @@ const taskSet = z.object({
   template: z.boolean().optional(),
   weekdays: z.array(z.number().int().min(1).max(7)).max(7).nullable().optional(),
   lead: minutes0.nullable().optional(),
+  /** Does finishing this step move its project's bar? Only `true` does; null clears the answer. Not for events or standing steps. */
+  advances: z.boolean().nullable().optional(),
+  /** What a done advancing step adds to a count (default 1). */
+  advanceBy: z.union([z.number(), z.string().regex(/^\s*\d+([.,]\d+)?\s*$/).transform(v => Number(v.replace(',', '.')))]).pipe(z.number().positive().max(1e9)).nullable().optional(),
 });
 export type TaskSet = z.infer<typeof taskSet>;
 
 /** What an event cannot carry (it is not done, estimated or scheduled). Nothing, false and empty are fine: "no estimate" is not a clash. */
-const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'at', 'dur', 'lead', 'weekdays', 'template'] as const;
+const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'at', 'dur', 'lead', 'weekdays', 'template', 'advances', 'advanceBy'] as const;
 const has = (v: unknown) => v != null && v !== false && v !== '' && !(Array.isArray(v) && !v.length);
 /** The fields of `set` an event may not have, set to something. */
 export const eventClashes = (set: Partial<TaskSet>): string[] => EVENT_NO.filter(k => has(set[k]));
@@ -65,11 +69,33 @@ const newTaskSet = taskSet.extend({ title: text(240).pipe(z.string().min(1)) }).
 const taskUpdateSet = taskSet.superRefine(eventRules(false));
 
 const smart = z.object({ specific: text(400), measurable: text(400), attainable: text(400), relevant: text(400), dated: text(400) }).partial();
+/**
+ * How a project's bar is measured (schema 7): a count towards a target, milestones (words, or { text, done } to tick one: done is
+ * true for today, a day, or false to open it again), or none (no bar). A milestones list is the whole list: one matched by its text
+ * keeps its tick, one left out is gone.
+ */
+const milestone = z.union([text(120).pipe(z.string().min(1)).transform(t => ({ text: t, done: undefined as boolean | string | null | undefined })), z.object({ text: text(120).pipe(z.string().min(1)), done: z.union([z.boolean(), day, z.null()]).optional() })]);
+const measure = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({
+    kind: z.literal('count'),
+    target: z.union([z.number(), z.string().regex(/^\s*\d+([.,]\d+)?\s*$/).transform(v => Number(v.replace(',', '.')))]).pipe(z.number().positive().max(1e9)),
+    unit: text(40).optional(),
+  }),
+  z.object({ kind: z.literal('milestones'), items: z.array(milestone).max(30) }),
+]);
+export type MeasureSet = z.infer<typeof measure>;
 const projectSet = z.object({
   name: text(120).optional(),
   suit: suit.optional(),
   where: id.optional(),
+  /** The outcome, in one sentence (schema 7). */
+  outcome: text(400).nullable().optional(),
+  /** The old name of `outcome`, still accepted (it sets the outcome; the stored `goal` is never written again). */
   goal: text(400).nullable().optional(),
+  measure: measure.optional(),
+  /** The day the goal starts. */
+  start: day.nullable().optional(),
   smart: smart.nullable().optional(),
   due: day.nullable().optional(),
   status: z.enum(['active', 'paused', 'done', 'dropped']).optional(),

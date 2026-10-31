@@ -1,7 +1,7 @@
 // Projects by suit (brief §5, Projects): the project editor with its SMART goal, steps in
 // order with what waits for what, linked decisions, progress bars, and the Completed shelf.
 import { useState } from 'preact/hooks';
-import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace } from '../app/store';
+import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace, today } from '../app/store';
 import { onPage } from '../domain/places';
 import { isOpen, isEvent, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
 import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
@@ -9,7 +9,8 @@ import { openTask, PlaceSelect, placeName } from '../app/sheets';
 import { openHappened } from '../app/EventUi';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
-import { SmartEditor, smartFilled } from '../app/smart';
+import { SmartEditor, progressLine, projectProgress } from '../app/smart';
+import { outcomeOf } from '../domain/goal';
 import { More, Fold, countSet } from '../app/More';
 import { DoneFold } from '../app/DoneFold';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
@@ -67,6 +68,8 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   const openSteps = open.filter(x => !isEvent(x));
   const tmpl = ts.filter(x => x.template && x.status !== 'dropped');
   const total = real.length;
+  const prog = p.id === 'inbox' ? null : projectProgress(p);
+  const outcome = outcomeOf(p);
   const next = openSteps.find(x => !blocked(x)) ?? openSteps[0];
   const doneSorted = mine.filter(x => x.status === 'done').sort((a, b) => String(a.doneAt ?? '').localeCompare(String(b.doneAt ?? '')));
   const label = t('stepsDone', { d: done.length, n: total });
@@ -87,11 +90,11 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   return (
     <article class="proj" data-project={p.id}>
       <h4><span>{p.name}{p.status === 'paused' && <> <span class="tag">{t('pst_paused')}</span></>}</span>
-        <span class="frac">{total ? done.length + ' / ' + total : ''}{p.id !== 'inbox' && <button type="button" class="btn small ghost" onClick={() => openProject(p.id)} data-testid="edit-project">{t('edit')}</button>}</span></h4>
-      {total > 0 && total <= 16 && <div class="bar" role="img" aria-label={label}>{real.map((_, i) => <i class={i < done.length ? 'on' : ''} />)}</div>}
-      {total > 16 && <div class="bar cont" role="img" aria-label={label}><i style={{ width: Math.round((done.length / total) * 100) + '%' }} /></div>}
+        <span class="frac" aria-label={label}>{total ? done.length + ' / ' + total : ''}{p.id !== 'inbox' && <button type="button" class="btn small ghost" onClick={() => openProject(p.id)} data-testid="edit-project">{t('edit')}</button>}</span></h4>
+      {prog && <div class="bar cont goalbar" role="img" aria-label={progressLine(prog)} data-testid="goal-bar" data-frac={Math.round(prog.frac * 100)}><i style={{ width: Math.round(prog.frac * 100) + '%' }} /></div>}
+      {prog && <p class="next" data-testid="goal-line">{progressLine(prog)}</p>}
       {total >= 4 && left > 0 && left <= 3 && <p class="left">{t('stepsLeft', { n: left })}</p>}
-      {p.goal ? <p class="goal">{p.goal}{p.goalBy === 'ai' && <span class="proposed" title={t('proposedHint')}>{t('proposed')}</span>}{p.id !== 'inbox' && <small class="muted"> · {t('smartN', { n: smartFilled(p.smart) })}</small>}</p>
+      {outcome ? <p class="goal" data-testid="outcome">{outcome}{p.goalBy === 'ai' && <span class="proposed" title={t('proposedHint')}>{t('proposed')}</span>}</p>
         : p.id !== 'inbox' && <p class="goal muted">{t('noGoal')}</p>}
       {p.due && <p class="next"><Due k={p.due} /></p>}
       {next && <p class="next">{t('next', { what: '' })}<Title s={next.title} /></p>}
@@ -133,9 +136,10 @@ function ProjectSheet({ id }: { id: string }) {
         </label>
         <label class="field"><span>{t('where')}</span><PlaceSelect value={where} onChange={v => { setWhere(v); set({ where: v }); }} /></label>
       </div>
-      <More n={countSet(p.due, p.status !== 'active', (smartFilled(p.smart) > 0 || !!p.goal))} testid="project-more">
+      <h2 class="sec">{t('smartGoal')}</h2>
+      <SmartEditor projectId={id} />
+      <More n={countSet(p.status !== 'active')} testid="project-more">
         <div class="row2">
-          <label class="field"><span>{t('dueField')}</span><input type="date" defaultValue={p.due ?? ''} onChange={e => set({ due: (e.target as HTMLInputElement).value || null })} /></label>
           <label class="field"><span>{t('status')}</span>
             <select value={p.status} onChange={e => { const v = (e.target as HTMLSelectElement).value as Project['status']; set({ status: v, doneAt: v === 'done' ? new Date().toISOString() : null }); }}>
               {STATUSES.map(s => <option value={s}>{t(('pst_' + s) as Key)}</option>)}
@@ -146,9 +150,6 @@ function ProjectSheet({ id }: { id: string }) {
           <button class="btn small" type="button" onClick={() => moveProject(id, -1)}>{t('earlier')}</button>
           <button class="btn small" type="button" onClick={() => moveProject(id, 1)}>{t('later')}</button>
         </div>
-        <h2 class="sec">{t('smartGoal')}</h2>
-        <p class="hint">{t('smartHint')}</p>
-        <SmartEditor projectId={id} />
       </More>
       <div class="actions"><button class="btn primary" type="button" onClick={closeSheet}>{t('doneButton')}</button><button class="btn" type="button" onClick={() => void openDecision(null, { projectId: id })}>{t('newDecision')}</button></div>
     </div>
@@ -168,7 +169,7 @@ function NewProject() {
     const name = (f.elements.namedItem('name') as HTMLInputElement).value.trim();
     if (!name) return;
     const suit = (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'];
-    const id = await createDoc<Project>('projects', { name, suit, where, goal: null, goalBy: null, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
+    const id = await createDoc<Project>('projects', { name, suit, where, goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: today.value, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
     openProj.add(id);
     closeSheet();
     toast(t('projectAdded'));

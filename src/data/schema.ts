@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -88,6 +88,15 @@ export interface Task {
    * the title when one is needed (`shortLabel`, src/domain/label.ts) and never stored.
    */
   label?: string;
+  // v2, schema 7 (SMART goals v2)
+  /**
+   * Does finishing this step move its project's bar? `true`: yes (a count adds `advanceBy`, milestones may be ticked);
+   * `false`: no, said on purpose; `null` or missing: not said yet, which counts as no. Only `true` ever moves a bar;
+   * card counts never do (src/domain/goal.ts).
+   */
+  advances?: boolean | null;
+  /** What a done advancing step adds to a count measure; missing or 0 reads as 1. */
+  advanceBy?: number | null;
   [extra: string]: unknown;
 }
 
@@ -102,12 +111,30 @@ export interface Session {
   [extra: string]: unknown;
 }
 
+/** One milestone of a goal: ticked on a day, or open. `id` is stable so a tick finds the same line on every device. */
+export interface Milestone { id: string; text: string; done: DayKey | null }
+/** How a project's bar is measured (schema 7): a count towards a target, milestones ticked one by one, or no bar at all. */
+export type Measure =
+  | { kind: 'none' }
+  | { kind: 'count'; target: number; unit: string }
+  | { kind: 'milestones'; items: Milestone[] };
+
 export interface Project {
   name: string;
   suit: SuitId;
   where: Where;
+  /** The SMART goal's old one-sentence field (schema 6 and before). Kept, never edited again: `outcome` replaces it (`outcomeOf`, src/domain/goal.ts). */
   goal: string | null;
+  /** Who wrote the outcome (and, before schema 7, the goal): 'ai' shows "proposed" until confirmed. */
   goalBy: By | null;
+  /** The outcome, in one sentence (schema 7). Missing on a project an older device wrote: `goal` stands in. */
+  outcome?: string | null;
+  /** How the bar is measured (schema 7). Missing reads as `{ kind: 'none' }`: no bar. */
+  measure?: Measure;
+  /** What the measure held before the person picked another kind, so going back finds it again (the editor, src/app/smart.tsx). */
+  measurePrev?: Measure;
+  /** The day the goal starts; `due` is the day it ends. */
+  start?: DayKey | null;
   due: DayKey | null;
   order: number;
   status: 'active' | 'paused' | 'done' | 'dropped';

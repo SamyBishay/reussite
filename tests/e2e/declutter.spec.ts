@@ -51,10 +51,12 @@ test('the add sheet and the project sheet fold their optional fields too', async
   await page.getByTestId('edit-project').first().click();
   const p = sheet(page).getByTestId('project-sheet');
   await expect(p.locator('input[type=text]').first()).toBeVisible();
-  await expect(p.getByTestId('smart')).toBeHidden();
-  await expect(p.getByTestId('project-more')).not.toHaveAttribute('open', '');
-  await p.getByTestId('project-more').locator('summary').click();
+  // The goal (outcome, measure, dates) is on the sheet; the five old SMART questions are folded under it, and status is under More.
   await expect(p.getByTestId('smart')).toBeVisible();
+  await expect(p.getByTestId('smart-five')).not.toHaveAttribute('open', '');
+  await expect(p.getByTestId('project-more')).not.toHaveAttribute('open', '');
+  await p.getByTestId('smart-five').locator('summary').click();
+  await expect(p.getByTestId('smart-five').locator('input[type=text]').first()).toBeVisible();
 });
 
 test('Settings sections are folded; only the first is open, and one tap opens another', async ({ page }) => {

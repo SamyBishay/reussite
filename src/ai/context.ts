@@ -15,6 +15,7 @@ import { preferencesPack, preferencesSystem } from '../domain/preferences';
 import { lang } from '../i18n';
 import { DEFAULT_SETTINGS } from '../data/settings';
 import type { Decision, ExchangeTurn, Project } from '../data/schema';
+import { goalLines, outcomeOf } from '../domain/goal';
 
 export const MAX_STEPS = 25;
 
@@ -82,7 +83,7 @@ export const stepLines = (ts: { id: string }[], max = MAX_STEPS) => ts.slice(0, 
 
 export function projectLines(max = 30): string {
   const ps = [...projects.value.values()].filter(p => p.status === 'active' || p.status === 'paused').sort(byOrder).slice(0, max);
-  return 'Projects (id | name | suit | goal):\n' + ps.map(p => [p.id, one(p.name), p.suit, p.goal ? one(p.goal) : '-'].join(' | ')).join('\n');
+  return 'Projects (id | name | suit | goal):\n' + ps.map(p => [p.id, one(p.name), p.suit, outcomeOf(p) ? one(outcomeOf(p)) : '-'].join(' | ')).join('\n');
 }
 export function placeLines(): string {
   const ps = [...places.value.values()];
@@ -145,7 +146,7 @@ export function scopeLines(s: Scope): string {
     const all = [...tasks.value.values()].filter(x => x.project === s.id && !x.template && x.status !== 'dropped' && x.kind !== 'event');
     const open = all.filter(x => x.status === 'open').sort(byOrder);
     const smart = p.smart ? Object.entries(p.smart).filter(([, v]) => v).map(([k, v]) => `${k}: ${one(String(v))}`).join('; ') : '';
-    return `Project ${p.id}: ${one(p.name)} (${p.status}), due ${p.due ?? '-'}\ngoal: ${p.goal ? one(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} steps done, ${open.length} open:\n${stepLines(open)}`;
+    return `Project ${p.id}: ${one(p.name)} (${p.status}), due ${p.due ?? '-'}\n${goalLines(p, all, one).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} steps done, ${open.length} open:\n${stepLines(open)}`;
   }
   const d = decisions.value.get(s.id);
   return d ? decisionLines(d) : '';

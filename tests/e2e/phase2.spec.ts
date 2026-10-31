@@ -345,7 +345,7 @@ test('Sunday review help: a proposed SMART goal and next step, confirmed by the 
   answer.text = JSON.stringify({ goal: 'Method section drafted by November 15', smart: { specific: 'Draft the method section', dated: 'November 15' }, next: [{ title: 'Open the thesis draft and list the method subsections', est: 10 }], note: 'One goal, one step.' });
   await toProjects(page);
   const proj = page.locator('details.proj-rv', { hasText: 'Thesis' });
-  await proj.locator('summary').click();
+  await proj.locator('summary').first().click();
   await proj.getByTestId('ai-review').click();
   await page.getByTestId('ai-send').click();
   await expect(proj.getByTestId('chg')).toHaveCount(3);
@@ -400,7 +400,7 @@ for (const w of [320, 375, 430]) {
     answer.text = JSON.stringify({ goal: 'A goal', smart: { specific: 'Something specific' }, next: [{ title: 'Open the draft', est: 10 }] });
     await toProjects(page);
     const proj = page.locator('details.proj-rv', { hasText: 'Thesis' });
-    await proj.locator('summary').click();
+    await proj.locator('summary').first().click();
     await proj.getByTestId('ai-review').click();
     await page.getByTestId('ai-send').click();
     await expect(proj.getByTestId('review')).toBeVisible();

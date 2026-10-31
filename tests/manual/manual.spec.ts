@@ -28,6 +28,8 @@ function list(lang: Lang): Docs {
   const done = (title: string, project: string, suit: string, est: number, real: number, ago: number) => task(title, {
     project, suit, est, est0: est, status: 'done', doneDay: day(-ago), doneAt: day(-ago) + 'T10:00:00.000Z', where: 'any',
   });
+  // The thesis is counted in pages: two done steps moved it (3 and 4 pages), a third said it does not.
+  const MOVES: Record<number, Record<string, unknown>> = { 2: { advances: true, advanceBy: 3 }, 3: { advances: false }, 6: { advances: true, advanceBy: 4 } };
   const past = [
     ['Open the bank app and download the September statement', 'Ouvrir l’appli de la banque et télécharger le relevé de septembre', 'p1', 'D', 10, 14, 1],
     ['Open Mail and reply to the electrician', 'Ouvrir Mail et répondre à l’électricien', 'p1', 'D', 10, 12, 2],
@@ -39,7 +41,7 @@ function list(lang: Lang): Docs {
   ] as const;
   const tasks: [string, Record<string, unknown>][] = [
     ['t1', task(L('Open Mail and send the signed lease to the agency', 'Ouvrir Mail et envoyer le bail signé à l’agence'), { project: 'p1', suit: 'D', due: day(2), urgent: true, est: 10, order: 1 })],
-    ['t2', task(L('Open the thesis draft and write the second paragraph of the method section', 'Ouvrir le mémoire et écrire le deuxième paragraphe de la méthode'), { project: 'p3', suit: 'S', est: 30, order: 2, starter: L('Open the draft on the method section', 'Ouvrir le brouillon à la section méthode') })],
+    ['t2', task(L('Open the thesis draft and write the second paragraph of the method section', 'Ouvrir le mémoire et écrire le deuxième paragraphe de la méthode'), { project: 'p3', suit: 'S', est: 30, order: 2, advances: true, advanceBy: 2, starter: L('Open the draft on the method section', 'Ouvrir le brouillon à la section méthode') })],
     ['t3', task(L('Open Doctolib and book the dentist', 'Ouvrir Doctolib et prendre rendez-vous chez le dentiste'), { project: 'p2', suit: 'H', due: day(5), est: 10, app: 'Doctolib', link: 'https://www.doctolib.fr/', order: 3 })],
     ['t4', task(L('Open Messages and text Alex about Sunday', 'Ouvrir Messages et écrire à Alex pour dimanche'), { project: 'p2', suit: 'H', due: day(3), important: false, est: 5, order: 4 })],
     ['t5', task(L('Open Files and sort the scanned receipts', 'Ouvrir Fichiers et trier les reçus scannés'), { project: 'p1', suit: 'D', important: false, est: 20, order: 5, where: 'oldtown' })],
@@ -55,7 +57,7 @@ function list(lang: Lang): Docs {
     ['t15', task(L('Call with the agency', 'Appel avec l’agence'), { project: 'p1', suit: 'D', due: day(0), at: '11:30', dur: 30, est: 30, order: 15 })],
     ['t16', task(L('Lunch with Noor', 'Déjeuner avec Noor'), { project: 'p2', suit: 'H', due: day(2), at: '12:30', dur: 60, est: 60, order: 16 })],
     ['t11', task(L('Open the buy-a-gift list and pick a gift for Mum', 'Ouvrir la liste de cadeaux et en choisir un pour maman'), { project: 'p2', suit: 'H', where: 'lisbon', est: 20, order: 11, dueRule: { beforeEndOf: 'stay1', daysBefore: 2 } })],
-    ...past.map(([en, fr, p, s, est, real, ago], i) => [`d${i}`, done(L(en, fr), p, s, est, real, ago)] as [string, Record<string, unknown>]),
+    ...past.map(([en, fr, p, s, est, real, ago], i) => [`d${i}`, { ...done(L(en, fr), p, s, est, real, ago), ...(MOVES[i] ?? {}) }] as [string, Record<string, unknown>]),
   ];
   const sessions: [string, Record<string, unknown>][] = past.map(([, , , , , real, ago], i) => [`s${i}`, { taskId: `d${i}`, d: day(-ago), m: real, why: 'done', at: day(-ago) + 'T10:00:00.000Z', source: 'timer' }]);
   const item = (id: string, text: string, w: number) => ({ id, text, w, by: 'me' });
@@ -64,9 +66,9 @@ function list(lang: Lang): Docs {
     places: [['home', { name: L('Home', 'Maison'), timeZone: 'Europe/Paris', order: 1 }], ['lisbon', { name: L('Lisbon', 'Lisbonne'), timeZone: 'Europe/Lisbon', order: 2 }], ['oldtown', { name: L('Old town', 'Vieille ville'), timeZone: 'Europe/Paris', order: 3, parentId: 'home' }]],
     stays: [['stay1', { placeId: 'lisbon', from: day(12), to: day(16), note: '' }]],
     projects: [
-      ['p1', { name: L('Housing papers', 'Papiers du logement'), suit: 'D', where: 'any', goal: L('Lease signed and filed by the end of the month', 'Bail signé et classé avant la fin du mois'), goalBy: 'me', due: day(20), order: 1, status: 'active' }],
+      ['p1', { name: L('Housing papers', 'Papiers du logement'), suit: 'D', where: 'any', goal: L('Lease signed and filed by the end of the month', 'Bail signé et classé avant la fin du mois'), goalBy: 'me', outcome: L('Lease signed and filed by the end of the month', 'Bail signé et classé avant la fin du mois'), measure: { kind: 'milestones', items: [{ id: 'm1', text: L('Lease signed', 'Bail signé'), done: day(-3) }, { id: 'm2', text: L('Boiler form filed', 'Formulaire de la chaudière classé'), done: null }, { id: 'm3', text: L('Receipts sorted', 'Reçus triés'), done: null }] }, start: day(-20), due: day(20), order: 1, status: 'active' }],
       ['p2', { name: L('Friends & outings', 'Amis et sorties'), suit: 'H', where: 'any', goal: L('See a friend every week', 'Voir un proche chaque semaine'), goalBy: 'me', due: null, order: 2, status: 'active' }],
-      ['p3', { name: L('Thesis', 'Mémoire'), suit: 'S', where: 'home', goal: L('Method section drafted by the 30th', 'Section méthode rédigée avant le 30'), goalBy: 'me', due: day(7), order: 3, status: 'active' }],
+      ['p3', { name: L('Thesis', 'Mémoire'), suit: 'S', where: 'home', goal: L('Method section drafted by the 30th', 'Section méthode rédigée avant le 30'), goalBy: 'me', outcome: L('Method section drafted by the 30th', 'Section méthode rédigée avant le 30'), measure: { kind: 'count', target: 12, unit: L('pages', 'pages') }, start: day(-20), due: day(7), order: 3, status: 'active' }],
       ['inbox', { name: L('Inbox', 'Boîte de réception'), suit: 'S', where: 'any', goal: null, goalBy: null, due: null, order: 99, status: 'active' }],
     ],
     tasks, sessions,

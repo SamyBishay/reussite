@@ -18,7 +18,7 @@ The core difficulty it addresses is **starting**. Once work has begun it usually
 6. **Make progress visible.** Played cards, progress bars, the close of the day. Seeing progress is the reward; nothing else is invented. `[E?]`
 7. **Leisure, going out and seeing people are obligations**, to your mental health and to the list. Schedule them like any step, never as a prize for work. `[E?]`
 8. **Decisions and problems get a method of their own**: define the problem, list every option, weigh the pros and cons of doing and of not doing each one, choose, then turn the choice into steps. See *Decisions* below. `[E?]`
-9. **Goals are SMART**: specific, measurable, attainable, relevant, dated. `[E?]`
+9. **Goals are SMART**: specific, measurable, attainable, relevant, dated. In the app a goal is an **outcome** in one sentence, a **measure** (a count towards a target, like 10 pages; milestones you tick off; or none, and then there is no bar), and a start and due date. Only the steps you say *move the goal* fill its bar, once they are done; a count adds 1 per step (or the amount you give), and a milestone is ticked by hand. How many cards are done never fills it. `[E?]`
 
 ## Starters: the smallest frictionless action
 

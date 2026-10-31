@@ -6,7 +6,8 @@ import { T, isOpen, quad, inPlace, byPriority, byOrder, rawPlan, dayDoc, estPoin
 import { patchTask, dropTask, planOn, cloneTemplate, dayPatch, dueOn } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, quadName } from '../app/ui';
-import { SmartEditor, smartFilled } from '../app/smart';
+import { SmartEditor } from '../app/smart';
+import { outcomeOf } from '../domain/goal';
 import { reviewDecision } from './decision';
 import { t, fmtDate, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -111,7 +112,7 @@ function Review() {
         const nx = [...tasks.value.values()].filter(x => x.project === p.id && isOpen(x)).sort(byOrder)[0];
         return (
           <details class="proj-rv">
-            <summary><b>{p.name}</b> · {t('smartN', { n: smartFilled(p.smart) })}</summary>
+            <summary><b>{p.name}</b>{outcomeOf(p) ? ' · ' + outcomeOf(p) : ''}</summary>
             {nx ? <label class="field"><span>{t('nextStepField')}</span><input type="text" defaultValue={nx.title} onChange={e => void patchTask(nx.id, { title: (e.target as HTMLInputElement).value.trim() || nx.title })} /></label>
               : <p class="hint">{t('noNextStep')}</p>}
             <ProjectAi id={p.id} />

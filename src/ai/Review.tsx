@@ -9,25 +9,28 @@ import { t, fmtDate, fmtIfDay, fmtMin, type Key } from '../i18n';
 import { planChanges, applyPlanned, createsNote, isRef, type Plan, type Planned } from './apply';
 import { recordWrites } from '../app/store';
 import { appWriter, snapshot, gen } from './writer';
+import { measureLabel } from '../app/smart';
+import { readMeasure } from '../domain/goal';
 import type { ChangeSet } from './changeset';
 import type { SuitId, UndoDoc } from '../data/schema';
 
 const FIELD: Record<string, Key> = {
   title: 'fTitle', project: 'project', suit: 'suit', urgent: 'fUrgent', important: 'fImportant', due: 'fDue', est: 'fEst', starter: 'fStarter',
   app: 'fApp', link: 'fLink', prompt: 'fPrompt', note: 'fNote', where: 'where', after: 'fAfter', kind: 'fKind', nudge: 'nudgeField', at: 'fAt', dur: 'fDur',
-  doneDay: 'fDoneDay', order: 'fOrder', name: 'fName', goal: 'fGoal', smart: 'fSmart', status: 'fStatus', plan: 'fPlan', first: 'fFirst',
+  doneDay: 'fDoneDay', order: 'fOrder', name: 'fName', goal: 'fGoal', smart: 'fSmart', outcome: 'fOutcome', measure: 'fMeasure', start: 'fStart', advances: 'fAdvances', advanceBy: 'fAdvanceBy', status: 'fStatus', plan: 'fPlan', first: 'fFirst',
   launches: 'fLaunches', timeZone: 'timeZone', place: 'fPlace', from: 'stayFrom', to: 'stayTo', option: 'fOption', items: 'fItems', steps: 'fSteps',
   template: 'fTemplate', weekdays: 'weekdaysField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
   category: 'addrCategory', mapsUrl: 'addrLink', street: 'addrStreet', state: 'addrState',
   chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
 };
-const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge']);
+const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge', 'start']);
 const IDS = new Set(['after', 'plan', 'order', 'steps', 'first']);
 
 function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {
   if (v == null || v === '' || (Array.isArray(v) && !v.length)) return t('chgNone');
   const title = (id: string) => (isRef(id) ? refs.get(id) ?? '?' : tasks.value.get(id)?.title ?? id);
   if (field === 'kind' && (v === 'event' || v === 'task' || v === 'decision')) return t(v === 'event' ? 'kindEvent' : v === 'decision' ? 'kindDecision' : 'kindTask');
+  if (field === 'measure' && typeof v === 'object') return measureLabel(readMeasure(v));
   if (DATES.has(field) && typeof v === 'string') return fmtDate(v);
   if (field === 'weekdays' && Array.isArray(v)) return weekdayNames().filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ');
   if ((field === 'est' || field === 'dur' || field === 'lead') && typeof v === 'number') return fmtMin(v);

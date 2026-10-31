@@ -1,16 +1,37 @@
 # Projects
 
-A project groups steps toward a goal. Projects are listed under the four suits. A project card shows its goal, how many steps are done, and its next step.
+A project groups steps toward a goal. Projects are listed under the four suits. A project card shows its goal, its bar if it has one, and its next step.
 
 ![Projects, with decisions below](shot:projects)
 
 ## The goal
 
-Give every active project a **SMART** goal: specific, measurable, attainable, relevant and dated. Open the project and fill in the five lines. The card shows "SMART 3/5" until all are there. If an AI proposed a goal, it stays "proposed" until you confirm or rewrite it.
+A goal has four parts. Open the project to set them:
+
+- **The goal, in one sentence**: the outcome you want ("Draft of the thesis handed in").
+- **How you'll see progress**: **A count**, **Milestones** or **No bar**.
+  - *A count* is a number towards a target, with a unit: 10 pages, 12 sessions.
+  - *Milestones* are a few stages you tick off yourself: "Draft sent", "Feedback in", "Final filed".
+  - *No bar* means the card shows the goal and no bar. Every project starts here.
+- **Starts** and **Due**: the two dates.
+- **The five SMART questions** (specific, measurable, attainable, relevant, dated) are still there, folded under the goal. Fill them in if they help you; nothing depends on them.
+
+If an AI proposed a goal, it stays "proposed" until you confirm or rewrite it.
+
+### What moves the bar
+
+The bar is filled by steps, not by the number of cards done. Open a step of a project that has a bar and answer **Moves the goal?** with **Yes** or **No**. Only the steps you say **Yes** to count, and only once they are done:
+
+- With a count, each such step adds 1 when you mark it done. A small sheet then asks if it added more ("+5 pages"), or you keep +1. A step can also hold its own amount in the step sheet (**Adds**).
+- With milestones, marking such a step done asks **Tick a milestone?** and lists the ones still open. Pick one, or **Not now**: the bar only moves when you tick a milestone, here or in the project.
+
+A step you never answered counts as No, and the bar never counts steps just because they are done. If you un-do a step, a count goes back down. Steps you add in the project, on Today or by talking to an AI can all say whether they move the goal.
 
 **Research says:** untested here. `[E?]`
 
-**Practice says:** a goal you can't tell is finished isn't a goal. `[E?]`
+**Practice says:** a goal you can't tell is finished isn't a goal, and a bar that fills for any step done isn't telling you about the goal. `[E?]`
+
+Projects you had before this change keep their goal as the sentence and have no bar until you pick a measure. What you wrote in the five SMART lines is kept.
 
 ## The next step
 

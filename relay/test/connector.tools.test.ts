@@ -72,7 +72,7 @@ describe('chains', () => {
 });
 
 describe('reading', () => {
-  it('today: the place, the list in order, the day's shape, fixed times, carried steps', async () => {
+  it('today: the place, the list in order, the shape of the day, fixed times, carried steps', async () => {
     const r = await tool(access, 'today');
     expect(r.isError).toBe(false);
     expect(r.text).toContain('Next step:\nt1 | Call the agency about the keys');

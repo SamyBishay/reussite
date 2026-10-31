@@ -1,6 +1,8 @@
 # What's new
 
 ## Next — less clutter
+- Steps left open from yesterday are no longer carried over all at once. In the morning each one gets its own card, one at a time: **Today**, **Another day**, **Drop it** or **Make it a decision** (or **Already done**, with how long it took). Nothing moves until you choose. Today's old "Add them at the end" button and the bell's are now "Decide them one at a time".
+- A thing at a fixed time whose time has passed gets one small card on Home and Today, “Call the bank” was at 10:00, with **Move** and **Remove** (and **Already done**). In the morning, yesterday's are asked one at a time too. No counts, never red.
 - Start here follows the clock. It is the first step that fits before your next fixed time; a step that doesn't fit the gap waits and a shorter one further down moves up. When the next thing at a fixed time gets close, it takes over, with its time and when to leave, on Home, on Today and in the bar on the other tabs, and they all agree. Today's list shows when each step is expected to start ("≈10:40"). "Coming up" is gone.
 - Home opens with one friendly line, picked from a few sentences and filled with what is true today (the next fixed time, a project nearly done, the time of day, what you ticked off). It doesn't repeat itself during a day, never counts what you missed, and works without an AI.
 - Done steps fold under their list as "3 done ▸" on Today and in each project.

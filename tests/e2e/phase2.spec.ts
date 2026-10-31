@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
+import { importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -213,7 +213,7 @@ async function aiSession(page: Page) {
 const userText = (seen: Record<string, unknown>[], i = -1) => String(((seen.at(i)!.body as { messages: { content: string }[] }).messages[0]!).content);
 async function toPlan(page: Page) {
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
-  await page.getByTestId('ci-next').click();
+  await carryAll(page);
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('plan-items')).toBeVisible();

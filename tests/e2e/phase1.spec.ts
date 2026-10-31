@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
+import { importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -25,7 +25,7 @@ test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page
   await importSample(page);
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await expect(page.getByTestId('ci-yesterday')).toContainText('text Alex');
-  await page.getByTestId('ci-next').click();
+  await carryAll(page);
   await expect(page.getByTestId('ci-shape')).toBeVisible();
   await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('ci-pillars')).toBeVisible();
@@ -265,7 +265,7 @@ for (const width of [320, 375, 430]) {
     // Check-in, each screen.
     await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
     await check('check-in yesterday');
-    await page.getByTestId('ci-next').click();
+    await carryAll(page);
     await check('check-in shape');
     await page.getByTestId('ci-next').click();
     await check('check-in pillars');

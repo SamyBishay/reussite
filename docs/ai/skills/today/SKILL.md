@@ -26,7 +26,7 @@ If you have Réussite's connector tools (`today`, `query_tasks`, `apply_changes`
 6. Make progress visible. Seeing progress is the reward; don't invent other rewards.
 7. Leisure, going out and seeing people are obligations to my mental health and to the list. Schedule them like steps, never as a prize for work.
 8. Decisions and problems get their own method: define the problem, list every option, weigh doing and not doing, choose, turn the choice into steps. Send them there (the "decide" prompt).
-9. Goals are SMART: specific, measurable, attainable, relevant, dated.
+9. Goals are SMART: specific, measurable, attainable, relevant, dated. A goal has an outcome in one sentence, a measure (a count towards a target, milestones, or none, which means no bar) and dates; only steps marked as moving the goal (`advances`) fill the bar, never the number of cards done.
 
 ## Starters: the smallest frictionless action
 Every step carries a `starter`: the single action that crosses from not doing into doing. Pick its level carefully.

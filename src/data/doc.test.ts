@@ -36,4 +36,17 @@ describe('doc merge', () => {
     const a = { ...base(), mystery: 1, _hlc: { ...base()._hlc, mystery: base()._hlc.title! } };
     expect(merge(a, base())).toHaveProperty('mystery', 1);
   });
+
+  it('the goal fields (schema 7) have their own clocks: two devices editing different ones both keep their edit; the same one, the later wins', () => {
+    const proj = () => create<Record<string, unknown>>('p1', { name: 'Thesis', goal: 'Old', outcome: 'Old', measure: { kind: 'none' }, start: null }, 7, tick(createClock('z'), 1));
+    const step = () => create<Record<string, unknown>>('t1', { title: 'x', advances: null, advanceBy: null }, 7, tick(createClock('z'), 1));
+    const ca = createClock('a'), cb = createClock('b');
+    ca.wall = 100; cb.wall = 200;
+    const a = patch(proj(), { outcome: 'From A', start: '2026-10-01' }, ca, 7);
+    const b = patch(proj(), { measure: { kind: 'count', target: 10, unit: 'pages' }, outcome: 'From B' }, cb, 7);
+    expect(fieldsOf(merge(a, b))).toEqual({ name: 'Thesis', goal: 'Old', outcome: 'From B', measure: { kind: 'count', target: 10, unit: 'pages' }, start: '2026-10-01' });
+    expect(fieldsOf(merge(b, a))).toEqual(fieldsOf(merge(a, b)));
+    const s1 = patch(step(), { advances: true }, ca, 7), s2 = patch(step(), { advanceBy: 3 }, cb, 7);
+    expect(fieldsOf(merge(s1, s2))).toEqual({ title: 'x', advances: true, advanceBy: 3 });
+  });
 });

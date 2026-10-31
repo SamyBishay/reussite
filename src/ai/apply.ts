@@ -599,6 +599,7 @@ export function isLowRisk(cs: Pick<ChangeSet, 'changes' | 'bad'>, plan: Pick<Pla
   if (it.target !== 'task') return false;
   const first = cs.changes[0]!;
   if (first.op === 'task.create' && first.set.kind === 'decision') return false; // a decision opens the review (brief §10)
+  if (first.op === 'task.create' && (first.set.advances != null || first.set.advanceBy != null)) return false; // what moves a goal's bar is the person's call
   if (it.kind === 'create' || it.kind === 'done') return true;
   if (it.kind !== 'update') return false;
   const fields = it.diffs.map(d => d.field);

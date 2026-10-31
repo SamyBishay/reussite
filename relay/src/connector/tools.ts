@@ -137,7 +137,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
 
   tool('get_task', 'One step with everything on it, and its work sessions. The id, or its title.', z.object({ id: z.string() }), read, (c, { id }) => ({ text: taskText(c.v, task(c, id)) }));
 
-  tool('get_project', 'One project: goal, SMART fields, and its steps (at most 50 open ones). The id, or its name.', z.object({ id: z.string() }), read, (c, { id }) => {
+  tool('get_project', 'One project: its goal (the outcome, how it is measured and where the bar stands, when it starts, and the open steps that move it), the SMART fields, and its steps (at most 50 open ones). The id, or its name.', z.object({ id: z.string() }), read, (c, { id }) => {
     const f = c.v.projects.has(id) || id === 'inbox' ? { id } : findByName(id, [...c.v.projects.values()].map(p => ({ id: p.id, name: p.name })));
     if ('many' in f) throw new ToolError(`"${id}" matches several projects:\n${f.many.map(m => `${m.id} | ${m.name}`).join('\n')}`);
     if (!('id' in f)) {

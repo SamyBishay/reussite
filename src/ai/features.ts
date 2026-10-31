@@ -2,9 +2,10 @@
 // check a reply against the rules and turn it into a change-set for the review screen.
 // Nothing here writes; nothing here reads the store, so every rule is unit-tested.
 import { z } from 'zod';
-import { checkPlan, needsBreakDown, type Plan, type PlanInput, type PlanItem, type Role } from '../domain/planner';
+import { checkPlan, needsBreakDown, PILLARS, type Plan, type PlanInput, type PlanItem, type Role } from '../domain/planner';
+import type { MustWhy, Proposal } from '../domain/propose';
 import { readChangeSet, type ChangeSet } from './changeset';
-import type { By } from '../data/schema';
+import type { By, SuitId } from '../data/schema';
 
 const text = (max: number) => z.string().transform(s => s.trim().slice(0, max));
 const line = (max: number) => text(max).pipe(z.string().min(1));
@@ -178,4 +179,196 @@ export function reviewChangeSet(r: ReviewReply, p: { id: string; where?: string 
   if (r.smart && Object.values(r.smart).some(Boolean)) ch.push({ op: 'project.update', id: p.id, set: { smart: r.smart } });
   (r.next ?? []).forEach((s, i) => ch.push({ op: 'task.create', ref: 'next' + i, set: { ...clean(s), project: p.id, important: true, ...(i ? { after: ['next' + (i - 1)] } : {}) } }));
   return toChangeSet(ch, r.note);
+}
+
+// ---------- 7. The morning conversation ----------
+// The AI words and ranks the candidates `proposeDay` gives it (src/domain/propose.ts); it may also write a new step for a goal or a
+// pillar. Whatever it sends is checked against those candidates here: an id it was not given, a section it left out or a pillar it
+// forgot falls back to the candidates themselves, so the five sections are always there. The person then keeps, swaps or skips each
+// item (`swapItem`, `setSkipped`), and `morningChangeSet` turns what is left into the one change-set for the review screen.
+const pick = z.object({
+  id: id.optional().catch(undefined),
+  new: StepSchema.optional().catch(undefined),
+  /** The AI's wording: one short sentence on why it is there. */
+  line: text(200).optional().catch(undefined),
+  /** The AI proposes leaving it out, because the day is over-full. */
+  cut: z.boolean().optional().catch(undefined),
+});
+const list = <T extends z.ZodTypeAny>(item: T, max: number) => z.array(item).max(max).optional().catch(undefined);
+export const MorningReply = z.object({
+  must: list(pick, 12),
+  goals: list(pick.extend({ project: id.optional().catch(undefined) }), 4),
+  pillars: list(pick.extend({ suit: z.enum(['S', 'D', 'C', 'H']).optional().catch(undefined) }), 8),
+  here: list(pick, 8),
+  /** The step to start with (an id from the sections). */
+  first: id.optional().catch(undefined),
+  split: z.array(z.object({ id, steps: z.array(StepSchema).min(2).max(8) })).max(5).optional().catch(undefined),
+  note: note.catch(''),
+});
+export type MorningReply = z.infer<typeof MorningReply>;
+
+export type Section = 'must' | 'goals' | 'here' | 'pillars';
+export interface DraftItem {
+  /** The step's id, or `new:<n>` for a step the AI proposes to make. */
+  key: string;
+  id: string | null;
+  step: AiStep | null;
+  suit: SuitId;
+  /** A goal's project, and the project a new step joins. */
+  project: string | null;
+  line: string;
+  why?: MustWhy;
+  skipped: boolean;
+  /** A fixed-time item or an event to check: shown, not part of the choice. */
+  locked?: boolean;
+}
+export interface Draft {
+  note: string;
+  must: DraftItem[];
+  goals: DraftItem[];
+  here: DraftItem[];
+  pillars: Record<SuitId, DraftItem | null>;
+  /** The key of the step the AI would start with. */
+  first: string | null;
+  split: { id: string; steps: AiStep[] }[];
+}
+export interface Known { suit: SuitId; project: string }
+
+const mk = (id: string, known: ReadonlyMap<string, Known>, o: Partial<DraftItem> = {}): DraftItem => ({
+  key: id, id, step: null, suit: known.get(id)?.suit ?? 'S', project: known.get(id)?.project ?? null, line: '', skipped: false, ...o,
+});
+const sectionsOf = (d: Draft): DraftItem[] => [...d.must, ...d.goals, ...d.here, ...PILLARS.flatMap(s => (d.pillars[s] ? [d.pillars[s]!] : []))];
+
+/**
+ * The first turn (and each later one): the AI's reply read against the candidates. `gone` are steps the person skipped on an earlier
+ * turn, which are not offered again. With no reply (the AI failed, or the person wants no wording), the candidates are the proposal.
+ */
+export function readMorning(r: Partial<MorningReply> | null, p: Proposal, known: ReadonlyMap<string, Known>, gone: ReadonlySet<string> = new Set()): Draft {
+  const used = new Set<string>(gone);
+  let n = 0;
+  const free = (id: string | undefined | null): id is string => !!id && known.has(id) && !used.has(id);
+  const take = (id: string) => { used.add(id); return id; };
+
+  // What has to happen: the fixed items and the events to check stay whatever the AI says; the rest in its order, then any it left out.
+  const locked = (m: { why: MustWhy }) => m.why === 'fixed' || m.why === 'check';
+  const whyOf = new Map(p.must.filter(m => !locked(m)).map(m => [m.id, m.why]));
+  const allowed = new Set([...whyOf.keys(), ...p.mustMore]);
+  const said = new Map((r?.must ?? []).flatMap(x => (x.id ? [[x.id, x] as const] : [])));
+  const mustIds: string[] = [];
+  for (const x of r?.must ?? []) if (x.id && allowed.has(x.id) && free(x.id)) mustIds.push(take(x.id));
+  for (const m of p.must) if (!locked(m) && free(m.id)) mustIds.push(take(m.id));
+  const must: DraftItem[] = [
+    ...p.must.filter(m => m.why === 'fixed').map(m => mk(m.id, known, { why: 'fixed', locked: true })),
+    ...mustIds.map(id => mk(id, known, { why: whyOf.get(id), line: said.get(id)?.line ?? '', skipped: !!said.get(id)?.cut })),
+    ...p.must.filter(m => m.why === 'check').map(m => mk(m.id, known, { why: 'check', locked: true })),
+  ];
+
+  // The main goals: at most as many as the proposal has, each a project it listed with a step of that project (or a new one).
+  const options = [...p.goals, ...p.moreGoals];
+  const goals: DraftItem[] = [];
+  const projectsUsed = new Set<string>();
+  type G = NonNullable<MorningReply['goals']>[number];
+  const goalItem = (o: (typeof options)[number], g?: G): DraftItem | null => {
+    const ok = new Set([o.step, ...o.more]);
+    if (g?.id && ok.has(g.id) && free(g.id)) return mk(take(g.id), known, { project: o.project, line: g.line ?? '', skipped: !!g.cut });
+    if (g?.new) return { key: 'new:' + ++n, id: null, step: g.new, suit: known.get(o.step)?.suit ?? 'S', project: o.project, line: g.line ?? '', skipped: !!g.cut };
+    const id = [o.step, ...o.more].find(free);
+    return id ? mk(take(id), known, { project: o.project, line: g?.line ?? '', skipped: !!g?.cut }) : null;
+  };
+  for (const g of r?.goals ?? []) {
+    const o = options.find(x => x.project === g.project);
+    if (!o || projectsUsed.has(o.project) || goals.length >= Math.max(1, p.goals.length)) continue;
+    const it = goalItem(o, g);
+    if (it) { goals.push(it); projectsUsed.add(o.project); }
+  }
+  if (!goals.length) for (const o of p.goals) { const it = goalItem(o); if (it) goals.push(it); }
+
+  // Where the person is: the AI's choice among the candidates, else the candidates.
+  const hereOk = new Set([...p.here.ids, ...p.here.more]);
+  const asked2 = (r?.here ?? []).filter(x => x.id && hereOk.has(x.id) && free(x.id));
+  const here = (asked2.length ? asked2 : p.here.ids.map(id => ({ id } as { id?: string; line?: string; cut?: boolean })))
+    .filter(x => free(x.id)).map(x => mk(take(x.id!), known, { line: x.line ?? '', skipped: !!x.cut }));
+
+  // One for each pillar: the AI's, the candidate if it said nothing, none if there is nothing.
+  const pillars = { S: null, D: null, C: null, H: null } as Record<SuitId, DraftItem | null>;
+  for (const suit of PILLARS) {
+    const pc = p.pillars[suit], ok = new Set([pc.pick, ...pc.more].filter((x): x is string => !!x));
+    const mine = (r?.pillars ?? []).filter(x => x.suit === suit);
+    const byId = mine.find(x => x.id && ok.has(x.id) && free(x.id));
+    const fresh = byId ? undefined : mine.find(x => x.new && !x.id);
+    if (byId) pillars[suit] = mk(take(byId.id!), known, { suit, line: byId.line ?? '', skipped: !!byId.cut });
+    else if (fresh) pillars[suit] = { key: 'new:' + ++n, id: null, step: fresh.new!, suit, project: null, line: fresh.line ?? '', skipped: !!fresh.cut };
+    else if (free(pc.pick)) pillars[suit] = mk(take(pc.pick), known, { suit });
+  }
+
+  const draft: Draft = { note: r?.note ?? '', must, goals, here, pillars, first: null, split: [] };
+  const keys = new Set(sectionsOf(draft).filter(x => !x.locked).map(x => x.key));
+  draft.first = r?.first && keys.has(r.first) ? r.first : null;
+  draft.split = (r?.split ?? []).filter(x => keys.has(x.id));
+  return draft;
+}
+
+/** The same draft with one item changed (by key). */
+export function mapDraft(d: Draft, key: string, f: (i: DraftItem) => DraftItem): Draft {
+  const one = (i: DraftItem) => (i.key === key ? f(i) : i);
+  const pl = (s: SuitId) => (d.pillars[s] ? one(d.pillars[s]!) : null);
+  return { ...d, must: d.must.map(one), goals: d.goals.map(one), here: d.here.map(one), pillars: { S: pl('S'), D: pl('D'), C: pl('C'), H: pl('H') } };
+}
+export const setSkipped = (d: Draft, key: string, skipped: boolean): Draft => mapDraft(d, key, i => (i.locked ? i : { ...i, skipped }));
+
+/** What can take an item's place: steps of the same section that are not in the draft yet (a goal: other steps of its project, or another project's first step). */
+export function swapOptions(d: Draft, section: Section, item: DraftItem, p: Proposal): { id: string; project?: string }[] {
+  const inDraft = new Set(sectionsOf(d).flatMap(i => (i.id ? [i.id] : [])));
+  const free = (id: string) => !inDraft.has(id);
+  if (section === 'must') return p.mustMore.filter(free).map(id => ({ id }));
+  if (section === 'here') return [...p.here.ids, ...p.here.more].filter(free).map(id => ({ id }));
+  if (section === 'pillars') return [p.pillars[item.suit].pick, ...p.pillars[item.suit].more].filter((x): x is string => !!x && free(x)).map(id => ({ id }));
+  const goals = [...p.goals, ...p.moreGoals];
+  const mine = goals.find(o => o.project === item.project);
+  const others = goals.filter(o => o.project !== item.project && !d.goals.some(g => g.project === o.project));
+  return [
+    ...(mine ? [mine.step, ...mine.more].filter(free).map(id => ({ id, project: mine.project })) : []),
+    ...others.filter(o => free(o.step)).map(o => ({ id: o.step, project: o.project })),
+  ];
+}
+/** Put a step in place of an item. */
+export function swapItem(d: Draft, key: string, to: { id: string; project?: string }, known: ReadonlyMap<string, Known>): Draft {
+  return mapDraft(d, key, i => mk(to.id, known, { suit: known.get(to.id)?.suit ?? i.suit, project: to.project ?? i.project }));
+}
+
+/** The steps that stay in the plan, in the order the day takes them: what has to happen, the goals, where the person is, the pillars. */
+export function keptItems(d: Draft): DraftItem[] {
+  return sectionsOf(d).filter(i => !i.locked && !i.skipped && (i.id || i.step));
+}
+/** The step to start with: the AI's, if it is still kept, else the first kept step. */
+export function firstKey(d: Draft): string | null {
+  const kept = keptItems(d);
+  return kept.find(i => i.key === d.first)?.key ?? kept[0]?.key ?? null;
+}
+
+/**
+ * The one change-set a morning ends in: new steps, broken-down steps, and `day.update` with the plan and the first step. Fixed-time
+ * items already on the day's list stay on it; steps that were on it and are skipped leave it; the rest of the list is untouched.
+ */
+export function morningChangeSet(d: Draft, ctx: { date: string; existing: readonly string[]; known: ReadonlyMap<string, { project: string; where?: string }> }): ChangeSet | null {
+  const kept = keptItems(d);
+  if (!kept.length) return null;
+  const ref = (i: DraftItem) => i.id ?? 'n' + i.key.slice(4);
+  const changes: unknown[] = [];
+  for (const i of kept) if (i.step) changes.push({ op: 'task.create', ref: ref(i), set: { ...clean(i.step), suit: i.suit, project: i.project ?? 'inbox', important: true } });
+  const split = new Set<string>();
+  for (const sp of d.split) {
+    const tk = ctx.known.get(sp.id);
+    if (!tk || split.has(sp.id) || !kept.some(i => i.id === sp.id)) continue;
+    split.add(sp.id);
+    changes.push(...splitChanges(sp.id, tk, sp.steps));
+  }
+  const all = sectionsOf(d);
+  const lockedIds = new Set(all.filter(i => i.locked && i.id).map(i => i.id!));
+  const touched = new Set(all.flatMap(i => (i.id ? [i.id] : [])));
+  const first = firstKey(d);
+  const order = [...kept].sort((a, b) => +(b.key === first) - +(a.key === first));
+  const plan = [...new Set([...ctx.existing.filter(id => lockedIds.has(id) || !touched.has(id)), ...order.map(ref)])];
+  changes.push({ op: 'day.update', date: ctx.date, plan, ...(first ? { first: ref(kept.find(i => i.key === first)!) } : {}) });
+  return toChangeSet(changes, d.note);
 }

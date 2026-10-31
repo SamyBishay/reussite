@@ -127,7 +127,7 @@ export function tomorrowFirst(k = today.value): { id: string; title: string } | 
  */
 export function dayOrderOf(k: string = today.value): DayOrder {
   const s = settings.value;
-  const zone = placeOfDay(k, stays.value.values(), s.here, id => zoneOfPlace(places.value, id)).timeZone;
+  const zone = dayZone(k);
   const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
   const events = fixedOnDay(data, s, k).filter(e => e.taskId && T(e.taskId));
   const timed = new Set(events.map(e => e.taskId!));
@@ -135,12 +135,20 @@ export function dayOrderOf(k: string = today.value): DayOrder {
     .map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template }));
   const cards = dayCards(k).filter(id => !timed.has(id) && !isWaiting(id) && isOpen(T(id)) && showsInArea('today', T(id)!));
   const rid = [...fixed.map(f => f.id), ...cards].find(id => T(id)?.started);
-  const floor = atOnDay(k, s.dayStart, s.dayStart, zone);
+  // The morning's shape: nothing is placed before the start it chose, and the day ends when it said (else at the setting's `dayEnd`).
+  const shape = dayDoc(k)?.shape, floor = atOnDay(k, s.dayStart, s.dayStart, zone);
+  const start = shape?.start ? Math.max(floor, atOnDay(k, shape.start, s.dayStart, zone)) : floor;
   return dayOrder({
-    now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor, end: atOnDay(k, s.dayEnd, s.dayStart, zone),
+    now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: start, end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone),
     cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: T(rid)!.started! } : null, optional: new Set(dayDoc(k)?.optional ?? []),
   });
 }
+
+/** The zone a day's clock is read in (its stay's place, else the one chosen by hand). */
+export const dayZone = (k: string): string | undefined => placeOfDay(k, stays.value.values(), settings.value.here, id => zoneOfPlace(places.value, id)).timeZone;
+
+/** The instant of a clock time (HH:MM) on a day, by the day-start rule and the day's zone. */
+export const timeOnDay = (k: string, hhmm: string): number => atOnDay(k, hhmm, settings.value.dayStart, dayZone(k));
 
 /** What Home's greeting card says now (src/domain/greeting.ts): the first item of the day's order, so a fixed-time item takes over on time. */
 export const greetingNow = computed(() => {

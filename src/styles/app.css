@@ -737,3 +737,11 @@ body > .row,body > li{list-style:none}
 .waitlist .go{margin-top:var(--s1)}
 .banner.nudge{display:grid;justify-content:stretch;gap:var(--s2)}
 .banner.nudge p{overflow-wrap:anywhere}
+/* ---------- the morning ritual: pillars ---------- */
+.pillar{margin-top:var(--s4)}
+.pillar h4{font:600 13px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin:0}
+.pillar .picklist{margin-top:var(--s2)}
+.pillar .picklist li{grid-template-columns:minmax(0,1fr)}
+.pillar .go{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.pillar-empty,.pillar-skipped{margin:var(--s2) 0 0}
+.planmeta.over{color:var(--ink)}

@@ -1,6 +1,6 @@
 // Read-side helpers, ported from v1. They read the signals, so views that call them re-render.
 import { computed } from '@preact/signals';
-import { tasks, sessions, projects, days, settings, today, pagePlace, here, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
+import { tasks, sessions, projects, days, settings, today, pagePlace, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
 import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
@@ -9,10 +9,12 @@ import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { nudgesDue, waitingList } from '../domain/events';
 import { addDays } from '../domain/dates';
-import { agenda } from '../domain/agenda';
-import { greeting, startHere } from '../domain/greeting';
+import { fixedOnDay } from '../domain/agenda';
+import { greeting, nearGoal, type LineInput } from '../domain/greeting';
+import { dayOrder, type DayOrder, type FixedItem } from '../domain/dayOrder';
+import { atOnDay, placeOfDay, wallOf } from '../domain/zone';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
-import { onPage } from '../domain/places';
+import { onPage, zoneOfPlace } from '../domain/places';
 import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
@@ -118,21 +120,75 @@ export function tomorrowFirst(k = today.value): { id: string; title: string } | 
   return tt ? { id: tt.id, title: tt.title } : null;
 }
 
-/** The Start here card of a day, for Home and Today alike (src/domain/greeting.ts): cards without the steps that wait for another,
- *  within Today's area filter, a running step first, else the first open. */
-export const startHereOf = (k: string, cards: readonly string[] = dayCards(k).filter(id => !isWaiting(id) && showsInArea('today', T(id)!))) =>
-  startHere(cards, id => isOpen(T(id)), id => !!T(id)?.started);
-
-/** What Home's greeting says now (src/domain/greeting.ts); follows the clock, so a fixed-time item takes over on time. */
-export const greetingNow = computed(() => {
-  const now = clockNow.value, k = today.value;
+/**
+ * The one order of a day (src/domain/dayOrder.ts), for Home's Start here, Today's card and list and the next-step bar: the day's open
+ * cards, without the steps that wait for another, within Today's area filter, with its fixed-time items (standing ones not yet placed
+ * too) laid out against the clock. Follows the clock for today; another day is laid out from its start. Its first item is Start here.
+ */
+export function dayOrderOf(k: string = today.value): DayOrder {
+  const s = settings.value;
+  const zone = placeOfDay(k, stays.value.values(), s.here, id => zoneOfPlace(places.value, id)).timeZone;
   const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
-  const sh = startHereOf(k);
+  const events = fixedOnDay(data, s, k).filter(e => e.taskId && T(e.taskId));
+  const timed = new Set(events.map(e => e.taskId!));
+  const fixed: FixedItem[] = events.filter(e => showsInArea('today', T(e.taskId!)!))
+    .map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template }));
+  const cards = dayCards(k).filter(id => !timed.has(id) && !isWaiting(id) && isOpen(T(id)) && showsInArea('today', T(id)!));
+  const rid = [...fixed.map(f => f.id), ...cards].find(id => T(id)?.started);
+  const floor = atOnDay(k, s.dayStart, s.dayStart, zone);
+  return dayOrder({
+    now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor, end: atOnDay(k, s.dayEnd, s.dayStart, zone),
+    cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: T(rid)!.started! } : null, optional: new Set(dayDoc(k)?.optional ?? []),
+  });
+}
+
+/** What Home's greeting card says now (src/domain/greeting.ts): the first item of the day's order, so a fixed-time item takes over on time. */
+export const greetingNow = computed(() => {
+  const k = today.value, o = dayOrderOf(k), first = o.order[0];
+  // A fixed-time item whose time has passed is not a card played, nor one still to play: a day with only those has no list yet.
+  const planned = dayCards(k).filter(id => !o.missed.includes(id) && !isWaiting(id) && showsInArea('today', T(id)!)).length;
   return greeting({
-    now, fixed: agenda(data, settings.value, addDays(k, -1), addDays(k, 1)).filter(e => e.kind === 'fixed'),
-    running: sh.running ? sh.id : null, closed: !!dayDoc(k)?.closed, planned: sh.planned, next: sh.running ? null : sh.id, tomorrow: tomorrowFirst(k),
+    closed: !!dayDoc(k)?.closed, planned, tomorrow: tomorrowFirst(k),
+    first: first ? { id: first.id, kind: first.kind, running: !!T(first.id)?.started } : null,
   });
 });
+
+/** The first item of today's order when it is a fixed-time item: its time, when to leave, and its step. */
+export function fixedFirst(): { id: string; time: string; leave: string } | null {
+  const f = dayOrderOf(today.value).order[0];
+  if (!f || f.kind !== 'fixed' || !T(f.id)) return null;
+  const zone = hereZone.value;
+  return { id: f.id, time: wallOf(f.at!, zone), leave: wallOf(f.start, zone) };
+}
+
+/** A step's title in a sentence: cut at a word within 40 characters. */
+const nameOf = (x: Pick<T, 'title'>): string => {
+  const s = x.title.trim();
+  if (s.length <= 40) return s;
+  const cut = s.slice(0, 39), i = cut.lastIndexOf(' ');
+  return (i > 20 ? cut.slice(0, i) : cut).trimEnd() + '…';
+};
+
+/** What the greeting's line can say now (src/domain/greeting.ts): the real data its templates are filled with. */
+export function lineInputNow(): LineInput {
+  const k = today.value, zone = hereZone.value;
+  const order = dayOrderOf(k).order;
+  const next = order.find(x => x.kind === 'fixed' && !T(x.id)?.started && x.at! > clockNow.value);
+  const counts = new Map<string, { open: number; done: number }>();
+  for (const x of tasks.value.values()) {
+    if (x.template || isEvent(x) || !projects.value.get(x.project)) continue;
+    const c = counts.get(x.project) ?? { open: 0, done: 0 };
+    if (x.status === 'done') c.done++; else if (x.status === 'open') c.open++;
+    counts.set(x.project, c);
+  }
+  const near = [...projects.value.values()].filter(p => p.status === 'active').map(p => ({ name: p.name, order: p.order, ...(counts.get(p.id) ?? { open: 0, done: 0 }) }));
+  return {
+    clock: wallOf(clockNow.value, zone), dayStart: settings.value.dayStart,
+    fixed: next ? { time: wallOf(next.at!, zone), title: nameOf(T(next.id)!) } : null,
+    project: nearGoal(near), doneToday: cardsOn(k).length,
+    planned: order.filter(x => x.kind === 'step').length, running: !!running(),
+  };
+}
 
 // ---------- addresses and people (phase 4) ----------
 /** The module is on (Settings → Addresses & People). Off hides the screens and the offers; what is stored stays. */

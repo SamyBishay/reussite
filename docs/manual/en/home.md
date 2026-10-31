@@ -6,12 +6,14 @@ Home is where you start. It shows only your **next step**. Under it there is one
 
 ## What Home says
 
-In this order, the first that applies:
+At the top, one line greets you. It is picked from a few ready-made sentences and filled with what is true today: the next thing at a fixed time ("Anything to move before “Dentist” at 14:00?"), a project that is nearly there, the time of day, what you have ticked off so far, or what is planned. It never counts what you missed or carried over, and it is the same with or without an AI. Open Home again and you get another sentence, not the same one twice in a day while another fits. They all end the same way: type in the box below what to add, move or tick off.
 
-1. **A fixed time is near.** Shortly before you need to leave, it takes over and says "leave at…".
+Under the line, in this order, the first that applies:
+
+1. **A fixed time has taken over.** Start here follows the clock (see [Start](daily-loop.md)). When the step you are on, with a small margin, would run into the time you need to leave, the next thing at a fixed time takes over. It says its time and "leave at…".
 2. **A timer is running.** You see the step, the clock, **Pause** and **Done**.
 3. **The day is closed.** You see tomorrow's first step.
-4. **There is a next step.** You see **Start here**, the starter and **Start**. **Drop it** drops the step if it no longer matters: tap it twice.
+4. **There is a next step.** You see **Start here**, the starter and **Start**. It is the same step Today shows. **Drop it** drops the step if it no longer matters: tap it twice.
 5. **Nothing is planned yet.** You see **Plan the day**.
 
 Home has no counts, no list and no streaks. What waits for you is not in the way: a small **bell** at the top shows a quiet dot when something is waiting, and opens the **Notifications** page.

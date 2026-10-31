@@ -43,6 +43,8 @@ export interface Settings {
   // Method
   urgencyDays: number;
   dayStart: string;
+  /** When the day's planning ends (HH:MM): what `dayOrder` counts as over (src/domain/dayOrder.ts). */
+  dayEnd: string;
   maxWorkSteps: number;
   planningMin: number;
   launchDefaults: { start: string; restarts: string[] };
@@ -121,6 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
   celebrations: 'lively',
   urgencyDays: 21,
   dayStart: '05:00',
+  dayEnd: '19:00',
   maxWorkSteps: 3,
   planningMin: 15,
   launchDefaults: { start: '09:30', restarts: ['14:00'] },

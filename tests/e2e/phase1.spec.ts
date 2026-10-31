@@ -32,7 +32,7 @@ test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page
   await expect(page.getByTestId('plan-total')).toContainText('planning included');
   await page.getByTestId('go-with-this').click();
   await expect(sheet(page)).toBeHidden();
-  await expect(page.locator('.tableau')).toContainText('Plan the day');
+  await expect(page.locator('main .tableau', { hasText: 'Plan the day' })).toHaveCount(1); // on the list, or among the done ones, folded
   await expect(page.getByTestId('first')).toBeVisible();
   // A card is on one day's list: yesterday's open card is on today's or still on yesterday's, never both.
   const onToday = await page.locator('main').getByText('text Alex').count();
@@ -345,7 +345,7 @@ test('a timed standing item added by hand is a card on Today’s list and on the
   await sheet(page).getByRole('button', { name: 'Add to today' }).click();
   await page.getByTestId('tab-today').click();
   // On Today it is a card of the day's list, with its time; Today has no separate list of fixed times.
-  await expect(page.locator('.row', { hasText: 'Walk to the park' })).toContainText('17:00');
+  await expect(page.locator('[data-task]', { hasText: 'Walk to the park' })).toContainText('17:00'); // a row, or Start here once its time is near
   await expect(page.locator('ul.fixed')).toHaveCount(0);
   await page.getByTestId('tab-calendar').click();
   // A fixed time is on the hour grid (not in the all-day row), at its time.
@@ -415,12 +415,13 @@ const planIds = (page: Page) => page.locator('[data-testid=plan-list] > li').eva
 
 test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and ↓ are the keyboard way', async ({ page }) => {
   await importSample(page);
+  await addCard(page, 'Extra errand'); // by hand with nothing running: the top of what is left, so the list under Start here has three rows
   await page.getByTestId('plan-list').scrollIntoViewIfNeeded();
   await page.evaluate(() => document.querySelector('[data-testid=plan-list]')!.scrollIntoView({ block: 'start' })); // the whole list in view, so the mouse can reach it
   const before = await planIds(page);
   expect(before.length).toBeGreaterThanOrEqual(3);
   const last = page.locator('[data-testid=plan-list] > li').last();
-  const first = page.locator('[data-testid=plan-list] > li').nth(1); // (the first row is a step already done)
+  const first = page.locator('[data-testid=plan-list] > li').first();
   const g = (await last.getByTestId('grip').boundingBox())!, f = (await first.boundingBox())!;
   await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
   await page.mouse.down();
@@ -431,7 +432,7 @@ test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and
   await page.mouse.up();
   await expect.poll(() => planIds(page)).not.toEqual(before);
   const after = await planIds(page);
-  expect(after[1]).toBe(before[before.length - 1]);
+  expect(after[0]).toBe(before[before.length - 1]);
   expect(after).toHaveLength(before.length);
   await page.reload();
   await expect(page.getByTestId('first')).toBeVisible();
@@ -453,7 +454,7 @@ test('a step added by hand goes right after the one running, not at the bottom',
   await addCard(page, 'Zebra errand');
   const rows = page.locator('[data-testid=plan-list] > li');
   await expect(rows).toHaveCount(ids0.length + 1);
-  await expect(rows.nth(1)).toContainText('Zebra errand'); // the done step stays above; the running one is the first card
+  await expect(rows.first()).toContainText('Zebra errand'); // the running one is the first card; the done ones are folded away
 });
 
 test('a project’s steps are ordered by dragging a grip, too', async ({ page }) => {

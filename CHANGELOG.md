@@ -1,6 +1,9 @@
 # What's new
 
 ## Next — less clutter
+- Start here follows the clock. It is the first step that fits before your next fixed time; a step that doesn't fit the gap waits and a shorter one further down moves up. When the next thing at a fixed time gets close, it takes over, with its time and when to leave, on Home, on Today and in the bar on the other tabs, and they all agree. Today's list shows when each step is expected to start ("≈10:40"). "Coming up" is gone.
+- Home opens with one friendly line, picked from a few sentences and filled with what is true today (the next fixed time, a project nearly done, the time of day, what you ticked off). It doesn't repeat itself during a day, never counts what you missed, and works without an AI.
+- Done steps fold under their list as "3 done ▸" on Today and in each project.
 - The Calendar is only for things at a fixed time. The day's cards, what is due, decision checks, project dates and the weekly-review marker are no longer in it, nor in the feed or Add to calendar; they are in Today. Stays and half days stay as labels. The weekly review can be started from Settings → Method on any day.
 - On Today, Launch points are folded into one line ("Launch points · 09:30, 14:00"); open it to change them.
 - Forms are calmer. A step shows its title, Time, urgent and important, estimate and due date; the rest (short name, starter, suit, place, project, note, kind, app and link, repeat, weekdays) is under **More**, which says how many things are set ("More · 2 set"). Projects, addresses, people, the decision steps and the morning check-in fold their optional fields the same way. Settings sections are folded, and each shows only the controls most people use, with the rest under More.

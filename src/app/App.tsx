@@ -2,8 +2,9 @@
 import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
-import { planOf, cardsOn, minutesOn, allCards, running, isOpen, T, dayDoc, greetingNow } from './model';
+import { ready, readOnly, settings, today, toastMsg, start, here, hereZone, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
+import { cardsOn, minutesOn, allCards, running, T, dayDoc, greetingNow, dayOrderOf } from './model';
+import { wallOf } from '../domain/zone';
 import { applyTheme } from './theme';
 import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
@@ -135,11 +136,11 @@ function Runbar() {
     <div id="runbar"><div class="runbar"><Clock tk={r} /><span class="rt"><Title s={r.title} /></span><button class="btn small" type="button" onClick={() => openPause(r.id)}>{t('pause')}</button></div></div>
   );
   if (!r && view.value !== 'today' && view.value !== 'settings' && view.value !== 'home') {
-    // Gentle insisting (brief §5): while a plan is open, the first step stays in sight, except on Home, which shows it. No counters.
-    const first = planOf(today.value).map(id => T(id)).find(isOpen);
+    // Gentle insisting (brief §5): while a plan is open, what comes first stays in sight (the first item of the day's order, src/domain/dayOrder.ts), except on Home, which shows it. No counters.
+    const fo = dayOrderOf(today.value).order[0], first = fo && T(fo.id);
     if (first) return (
-      <div id="runbar"><div class="insist" data-testid="insist"><span class="rt">{first.starter ? first.starter + ' → ' : ''}<Title s={first.title} /></span>
-        <button class="btn small" type="button" onClick={() => void startTask(first.id)}>{t('start')}</button></div></div>
+      <div id="runbar"><div class="insist" data-testid="insist"><span class="rt">{first.starter ? first.starter + ' → ' : ''}<Title s={first.title} />{fo.kind === 'fixed' && ' · ' + wallOf(fo.at!, hereZone.value)}</span>
+        {!first.template && <button class="btn small" type="button" onClick={() => void startTask(first.id)}>{t('start')}</button>}</div></div>
     );
   }
   return <div id="runbar" />;

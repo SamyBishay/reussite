@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, yesterdayOpen, type TaskW } from './lists';
+import { dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
 
@@ -86,5 +86,14 @@ describe('events (schema 6)', () => {
     expect(isOpen({ status: 'open', template: false })).toBe(true); // a step written before kinds were optional reads as a task
     expect(isEvent({ kind: 'event' })).toBe(true);
     expect(isEvent({ kind: 'decision' })).toBe(false);
+  });
+});
+
+describe('splitDone', () => {
+  it('keeps the open cards in their order and sets the done ones apart, also in their order', () => {
+    const done = new Set(['b', 'd']);
+    expect(splitDone(['a', 'b', 'c', 'd', 'e'], id => done.has(id))).toEqual({ open: ['a', 'c', 'e'], done: ['b', 'd'] });
+    expect(splitDone([], () => false)).toEqual({ open: [], done: [] });
+    expect(splitDone(['a'], () => true)).toEqual({ open: [], done: ['a'] });
   });
 });

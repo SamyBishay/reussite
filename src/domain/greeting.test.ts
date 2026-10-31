@@ -1,93 +1,146 @@
 import { describe, expect, it } from 'vitest';
-import { agenda } from './agenda';
-import { greeting, startHere, fixedNow, type GreetingInput } from './greeting';
-import { choir, settings, state, task } from './agenda.fixture';
+import { en } from '../i18n/en';
+import { fr } from '../i18n/fr';
+import { translate } from '../i18n/core';
+import { GREETING_KEYS, eligibleLines, greeting, greetingLine, nearGoal, partOfDay, pickGreeting, seedOf, type GreetingInput, type LineInput } from './greeting';
 
-const S = settings();
-const at = (iso: string) => Date.parse(iso);
-// The choir's events around a day, as the app asks for them (the day before to the day after).
-const events = (o: Parameters<typeof choir>[0] = {}) =>
-  agenda(state({ tasks: [choir(o)] }), S, '2026-10-18', '2026-10-28').filter(e => e.kind === 'fixed');
-const base = (o: Partial<GreetingInput> = {}): GreetingInput => ({ now: at('2026-10-19T12:00:00Z'), fixed: [], running: null, closed: false, planned: 2, next: 's1', tomorrow: null, ...o });
+const base = (o: Partial<GreetingInput> = {}): GreetingInput => ({ closed: false, planned: 2, first: { id: 's1', kind: 'step', running: false }, tomorrow: null, ...o });
 
-describe('the fixed-time item takes over within its lead time', () => {
-  it('shows the choir from 18:30 on a Monday in summer time (the day before the clocks go back)', () => {
-    const fixed = events();
-    // 19:00 in Paris is 17:00 UTC until 25 October; the lead is 30 minutes.
-    expect(greeting(base({ fixed, now: at('2026-10-19T16:29:59Z') })).kind).toBe('next');
-    const g = greeting(base({ fixed, now: at('2026-10-19T16:30:00Z') }));
-    expect(g).toMatchObject({ kind: 'fixed', leave: '18:30', event: { taskId: 'choir', time: '19:00', title: 'Choir, Hill House 602' } });
+describe('the card under the greeting', () => {
+  it('a running step is shown running', () => {
+    expect(greeting(base({ first: { id: 'r1', kind: 'step', running: true } }))).toEqual({ kind: 'running', id: 'r1' });
+    expect(greeting(base({ first: { id: 'r1', kind: 'step', running: true }, closed: true }))).toEqual({ kind: 'running', id: 'r1' });
   });
-
-  it('shows the choir from 18:30 on the first Monday after the clocks go back, an hour later in UTC', () => {
-    const fixed = events();
-    expect(greeting(base({ fixed, now: at('2026-10-26T17:29:00Z') })).kind).toBe('next');
-    expect(greeting(base({ fixed, now: at('2026-10-26T17:30:00Z') })).kind).toBe('fixed');
-    // The summer-time instant is no longer the choir's.
-    expect(greeting(base({ fixed, now: at('2026-10-26T16:30:00Z') })).kind).toBe('next');
+  it('a fixed-time item that took over is Start here, closed day or not', () => {
+    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: false } }))).toEqual({ kind: 'next', id: 'f', fixed: true });
+    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: false }, closed: true }))).toEqual({ kind: 'next', id: 'f', fixed: true });
   });
-
-  it('keeps the greeting until the item is over: its own length, else 30 minutes', () => {
-    const fixed = events(); // dur 90: until 20:30 Paris = 18:30Z
-    expect(greeting(base({ fixed, now: at('2026-10-19T18:29:00Z') })).kind).toBe('fixed');
-    expect(greeting(base({ fixed, now: at('2026-10-19T18:30:00Z') })).kind).toBe('next');
-    const short = events({ dur: null, est: null });
-    expect(greeting(base({ fixed: short, now: at('2026-10-19T17:29:00Z') })).kind).toBe('fixed');
-    expect(greeting(base({ fixed: short, now: at('2026-10-19T17:30:00Z') })).kind).toBe('next');
+  it('a fixed-time item that is being timed is shown running', () => {
+    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: true } }))).toEqual({ kind: 'running', id: 'f' });
   });
-
-  it('a lead of 0 means the time itself; a longer lead shows it sooner', () => {
-    expect(fixedNow(events({ lead: 0 }), at('2026-10-19T16:59:00Z'))).toBeNull();
-    expect(fixedNow(events({ lead: 0 }), at('2026-10-19T17:00:00Z'))).not.toBeNull();
-    const g = greeting(base({ fixed: events({ lead: 60 }), now: at('2026-10-19T16:00:00Z') }));
-    expect(g).toMatchObject({ kind: 'fixed', leave: '18:00' });
+  it('otherwise the first step is Start here', () => {
+    expect(greeting(base())).toEqual({ kind: 'next', id: 's1', fixed: false });
   });
-
-  it('beats a running timer and a closed day; the earliest of two wins', () => {
-    const fixed = events();
-    const now = at('2026-10-19T16:45:00Z');
-    expect(greeting(base({ fixed, now, running: 'r1' })).kind).toBe('fixed');
-    expect(greeting(base({ fixed, now, closed: true })).kind).toBe('fixed');
-    const two = agenda(state({ tasks: [choir(), task('dentist', { at: '19:15', lead: 30, due: '2026-10-19' })] }), S, '2026-10-19', '2026-10-19').filter(e => e.kind === 'fixed');
-    expect(fixedNow(two, now)!.taskId).toBe('choir');
+  it('no list shows Plan the day; a list with nothing left shows all done', () => {
+    expect(greeting(base({ planned: 0, first: null }))).toEqual({ kind: 'plan' });
+    expect(greeting(base({ first: null, planned: 3 }))).toEqual({ kind: 'allDone' });
   });
-
-  it('has nothing on other days, and nothing once the item is done', () => {
-    expect(greeting(base({ fixed: events(), now: at('2026-10-20T16:45:00Z') })).kind).toBe('next'); // a Tuesday
-    const done = agenda(state({ tasks: [choir(), task('copy', { from: 'choir', at: '19:00', due: '2026-10-19', status: 'done' })] }), S, '2026-10-19', '2026-10-19').filter(e => e.kind === 'fixed');
-    expect(greeting(base({ fixed: done, now: at('2026-10-19T16:45:00Z') })).kind).toBe('next');
-  });
-});
-
-describe('the rest of the greeting', () => {
-  it('a running timer', () => {
-    expect(greeting(base({ running: 'r1' }))).toEqual({ kind: 'running', id: 'r1' });
-    expect(greeting(base({ running: 'r1', closed: true }))).toEqual({ kind: 'running', id: 'r1' });
-  });
-  it('the next step on the list', () => {
-    expect(greeting(base())).toEqual({ kind: 'next', id: 's1' });
-  });
-  it('no list yet: Plan the day', () => {
-    expect(greeting(base({ planned: 0, next: null }))).toEqual({ kind: 'plan' });
-  });
-  it('a closed day shows tomorrow’s first step, or says none is chosen', () => {
+  it('a closed day shows tomorrow’s first step, or says there is none', () => {
     expect(greeting(base({ closed: true, tomorrow: { id: 'z', title: 'Open the form' } }))).toEqual({ kind: 'tomorrow', step: { id: 'z', title: 'Open the form' } });
     expect(greeting(base({ closed: true }))).toEqual({ kind: 'tomorrow', step: null });
   });
-  it('everything on the list is done', () => {
-    expect(greeting(base({ next: null, planned: 3 }))).toEqual({ kind: 'allDone' });
+});
+
+const line = (o: Partial<LineInput> = {}): LineInput => ({ clock: '10:00', dayStart: '05:00', fixed: null, project: null, doneToday: 0, planned: 0, running: false, ...o });
+const kinds = (i: LineInput) => eligibleLines(i).map(l => l.key.replace(/\d$/, '').replace('greet', '').toLowerCase());
+const unique = (xs: string[]) => [...new Set(xs)];
+
+describe('the line: which kinds are eligible', () => {
+  it('only the time of day, with nothing else to say', () => {
+    expect(unique(kinds(line()))).toEqual(['morning']);
+  });
+  it('the part of the day follows the clock and the day-start rule', () => {
+    expect(partOfDay('05:00', '05:00')).toBe('morning');
+    expect(partOfDay('11:59', '05:00')).toBe('morning');
+    expect(partOfDay('12:00', '05:00')).toBe('afternoon');
+    expect(partOfDay('17:59', '05:00')).toBe('afternoon');
+    expect(partOfDay('18:00', '05:00')).toBe('evening');
+    expect(partOfDay('02:30', '05:00')).toBe('evening');
+  });
+  it('the next fixed item, with its time and title', () => {
+    const l = eligibleLines(line({ fixed: { time: '14:00', title: 'Dentist' } })).filter(x => x.key.startsWith('greetFixed'));
+    expect(l).toHaveLength(3);
+    expect(l[0]!.slots).toEqual({ time: '14:00', title: 'Dentist' });
+    expect(translate('en', 'greetFixed1', l[0]!.slots)).toBe('Anything to move before “Dentist” at 14:00? Type it in the box.');
+  });
+  it('a project close to its goal is named', () => {
+    const l = eligibleLines(line({ project: { name: 'Flat move' } })).filter(x => x.key.startsWith('greetProject'));
+    expect(l).toHaveLength(3);
+    expect(translate('en', l[0]!.key, l[0]!.slots)).toContain('Flat move');
+  });
+  it('done so far counts done steps only, and needs one', () => {
+    expect(kinds(line({ doneToday: 0 }))).not.toContain('done');
+    const l = eligibleLines(line({ doneToday: 2 })).find(x => x.key === 'greetDone1')!;
+    expect(translate('en', l.key, l.slots)).toBe('2 down. What’s next to tick off? Type it in the box.');
+    expect(translate('en', 'greetDone1', { n: 1 })).toBe('One down. What’s next to tick off? Type it in the box.');
+  });
+  it('planned but not started: steps on the list, nothing done, nothing running', () => {
+    expect(unique(kinds(line({ planned: 3 })))).toEqual(['morning', 'planned']);
+    expect(kinds(line({ planned: 3, doneToday: 1 }))).not.toContain('planned');
+    expect(kinds(line({ planned: 3, running: true }))).not.toContain('planned');
+  });
+  it('a project is near its goal with a step done and one or two left, the fewest first', () => {
+    const p = (name: string, order: number, open: number, done: number) => ({ name, order, open, done });
+    expect(nearGoal([p('A', 1, 5, 4), p('B', 2, 3, 3), p('C', 3, 0, 4), p('D', 4, 2, 0)])).toBeNull();
+    expect(nearGoal([p('A', 2, 2, 1), p('B', 1, 1, 3), p('C', 0, 2, 5)])).toEqual({ name: 'B' });
+    expect(nearGoal([p('A', 2, 2, 1), p('C', 0, 2, 5)])).toEqual({ name: 'C' });
   });
 });
 
-describe('startHere, the one card of Home and Today', () => {
-  const open = (id: string) => id !== 'd';
-  it('the first open card; done ones are skipped', () => {
-    expect(startHere(['d', 'a', 'b'], open, () => false)).toEqual({ id: 'a', running: false, planned: 3 });
+describe('the line: no repeat within a day', () => {
+  const all = [...GREETING_KEYS.fixed, ...GREETING_KEYS.morning];
+  it('returns nothing without a candidate', () => {
+    expect(pickGreeting([], [], 1)).toBeNull();
   });
-  it('a running card on the list comes first', () => {
-    expect(startHere(['a', 'b'], open, id => id === 'b')).toEqual({ id: 'b', running: true, planned: 2 });
+  it('picks the first unshown template in the seeded order, and the same one for the same seed', () => {
+    const a = pickGreeting(all, [], 7);
+    expect(a).not.toBeNull();
+    expect(pickGreeting(all, [], 7)).toBe(a);
   });
-  it('nothing open', () => {
-    expect(startHere(['d'], open, () => false)).toEqual({ id: null, running: false, planned: 1 });
+  it('never repeats until every eligible template was shown', () => {
+    for (const seed of [0, 1, 42, seedOf('2026-10-31')]) {
+      const shown: string[] = [];
+      for (let n = 0; n < all.length; n++) shown.push(pickGreeting(all, shown, seed)!);
+      expect(new Set(shown).size).toBe(all.length);
+    }
+  });
+  it('starts over when all were shown, with the one shown longest ago', () => {
+    const shown: string[] = [];
+    for (let n = 0; n < all.length; n++) shown.push(pickGreeting(all, shown, 3)!);
+    expect(pickGreeting(all, shown, 3)).toBe(shown[0]);
+    expect(pickGreeting(all, [...shown, shown[0]!], 3)).toBe(shown[1]);
+  });
+  it('a template that is no longer eligible does not stand in the way', () => {
+    expect(pickGreeting(['greetMorning1'], ['greetMorning2', 'greetFixed1'], 5)).toBe('greetMorning1');
+  });
+  it('a day has its own order', () => {
+    const orders = new Set(['2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'].map(d => pickGreeting(all, [], seedOf(d))));
+    expect(orders.size).toBeGreaterThan(1);
+  });
+  it('greetingLine fills the slots of the pick', () => {
+    const i = line({ fixed: { time: '09:00', title: 'Call' } });
+    const l = greetingLine(i, [], 11)!;
+    expect(eligibleLines(i).map(x => x.key)).toContain(l.key);
+    const shown = [l.key];
+    expect(greetingLine(i, shown, 11)!.key).not.toBe(l.key);
+  });
+});
+
+describe('every template', () => {
+  const templates = (dict: Record<string, unknown>) => Object.values(GREETING_KEYS).flat().flatMap(k => {
+    const v = dict[k];
+    return v == null ? [] : typeof v === 'string' ? [v] : Object.values(v as Record<string, string>);
+  });
+  const BAD = [/database/i, /record/i, /entry/i, /field/i, /base de donn/i, /enregistrement/i, /entr[ée]e/i, /champ/i];
+  it('exists in English and French, with the same slots', () => {
+    const slots = (s: string) => [...new Set(s.match(/\{\w+\}/g) ?? [])].sort().join();
+    for (const k of Object.values(GREETING_KEYS).flat()) {
+      const e = (en as Record<string, unknown>)[k], f = (fr as Record<string, unknown>)[k];
+      expect(e, k).toBeTruthy();
+      expect(f, k).toBeTruthy();
+      expect(typeof f).toBe(typeof e);
+      const one = (v: unknown) => (typeof v === 'string' ? [v] : Object.values(v as Record<string, string>));
+      expect(slots(one(f).join(' ')), k).toBe(slots(one(e).join(' ')));
+    }
+  });
+  it('never says database, record, entry or field (nor their French)', () => {
+    for (const s of [...templates(en), ...templates(fr)]) for (const re of BAD) expect(s, s).not.toMatch(re);
+  });
+  it('never mentions what was missed or carried', () => {
+    for (const s of [...templates(en), ...templates(fr)]) expect(s, s).not.toMatch(/missed|carried|overdue|late|behind|manqu|report|retard/i);
+  });
+  it('invites the person to use the box: every sentence names what to add, move or tick off, or says where to type', () => {
+    for (const s of templates(en)) expect(s, s).toMatch(/type|box|below/i);
+    for (const s of templates(fr)) expect(s, s).toMatch(/écri|case|ci-dessous/i);
   });
 });

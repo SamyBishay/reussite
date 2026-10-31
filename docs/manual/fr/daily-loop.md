@@ -41,6 +41,10 @@ La liste du jour, ce sont les cartes du jour, y compris ce qui est à heure fixe
 
 ![Aujourd’hui : la première étape et le reste de la liste](shot:today)
 
+**Commencez ici suit l’horloge.** C’est la première étape qui tient avant votre prochaine heure fixe, dans l’ordre de votre liste. Une étape qui ne tient pas dans le creux attend le suivant, et une étape plus courte plus bas remonte ; une étape n’est jamais coupée en deux. Quand la prochaine chose à heure fixe approche, elle prend le dessus : Commencez ici devient cet élément, avec son heure et l’heure de départ. Cela arrive quand l’étape en cours (ce qu’il en reste si le chrono tourne, sinon son estimation), plus une marge d’un cinquième de sa durée et d’au moins 5 minutes, empiéterait sur l’heure à laquelle vous devez partir. Une étape sans estimation compte pour 15 minutes. Ce qui est à heure fixe et dont l’heure est passée sort de l’ordre. L’accueil, la carte et la liste d’Aujourd’hui, et la barre de l’étape suivante sur les autres onglets suivent ce même ordre. La liste d’Aujourd’hui indique l’heure à laquelle chaque étape devrait commencer (« ≈10:40 ») ; c’est une projection qui bouge avec l’horloge, pas une promesse. Faire glisser une étape par sa poignée règle toujours l’ordre de votre liste. Ce qui est à heure fixe garde son heure, où que vous le déposiez.
+
+**Les étapes faites se replient.** Sous la liste, les étapes que vous avez cochées sont rassemblées sur une ligne, « 3 faites ▸ ». Touchez-la, ou appuyez sur Entrée, pour les voir ; elles sont fermées au départ. Les projets replient leurs étapes faites de la même façon.
+
 Ajouter une étape à la main à aujourd’hui (ajout rapide, **Ajouter à aujourd’hui**, **Depuis votre liste**) la place juste après l’étape que vous chronométrez, ou avant la première pas encore faite. Elle n’attend pas au bout, derrière tout le plan.
 
 Vous pouvez faire glisser une étape par sa poignée pour changer l’ordre de la liste. Les flèches marchent toujours. Quand des étapes ont des zones, la liste est groupée sous le nom de la zone.

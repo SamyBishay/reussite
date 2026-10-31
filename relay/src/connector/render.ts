@@ -8,10 +8,13 @@ import {
 } from '../../../src/domain/lists';
 import { nudgesDue, waitingList } from '../../../src/domain/events';
 import { addDays } from '../../../src/domain/dates';
+import { fixedOnDay } from '../../../src/domain/agenda';
+import { dayOrder } from '../../../src/domain/dayOrder';
+import { atOnDay, placeOfDay, wallOf } from '../../../src/domain/zone';
 import { chainIndex, chainOf, effectiveDue, isWaiting, type ChainIndex } from '../../../src/domain/chains';
 import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
 import { findByName, norm } from '../../../src/domain/names';
-import { onPage } from '../../../src/domain/places';
+import { onPage, zoneOfPlace } from '../../../src/domain/places';
 import type { View } from './view';
 
 export const MAX_LINES = 50;
@@ -79,6 +82,30 @@ function step(v: View, t: TaskW): string {
   return line(v, t) + (extra.length ? '\n    ' + extra.join(' · ') : '');
 }
 
+/**
+ * What the app shows as Start here for today (src/domain/dayOrder.ts): the running step, or the first step that fits before the next
+ * fixed-time item, or that item once it takes over, with the clock at the request. Same order as Home and Today.
+ */
+function startHereToday(v: View, plan: TaskW[]): { task: TaskW; fixed?: { time: string; leave: string } } | null {
+  const k = v.today, s = v.settings, d = v.data;
+  const zone = placeOfDay(k, v.stays.values(), s.here, id => zoneOfPlace(v.places, id)).timeZone;
+  const events = fixedOnDay({ tasks: v.tasks, days: v.days, decisions: v.decisions, places: v.places, stays: v.stays }, s, k).filter(e => e.taskId && v.tasks.has(e.taskId));
+  const timed = new Set(events.map(e => e.taskId!));
+  const cards = plan.filter(t => !timed.has(t.id) && isOpen(t));
+  const run = [...events.map(e => v.tasks.get(e.taskId!)!), ...cards].find(t => t.started);
+  const optional = new Set(d.days.get(k)?.optional ?? []);
+  const floor = atOnDay(k, s.dayStart, s.dayStart, zone);
+  const first = dayOrder({
+    now: Math.max(v.at.getTime(), floor), floor, end: atOnDay(k, s.dayEnd, s.dayStart, zone), cards: cards.map(t => t.id), optional,
+    est: id => { const t = v.tasks.get(id)!; return personal(v, t)?.value ?? t.est ?? null; },
+    fixed: events.map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template })),
+    running: run ? { id: run.id, started: run.started! } : null,
+  }).order[0];
+  const task = first && v.tasks.get(first.id);
+  if (!first || !task) return null;
+  return first.kind === 'fixed' ? { task, fixed: { time: wallOf(first.at!, zone), leave: wallOf(first.start, zone) } } : { task };
+}
+
 /** A day: its list in order, launch points, fixed times, the next step, and for today what carries over. */
 export function dayText(v: View, k: string): string {
   const d = v.data;
@@ -91,8 +118,8 @@ export function dayText(v: View, k: string): string {
   const L: string[] = [isToday ? header(v) : `${weekday(k)} ${k}.`];
 
   if (isToday && v.where.here !== 'any') L.push(`Place: ${v.places.get(v.where.here)?.name ?? v.where.here} (${v.zone})`);
-  const next = open[0];
-  if (isToday) L.push(next ? `Next step:\n${step(v, next)}` : plan.length ? 'Next step: none, the list is played.' : 'Next step: none, no list yet today.');
+  const next = isToday ? startHereToday(v, plan) : null;
+  if (isToday) L.push(next ? `Next step${next.fixed ? ` (a fixed time has taken over: ${next.fixed.time}, leave at ${next.fixed.leave})` : ''}:\n${step(v, next.task)}` : plan.length ? 'Next step: none, the list is played.' : 'Next step: none, no list yet today.');
 
   if (plan.length) {
     const est = work.reduce((a, t) => a + (personal(v, t)?.value ?? t.est ?? 0), 0);

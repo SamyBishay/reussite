@@ -112,6 +112,15 @@ Once a week (Sunday by default), Home offers **Start the review**. It takes abou
 
 It ends with how your estimates compared with reality.
 
+### The goals
+
+After the next steps, each active project gets two screens.
+
+- **Is this goal still right?** You see the goal in one sentence, its bar and its dates. **Still right** goes on. **Edit the goal** opens the goal editor in the screen. **Close it** asks whether the goal was **Reached** or you want to **Let it go**; either way the project is closed (you can reopen it in Projects), and its steps are not asked.
+- **Which steps move this goal?** Each open step of the project, with **Moves the goal? Yes / No**. The buttons show the answer the step already has, so a step you answered last week stays as you left it; one you never answered says "Not said". Only the steps you say Yes to fill the bar, once they are done.
+
+With an AI set up, **Start the review** (on the review day, from Home's bell or Today, and in Settings → Method as **Review the goals with the AI**) opens a short conversation about the goals instead, one project at a time. For each project the AI checks the goal against SMART (the sentence, the measure and the dates), tells you for each open step whether it belongs to the goal and whether it moves it, and proposes changes: a clearer sentence, a measure, other dates, steps to drop or to add. You keep or **Skip** each proposal, flip any step's **Yes / No** with a tap, and can say what to change ("make the goal smaller"). After the last project, **See the changes** shows one list on the review screen: tick what you want and nothing is written before that. **The rest of the review** then goes on with the usual questions, and **Go through the goals myself** opens the review by hand at any point. Without an AI nothing changes.
+
 **Research says:** untested here. `[E?]`
 
 **Practice says:** a regular look at everything keeps the daily list small. `[E?]`

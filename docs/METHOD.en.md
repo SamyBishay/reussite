@@ -70,7 +70,7 @@ Once a week, about 45 minutes, one question at a time:
 1. Re-sort what changed between the quadrants.
 2. Drop what no longer matters.
 3. Sort the inbox into projects.
-4. Make the next step of each active project a concrete first action, and give each active project a SMART goal.
+4. Make the next step of each active project a concrete first action, and give each active project a SMART goal. Then check each goal, one project at a time: is the outcome still right, is it measured (a count, milestones, or no bar), do the dates leave real time? And for each open step: does it belong to the goal, and does finishing it move it? Only steps that move it fill the bar, and only the person says which; an assistant proposes, and nothing is written before their yes.
 5. Pick the week's *Protect* steps, and their days.
 6. Name the week's obligations (people, going out, leisure), with days.
 7. Queue the decisions to make, with dates.

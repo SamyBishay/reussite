@@ -161,8 +161,10 @@ test('no list yet shows Plan the day; a started step is the greeting, and the ru
   await page.getByTestId('home-start').click();
   await expect(page.getByTestId('greeting-running')).toContainText('Open Doctolib');
   await expect(page.locator('.runbar')).toHaveCount(0);
-  await goTab(page, 'matrix');
+  await goTab(page, 'projects');
   await expect(page.locator('.runbar')).toBeVisible();
+  await goTab(page, 'matrix');
+  await expect(page.locator('.runbar')).toHaveCount(0);
   await goTab(page, 'home');
   await page.getByTestId('greeting-running').getByRole('button', { name: 'Pause' }).click();
   await sheet(page).getByRole('button', { name: /^(Pause|Save)/ }).first().click();

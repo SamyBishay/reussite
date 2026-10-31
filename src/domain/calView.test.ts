@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { choir, day, place, state, stay, task } from './agenda.fixture';
-import { appSlot, calViewEvents, endClock, gridSlot, type CalViewData, type CalViewOptions } from './calView';
+import { appSlot, calViewEvents, endClock, gridSlot, projectedEvents, type CalViewData, type CalViewOptions } from './calView';
 
 const data = (o: Parameters<typeof state>[0] = {}, more: Partial<CalViewData> = {}): CalViewData => ({
   ...(state(o) as unknown as CalViewData), projects: new Map(), addresses: new Map(), ...more,
@@ -124,5 +124,37 @@ describe('where a time is drawn', () => {
       const evs = calViewEvents(world(), opts({ area: 'maadi' }), '2026-10-22', '2026-10-22');
       expect(evs.some(e => e.kind === 'half')).toBe(false);
     });
+  });
+});
+
+describe('projected steps (today’s order on the grid)', () => {
+  const MIN = 60_000, base = Date.UTC(2026, 9, 26, 0, 0); // a clock that reads UTC
+  const wall = (ms: number) => new Date(ms).toISOString().slice(11, 16);
+  const at = (hh: number, mm = 0) => base + (hh * 60 + mm) * MIN;
+  const d = data({ tasks: [task('a', { title: 'Buy stamps', suit: 'D' }), task('b', { title: 'Sort the drawer' }), task('x', { title: 'Done', status: 'done' }), task('f', { title: 'Timed', at: '14:30', due: '2026-10-27' })] });
+
+  it('draws each planned step as a block from its projected start to its end, never movable', () => {
+    const evs = projectedEvents(d, opts(), '2026-10-26', [{ taskId: 'a', start: at(11), end: at(11, 20) }, { taskId: 'b', start: at(11, 20), end: at(11, 35) }], wall);
+    expect(evs.map(e => [e.id, e.kind, e.date, e.time, e.endTime, e.title, e.movable])).toEqual([
+      ['projected:a:2026-10-26', 'projected', '2026-10-26', '11:00', '11:20', 'stamps', false],
+      ['projected:b:2026-10-26', 'projected', '2026-10-26', '11:20', '11:35', 'drawer', false],
+    ]);
+    expect(evs[0]!.suit).toBe('D');
+  });
+
+  it('marks the running step, and its block grows with the clock when it overruns', () => {
+    const run = (now: number) => projectedEvents(d, opts(), '2026-10-26', [{ taskId: 'a', start: at(11), end: Math.max(now, at(11, 20)), running: true }], wall)[0]!;
+    expect(run(at(11, 10))).toMatchObject({ running: true, time: '11:00', endTime: '11:20' });
+    expect(run(at(11, 45))).toMatchObject({ time: '11:00', endTime: '11:45' });
+  });
+
+  it('leaves out a step that is not open or unknown, and stops at the end of the grid', () => {
+    const evs = projectedEvents(d, opts(), '2026-10-26', [{ taskId: 'x', start: at(9), end: at(10) }, { taskId: 'zz', start: at(9), end: at(10) }, { taskId: 'f', start: at(9), end: at(10) }, { taskId: 'a', start: at(23, 30), end: at(24, 30) }, { taskId: 'b', start: at(23, 59), end: at(24, 10) }], wall);
+    expect(evs.map(e => [e.taskId, e.time, e.endTime])).toEqual([['a', '23:30', '23:59']]);
+  });
+
+  it('puts a block after midnight and before the day starts on the next date', () => {
+    const evs = projectedEvents(d, opts(), '2026-10-26', [{ taskId: 'a', start: at(25), end: at(25, 30) }], wall); // 01:00
+    expect(evs[0]).toMatchObject({ day: '2026-10-26', date: '2026-10-27', time: '01:00', endTime: '01:30' });
   });
 });

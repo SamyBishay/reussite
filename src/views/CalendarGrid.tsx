@@ -12,14 +12,17 @@ import '@schedule-x/theme-default/dist/index.css';
 import '../styles/calendar.css';
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
-import { addresses, days, hereZone, places, projects, settings, stays, tasks, today } from '../app/store';
+import { addresses, clockNow, days, hereZone, places, projects, settings, stays, tasks, today } from '../app/store';
 import { moveFixed } from '../app/actions';
 import { openTask } from '../app/sheets';
 import { dayView } from './Today';
+import { dayOrderOf, dayZone } from '../app/model';
+import { wallOf } from '../domain/zone';
+import { deviceZone } from '../domain/zones';
 import { isPhone, PHONE_DAYS, type CalMode } from '../app/nav';
 import { t, lang } from '../i18n';
 import { addDays } from '../domain/dates';
-import { appSlot, calViewEvents, type CalViewEvent } from '../domain/calView';
+import { appSlot, calViewEvents, projectedEvents, type CalViewEvent } from '../domain/calView';
 import { isoDow } from '../domain/repeat';
 import { areaFilter } from '../app/areas';
 
@@ -48,7 +51,7 @@ function toLibrary(e: CalViewEvent, zone: string, phone: boolean): CalendarEvent
   const base = {
     id: e.id, title: labelOf(e), ...(e.where ? { location: e.where } : {}),
     calendarId: e.kind === 'stay' ? 'stay' : e.suit && e.kind === 'fixed' ? e.suit : 'neutral',
-    _options: { disableDND: phone || !e.movable, disableResize: true, additionalClasses: ['k-' + e.kind, ...(e.done ? ['is-done'] : []), ...(e.time ? ['is-timed'] : [])] },
+    _options: { disableDND: phone || !e.movable, disableResize: true, additionalClasses: ['k-' + e.kind, ...(e.done ? ['is-done'] : []), ...(e.running ? ['is-running'] : []), ...(e.time ? ['is-timed'] : [])] },
   };
   if (e.time && e.endTime) {
     const at = (time: string) => Temporal.PlainDateTime.from(`${e.date}T${time}:00`).toZonedDateTime(zone);
@@ -68,7 +71,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
   const api = useRef<{ controls: ReturnType<typeof createCalendarControlsPlugin>; sync: () => void } | null>(null);
   const latest = useRef({ mode, date });
   latest.current = { mode, date };
-  const zone = hereZone.value || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zone = hereZone.value || deviceZone();
   const language = lang.value;
   const phone = isPhone();
 
@@ -126,13 +129,20 @@ export function CalendarGrid({ mode, date }: GridProps) {
         { dayStart: settings.value.dayStart, area: areaFilter('calendar') },
         from, to,
       );
+      // Today's planned steps, faded between the fixed items, on the hour grid only (Day and Week): they follow the clock.
+      const td = today.value, grid = latest.current.mode === 'day' || latest.current.mode === 'week';
+      if (grid && td >= from && td <= to) {
+        const steps = dayOrderOf(td).order.filter(x => x.kind === 'step').map(x => ({ taskId: x.id, start: x.start, end: x.end, running: !!tasks.value.get(x.id)?.started }));
+        const zoneOfDay = dayZone(td);
+        evs.push(...projectedEvents({ tasks: tasks.value }, { dayStart: settings.value.dayStart }, td, steps, ms => wallOf(ms, zoneOfDay)));
+      }
       byId.clear();
       for (const e of evs) byId.set(e.id, e);
       calendar.events.set(evs.map(e => toLibrary(e, zone, phone)));
     }
     api.current = { controls, sync };
     calendar.render(el);
-    const stop = effect(() => { void [tasks.value, days.value, projects.value, places.value, stays.value, addresses.value, settings.value, lang.value]; sync(); });
+    const stop = effect(() => { void [clockNow.value, tasks.value, days.value, projects.value, places.value, stays.value, addresses.value, settings.value, lang.value]; sync(); });
     move(controls, latest.current.mode, latest.current.date, phone);
     return () => { stop(); calendar.destroy(); api.current = null; };
   }, [language, zone, phone]);

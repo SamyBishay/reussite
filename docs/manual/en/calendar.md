@@ -8,10 +8,11 @@ The **Calendar** tab is a real calendar. It has the views **Day**, **Week** (or 
 
 ## What a day shows
 
-The calendar is only for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md), not here. Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
+The calendar is for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md); the only steps here are today’s planned ones, shown faded (below). Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
 
 - **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays.
 - Past days show only the fixed-time items too; a done one is struck through.
+- **Today's planned steps** show on the Day and Week views as faded, hatched blocks with a dashed edge, between the fixed-time items. They are where the day's order says each step will happen if you go on as you are, so they are a guess, not an appointment. When a step runs past its estimate its block grows with the clock and the later ones move on. Tap one to open the step, as in Today. You cannot drag them, they are only today's (other days have no clock to follow), and they are not in the files or the feed below.
 - A **stay** is a coloured band over its days. A **half day** you chose in the morning check-in shows as a small label: "Afternoon · Heliopolis".
 - Each event shows the step's **short name** and, when there is room, the address or place.
 

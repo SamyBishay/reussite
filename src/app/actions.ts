@@ -2,7 +2,7 @@
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects } from './store';
-import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
+import type { Address, Day, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
 import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
@@ -280,17 +280,7 @@ export async function setFirst(id: string, k = today.value) {
   await dayPatch(k, { plan: p, first: { id, title: tk.title } });
   if (k === today.value) toast(t('startHereToast', { title: tk.title }));
 }
-export async function addLaunch(time: string, kind: Launch['k'], k = today.value) {
-  const L = [...(dayDoc(k)?.launches ?? []), { t: time, k: kind }].sort((a, b) => a.t.localeCompare(b.t));
-  await dayPatch(k, { launches: L });
-}
-export async function delLaunch(i: number, k = today.value) {
-  const L = [...(dayDoc(k)?.launches ?? [])];
-  L.splice(i, 1);
-  await dayPatch(k, { launches: L });
-}
-
-export async function closeDay(firstId: string | null, newTitle: string, time: string) {
+export async function closeDay(firstId: string | null, newTitle: string) {
   const k = today.value;
   const r = running();
   if (r) await stopTimer(r, 'close', null);
@@ -306,10 +296,7 @@ export async function closeDay(firstId: string | null, newTitle: string, time: s
   if (id) {
     const tk = addDays(k, 1), td = dayDoc(tk);
     const plan = [id, ...(td?.plan ?? []).filter(x => x !== id)];
-    const L = (td?.launches ?? []).filter(l => !l.first);
-    if (time) L.push({ t: time, k: 'start', n: title, first: true });
-    L.sort((a, b) => a.t.localeCompare(b.t));
-    await dayPatch(tk, { plan, first: { id, title }, launches: L });
+    await dayPatch(tk, { plan, first: { id, title } });
   }
   toast(id ? t('dayClosedFirst', { title }) : t('dayClosedToast'));
 }

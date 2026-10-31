@@ -197,14 +197,13 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
   const td = dayDoc(addDays(k, 1));
   const sugg: Tk[] = planOf(k).map(id => T(id)!).filter(isOpen);
   candidates().forEach(c => { if (sugg.length < 8 && !sugg.includes(c)) sugg.push(c); });
-  const startL = td?.launches?.find(l => l.first);
   const [sel, setSel] = useState(td?.first?.id ?? '');
   const submit = (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
     const v = (n: string) => ((f.elements.namedItem(n) as HTMLInputElement | null)?.value ?? '');
     if (inShow) endShow(); else closeSheet();
-    void closeDay(sel && sel !== '__new' ? sel : null, sel === '__new' ? v('newTitle') : '', v('time'));
+    void closeDay(sel && sel !== '__new' ? sel : null, sel === '__new' ? v('newTitle') : '');
   };
   return (
     <form onSubmit={submit} class="summary-form" data-testid="close-summary">
@@ -222,7 +221,6 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
         </select>
       </label>
       {sel === '__new' && <label class="field"><span>{t('newVerbFirst')}</span><input type="text" name="newTitle" autocomplete="off" /></label>}
-      <label class="field"><span>{t('startAt')}</span><input type="time" name="time" defaultValue={startL?.t ?? ''} /></label>
       <div class="actions"><button class="btn primary" type="submit" data-testid="close-confirm">{t('closeTitle')}</button><button class="btn ghost" type="button" onClick={inShow ? endShow : closeSheet}>{t('notYet')}</button></div>
     </form>
   );

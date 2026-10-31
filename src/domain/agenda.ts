@@ -1,5 +1,5 @@
 // The agenda: everything that happens at a clock time on a dated day, as instants (brief §8).
-// Launch points, fixed-time items (one-off and standing), the check-in, the close of the day, the
+// Fixed-time items (one-off and standing), the check-in, the close of the day, the
 // weekly review and decision checks. Push notifications (notify.ts), the planner's fixed lines and
 // the calendar exports all read it, so they agree on what is when. Pure: no store, no clock.
 import type { Day, Decision, Place, Stay, Task } from '../data/schema';
@@ -32,10 +32,10 @@ export interface AgendaSettings {
   notifyLead: number;
 }
 
-export type AgendaKind = 'launch' | 'fixed' | 'checkin' | 'close' | 'review' | 'decision';
+export type AgendaKind = 'fixed' | 'checkin' | 'close' | 'review' | 'decision';
 
 export interface AgendaEvent {
-  /** Stable for the same thing on the same day: `launch:<day>:<n>`, `fixed:<rootId>:<day>`, `checkin:<day>`, … */
+  /** Stable for the same thing on the same day: `fixed:<rootId>:<day>`, `checkin:<day>`, … */
   id: string;
   kind: AgendaKind;
   /** The day it belongs to (by the day-start rule), which may differ from the calendar date of `at`. */
@@ -58,8 +58,6 @@ export interface AgendaEvent {
   /** Minutes before `at` to leave. */
   lead?: number;
   dur?: number | null;
-  // launch
-  launch?: { k: 'start' | 'restart'; n: number; note?: string };
   // decision
   decisionId?: string;
 }
@@ -137,11 +135,6 @@ export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: Da
   const morning = clockOf(s.morningAt), evening = clockOf(s.eveningAt), review = clockOf(s.reviewTime);
   for (let k = from; k <= to; k = addDays(k, 1)) {
     const d = data.days.get(k);
-    const ls = Array.isArray(d?.launches) ? d!.launches : [];
-    ls.forEach((l, n) => {
-      const clock = clockOf(l.t);
-      if (clock) put({ id: `launch:${k}:${n}`, kind: 'launch', day: k, clock, launch: { k: l.k === 'restart' ? 'restart' : 'start', n, ...(l.n ? { note: l.n } : {}) } });
-    });
     if (morning && !d?.checkin) put({ id: 'checkin:' + k, kind: 'checkin', day: k, clock: morning });
     if (evening && !d?.closed) put({ id: 'close:' + k, kind: 'close', day: k, clock: evening });
     if (review && isoDow(k) === s.reviewDay && !d?.review) put({ id: 'review:' + k, kind: 'review', day: k, clock: review });

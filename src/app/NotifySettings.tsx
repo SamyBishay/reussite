@@ -10,8 +10,8 @@ import { NOTIFY_TYPES, DEFAULT_SETTINGS, type NotifyText, type NotifyType } from
 import { t, locale, type Key } from '../i18n';
 
 const TYPE_LABEL: Record<NotifyType, Key> = {
-  launch: 'notifyTypeLaunch', fixed: 'notifyTypeFixed', checkin: 'notifyTypeCheckin', close: 'notifyTypeClose',
-  decision: 'notifyTypeDecision', review: 'notifyTypeReview', still: 'notifyTypeStill',
+  fixed: 'notifyTypeFixed', checkin: 'notifyTypeCheckin', close: 'notifyTypeClose',
+  decision: 'notifyTypeDecision', review: 'notifyTypeReview',
 };
 
 const failure = (code: string) => (code === 'network' ? t('syncNetwork') : t('notifyFailed', { code }));

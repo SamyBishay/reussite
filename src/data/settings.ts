@@ -11,8 +11,9 @@ export type Celebrations = 'off' | 'calm' | 'lively';
 export type TextSize = 'S' | 'M' | 'L';
 export type Lang = 'en' | 'fr';
 export type NotifyText = 'generic' | 'titles';
-export type NotifyType = 'launch' | 'fixed' | 'checkin' | 'close' | 'decision' | 'review' | 'still';
-export const NOTIFY_TYPES: NotifyType[] = ['launch', 'fixed', 'checkin', 'close', 'decision', 'review', 'still'];
+// Pushes the app sends. `launch` and `still` were removed (plan 2 Nov): a `notify` that still holds them keeps them, and nothing reads them.
+export type NotifyType = 'fixed' | 'checkin' | 'close' | 'decision' | 'review';
+export const NOTIFY_TYPES: NotifyType[] = ['fixed', 'checkin', 'close', 'decision', 'review'];
 export type AiProvider = 'none' | 'openai' | 'anthropic';
 
 /**
@@ -47,6 +48,7 @@ export interface Settings {
   dayEnd: string;
   maxWorkSteps: number;
   planningMin: number;
+  /** Kept as stored, no longer read: launch points and restarts were removed (plan 2 Nov). */
   launchDefaults: { start: string; restarts: string[] };
   suits: Record<SuitId, SuitSetting>;
   /** Current place outside any stay: a place id. */
@@ -144,7 +146,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewTime: '18:00',
   morningAt: '08:30',
   eveningAt: '21:00',
-  notify: { launch: true, fixed: true, checkin: true, close: true, decision: true, review: true, still: true },
+  notify: { fixed: true, checkin: true, close: true, decision: true, review: true },
   notifyText: 'generic',
   notifyLead: 30,
   feedDetail: 'times',

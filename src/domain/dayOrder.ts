@@ -135,3 +135,24 @@ export function dayOrder(i: DayOrderInput): DayOrder {
 
 /** The projected start of each step in an order, by id (fixed items keep their own time). */
 export const startsOf = (o: DayOrder): Map<string, number> => new Map(o.order.filter(x => x.kind === 'step').map(x => [x.id, x.start]));
+
+/**
+ * The day's load against the time it has (the morning ritual's "3 h 10 of 4 h 30 free"): `planned` is the minutes of the cards
+ * that are not "if there's room"; `free` is the time between `max(now, floor)` and `end` that no fixed-time item takes (from the
+ * time to leave to its end); `over` is what `dayOrder` says does not fit before `end`.
+ */
+export function dayLoad(i: DayOrderInput): { planned: number; free: number; over: number } {
+  const optional = i.optional ?? new Set<string>();
+  const estOf = (id: string): number => { const e = i.est(id); return typeof e === 'number' && e > 0 ? e : DEFAULT_EST; };
+  const planned = i.cards.filter(id => !optional.has(id)).reduce((a, id) => a + estOf(id), 0);
+  const from = Math.max(i.now, i.floor);
+  const busy = i.fixed
+    .map(f => [Math.max(from, f.at - (f.lead && f.lead > 0 ? f.lead : 0) * MIN), Math.min(i.end, f.at + (f.dur && f.dur > 0 ? f.dur : DEFAULT_DURATION) * MIN)] as const)
+    .filter(([a, b]) => b > a).sort((a, b) => a[0] - b[0]);
+  let free = Math.max(0, i.end - from), cursor = from;
+  for (const [a, b] of busy) {
+    const s = Math.max(a, cursor);
+    if (b > s) { free -= b - s; cursor = b; }
+  }
+  return { planned, free: Math.round(Math.max(0, free) / MIN), over: dayOrder(i).over };
+}

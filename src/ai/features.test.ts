@@ -7,7 +7,7 @@ import type { Option } from '../domain/decision';
 
 const s = (id: string, quad: PStep['quad'], o: Partial<PStep> = {}): PStep => ({ id, quad, due: null, est: 15, starter: 'Open it', ...o });
 const input = (o: Partial<PlanInput> = {}): PlanInput => ({
-  today: '2026-10-09', maxWorkSteps: 3, planningMin: 15, defaultRestarts: ['14:00'], obligationAt: '18:00',
+  today: '2026-10-09', maxWorkSteps: 3, planningMin: 15, obligationAt: '18:00',
   shape: { start: '09:30', preset: 'normal', fixed: [] },
   carried: [s('c1', 1)], candidates: [s('n1', 1), s('p1', 2), s('p2', 2), s('q1', 3, { est: 45 })],
   obligations: [{ id: 'o1', lastDone: null, est: 30 }, { id: 'o2', lastDone: '2026-10-01', est: 20 }], optional: [], laterPool: [], usualLoad: null, ...o,

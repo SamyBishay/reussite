@@ -20,7 +20,7 @@ import { aiOn } from '../ai/ask';
 import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
-import { openPlanDay } from '../flows/morning';
+import { openPlanDay, openMorning } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { withTime } from '../domain/calendar';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
@@ -142,6 +142,13 @@ function GreetingBody() {
       <div class="go"><button class="btn" type="button" onClick={openClose}>{t('closeTheDay')}</button></div>
     </section>
   );
+}
+
+/** With an AI on and the day not planned yet, a fixed-time item or a step added by hand is already Start here: the planning is still one tap away. */
+function PlanLink() {
+  const d = dayDoc(today.value);
+  if (!aiOn.value || d?.checkin || d?.closed || greetingNow.value.kind !== 'next') return null;
+  return <div class="go quiet"><button class="btn small ghost" type="button" onClick={openMorning} data-testid="home-plan-ai">{t('planTheDay')}</button></div>;
 }
 
 // ---------- the card ----------
@@ -269,6 +276,7 @@ export function Home() {
         </div>
         <GreetingLine />
         <GreetingBody />
+        <PlanLink />
         <MissedNow />
       </section>
       <Card />

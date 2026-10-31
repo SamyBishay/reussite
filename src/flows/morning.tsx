@@ -196,7 +196,7 @@ function Morning() {
               <button type="button" onClick={() => void turn(t('mornTooMuchSays'))} disabled={ai.busy} data-testid="morning-toomuch">{t('mornTooMuch')}</button>
               <button type="button" onClick={() => void turn(t('mornRoomSays'))} disabled={ai.busy} data-testid="morning-room">{t('mornRoom')}</button>
             </div>
-            <form class="fixed-add" onSubmit={e => { e.preventDefault(); const m = say.trim(); if (m && !ai.busy) { setSay(''); void turn(m); } }}>
+            <form class="morn-say" onSubmit={e => { e.preventDefault(); const m = say.trim(); if (m && !ai.busy) { setSay(''); void turn(m); } }}>
               <input type="text" value={say} onInput={e => setSay((e.target as HTMLInputElement).value)} placeholder={t('mornAdjustPh')} aria-label={t('mornAdjust')} autocomplete="off" data-testid="morning-say" />
               <button class="btn small" type="submit" disabled={ai.busy || !say.trim()} data-testid="morning-adjust">{t('mornAdjustBtn')}</button>
             </form>

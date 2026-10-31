@@ -10,7 +10,7 @@ export const appWriter: Writer = {
   create: (c, fields) => createDoc(c, fields),
   update: (c, id, patch) => update(c, id, patch),
   finish: async (id, day) => { const tk = tasks.value.get(id); if (tk && tk.status === 'open') await finishTask(tk, null, day); },
-  drop: id => dropTask(id),
+  drop: async id => { await dropTask(id); },
   day: (k, patch) => dayPatch(k, patch).then(() => undefined),
   stay: (id, s) => saveStay(id, s),
   read: async (c, id) => { const d = await db.table_(c).get(id); return d && !d._del ? fieldsOf(d as Stored<Record<string, unknown>>) : undefined; },

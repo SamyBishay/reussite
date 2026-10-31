@@ -5,7 +5,7 @@
 import { useState } from 'preact/hooks';
 import { today, toast } from './store';
 import { T, type T as Tk } from './model';
-import { finishTask, dropTask, snoozeEvent } from './actions';
+import { finishTask, dropTask, droppedLine, snoozeEvent } from './actions';
 import { closeSheet, openSheet, Title } from './ui';
 import { nudgeAfter, snoozeNudge } from '../domain/events';
 import { t, fmtDate } from '../i18n';
@@ -72,7 +72,7 @@ function StillWaitingSheet({ id }: { id: string }) {
 function DropEvent({ tk }: { tk: Tk }) {
   const [armed, setArmed] = useState(false);
   return (
-    <button class="btn ghost small" type="button" data-testid="event-drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id); toast(t('dropped')); }}>
+    <button class="btn ghost small" type="button" data-testid="event-drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id).then(f => toast(droppedLine(f))); }}>
       {armed ? t('dropAgain') : t('dropIt')}
     </button>
   );

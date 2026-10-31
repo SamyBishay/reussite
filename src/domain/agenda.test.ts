@@ -104,14 +104,10 @@ describe('one-off fixed-time items', () => {
   });
 });
 
-describe('launch points, check-in, close, review, decisions', () => {
-  it('launches come from the days’ lists, in order, with a stable index', () => {
-    const ev = week({ days: [day('2026-10-20', { launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart', n: 'after lunch' }] })] }).filter(e => e.kind === 'launch');
-    expect(ev.map(e => [e.id, e.time, e.launch!.k, iso(e.at)])).toEqual([
-      ['launch:2026-10-20:0', '09:30', 'start', '2026-10-20T07:30:00.000Z'],
-      ['launch:2026-10-20:1', '14:00', 'restart', '2026-10-20T12:00:00.000Z'],
-    ]);
-    expect(ev[1]!.launch!.note).toBe('after lunch');
+describe('check-in, close, review, decisions', () => {
+  it('a day’s old launch points make no event: they stay stored and nothing reads them', () => {
+    const ev = week({ days: [day('2026-10-20', { launches: [{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart', n: 'after lunch' }] })] });
+    expect(ev.filter(e => e.id.startsWith('launch:'))).toEqual([]);
   });
   it('the daily prompts follow the settings, and not on days where they were done', () => {
     const ev = (w = {}, s = S) => week(w, '2026-10-19', '2026-10-20', s).filter(e => e.kind !== 'fixed').map(e => e.id);
@@ -135,11 +131,10 @@ describe('launch points, check-in, close, review, decisions', () => {
 
 describe('day start and places', () => {
   it('a time before the day starts is on the next calendar date, still that day’s event', () => {
-    const ev = week({ days: [day('2026-10-19', { launches: [{ t: '01:30', k: 'restart' }] })] }, '2026-10-19', '2026-10-19', settings({ eveningAt: '01:00' }));
+    const ev = week({}, '2026-10-19', '2026-10-19', settings({ eveningAt: '01:00' }));
     const close = ev.find(e => e.kind === 'close')!;
     expect(close).toMatchObject({ day: '2026-10-19', time: '01:00' });
     expect(iso(close.at)).toBe('2026-10-19T23:00:00.000Z');
-    expect(iso(ev.find(e => e.kind === 'launch')!.at)).toBe('2026-10-19T23:30:00.000Z');
   });
   it('a day inside a stay uses the stay’s place and zone, and another day uses the place chosen by hand', () => {
     const w = { tasks: [task('t', { title: 'Meet', at: '19:00', due: '2026-10-21' }), task('u', { title: 'Call', at: '19:00', due: '2026-10-25' })], stays: [stay('s1', 'cairo', '2026-10-20', '2026-10-24')] };

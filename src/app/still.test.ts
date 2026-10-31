@@ -1,20 +1,19 @@
-// "Still on …?" has two voices: the in-app banner (isLong) and the push (buildSchedule). They
-// must agree on the moment a timer becomes long, or the push says one thing and the app another.
+// "Still on …?" is the in-app banner (isLong); the push was removed (plan 2 Nov). The banner and `stillOnDue`, the rule that
+// says when a timer becomes long, must agree on the moment, in every zone and across the day boundary.
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { days, decisions, places, sessions, settings, stays, tasks, type WithId } from './store';
+import { places, sessions, settings, tasks, type WithId } from './store';
 import { isLong } from './sheets';
 import { T } from './model';
 import { withDefaults } from '../data/settings';
-import { buildSchedule, type Translate } from '../domain/notify';
+import { stillOnDue } from '../domain/calendar';
 import type { Task } from '../data/schema';
 
-const tr: Translate = key => key;
 const MIN = 60_000;
 
-function stillAt(now: number): number | undefined {
-  const items = buildSchedule({ tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, sessions: sessions.value }, now, settings.value, tr);
-  return items.find(i => i.id === 'still:t1')?.at;
+function stillAt(_now: number): number | undefined {
+  const x = T('t1')!, zone = places.value.get(settings.value.here)?.timeZone;
+  return stillOnDue(Date.parse(x.started!), Date.parse(x.stillAt ?? '') || 0, x.est, settings.value.dayStart, zone);
 }
 
 function run(fields: Partial<Task>, started: number, now: number, here?: { id: string; zone: string }) {
@@ -25,7 +24,7 @@ function run(fields: Partial<Task>, started: number, now: number, here?: { id: s
   return stillAt(now);
 }
 
-describe('"Still on …?": the push fires at the moment the banner would call the timer long', () => {
+describe('"Still on …?": the banner calls the timer long at the moment stillOnDue says', () => {
   // Mid-morning, UTC and local agree on the date for hours either side.
   const started = Date.parse('2026-10-20T09:00:00Z');
 
@@ -52,7 +51,7 @@ describe('"Still on …?": the push fires at the moment the banner would call th
   });
 });
 
-describe('"Still on …?" across the day boundary: the banner and the push use the one rule (stillOnDue)', () => {
+describe('"Still on …?" across the day boundary: the banner uses the one rule (stillOnDue)', () => {
   // A long estimate, so the day boundary (not the estimate) is what makes the timer long.
   const long = { est: 240 } as const;
   const paris = { id: 'paris', zone: 'Europe/Paris' };

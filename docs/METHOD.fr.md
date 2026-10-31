@@ -36,11 +36,11 @@ Quand vous êtes bloqué, l’amorce est la version deux minutes. Si celle qui e
 
 ### Le point du matin
 1. **Hier.** Ce qui a été fait, en une ligne. Cochez les étapes faites mais non marquées ; les autres sont reportées à aujourd’hui. Une étape reportée trois fois ou plus est trop grosse ou cache une décision : réduisez-la, ou faites-en une décision. Aucun commentaire sur ce qui n’a pas été fait.
-2. **La forme de la journée.** Quand pouvez-vous commencer, et qu’est-ce qui est fixé aujourd’hui ?
-3. **Le plan.** D’abord les étapes *Maintenant* débloquées, pour le lieu où vous êtes ; puis une seule étape *À protéger* ; puis les étapes *Vite fait*, regroupées. Trois étapes de travail au plus. Une obligation de loisir ou de proches, avec une heure. Chaque élément est une première étape de 30 minutes au plus ; découpez maintenant celles qui sont plus longues. Additionnez les estimations, ajoutez le temps de planification, et appliquez votre ratio.
-4. **Les points de départ** : un départ, et une ou deux reprises après les engagements fixes. Ce sont les moments pour commencer ou revenir à la liste, pas un emploi du temps. Les étapes flottent entre eux.
+2. **La forme de la journée.** À partir de quand et jusqu’à quand (la journée finit à 19 h sauf avis contraire), et qu’est-ce qui est fixé aujourd’hui.
+3. **Les quatre piliers.** Une étape pour chacun : travail (♠), papiers (♦), famille (♣) et vie (♥), autant que la liste en a. Un pilier vide reçoit une ligne (« Pas d’étape famille aujourd’hui. Très bien, ou en ajouter une ? ») ; la personne garde, remplace ou passe chacune.
+4. **Le plan.** D’abord les étapes *Maintenant* débloquées, pour le lieu où vous êtes ; puis une seule étape *À protéger* ; puis les étapes *Vite fait*, regroupées. Trois étapes de travail au plus. Une obligation de loisir ou de proches, avec une heure. Chaque élément est une première étape de 30 minutes au plus ; découpez maintenant celles qui sont plus longues. Placez-le face à l’horloge : les heures fixes où elles sont, les étapes dans les creux. Additionnez les estimations, appliquez votre ratio, et dites-le face au temps disponible : « 3 h 10 sur 4 h 30 de libre ». Si c’est plus que le temps disponible, dites de combien (« Environ 50 min de plus que le temps dont vous disposez. En retirer une ? ») et laissez la personne retirer. Il n’y a ni points de départ ni relances de reprise ; les étapes flottent entre les heures fixes.
 5. **Jour de repos** : l’obligation seulement, sauf si quelque chose est dû dans les deux jours.
-6. Puis lancez la première étape.
+6. Puis la première étape, seule : son amorce, et Démarrer.
 
 ### Insister
 Revenez à la première étape. L’échanger contre une autre du même poids, oui ; la sauter, non. En cas de résistance, une seule question : qu’est-ce qui bloque ? Un vrai obstacle (une information manquante, l’action de quelqu’un d’autre, une décision cachée) change le plan : on en fait un message à envoyer, une étape plus petite, ou une décision. Pour tout le reste, l’amorce, ou une plus petite.

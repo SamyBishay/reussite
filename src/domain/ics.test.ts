@@ -106,16 +106,14 @@ describe('events', () => {
     expect(text).not.toContain('VALARM');
   });
 
-  it('exports only fixed-time items: no launch points, check-ins, closes, reviews or decision checks', () => {
+  it('exports only fixed-time items: no check-ins, closes, reviews or decision checks', () => {
     const others = [
-      ev({ id: 'launch:2026-10-20:0', kind: 'launch', launch: { k: 'start', n: 0 } }), ev({ id: 'launch:2026-10-20:1', kind: 'launch', launch: { k: 'restart', n: 1, note: 'taxes' } }),
       ev({ id: 'checkin:2026-10-20', kind: 'checkin' }), ev({ id: 'close:x', kind: 'close' }), ev({ id: 'review:x', kind: 'review' }), ev({ id: 'decision:d:x', kind: 'decision' }),
     ];
     const cal = parse(icsFor([ev({}), ...others], opts()));
     expect(kids(cal, 'VEVENT')).toHaveLength(1);
     expect(others.some(exported)).toBe(false);
     const week = agenda(state({ tasks: [choir()], days: [day('2026-10-20', { launches: [{ t: '08:30', k: 'start' }, { t: '14:00', k: 'restart', n: 'taxes' }] })] }), settings(), '2026-10-19', '2026-10-26');
-    expect(week.some(e => e.kind === 'launch')).toBe(true);
     expect(icsFor(week.filter(exported), opts())).not.toMatch(/Start|Restart|taxes/);
   });
 });

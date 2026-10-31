@@ -88,14 +88,18 @@ test('the morning check-in can say "afternoon in Heliopolis": the plan puts them
   }
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
+  await page.getByTestId('ci-start-at').fill('09:30'); // the start is now by default; the morning's area needs a morning start
   await page.getByTestId('ci-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
   const halves = page.getByTestId('ci-halves');
   await expect(halves.locator('[data-half=am]')).toBeVisible();
   await noSideways(page, 'check-in shape with the halves');
   await halves.locator('[data-half=pm]').getByRole('button', { name: 'Heliopolis' }).click();
   await page.getByTestId('ci-next').click();
+  await expect(page.getByTestId('ci-pillars')).toBeVisible();
+  await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('plan-items')).toContainText('Afternoon in Heliopolis');
   await page.getByTestId('go-with-this').click();
+  await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
 
   // Today: the area's steps are under their heading; the others are not.

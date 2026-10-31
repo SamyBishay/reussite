@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayOrder, marginOf, DEFAULT_EST, type DayOrderInput, type FixedItem } from './dayOrder';
+import { dayOrder, dayLoad, marginOf, DEFAULT_EST, type DayOrderInput, type FixedItem } from './dayOrder';
 
 const at = (hhmm: string) => Date.parse('2026-10-26T' + hhmm + ':00Z');
 const hm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
@@ -174,5 +174,30 @@ describe('missed and over', () => {
   it('nothing is placed before the start of the day', () => {
     const o = dayOrder(day('04:00', { cards: ['s1'], fixed: [] }));
     expect(o.order[0]!.start).toBe(at('05:00'));
+  });
+});
+
+describe('dayLoad, the planned minutes against the free time', () => {
+  it('free is the window minus the fixed-time items (from the time to leave), planned the steps that are not optional', () => {
+    // 08:00 to 19:00 is 11 h; the call takes 08:45-09:30 (45 min) and the dentist 13:30-15:00 (90 min).
+    const l = dayLoad(day('08:00'));
+    expect(l).toEqual({ planned: 215, free: 660 - 45 - 90, over: 0 });
+    expect(dayLoad(day('08:00', { optional: new Set(['s3']) })).planned).toBe(95);
+  });
+
+  it('counts the part of a fixed item inside the window, and overlapping items once', () => {
+    const late: FixedItem = { id: 'late', at: at('18:30'), dur: 60, lead: 0 };
+    expect(dayLoad(day('17:00', { fixed: [late], cards: [] })).free).toBe(90);
+    const a: FixedItem = { id: 'a', at: at('10:00'), dur: 60, lead: 0 }, b: FixedItem = { id: 'b', at: at('10:30'), dur: 60, lead: 0 };
+    expect(dayLoad(day('09:00', { fixed: [a, b], cards: [], end: at('12:00') })).free).toBe(180 - 90);
+  });
+
+  it('is over when the steps do not fit before the end, and a step with no estimate takes the default', () => {
+    expect(dayLoad(day('17:00', { cards: ['s3', 's2'], fixed: [] }))).toEqual({ planned: 165, free: 120, over: 45 });
+    expect(dayLoad(day('08:00', { cards: ['x'], fixed: [] })).planned).toBe(DEFAULT_EST);
+  });
+
+  it('starts from the chosen start when it is later than now', () => {
+    expect(dayLoad(day('08:00', { floor: at('14:00'), fixed: [], cards: [] })).free).toBe(300);
   });
 });

@@ -53,6 +53,6 @@ describe('the connector end to end', () => {
     expect(today.isError).toBe(false);
     console.log(today.text); expect(today.text).toContain(`Today is`);
     expect(today.text).toContain('t1 | Open Mail and reply to the agency');
-    expect(today.text).toContain('09:30 start');
+    expect(today.text).not.toContain('09:30 start'); // launch points are stored, no longer shown
   });
 });

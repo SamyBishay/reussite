@@ -142,8 +142,8 @@ export interface Day {
   areas?: DayArea[];
   /** Later steps allotted to this day at the Sunday review: played only if there's room. */
   optional?: string[];
-  /** The day's shape from the check-in. */
-  shape?: { start: string; preset: 'normal' | 'afternoon' | 'hour' | 'rest' } | null;
+  /** The day's shape from the check-in: when it starts and, if the person said, when it ends (else `dayEnd` in settings). */
+  shape?: { start: string; end?: string; preset: 'normal' | 'afternoon' | 'hour' | 'rest' } | null;
   /** The plan's estimated minutes when it was accepted, for "a light day". */
   load?: number;
   /** When the Sunday review was done on this day. */

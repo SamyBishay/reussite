@@ -155,13 +155,17 @@ for (const lang of LANGS) for (const theme of THEMES) {
       test.setTimeout(120_000);
       await seed(page, list(lang));
 
-      // The morning check-in and its plan, then the list it made.
+      // The morning check-in and its plan, then the list it made. The room is counted from the hour the pictures are taken to the end
+      // the day is given, so the end is late: the picture shows the plan, not an overfull evening.
       await page.goto('/#home');
       await page.getByTestId('home-plan').click();
+      await page.getByTestId('ci-until').fill('23:59');
+      await page.getByTestId('ci-next').click();
       await page.getByTestId('ci-next').click();
       await expect(page.getByTestId('plan-items')).toBeVisible();
       await shot(page, 'checkin');
       await page.getByTestId('go-with-this').click();
+      await page.getByTestId('ci-later').click();
       await page.goto('/#today');
       await expect(page.getByTestId('first')).toBeVisible();
       await shot(page, 'today');

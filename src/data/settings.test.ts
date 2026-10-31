@@ -14,7 +14,8 @@ describe('settings defaults', () => {
   });
   it('notification settings merge: a chosen toggle stays, new types default on', () => {
     const s = withDefaults({ notify: { launch: false } as never, notifyText: 'titles', notifyLead: 45 });
-    expect(s.notify).toEqual({ launch: false, fixed: true, checkin: true, close: true, decision: true, review: true, still: true });
+    // What was stored stays (a removed type keeps its value), and the new defaults fill the rest.
+    expect(s.notify).toEqual({ launch: false, fixed: true, checkin: true, close: true, decision: true, review: true });
     expect(s.notifyText).toBe('titles');
     expect(s.notifyLead).toBe(45);
     const d = withDefaults({});

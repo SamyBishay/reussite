@@ -106,7 +106,7 @@ function startHereToday(v: View, plan: TaskW[]): { task: TaskW; fixed?: { time: 
   return first.kind === 'fixed' ? { task, fixed: { time: wallOf(first.at!, zone), leave: wallOf(first.start, zone) } } : { task };
 }
 
-/** A day: its list in order, launch points, fixed times, the next step, and for today what carries over. */
+/** A day: its list in order, the shape the morning gave it, fixed times, the next step, and for today what carries over. */
 export function dayText(v: View, k: string): string {
   const d = v.data;
   const day = v.days.get(k);
@@ -129,8 +129,8 @@ export function dayText(v: View, k: string): string {
     L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? ` [${t.at}]` : ''}${t.started ? ' [running]' : ''}`).join('\n'));
   } else L.push('List: empty.');
 
-  const launches = day?.launches ?? [];
-  if (launches.length) L.push('Launch points: ' + launches.map(l => `${l.t} ${l.k}${l.n ? ' (' + oneLine(l.n) + ')' : ''}`).join(', '));
+  // The morning's shape (the app's check-in): from when, until when. Launch points no longer exist; a stored one is not shown.
+  if (day?.shape?.start) L.push(`Shape: from ${day.shape.start}${day.shape.end ? ` until ${day.shape.end}` : ''} (${day.shape.preset} day).`);
   if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
   const fixed = fixedOn(d, k);
   if (fixed.length) L.push('Fixed times:\n' + fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`).join('\n'));

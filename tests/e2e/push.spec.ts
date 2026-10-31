@@ -46,7 +46,8 @@ test('switching on subscribes, registers and uploads the schedule; switching off
   expect((await ids(page)).some(i => i.startsWith('checkin:'))).toBe(true);
   await expect(page.getByTestId('notify-held')).toContainText(/Waiting at the relay: \d+/);
   // generic by default: no title in any text
-  expect(await textOf((await held(page)).find(h => h.id.startsWith('checkin:'))!)).toBe('Morning check-in');
+  expect(await textOf((await held(page)).find(h => h.id.startsWith('checkin:'))!)).toMatch(/^Morning\. .*Plan (it|the day)\?$/);
+  expect((await ids(page)).some(i => /^(launch|still):/.test(i))).toBe(false);
   await page.getByTestId('notify-master').uncheck();
   await expect(page.getByTestId('notify-types')).toBeHidden();
   await expect.poll(() => relayHeld(pid).length).toBe(0);
@@ -139,19 +140,16 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   expect((await ids(page)).includes(todays!.id)).toBe(false);
 });
 
-test('starting a timer adds the "Still on…?" item and stopping it removes it', async ({ page }) => {
+test('starting a timer adds no "Still on…?" push: that nudge was removed (the banner in the app stays)', async ({ page }) => {
   await importSample(page);
   const pid = await switchOn(page);
   await expect.poll(() => relayHeld(pid).length, { timeout: 15_000 }).toBeGreaterThan(5);
-  expect((await ids(page)).some(i => i.startsWith('still:'))).toBe(false);
   await page.getByTestId('tab-today').click();
   await page.getByTestId('first').getByRole('button', { name: 'Just start the timer' }).click();
-  await expect.poll(() => relayHeld(pid).filter(h => h.id.startsWith('still:')).length, { timeout: 15_000 }).toBe(1);
-  const still = relayHeld(pid).find(h => h.id.startsWith('still:'))!;
-  expect(still.at).toBeGreaterThan(Date.now() + 40 * 60_000);
-  expect(await textOf(still)).toBe('Still on a step?');
-  await page.getByTestId('first').getByRole('button', { name: 'Done', exact: true }).click();
-  await expect.poll(() => relayHeld(pid).filter(h => h.id.startsWith('still:')).length, { timeout: 15_000 }).toBe(0);
+  await expect(page.getByTestId('first')).toContainText('Running');
+  // the schedule is rewritten after a change; give it the time it needs, then look
+  await page.waitForTimeout(3000);
+  expect(relayHeld(pid).filter(h => /^(still|launch):/.test(h.id))).toHaveLength(0);
 });
 
 test('the settings switches take a type out of the schedule and back; the lead and text choices are kept', async ({ page }) => {
@@ -211,7 +209,7 @@ for (const width of [320, 375, 430]) {
     await switchOn(page);
     await page.getByTestId('notify').scrollIntoViewIfNeeded();
     await noSideways(page, 'notification settings');
-    for (const id of ['notify-master', 'notify-test', 'notify-text-generic', 'notify-lead', 'notify-launch']) {
+    for (const id of ['notify-master', 'notify-test', 'notify-text-generic', 'notify-lead', 'notify-fixed']) {
       const b = await page.getByTestId(id).evaluate(el => { const r = (el.closest('label, button') ?? el).getBoundingClientRect(); return r.height; });
       expect(b, id + ' is at least 44px tall').toBeGreaterThanOrEqual(43.5);
     }

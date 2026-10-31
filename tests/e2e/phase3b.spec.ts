@@ -27,7 +27,7 @@ async function addChoir(page: Page) {
 }
 
 for (const width of [320, 375, 430]) {
-test(`a standing item with weekdays leads the plan with its time and leave-by line at ${width}px`, async ({ page }) => {
+test(`a standing item with weekdays sits in the plan at its time, with its leave-by line at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
   // The first card breathes (a looping animation); WebKit then never sees the tall sheet's buttons as still.
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -47,8 +47,10 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();
-  const first = page.getByTestId('plan-items').locator('li').nth(1);
-  await expect(first).toHaveAttribute('data-testid', 'plan-fixed');
+  await page.getByTestId('ci-next').click();
+  // The plan is in the order of the day: the choir sits at its time (leave at 18:30), after the steps that come before it.
+  const first = page.getByTestId('plan-fixed').first();
+  await expect(page.getByTestId('plan-fixed')).toHaveCount(1);
   await expect(first).toContainText('Choir 19:00, Hill House 602');
   await expect(first.getByTestId('plan-leave')).toHaveText('Leave at 18:30');
   // Fixed items cannot be swapped or cut.
@@ -58,23 +60,20 @@ test(`a standing item with weekdays leads the plan with its time and leave-by li
   await page.getByRole('button', { name: 'Done cutting' }).click();
   await noSideways(page, 'check-in plan with a fixed item');
   await page.getByTestId('go-with-this').click();
+  await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
   // Placed on the day, with its time.
   await expect(page.locator('main [data-task]', { hasText: 'Choir, Hill House 602' }).first()).toContainText('19:00–20:30');
 });
 }
 
-test('Add to calendar downloads an .ics with the day’s fixed-time items and no planned step or launch point when sharing is unavailable', async ({ page }) => {
+test('Add to calendar downloads an .ics with the day’s fixed-time items and no planned step when sharing is unavailable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true });
   });
   await importSample(page);
   await page.getByTestId('tab-today').click();
-  await page.getByTestId('launch-box').locator('summary').click();
-  await page.locator('form.launch-add input[name=time]').fill('23:30');
-  await page.locator('form.launch-add').getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.locator('.launches .chip', { hasText: '23:30' })).toHaveCount(1);
   await page.goto('/#task/t3'); // on today's list, no due date
   await sheet(page).locator('input[name=at]').fill('11:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
@@ -85,7 +84,7 @@ test('Add to calendar downloads an .ics with the day’s fixed-time items and no
   expect(d.suggestedFilename()).toMatch(/^reussite-\d{4}-\d{2}-\d{2}\.ics$/);
   const text = readFileSync((await d.path())!, 'utf8');
   expect(text.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
-  // Only the fixed-time step is an event; planned cards, due steps and launch points stay in the app.
+  // Only the fixed-time step is an event; planned cards and due steps stay in the app.
   expect(text).toMatch(/UID:fixed:t3:/);
   expect(text).not.toMatch(/UID:plan:|UID:due:|VALUE=DATE|TRANSPARENT/);
   expect(text).not.toMatch(/▶|Start/);

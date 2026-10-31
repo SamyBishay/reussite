@@ -3,6 +3,7 @@
 import { shiftTime } from './calendar';
 import { addDays, type DayKey } from './dates';
 import { HALF_DAY_AT, type Half } from './areas';
+import type { SuitId } from '../data/schema';
 
 export type Preset = 'normal' | 'afternoon' | 'hour' | 'rest';
 export type Role = 'fixed' | 'carried' | 'now' | 'protect' | 'quick' | 'obligation' | 'optional';
@@ -33,7 +34,6 @@ export interface PlanInput {
   today: DayKey;
   maxWorkSteps: number;
   planningMin: number;
-  defaultRestarts: string[];
   obligationAt: string;
   shape: Shape;
   /** Steps carried from yesterday at the check-in, in order. */
@@ -49,7 +49,7 @@ export interface PlanInput {
   usualLoad: number | null;
   /** Every fixed-time item dated today, still to do. */
   timed?: Timed[];
-  /** Areas the day spends its morning (launch points before 13:00) and its afternoon (from 13:00) in. */
+  /** Areas the day spends its morning (before 13:00) and its afternoon (from 13:00) in. */
   halves?: Partial<Record<Half, string | null>>;
 }
 
@@ -63,13 +63,25 @@ export interface PlanItem {
   leave?: string;
   breakDown?: boolean;
 }
-export interface Launch { t: string; k: 'start' | 'restart' }
 export interface Plan {
   items: PlanItem[];
-  launches: Launch[];
   total: { est: number; lo: number; hi: number };
   /** One more Later step to offer when the day is light. */
   offerLater: string | null;
+}
+
+/** The four pillars, in the order the morning asks about them. */
+export const PILLARS: SuitId[] = ['S', 'D', 'C', 'H'];
+
+/** The plan's steps by pillar (suit): fixed-time items and steps "if there's room" are not a pillar's. A pillar with no step is an empty list. */
+export function pillarsOf(items: readonly PlanItem[], suitOf: (id: string) => SuitId | undefined): Record<SuitId, PlanItem[]> {
+  const out: Record<SuitId, PlanItem[]> = { S: [], D: [], C: [], H: [] };
+  for (const it of items) {
+    if (it.role === 'fixed' || it.role === 'optional') continue;
+    const s = suitOf(it.id);
+    if (s && out[s]) out[s].push(it);
+  }
+  return out;
 }
 
 export const HOUR_BUDGET = 60;
@@ -137,21 +149,10 @@ export function plan(input: PlanInput): Plan {
   const sum = (f: (s: PStep) => number) => work.reduce((a, s) => a + f(s), 0) + (ob?.est ?? 0) + input.planningMin;
   const total = { est: sum(s => s.est ?? 0), lo: sum(s => s.lo ?? s.est ?? 0), hi: sum(s => s.hi ?? s.est ?? 0) };
 
-  // A start at the chosen time; one or two restarts after fixed commitments, else the defaults.
-  const start = mins(shape.start);
-  const ends = shape.fixed.map(f => mins(f.at) + Math.max(0, f.dur || 0)).filter(m => m > start).sort((a, b) => a - b);
-  const restarts = (ends.length ? ends.map(hm) : input.defaultRestarts.filter(t => mins(t) > start)).filter((t, i, a) => a.indexOf(t) === i).slice(0, 2);
-  const launches: Launch[] = [{ t: shape.start, k: 'start' }, ...restarts.map(t => ({ t, k: 'restart' as const }))];
-  // The afternoon's cards need an afternoon launch point to start from.
-  if (items.some(i => i.half === 'pm') && !launches.some(l => l.t >= HALF_DAY_AT)) {
-    launches.push({ t: input.defaultRestarts.filter(t => t >= HALF_DAY_AT).sort()[0] ?? '14:00', k: 'restart' });
-    launches.sort((a, b) => a.t.localeCompare(b.t));
-  }
-
   const usual = input.usualLoad ?? input.maxWorkSteps * 30;
   const light = rest || total.est - input.planningMin < usual / 2;
   const offerLater = light ? input.laterPool.find(s => !taken.has(s.id))?.id ?? null : null;
-  return { items, launches, total, offerLater };
+  return { items, total, offerLater };
 }
 
 /** Rules a plan must keep (used to check plans that come from elsewhere, such as an AI). */

@@ -22,7 +22,7 @@ When something in my list should change, end your reply with one change-set: one
 | `task.done` / `task.drop` | `id`; `task.done` also takes `day?` (the day it was done; for a waiting-for step, the day it happened) |
 | `task.reorder` | `ids` (a project's steps, in order) |
 | `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `goal`, `due`, `status`) |
-| `day.update` | `date`, and any of `plan`, `add`, `remove`, `first`, `launches` (`[{"t": "09:30", "k": "start"}]`, `k` is `start` or `restart`) |
+| `day.update` | `date`, and any of `plan`, `add`, `remove`, `first` (`launches` is accepted and stored but the app no longer uses launch points: leave it out) |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (`title`, `problem`, `options`, `chosen`, `why`, `mustBeTrue`, `falsifier`, `reviewOn`, `steps`) |
 | `address.create` | `set`: `name`, `category?`, `place?`, `mapsUrl?` (only a real Maps link), `street?`, `note?` (why, and what you checked). A place to try, saved as *want to go*; only in the app, not through the connector |
 | `place.create` / `place.update` | `ref?` or `id`, `set` (`name`, `timeZone`, `parent`: the place this is an area of; one level only; an area has its parent's time zone) |

@@ -110,7 +110,7 @@ function vtimezone(zone: string, from: number, to: number): string[] {
   return lines;
 }
 
-/** Whether an agenda event is exported at all: only fixed-time items (launch points stay in the app). */
+/** Whether an agenda event is exported at all: only fixed-time items. */
 export const exported = (e: AgendaEvent) => e.kind === 'fixed';
 
 const textLines = (x: IcsText) => [

@@ -215,6 +215,7 @@ async function toPlan(page: Page) {
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();
+  await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('plan-items')).toBeVisible();
 }
 
@@ -246,6 +247,7 @@ test('Plan my day: a plan with two Protect steps is set aside; a valid one is us
   await page.getByTestId('apply-changes').click();
   await expect(page.getByTestId('ai-plan-review')).toHaveCount(0);
   await page.getByTestId('go-with-this').click();
+  await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
   await expect(page.getByTestId('first')).toContainText('tax form');
 });

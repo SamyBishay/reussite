@@ -4,11 +4,13 @@ La boucle est courte : planifier la journée, démarrer la première étape, c
 
 ## Planifier la journée
 
-Ouvrez l’accueil et touchez **Planifier la journée**. C’est un court point du matin, une question par écran.
+Ouvrez l’accueil et touchez **Planifier la journée**. Une notification à l’heure de votre point du matin l’ouvre aussi : elle dit ce que la journée contient et le temps qu’elle laisse (« Bonjour. Aujourd’hui, une heure fixe et environ 3 h de libre. On prépare la journée ? »), ou « Une journée libre pour l’instant ». C’est un court rituel du matin, une question par écran.
 
-1. **Hier.** Cochez ce qui a été fait sans être coché, avec à peu près le temps que ça a pris. Le reste passe à aujourd’hui. Réussite ne dit rien de ce qui n’a pas été fait.
-2. **La forme du jour.** Quel genre de journée est-ce (une journée habituelle, l’après-midi seulement, une heure ou moins, un jour de repos) ? À quelle heure pouvez-vous démarrer ? Qu’est-ce qui est fixé aujourd’hui ? Si l’un de vos lieux a des zones, **Où serez-vous ?** vous laisse en choisir une pour le matin et une pour l’après-midi (voir [Lieux et voyages](places-and-trips.md)).
-3. **Le plan.** Réussite le construit à partir des règles de la méthode. Touchez **Échanger** pour choisir autre chose de même poids, ou **Couper** pour retirer quelque chose. Ça reste dans votre liste pour un autre jour. Touchez **C’est parti** quand le plan vous convient.
+1. **Hier.** Une ligne de ce qui a été joué, puis cochez ce qui a été fait sans être coché, avec à peu près le temps que ça a pris. Le reste passe à aujourd’hui. Réussite ne dit rien de ce qui n’a pas été fait.
+2. **La forme du jour.** Quel genre de journée est-ce (une journée habituelle, l’après-midi seulement, une heure ou moins, un jour de repos) ? **À partir de quand** et **jusqu’à quand** : le début commence aux cinq minutes suivantes, et la fin à la fin de journée (Réglages → Méthode, 19 h par défaut) ; la réponse de ce matin remplace ce réglage, pour aujourd’hui seulement. Qu’est-ce qui est fixé aujourd’hui ? Si l’un de vos lieux a des zones, **Où serez-vous ?** vous laisse en choisir une pour le matin et une pour l’après-midi (voir [Lieux et voyages](places-and-trips.md)).
+3. **Les quatre piliers.** Une ligne pour le travail, les papiers, la famille et la vie, remplie par la méthode. Gardez chacune, **Échangez-la** contre une autre de même poids, ou **Passez-la** (**La garder** la ramène). Une ligne vide le dit en une phrase (« Pas d’étape vie aujourd’hui. Très bien, ou en ajouter une ? ») et propose **En ajouter une**.
+4. **Le plan.** Les étapes sont placées face à l’horloge, avec l’heure prévue de chacune, entre vos heures fixes. Sous la liste : « 3 h 10 sur 4 h 30 de libre », les estimations des étapes (ajustées à votre rythme) à côté du temps dont vous disposez entre le début et la fin de la journée, moins ce qui est fixé. S’il y a plus que de la place, le plan dit de combien (« Environ 50 min de plus que le temps dont vous disposez. ») et **En retirer une** mène au retrait. Touchez **Échanger** pour choisir autre chose de même poids, ou **Couper** pour retirer quelque chose ; ça reste dans votre liste pour un autre jour. Touchez **C’est parti** quand le plan vous convient.
+5. **La première étape, seule.** Son amorce, son estimation et **Démarrer**. **Pas encore** ferme le rituel sans lancer le chrono.
 
 ![Le plan, construit selon les règles de la méthode](shot:checkin)
 
@@ -25,13 +27,11 @@ Ce que contient le plan :
 
 Réussite additionne les estimations et montre ce que la journée va probablement prendre, pour vous.
 
+Il n’y a ni points de départ ni rappels de reprise : les étapes flottent entre vos heures fixes, dans l’ordre que suit Aujourd’hui (voir Commencez ici plus bas).
+
 **La recherche dit :** non testé ici. `[E?]`
 
 **La pratique dit :** une liste courte avec une petite première étape est plus facile à démarrer qu’une longue. Une journée planifiée en quelques minutes vaut mieux qu’une journée planifiée pendant une heure. `[E?]`
-
-## Les points de départ
-
-Un point de départ est un moment pour commencer, ou pour revenir à la liste après une pause. Par exemple, un départ à 9 h 30 et une reprise à 14 h. Ce n’est pas un emploi du temps : les étapes flottent entre eux. Dans Aujourd’hui, ils sont repliés sous **Points de départ** (le résumé en donne les heures) : ouvrez-le pour en ajouter ou en retirer un. Les valeurs par défaut dans Réglages → Méthode. Ils vivent dans Réussite et ses notifications. Ils ne sont pas dans le calendrier, qui ne garde que ce qui est à heure fixe.
 
 ## Démarrer
 

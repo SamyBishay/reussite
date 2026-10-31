@@ -7,7 +7,7 @@ import { newReceiver } from './testing';
 import { b64uDecode, fromUtf8 } from '../sync/bytes';
 
 const NOW = Date.UTC(2026, 9, 20, 8, 0);
-const item = (id: string, minutes: number, text = 'Start'): ScheduleItem => ({ id, type: 'launch', at: NOW + minutes * 60_000, ttl: 600, text });
+const item = (id: string, minutes: number, text = 'Start'): ScheduleItem => ({ id, type: 'fixed', at: NOW + minutes * 60_000, ttl: 600, text });
 // A cheap stand-in for encryption: the diff is what is under test here; the round trip is below.
 const fake = async (_: unknown, json: unknown) => 'enc:' + String(json);
 

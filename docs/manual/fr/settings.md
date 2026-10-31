@@ -28,7 +28,7 @@ Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raison
 - **La journée commence à.** 5 h par défaut. Une nuit tardive compte comme le même jour jusque-là.
 - **Étapes de travail par jour, au plus.** Trois par défaut.
 - **Temps de planification (min).** 15 par défaut.
-- **Départ par défaut** et **Reprises par défaut :** vos points de départ habituels.
+- **La journée finit à.** 19 h par défaut. Le rituel de planification compte la place entre son début et cette heure ; le « jusqu’à quand » de chaque matin la remplace pour ce jour-là.
 - **Familles :** renommez les quatre sortes de cartes et choisissez leurs symboles.
 - **Lieux**, leurs **zones** et **Séjours.** Voir [Lieux et voyages](places-and-trips.md).
 - **Utiliser Adresses et proches**, et les **catégories d’adresses.** Voir [Adresses et proches](addresses-and-people.md).
@@ -48,12 +48,10 @@ Des rappels qui arrivent sur votre téléphone à la minute voulue, même quand 
 
 Activez **Me notifier sur cet appareil**, puis choisissez ce qui doit vous notifier :
 
-- **Départ et reprise :** vos points de départ (notifications seulement : le calendrier ne les contient pas).
 - **Heure de partir :** avant un élément à heure fixe, avec le préavis en minutes que vous choisissez.
 - **Point du matin** et **Clôturer la journée.**
 - **Revue de la semaine.**
 - **Point sur une décision.**
-- **Encore sur une étape ?** : quand un chrono dure trop.
 
 Par défaut, une notification dit seulement « Départ » ou « Partez maintenant ». Vous pouvez choisir **Avec les titres**. Dans les deux cas, le texte est brouillé sur votre appareil, et seul votre appareil peut le lire : ni le relais ni le service de notifications ne voient rien. **Envoyer une notification de test** vérifie que ça marche.
 

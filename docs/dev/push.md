@@ -70,3 +70,8 @@ Files: `src/sw.ts` (the service worker), `src/app/push.ts` (state, subscription,
 ## What the relay can see
 
 The endpoint (which push service, and an opaque token for this browser), the push id and a hash of the secret, the time each notification is to be sent and the TTL and urgency, the size of each (358 bytes for almost all), when it was sent and what the push service answered, the 45-day clock, and IP addresses. Not the text of any notification, nor the keys to read it, nor the space the device belongs to. The push service sees the same ciphertext and the sending times.
+
+## What is pushed (plan 2 Nov)
+
+`buildSchedule` (`src/domain/notify.ts`) makes five types: `fixed` (time to leave), `checkin` (the morning), `close`, `review` and `decision`. The `launch` (start and restart at a day's launch points) and `still` ("Still on …?") pushes were removed; a `notify` setting that still holds either is kept and nothing reads it, and the relay treats an item's `type` as opaque so items already held for them simply age out. The in-app "Still on …?" banner stays (`stillOnDue`). The morning push says what the day holds and the room it leaves: "Morning. Today has the 10:00 dentist and room for about 3 h. Plan it?" with titles on, "…has a fixed time…" or "…has 2 fixed times…" without, "A free day so far. Plan it?" with none. The room is `dayLoad(…).free` (`src/domain/dayOrder.ts`) from the push's time to `dayEnd` (the setting; the push cannot know a morning's own "until"), rounded to 30 minutes from an hour up, else to 5 (`roomText`).
+

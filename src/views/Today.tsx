@@ -1,9 +1,9 @@
-// Today: the "Start here" card, the day's cards (its list and its fixed-time items, the same steps the Calendar shows) and launch points, and the day navigator,
-// which edits any day's plan, launch points and first step (brief §5, Days).
+// Today: the "Start here" card, the day's cards (its list and its fixed-time items, the same steps the Calendar shows) and the day navigator,
+// which edits any day's plan and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places, hereZone } from '../app/store';
 import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, nudges, type T as Tk } from '../app/model';
-import { startTask, addLaunch, delLaunch, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
+import { startTask, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
@@ -27,7 +27,7 @@ import { addDays, daysBetween } from '../domain/dates';
 import { isoDow } from '../domain/repeat';
 import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
-import type { Launch, Task } from '../data/schema';
+import type { Task } from '../data/schema';
 import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 import { SyncCards } from '../app/SyncSettings';
@@ -62,7 +62,6 @@ function PlanGroupList({ g, k, optional, from, first, many, testid, proj, shown 
     </>
   );
 }
-const hmNow = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 function FirstCard({ tk }: { tk: Tk }) {
   const run = !!tk.started;
@@ -178,43 +177,6 @@ function Row({ tk, n, k, optional, at, shown }: { tk: Tk; n: number; k: string; 
   );
 }
 
-/** Whether the Launch points block is open: kept for the session, so it stays as the person left it. */
-const launchesOpen = signal(false);
-
-function Launches({ k }: { k: string }) {
-  const d = dayDoc(k);
-  const L: Launch[] = d?.launches ?? [];
-  const hm = k === today.value ? hmNow() : '';
-  const nextIdx = hm ? L.findIndex(l => l.t >= hm) : -1;
-  const submit = (e: Event) => {
-    e.preventDefault();
-    const f = e.currentTarget as HTMLFormElement;
-    const time = (f.elements.namedItem('time') as HTMLInputElement).value;
-    if (!time) return;
-    void addLaunch(time, (f.elements.namedItem('kind') as HTMLSelectElement).value as Launch['k'], k);
-    f.reset();
-  };
-  return (
-    <details class="launchbox" data-testid="launch-box" open={launchesOpen.value} onToggle={e => { launchesOpen.value = (e.currentTarget as HTMLDetailsElement).open; }}>
-      <summary><span>{t('launchPoints')}</span> <span class="hint-inline" data-testid="launch-summary">· {L.length ? L.map(l => l.t).join(', ') : t('launchNone')}</span></summary>
-      <p class="hint">{t('launchHint')}</p>
-      <div class="launches">
-        {L.length ? L.map((l, i) => (
-          <span class={'chip' + (i === nextIdx ? ' next' : '') + (hm && l.t < hm ? ' past' : '')}>
-            <span aria-hidden="true">{l.k === 'restart' ? '↻' : '▶'}</span><time>{l.t}</time><span>{l.k === 'restart' ? t('restart') : t('start')}</span>
-            <button type="button" onClick={() => delLaunch(i, k)} aria-label={t('remove', { what: l.t })}>×</button>
-          </span>
-        )) : <span class="hint">{t('noLaunches')}</span>}
-        <form class="launch-add" onSubmit={submit}>
-          <input type="time" name="time" aria-label={t('launchTime')} required />
-          <select name="kind" aria-label={t('startOrRestart')}><option value="start">{t('start')}</option><option value="restart">{t('restart')}</option></select>
-          <button class="btn small" type="submit">{t('add')}</button>
-        </form>
-      </div>
-    </details>
-  );
-}
-
 function Navigator({ k }: { k: string }) {
   const td = today.value;
   const go = (d: string | null) => { dayView.value = d === td ? null : d; };
@@ -244,7 +206,7 @@ function StayNotice() {
   );
 }
 
-/** Another day's plan: its list, first step and launch points, editable. Past days show their cards. */
+/** Another day's plan: its list and first step, editable. Past days show their cards. */
 function OtherDay({ k }: { k: string }) {
   const past = k < today.value;
   const plan = shownPlan(k);
@@ -279,7 +241,7 @@ function OtherDay({ k }: { k: string }) {
           <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
         </div>
       )}
-      <Launches k={k} />
+      
       <h2 class="sec">{t('dayList')}</h2>
       {plan.length ? <PlanLists ids={sd.open} k={k} optional={optional} from={0} /> : <p class="hint">{t('emptyDay')}</p>}
       <DoneFold n={sd.done.length}><ol class="tableau">{sd.done.map(id => <Row key={id} tk={T(id)!} n={0} k={k} />)}</ol></DoneFold>
@@ -353,7 +315,7 @@ export function Today() {
           <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
           {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}
         </div>
-        <Launches k={k} />
+        
         {rest.length > 0 && (
           <>
             <h2 class="sec">{fid ? t('then') : t('todaysList')} <span class="hint-inline">

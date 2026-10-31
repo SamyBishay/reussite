@@ -4,21 +4,20 @@
 import type { Session } from '../data/schema';
 import type { Settings, NotifyType } from '../data/settings';
 import { agenda, type AgendaData, type AgendaEvent, type AgendaSettings } from './agenda';
-import { stillOnDue, withTime } from './calendar';
+import { withTime } from './calendar';
+import { dayLoad } from './dayOrder';
 import { addDays } from './dates';
-import { fit, predict } from './estimates';
-import { estPointsOf, isOpen } from './lists';
 import { whereNow, zoneOfPlace } from './places';
-import { atOnDay, validZone, wallOf } from './zone';
+import { atOnDay, wallOf } from './zone';
 
 /** The words a notification can use; the app passes its `t`. */
 export type NotifyKey =
-  | 'notifyStart' | 'notifyRestart' | 'notifyStartTitle' | 'notifyRestartTitle' | 'notifyLeaveNow' | 'notifyLeaveBy'
-  | 'notifyCheckin' | 'notifyClose' | 'notifyReview' | 'notifyDecision' | 'notifyDecisionTitle' | 'notifyStill' | 'stillOn';
+  | 'notifyLeaveNow' | 'notifyLeaveBy' | 'notifyCheckin' | 'notifyCheckinFree' | 'notifyCheckinOne' | 'notifyCheckinMany'
+  | 'notifyCheckinTitle' | 'notifyCheckinTitles' | 'notifyClose' | 'notifyReview' | 'notifyDecision' | 'notifyDecisionTitle';
 export type Translate = (key: NotifyKey, vars?: Record<string, string | number>) => string;
 
 export interface ScheduleItem {
-  /** Stable for the same thing: `fixed:<rootId>:<day>`, `launch:<day>:<n>`, `still:<taskId>`, … */
+  /** Stable for the same thing: `fixed:<rootId>:<day>`, `checkin:<day>`, … */
   id: string;
   type: NotifyType;
   /** When to send, epoch milliseconds. */
@@ -31,42 +30,52 @@ export interface ScheduleItem {
 
 /** The documents it reads (the sessions are for the personal estimate behind "Still on …?"). */
 export type NotifyState = AgendaData & { sessions: ReadonlyMap<string, Session & { id: string }> };
-export type NotifySettings = AgendaSettings & Pick<Settings, 'dayStart' | 'notify' | 'notifyText'>;
+export type NotifySettings = AgendaSettings & Pick<Settings, 'dayStart' | 'dayEnd' | 'notify' | 'notifyText'>;
 
 export const WINDOW_DAYS = 14;
 export const MAX_ITEMS = 150;
-/** Seconds a push may wait, by type: a launch point or a "leave now" is stale soon; a daily prompt keeps for an hour. */
-export const TTL: Record<NotifyType, number> = { launch: 600, fixed: 1800, checkin: 3600, close: 3600, decision: 3600, review: 3600, still: 900 };
-/** A timer is not asked about again after this long. */
-export const STILL_GIVE_UP_H = 12;
+/** Seconds a push may wait, by type: a "leave now" is stale soon; a daily prompt keeps for an hour. */
+export const TTL: Record<NotifyType, number> = { fixed: 1800, checkin: 3600, close: 3600, decision: 3600, review: 3600 };
 
 const DAY_MS = 86_400_000;
 const clip = (s: string, n = 100) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
-/** The title a launch point carries: the first open work step on the day's list. */
-function nextStep(data: AgendaData, day: string): string | null {
-  const d = data.days.get(day);
-  for (const id of Array.isArray(d?.plan) ? d!.plan : []) {
-    const tk = data.tasks.get(id);
-    if (tk && isOpen(tk) && !tk.at && tk.src !== 'plan') return tk.title;
-  }
-  return null;
+/** "3 h", "3 h 30" or "45 min": the room left in a day, rounded (to 30 minutes from an hour up, else to 5), the same words in both languages. */
+export function roomText(minutes: number): string {
+  const m = minutes >= 60 ? Math.round(minutes / 30) * 30 : Math.round(minutes / 5) * 5;
+  if (m < 60) return m + ' min';
+  return Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + String(m % 60).padStart(2, '0') : '');
 }
 
-function textOf(e: AgendaEvent, data: AgendaData, titles: boolean, tr: Translate): string {
+/**
+ * The morning push: what the day holds and the room it leaves ("Today has the 10:00 dentist and room for about 3 h. Plan it?"),
+ * from the day's fixed-time items against the time from the push to the end of the day. A day with none is "A free day so far".
+ * Generic text says how many fixed times and not what they are.
+ */
+function checkinText(e: AgendaEvent, fixed: readonly AgendaEvent[], s: NotifySettings, titles: boolean, tr: Translate): string {
+  if (!fixed.length) return tr('notifyCheckinFree');
+  const end = atOnDay(e.day, s.dayEnd, s.dayStart, e.zone);
+  const free = dayLoad({
+    now: e.at, floor: e.at, end, cards: [], est: () => null,
+    fixed: fixed.map(f => ({ id: f.id, at: f.at, dur: f.dur, lead: f.lead })),
+  }).free;
+  if (free < 15) return tr('notifyCheckin');
+  const room = roomText(free);
+  const first = fixed[0]!;
+  if (titles) return fixed.length === 1
+    ? tr('notifyCheckinTitle', { at: first.time, title: clip(first.title ?? '', 40), room })
+    : tr('notifyCheckinTitles', { at: first.time, title: clip(first.title ?? '', 40), n: fixed.length - 1, room });
+  return fixed.length === 1 ? tr('notifyCheckinOne', { room }) : tr('notifyCheckinMany', { n: fixed.length, room });
+}
+
+function textOf(e: AgendaEvent, events: readonly AgendaEvent[], s: NotifySettings, titles: boolean, tr: Translate): string {
   switch (e.kind) {
-    case 'launch': {
-      const restart = e.launch?.k === 'restart';
-      const step = titles ? nextStep(data, e.day) : null;
-      if (step) return tr(restart ? 'notifyRestartTitle' : 'notifyStartTitle', { title: clip(step) });
-      return tr(restart ? 'notifyRestart' : 'notifyStart');
-    }
     case 'fixed': {
       if (!titles) return tr('notifyLeaveNow', { at: e.time });
       const head = withTime(clip(e.title ?? ''), e.time);
       return e.lead ? head + ' · ' + tr('notifyLeaveBy', { t: wallOf(e.at - e.lead * 60_000, e.zone) }) : head;
     }
-    case 'checkin': return tr('notifyCheckin');
+    case 'checkin': return checkinText(e, events.filter(x => x.kind === 'fixed' && x.day === e.day), s, titles, tr);
     case 'close': return tr('notifyClose');
     case 'review': return tr('notifyReview');
     case 'decision': return titles && e.title ? tr('notifyDecisionTitle', { title: clip(e.title) }) : tr('notifyDecision');
@@ -74,29 +83,8 @@ function textOf(e: AgendaEvent, data: AgendaData, titles: boolean, tr: Translate
 }
 
 /**
- * The next "Still on …?" push for each running timer: after twice the personal estimate (at least
- * 45 minutes) from the start or from the last "still going", or at the next day start after the
- * start (if the timer is over four hours old by then), whichever is first. Only the next one; none
- * once the timer has run `STILL_GIVE_UP_H` hours.
- */
-function stillItems(data: NotifyState, s: NotifySettings, today: string, zone: string | undefined, now: number, titles: boolean, tr: Translate): ScheduleItem[] {
-  const running = [...data.tasks.values()].filter(t => t.started && t.status === 'open' && !Number.isNaN(Date.parse(t.started)));
-  if (!running.length) return [];
-  const model = fit(estPointsOf(data.tasks.values(), data.sessions.values()), today);
-  const out: ScheduleItem[] = [];
-  for (const t of running) {
-    const started = Date.parse(t.started!);
-    const est = predict(model, { est: t.est, app: t.app, project: t.project, suit: t.suit, estBy: t.estBy })?.value ?? t.est;
-    const at = stillOnDue(started, Date.parse(t.stillAt ?? '') || 0, est, s.dayStart, zone);
-    if (at <= now || at - started > STILL_GIVE_UP_H * 3_600_000) continue;
-    out.push({ id: 'still:' + t.id, type: 'still', at, ttl: TTL.still, text: titles ? tr('stillOn', { title: clip(t.title) }) : tr('notifyStill') });
-  }
-  return out;
-}
-
-/**
  * Every push that should be waiting at `now`: the next 14 days of agenda events (a fixed-time item
- * at its lead time before it starts), the "Still on …?" of a running timer; only the types switched
+ * at its lead time before it starts); only the types switched
  * on in `settings.notify`; soonest first, at most 150. Text is generic or carries titles by
  * `settings.notifyText`; `tr` supplies the words.
  */
@@ -108,9 +96,8 @@ export function buildSchedule(data: NotifyState, now: number, s: NotifySettings,
   const items: ScheduleItem[] = [];
   for (const e of events) {
     if (!s.notify[e.kind]) continue;
-    items.push({ id: e.id, type: e.kind, at: e.kind === 'fixed' ? e.at - (e.lead ?? 0) * 60_000 : e.at, ttl: TTL[e.kind], text: textOf(e, data, titles, tr) });
+    items.push({ id: e.id, type: e.kind, at: e.kind === 'fixed' ? e.at - (e.lead ?? 0) * 60_000 : e.at, ttl: TTL[e.kind], text: textOf(e, events, s, titles, tr) });
   }
-  if (s.notify.still) items.push(...stillItems(data, s, today, validZone(zoneOf(here)), now, titles, tr));
   return items
     .filter(i => i.at > now && i.at <= now + WINDOW_DAYS * DAY_MS)
     .sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1))

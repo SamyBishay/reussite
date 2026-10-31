@@ -36,11 +36,11 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 
 ### Morning check-in
 1. **Yesterday.** What got done, in one line. Tick the steps that were done but not marked; the rest carry over to today. A step carried three times or more is too big or hides a decision: shrink it, or turn it into a decision. No comment on what didn't happen.
-2. **Today's shape.** When can you start, and what's fixed today?
-3. **The plan.** Unblocked *Now* steps first, for the place you're in; then exactly one *Protect* step; then any *Quick* steps, batched. At most three work steps. One leisure or people obligation, with a time. Every item is a first step of 30 minutes or less; break bigger ones down now. Total the estimates, add the planning time, and apply your ratio.
-4. **Launch points**: a start, and one or two restarts after fixed commitments. These are the moments to begin or re-enter the list, not a timetable. Steps float between them.
+2. **Today's shape.** From when and until when (the day ends at 19:00 unless the person says otherwise), and what's fixed today.
+3. **The four pillars.** One step for each of work (♠), papers (♦), family (♣) and life (♥), as far as the list has one. An empty pillar gets one line ("No family step today. Fine, or add one?"); the person keeps, swaps or skips each.
+4. **The plan.** Unblocked *Now* steps first, for the place you're in; then exactly one *Protect* step; then any *Quick* steps, batched. At most three work steps. One leisure or people obligation, with a time. Every item is a first step of 30 minutes or less; break bigger ones down now. Lay it out against the clock: fixed times where they are, the steps in the gaps. Total the estimates, apply your ratio, and say it against the room: "3 h 10 of 4 h 30 free". When it is more than the room, say by how much ("About 50 min more than the time you have. Cut one?") and let the person cut. There are no launch points and no restart nudges; steps float between fixed times.
 5. **Rest day**: the obligation only, unless something is due within two days.
-6. Then start the first step.
+6. Then the first step alone: its starter, and Start.
 
 ### Insisting
 Come back to the first step. Swapping it for one of the same weight is fine; skipping it isn't. If you resist, ask one question: what's in the way? A real blocker (missing information, someone else's move, a hidden decision) changes the plan: turn it into a message to send, a smaller step, or a decision. Anything else gets the starter, or a smaller one.

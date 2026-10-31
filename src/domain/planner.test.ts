@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { withTime } from './calendar';
-import { plan, checkPlan, needsBreakDown, totalOf, type PlanInput, type PlanItem, type PStep } from './planner';
+import { plan, checkPlan, needsBreakDown, totalOf, pillarsOf, type PlanInput, type PlanItem, type PStep } from './planner';
 
 const today = '2026-10-09';
 const s = (id: string, quad: PStep['quad'], o: Partial<PStep> = {}): PStep => ({ id, quad, due: null, est: 15, starter: 'Open it', ...o });
 const input = (o: Partial<PlanInput> = {}): PlanInput => ({
-  today, maxWorkSteps: 3, planningMin: 15, defaultRestarts: ['14:00'], obligationAt: '18:00',
+  today, maxWorkSteps: 3, planningMin: 15, obligationAt: '18:00',
   shape: { start: '09:30', preset: 'normal', fixed: [] },
   carried: [], candidates: [], obligations: [], optional: [], laterPool: [], usualLoad: null, ...o,
 });
@@ -63,10 +63,18 @@ describe('the planner', () => {
     expect(needsBreakDown({ est: 30, starter: 'x' })).toBe(false);
   });
 
-  it('a start launch point, and restarts after fixed commitments', () => {
-    expect(plan(input()).launches).toEqual([{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }]);
-    const p = plan(input({ shape: { start: '09:00', preset: 'normal', fixed: [{ at: '11:00', dur: 60 }, { at: '15:30', dur: 30 }, { at: '17:00', dur: 30 }, { at: '08:00', dur: 30 }] } }));
-    expect(p.launches).toEqual([{ t: '09:00', k: 'start' }, { t: '12:00', k: 'restart' }, { t: '16:00', k: 'restart' }]);
+  it('has no launch points: the plan is its items and total', () => {
+    expect(Object.keys(plan(input())).sort()).toEqual(['items', 'offerLater', 'total']);
+  });
+
+  it('groups the plan by pillar, leaving fixed-time and optional items out and an empty pillar empty', () => {
+    const suits: Record<string, 'S' | 'D' | 'C' | 'H'> = { n1: 'S', p1: 'S', q1: 'D', f: 'C', o: 'H' };
+    const items: PlanItem[] = [{ id: 'f', role: 'fixed', at: '10:00' }, { id: 'n1', role: 'now' }, { id: 'p1', role: 'protect' }, { id: 'q1', role: 'quick' }, { id: 'o', role: 'optional' }];
+    const g = pillarsOf(items, id => suits[id]);
+    expect(g.S.map(i => i.id)).toEqual(['n1', 'p1']);
+    expect(g.D.map(i => i.id)).toEqual(['q1']);
+    expect(g.C).toEqual([]);
+    expect(g.H).toEqual([]);
   });
 
   it('optional Later cards go at the end, outside the limit', () => {
@@ -100,8 +108,6 @@ describe('the planner', () => {
       // The three work steps are still there, and the choir does not count against them.
       expect(roles(p)).toEqual(['choir:fixed', 'n0:now', 'n1:now', 'p0:protect']);
       expect(p.items.filter(i => i.role !== 'fixed')).toHaveLength(3);
-      // The leave-by time is worked out, not stored in the launch points.
-      expect(p.launches).toEqual([{ t: '09:30', k: 'start' }, { t: '14:00', k: 'restart' }]);
     });
 
     it('lists every one by time, outside the limit, with a leave-by only where there is a lead', () => {
@@ -146,22 +152,12 @@ describe('the planner', () => {
       expect(p.items.filter(i => i.half === 'pm').map(i => i.id)).toEqual(['hn', 'hp']);
     });
 
-    it('puts the morning area’s cards first and gives the afternoon its own launch point', () => {
-      const p = plan(input({ maxWorkSteps: 4, defaultRestarts: ['15:00'], shape: { start: '09:00', preset: 'normal', fixed: [{ at: '10:00', dur: 30 }] }, candidates: [s('n1', 1), h('hn', 1, 'maadi'), h('hp', 2, 'heli'), s('q1', 3)], halves: { am: 'maadi', pm: 'heli' } }));
+    it('puts the morning area’s cards first and the afternoon area’s last', () => {
+      const p = plan(input({ maxWorkSteps: 4, shape: { start: '09:00', preset: 'normal', fixed: [{ at: '10:00', dur: 30 }] }, candidates: [s('n1', 1), h('hn', 1, 'maadi'), h('hp', 2, 'heli'), s('q1', 3)], halves: { am: 'maadi', pm: 'heli' } }));
       expect(p.items.map(i => i.id + ':' + (i.half ?? '-'))).toEqual(['hn:am', 'n1:-', 'q1:-', 'hp:pm']);
-      expect(p.launches.some(l => l.t >= '13:00')).toBe(true);
       // Fixed-time items stay first whatever the halves are.
       const f = plan(input({ timed: [{ id: 'dent', at: '10:00', lead: 0 }], candidates: [s('n1', 1), h('hn', 1)], halves: { pm: 'heli' } }));
       expect(f.items.map(i => i.id)).toEqual(['dent', 'n1', 'hn']);
-    });
-
-    it('adds an afternoon launch point only when there is none', () => {
-      const none = plan(input({ defaultRestarts: ['11:30'], candidates: [h('hn', 1)], halves: { pm: 'heli' } }));
-      expect(none.launches).toEqual([{ t: '09:30', k: 'start' }, { t: '11:30', k: 'restart' }, { t: '14:00', k: 'restart' }]);
-      const has = plan(input({ defaultRestarts: ['15:00'], candidates: [h('hn', 1)], halves: { pm: 'heli' } }));
-      expect(has.launches).toEqual([{ t: '09:30', k: 'start' }, { t: '15:00', k: 'restart' }]);
-      // No area card, no extra launch point.
-      expect(plan(input({ defaultRestarts: ['11:30'], candidates: [s('n1', 1)], halves: { pm: 'heli' } })).launches).toHaveLength(2);
     });
 
     it('ignores the morning on a day that starts in the afternoon, and changes nothing without halves', () => {

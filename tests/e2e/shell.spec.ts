@@ -197,12 +197,14 @@ test('a decision\'s deadline that is a day is shown like other dates, not as 202
   await expect(problem).not.toContainText('2026-11-22');
 });
 
-test('the manifest starts at Home; the gentle banner shows on every tab but Home, Today and Settings', async ({ page, request }) => {
+test('the manifest starts at Home; the gentle banner shows on every tab but Home, Today, the Matrix and Settings', async ({ page, request }) => {
   const m = await (await request.get('/manifest.webmanifest')).json();
   expect(m.start_url).toBe('./#home');
   await importSample(page);
-  await goTab(page, 'matrix');
+  await goTab(page, 'projects');
   await expect(page.getByTestId('insist')).toBeVisible();
+  await goTab(page, 'matrix');
+  await expect(page.getByTestId('insist')).toHaveCount(0);
   await goTab(page, 'home');
   await expect(page.getByTestId('insist')).toHaveCount(0);
   await goTab(page, 'settings');

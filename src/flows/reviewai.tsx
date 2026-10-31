@@ -112,7 +112,7 @@ function GoalReview() {
       <p class="hint">{t('grDoneHint')}</p>
       <div class="actions">
         <button class="btn primary" type="button" onClick={() => openReviewRest()} data-testid="goalai-rest">{t('grRest')}</button>
-        <button class="btn ghost" type="button" onClick={() => closeSheet()}>{t('close')}</button>
+        <button class="btn ghost" type="button" onClick={() => closeSheet()} data-testid="goalai-close">{t('close')}</button>
       </div>
     </div>
   );

@@ -184,6 +184,8 @@ test('the close of the day ends on St George: a tap skips it at once; Calm is a 
   await sg.click();
   await expect(sg).toHaveCount(0, { timeout: 1000 });
   expect(Date.now() - t0).toBeLessThan(1000);
+  // The import's toast sits over the bottom of a short screen for a few seconds; let it go before tapping what is under it.
+  await expect(page.locator('.toast')).toBeHidden({ timeout: 10_000 });
   await page.getByTestId('show').getByRole('button', { name: 'Not yet' }).click({ timeout: 1000 });
   // Calm: the last frame, no fight.
   await goTab(page, 'settings');

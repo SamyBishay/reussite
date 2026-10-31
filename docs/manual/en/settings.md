@@ -28,7 +28,7 @@ The numbers the method runs on, with sensible defaults:
 - **Day starts at.** 05:00 by default. A late night still counts as the same day until then.
 - **Most work steps per day.** Three by default.
 - **Planning time (min).** 15 by default.
-- **Default start** and **Default restarts:** your usual launch points.
+- **Day ends at.** 19:00 by default. The planning ritual counts the room between its start and this time; each morning's "until" replaces it for that day.
 - **Suits:** rename the four kinds of cards and choose their symbols.
 - **Places**, their **areas** and **Stays.** See [Places and trips](places-and-trips.md).
 - **Use Addresses & people**, and the **address categories.** See [Addresses and people](addresses-and-people.md).
@@ -48,12 +48,10 @@ Reminders that reach your phone at the right minute, even when Réussite is clos
 
 Switch on **Notify me on this device**, then choose what to be notified about:
 
-- **Start and restart:** your launch points (notifications only; the calendar doesn't carry them).
 - **Time to leave:** before a fixed-time item, with the minutes of notice you choose.
-- **Morning check-in** and **Close the day.**
+- **Morning check-in** (it says what the day holds and the room it leaves) and **Close the day.**
 - **Weekly review.**
 - **Decision check.**
-- **Still on a step?**: when a timer runs long.
 
 By default a notification says only "Start" or "Leave now". You can choose **With titles**. Either way the text is scrambled on your device, and only your device can read it: the relay and the push service see neither. **Send a test notification** checks that it works.
 

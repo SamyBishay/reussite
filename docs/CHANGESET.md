@@ -15,7 +15,7 @@ Use the ids from the lines you were given (`t…` steps, `p…` projects, places
 | `task.reorder` | `ids` (a project's steps in their new order) |
 | `project.create` | `ref?`, `set` (needs `name`) |
 | `project.update` | `id`, `set` |
-| `day.update` | `date`, and any of: `plan` (the whole list, in order), `add`, `remove` (step ids), `first` (the step to start with), `launches` (`[{"t": "09:30", "k": "start"}]`, `k` is `start` or `restart`) |
+| `day.update` | `date`, and any of: `plan` (the whole list, in order), `add`, `remove` (step ids), `first` (the step to start with), `launches` (accepted and stored, but the app no longer uses launch points: leave it out) |
 | `place.create` / `place.update` | `ref?` or `id`, `set`: `name`, `timeZone` (IANA, e.g. `Europe/Paris`), `parent` (makes it an area of that place: an id, a name, or the `ref` of a place made earlier in the change-set, which must come first; on `place.update`, `null` makes it a place again) |
 | `stay.create` / `stay.update` | `id` for updates, `set`: `place` (id or name), `from`, `to`, `note?` |
 | `address.create` | `set`: `name` (needed), `category?`, `place?`, `mapsUrl?`, `street?`, `note?`. A place to try, saved as *want to go* |

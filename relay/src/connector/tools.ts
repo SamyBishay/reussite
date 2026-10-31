@@ -104,9 +104,9 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     throw unknown('step', value, 'Use query_tasks to find it (status "all" includes standing and dropped steps).');
   };
 
-  tool('today', "Today: the current place, today's list in order with launch points and fixed times, the next step, steps carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
+  tool('today', "Today: the current place, today's list in order with the day's shape and fixed times, the next step, steps carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
 
-  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, launch points, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
+  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, the day's shape, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
     if (needsCold(c.s) && date < c.s.split!.from) throw new NeedCold(); // before the hot window
     return { text: dayText(c.v, date) };
   });

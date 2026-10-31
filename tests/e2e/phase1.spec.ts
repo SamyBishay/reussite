@@ -28,9 +28,12 @@ test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page
   await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
   await page.getByTestId('ci-next').click();
+  await expect(page.getByTestId('ci-pillars')).toBeVisible();
+  await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('plan-items')).toContainText('Plan the day');
   await expect(page.getByTestId('plan-total')).toContainText('planning included');
   await page.getByTestId('go-with-this').click();
+  await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
   await expect(page.locator('main .tableau', { hasText: 'Plan the day' })).toHaveCount(1); // on the list, or among the done ones, folded
   await expect(page.getByTestId('first')).toBeVisible();
@@ -69,22 +72,12 @@ test('the calendar tab opens its views; a fixed-time step there opens its sheet'
   await expect(page.locator('.sx__month-grid-wrapper')).toBeVisible();
 });
 
-test('launch points are folded on Today and in the day navigator, with their times in the summary, and stay as the person left them', async ({ page }) => {
-  await importSample(page);
-  const box = page.getByTestId('launch-box');
-  await expect(box).toBeVisible();
-  await expect(box).not.toHaveAttribute('open', '');
-  await expect(page.getByTestId('launch-summary')).toHaveText('· 09:30, 14:00');
-  await expect(page.locator('form.launch-add')).toBeHidden();
-  await box.locator('summary').click();
-  await expect(page.locator('form.launch-add')).toBeVisible();
-  // The state is kept for the session: another tab and back, and another day.
-  await page.getByTestId('tab-matrix').click();
-  await page.getByTestId('tab-today').click();
-  await expect(page.getByTestId('launch-box')).toHaveAttribute('open', '');
+test('Today has no launch points: not on the day, not on another day', async ({ page }) => {
+  await importSample(page); // the sample day still holds two stored launch points; nothing shows or reads them
+  await expect(page.getByTestId('launch-box')).toHaveCount(0);
   await page.getByTestId('next-day').click();
-  await expect(page.getByTestId('other-day').getByTestId('launch-box')).toHaveAttribute('open', '');
-  await expect(page.getByTestId('other-day').getByTestId('launch-summary')).toHaveText('· none');
+  await expect(page.getByTestId('other-day')).toBeVisible();
+  await expect(page.getByTestId('launch-box')).toHaveCount(0);
 });
 
 test('a stay switches the current place on its first day', async ({ page }) => {
@@ -272,6 +265,8 @@ for (const width of [320, 375, 430]) {
     await check('check-in yesterday');
     await page.getByTestId('ci-next').click();
     await check('check-in shape');
+    await page.getByTestId('ci-next').click();
+    await check('check-in pillars');
     await page.getByTestId('ci-next').click();
     await check('check-in plan');
     await page.keyboard.press('Escape');

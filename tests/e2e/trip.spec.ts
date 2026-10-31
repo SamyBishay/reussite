@@ -37,6 +37,7 @@ async function openPlan(page: Page) {
   await page.goto('/');
   await page.locator('main').getByRole('button', { name: /Plan the day|Planifier la journée/ }).click();
   await page.getByTestId('ci-next').click(); // nothing was planned yesterday, so the first screen is the day's shape
+  await page.getByTestId('ci-next').click(); // the pillars
   await expect(page.getByTestId('plan-items')).toBeVisible();
 }
 
@@ -63,6 +64,7 @@ test.describe('the check-in offers an address for a leisure obligation', () => {
     await offers.getByTestId('offer').filter({ hasText: 'Bar Zéphyr' }).click();
     await expect(offers.getByTestId('offer').filter({ hasText: 'Bar Zéphyr' })).toHaveAttribute('aria-pressed', 'true');
     await page.getByTestId('go-with-this').click();
+    await page.getByTestId('ci-later').click(); // the first step alone
     await expect(sheet(page)).toBeHidden();
     const made = (await live(page, 'tasks')).find(x => x.from === 'ob1')!;
     expect(made).toMatchObject({ title: 'Go to Bar Zéphyr', starter: 'Open the front door', link: 'https://maps.example/bar-z-phyr', addressId: 'a2' });
@@ -80,6 +82,7 @@ test.describe('the check-in offers an address for a leisure obligation', () => {
     await page.getByTestId('offer').first().click();
     await page.getByTestId('offer-keep').click(); // changed my mind
     await page.getByTestId('go-with-this').click();
+    await page.getByTestId('ci-later').click(); // the first step alone
     await expect(sheet(page)).toBeHidden();
     const made = (await live(page, 'tasks')).find(x => x.from === 'ob1')!;
     expect(made).toMatchObject({ title: 'Go out somewhere' });
@@ -92,6 +95,7 @@ test.describe('the check-in offers an address for a leisure obligation', () => {
     await openPlan(page);
     await expect(page.getByTestId('offers')).toHaveCount(0);
     await page.getByTestId('go-with-this').click();
+    await page.getByTestId('ci-later').click(); // the first step alone
     await expect(sheet(page)).toBeHidden();
     expect((await live(page, 'tasks')).find(x => x.from === 'ob1')).toMatchObject({ title: 'Go out somewhere' });
   });
@@ -118,6 +122,7 @@ test('a people obligation offers those seen least recently, and picking one sets
   await expect(page.getByTestId('offers').getByRole('button')).toHaveText(['Bea', 'Cy', 'Alex', 'Keep it as it is']);
   await page.getByTestId('offer').filter({ hasText: 'Alex' }).click();
   await page.getByTestId('go-with-this').click();
+  await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
   expect((await live(page, 'tasks')).find(x => x.from === 'ob2')).toMatchObject({ title: 'Message Alex', starter: 'Open a message to Alex', link: 'https://wa.me/33612345678', personId: 'pe1' });
 });

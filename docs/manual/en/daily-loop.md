@@ -4,11 +4,13 @@ The loop is short: plan the day, start the first step, close the day. Once a wee
 
 ## Plan the day
 
-Open Home and tap **Plan the day**. It is a short morning check-in, one question per screen.
+Open Home and tap **Plan the day**. A notification at your morning check-in time opens it too: it says what the day holds and the room it leaves ("Morning. Today has the 10:00 dentist and room for about 3 h. Plan it?"), or "A free day so far. Plan it?". It is a short morning ritual, one question per screen.
 
-1. **Yesterday.** Tick what was done but not ticked, with roughly how long it took. The rest carries over to today. Réussite says nothing about what didn't happen.
-2. **Today's shape.** What kind of day is it (a usual day, afternoon only, an hour or less, a rest day)? When can you start? What is fixed today? If one of your places has areas, **Where will you be?** lets you pick one for the morning and one for the afternoon (see [Places and trips](places-and-trips.md)).
-3. **The plan.** Réussite builds it from the method's rules. Tap **Swap** to pick something of the same weight, or **Cut** to take something off. It stays on your list for another day. Tap **Go with this** when you are happy.
+1. **Yesterday.** One line of what was played, then tick what was done but not ticked, with roughly how long it took. The rest carries over to today. Réussite says nothing about what didn't happen.
+2. **Today's shape.** What kind of day is it (a usual day, afternoon only, an hour or less, a rest day)? **From when** and **until when**: the start begins at the next five minutes, and the end at the day's end (Settings → Method, 19:00 by default); this morning's answer stands in for that setting, today only. What is fixed today? If one of your places has areas, **Where will you be?** lets you pick one for the morning and one for the afternoon (see [Places and trips](places-and-trips.md)).
+3. **The four pillars.** One row for each of work, papers, family and life, filled in by the method. Keep each one, **Swap** it for another of the same weight, or **Skip** it (**Keep it** brings it back). A row with nothing in it says so in one line ("No life step today. Fine, or add one?") and offers **Add one**.
+4. **The plan.** The steps are laid out against the clock, with the time each is expected to start, between your fixed times. Under the list: "3 h 10 of 4 h 30 free", the steps' estimates (adjusted by your pace) next to the time you have between the start and the end of the day, minus what is fixed. When there is more than room, it says by how much ("About 50 min more than the time you have.") and **Cut one** takes you to the cutting. Tap **Swap** to pick something of the same weight, or **Cut** to take something off; it stays on your list for another day. Tap **Go with this** when you are happy.
+5. **The first step alone.** Its starter, its estimate and **Start**. **Not yet** closes the ritual without starting the timer.
 
 ![The plan, made by the method's rules](shot:checkin)
 
@@ -25,13 +27,11 @@ What the plan contains:
 
 Réussite adds up the estimates and shows what the day will probably take for you.
 
+There are no launch points or restart reminders: steps float between your fixed times, and the order is the one Today follows (see Start here below).
+
 **Research says:** untested here. `[E?]`
 
 **Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour. `[E?]`
-
-## Launch points
-
-A launch point is a time to begin, or to come back to the list after a break. Typical: a start at 09:30 and a restart at 14:00. They are not a timetable. Steps float between them. On Today they are folded under **Launch points** (the summary lists the times); open it to add or remove one. The defaults in Settings → Method. They live in Réussite and its notifications. They are not in the calendar, which keeps only what is at a fixed time.
 
 ## Start
 

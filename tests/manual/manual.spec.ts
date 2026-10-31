@@ -159,9 +159,11 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#home');
       await page.getByTestId('home-plan').click();
       await page.getByTestId('ci-next').click();
+      await page.getByTestId('ci-next').click();
       await expect(page.getByTestId('plan-items')).toBeVisible();
       await shot(page, 'checkin');
       await page.getByTestId('go-with-this').click();
+      await page.getByTestId('ci-later').click();
       await page.goto('/#today');
       await expect(page.getByTestId('first')).toBeVisible();
       await shot(page, 'today');

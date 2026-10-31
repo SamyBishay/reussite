@@ -272,6 +272,8 @@ function Method() {
         <label class="field"><span>{t('dayStartsAt')}</span><input type="time" value={s.dayStart} onChange={e => set({ dayStart: (e.target as HTMLInputElement).value || '05:00' })} /></label>
         <NumberField label={t('maxWorkSteps')} value={s.maxWorkSteps} min={1} max={10} onSave={n => set({ maxWorkSteps: n })} />
       </div>
+      <label class="field"><span>{t('dayEndsAt')}</span><input type="time" value={s.dayEnd} onChange={e => set({ dayEnd: (e.target as HTMLInputElement).value || '19:00' })} /></label>
+      <p class="hint">{t('dayEndsHint')}</p>
       <label class="field"><span>{t('reviewDay')}</span>
         <select value={String(s.reviewDay)} onChange={e => set({ reviewDay: Number((e.target as HTMLSelectElement).value) })}>
           {[1, 2, 3, 4, 5, 6, 7].map(d => <option value={d}>{new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', timeZone: 'UTC' })}</option>)}

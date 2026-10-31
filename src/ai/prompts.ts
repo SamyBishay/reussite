@@ -1,14 +1,14 @@
 // What each AI feature sends (brief §10, features 2–6): the method and the feature's contract as
 // the system prompt; compact lines for at most 25 steps, and the calibration line whenever the
 // AI is asked for estimates.
-import { projects, places, settings, today, here, type WithId } from '../app/store';
-import { T, dayDoc } from '../app/model';
+import { projects, tasks, places, settings, today, here, type WithId } from '../app/store';
+import { T, dayDoc, byOrder } from '../app/model';
 import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
 import { PILLARS, type Plan, type PlanInput } from '../domain/planner';
 import type { Proposal } from '../domain/propose';
 import { lang, fmtMin } from '../i18n';
 import type { Decision, SuitId } from '../data/schema';
-import { outcomeOf } from '../domain/goal';
+import { goalLines, outcomeOf } from '../domain/goal';
 import type { DecisionAsk } from './features';
 
 /** `notes`: the names of the memory notes in the request (the profile is in the system prompt), for "Show me what's sent". */
@@ -176,6 +176,57 @@ export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[
     calibrationLine(ids.map(id => T(id)?.app)),
     o.message !== undefined && join([
       `The person has chosen so far. Kept: ${o.kept?.join(', ') || '(none)'}. Skipped, so never offer them again: ${o.skipped?.join(', ') || '(none)'}.`,
+      `They say: ${o.message.trim()}`,
+      'Reply with the full revised proposal in the same JSON, changed only as they ask.',
+    ]),
+    memo.text,
+  ]);
+  return { system, user, notes: memo.names };
+}
+
+// ---------- 8. The Sunday review: goals ----------
+const GOAL_JSON = `{"note": "one or two sentences: what holds and what is vague",
+ "check": [{"part": "outcome|measure|dates", "ok": true, "line": "short, a fact"}],
+ "outcome": "the goal reworded in one sentence",
+ "measure": {"kind": "count", "target": 10, "unit": "pages"} or {"kind": "milestones", "items": ["...", "..."]} or {"kind": "none"},
+ "start": "YYYY-MM-DD", "due": "YYYY-MM-DD",
+ "steps": [{"id": "...", "belongs": true, "moves": true, "line": "why, short"}],
+ "drop": [{"id": "...", "line": "why"}],
+ "add": [{"title": "...", "starter": "...", "est": 15, "moves": true, "line": "why"}]}`;
+
+const GOAL_TASK = `It is the weekly review, and you are checking one project's goal. You propose and the person chooses: they keep or skip each proposal and flip each answer with a tap, so do not ask open questions. Use only the ids you are given.
+1. "check": test the goal against SMART in three parts and say, for each, whether it holds ("ok") and in one short fact why not: the "outcome" (one sentence a stranger could tell is reached or not), the "measure" (a count with a target and a unit, or milestones, so the bar can fill; "none" means no bar), and the "dates" (a start and a due that leave a realistic time).
+2. Only if a part does not hold, propose the fix: "outcome" reworded in the person's own words, a "measure", or "start" and "due" dates. Leave a key out when it needs no change. A count's target must be a real number the person could reach by finishing steps; milestones are 2 to 6 results, not tasks.
+3. "steps": for each open step below, say whether it "belongs" to the goal and whether finishing it "moves" it. A step moves the goal only if finishing it adds to the measure (one more page of ten, a milestone reached). Preparing, waiting, tidying and housekeeping do not move it, though they may belong to the project. A step that does not belong cannot move the goal. "line" says why in a few words.
+4. "drop": steps that no longer serve this goal and could go (the person decides; a step that only waits or is a small chore is not a reason).
+5. "add": at most 3 new steps if the goal clearly lacks a way forward; "moves" says whether each would move the goal.
+${STEP_RULES} Say "goal", "project", "step" or the person's own names; never the words "card" or "suit". Short lines, facts, no praise, no guilt, no counts of what was not done.
+Reply with JSON only (leave out any key that needs no change):
+${GOAL_JSON}`;
+
+/**
+ * One project of the Sunday review (Sunday review, "AI on"): its goal, measure, dates and open steps with their present answers, and
+ * what the AI is to check. A later turn (`o.message`) carries what the person said, with the proposals they skipped.
+ */
+export function goalReviewPrompt(projectId: string, o: { message?: string; skipped?: string[]; answers?: string[] } = {}): P {
+  const system = systemPrompt(GOAL_TASK);
+  const p = projects.value.get(projectId);
+  const all = [...tasks.value.values()].filter(x => x.project === projectId && !x.template && x.status !== 'dropped' && x.kind !== 'event');
+  const open = all.filter(x => x.status === 'open').sort(byOrder);
+  const smart = p?.smart ? Object.entries(p.smart).filter(([, v]) => v).map(([k, v]) => `${k}: ${one(String(v))}`).join('; ') : '';
+  const answer = (x: { advances?: boolean | null }) => (x.advances === true ? 'moves the goal' : x.advances === false ? 'does not move it' : 'not said');
+  const rows = open.slice(0, MAX_STEPS).map(x => `${stepLine(x)} | ${answer(x)}`);
+  const memo = memoryFor(scopeLines({ kind: 'project', id: projectId }), open.slice(0, MAX_STEPS));
+  const user = join([
+    header(),
+    p ? `Project ${projectId}: ${one(p.name)} (${p.status})` : '',
+    p ? goalLines({ ...p, id: projectId }, all.map(x => ({ ...x, id: x.id })), one).join('\n') + `\ndue: ${p.due ?? '-'}` : '',
+    smart && 'SMART answers the person gave: ' + smart,
+    `${all.length - open.length} steps done, ${open.length} open${open.length > MAX_STEPS ? ` (first ${MAX_STEPS})` : ''}. Open steps (${STEP_HEADER} | moves the goal?):\n${rows.join('\n') || '(none)'}`,
+    calibrationLine(open.map(x => x.app)),
+    o.message !== undefined && join([
+      `Proposals the person skipped, so never offer them again: ${o.skipped?.join(', ') || '(none)'}.`,
+      `Where the steps stand in their answers now: ${o.answers?.join('; ') || '(none)'}.`,
       `They say: ${o.message.trim()}`,
       'Reply with the full revised proposal in the same JSON, changed only as they ask.',
     ]),

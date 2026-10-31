@@ -4,8 +4,8 @@
 import { z } from 'zod';
 import { checkPlan, needsBreakDown, PILLARS, type Plan, type PlanInput, type PlanItem, type Role } from '../domain/planner';
 import type { MustWhy, Proposal } from '../domain/propose';
-import { readChangeSet, type ChangeSet } from './changeset';
-import type { By, SuitId } from '../data/schema';
+import { readChangeSet, MeasureSchema, type ChangeSet, type MeasureSet } from './changeset';
+import type { By, Measure, SuitId } from '../data/schema';
 
 const text = (max: number) => z.string().transform(s => s.trim().slice(0, max));
 const line = (max: number) => text(max).pipe(z.string().min(1));
@@ -373,4 +373,112 @@ export function morningChangeSet(d: Draft, ctx: { date: string; existing: readon
   const plan = [...new Set([...ctx.existing.filter(id => lockedIds.has(id) || !touched.has(id)), ...order.map(ref)])];
   changes.push({ op: 'day.update', date: ctx.date, plan, ...(first ? { first: ref(kept.find(i => i.key === first)!) } : {}) });
   return toChangeSet(changes, d.note);
+}
+
+// ---------- 8. The Sunday review: goals, one project at a time ----------
+// For one project the AI checks the goal against SMART (the outcome, the measure, the dates), says for each open step whether it belongs
+// to the goal and whether finishing it moves it, and proposes changes: a reworded outcome, a measure, dates, steps to drop or add. The
+// person keeps or skips each proposal and flips each step's "moves the goal" with a tap; `goalReviewChangeSet` turns what is left, for
+// every project reviewed, into the one change-set the review screen asks a yes for. Nothing here writes.
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const said = plain(200).optional().catch(undefined);
+export const GoalReviewReply = z.object({
+  /** One or two sentences: what holds, what is vague. */
+  note: plain(600).optional().transform(s => s ?? '').catch(''),
+  check: z.array(z.object({ part: z.enum(['outcome', 'measure', 'dates']), ok: z.boolean().catch(true), line: said })).max(3).optional().catch(undefined),
+  outcome: text(400).nullable().optional().catch(undefined),
+  measure: MeasureSchema.optional().catch(undefined),
+  start: day.nullable().optional().catch(undefined),
+  due: day.nullable().optional().catch(undefined),
+  steps: z.array(z.object({ id, belongs: z.boolean().optional().catch(undefined), moves: z.boolean().optional().catch(undefined), line: said })).max(40).optional().catch(undefined),
+  drop: z.array(z.object({ id, line: said })).max(10).optional().catch(undefined),
+  add: z.array(StepSchema.extend({ moves: z.boolean().optional().catch(undefined), line: said })).max(3).optional().catch(undefined),
+});
+export type GoalReviewReply = z.infer<typeof GoalReviewReply>;
+
+/** A project as it stands, and its open steps that can move a goal (not events, not standing steps). */
+export interface GoalNow {
+  id: string;
+  outcome: string;
+  measure: Measure;
+  start: string | null;
+  due: string | null;
+  steps: { id: string; advances: boolean }[];
+}
+export type GoalProp =
+  | { key: 'outcome'; to: string; skipped: boolean }
+  | { key: 'measure'; to: MeasureSet; skipped: boolean }
+  | { key: 'start' | 'due'; to: string | null; skipped: boolean };
+/** `belongs` is the AI's verdict (null when it said nothing); `moves` is the answer shown, and flipped by a tap. */
+export interface GoalStep { id: string; belongs: boolean | null; moves: boolean; line: string }
+export interface GoalAdd { key: string; step: AiStep; moves: boolean; line: string; skipped: boolean }
+export interface GoalDraft {
+  project: string;
+  note: string;
+  check: { part: 'outcome' | 'measure' | 'dates'; ok: boolean; line: string }[];
+  props: GoalProp[];
+  steps: GoalStep[];
+  drops: { id: string; line: string; skipped: boolean }[];
+  adds: GoalAdd[];
+}
+
+/** Do a proposed measure and the project's say the same thing (ids and ticks aside)? */
+export function sameProposal(a: MeasureSet, cur: Measure): boolean {
+  if (a.kind === 'none' || cur.kind === 'none') return a.kind === cur.kind;
+  if (a.kind === 'count') return cur.kind === 'count' && a.target === cur.target && (a.unit ?? '').trim() === cur.unit.trim();
+  return cur.kind === 'milestones' && a.items.length === cur.items.length && a.items.every((x, i) => x.text.trim().toLowerCase() === cur.items[i]!.text.trim().toLowerCase());
+}
+
+/**
+ * The AI's reply read against the project: a proposal that changes nothing is not one, an id it was not given is dropped, a step it
+ * did not mention keeps its answer, and a step it says does not belong cannot be said to move the goal. With no reply the draft holds
+ * the open steps with their present answers and nothing proposed, so the person can still answer by hand.
+ */
+export function readGoalReview(r: Partial<GoalReviewReply> | null, now: GoalNow): GoalDraft {
+  const props: GoalProp[] = [];
+  const outcome = r?.outcome?.trim();
+  if (outcome && outcome !== now.outcome.trim()) props.push({ key: 'outcome', to: outcome, skipped: false });
+  if (r?.measure && !sameProposal(r.measure, now.measure)) props.push({ key: 'measure', to: r.measure, skipped: false });
+  if (r?.start !== undefined && r.start !== now.start) props.push({ key: 'start', to: r.start, skipped: false });
+  if (r?.due !== undefined && r.due !== now.due) props.push({ key: 'due', to: r.due, skipped: false });
+  const ids = new Set(now.steps.map(x => x.id));
+  const byId = new Map<string, NonNullable<GoalReviewReply['steps']>[number]>();
+  for (const x of r?.steps ?? []) if (ids.has(x.id) && !byId.has(x.id)) byId.set(x.id, x);
+  const steps: GoalStep[] = now.steps.map(x => {
+    const v = byId.get(x.id);
+    const belongs = v?.belongs ?? null;
+    return { id: x.id, belongs, moves: belongs === false ? false : v?.moves ?? x.advances, line: v?.line ?? '' };
+  });
+  const drops: GoalDraft['drops'] = [];
+  for (const d of r?.drop ?? []) if (ids.has(d.id) && !drops.some(x => x.id === d.id)) drops.push({ id: d.id, line: d.line ?? '', skipped: false });
+  const adds: GoalAdd[] = (r?.add ?? []).slice(0, 3).map(({ moves, line, ...step }, i) => ({ key: 'new:' + (i + 1), step, moves: moves === true, line: line ?? '', skipped: false }));
+  const check = (r?.check ?? []).map(c => ({ part: c.part, ok: c.ok, line: c.line ?? '' }));
+  return { project: now.id, note: r?.note ?? '', check, props, steps, drops, adds };
+}
+
+export const setPropSkipped = (d: GoalDraft, key: GoalProp['key'], skipped: boolean): GoalDraft => ({ ...d, props: d.props.map(x => (x.key === key ? { ...x, skipped } : x)) });
+export const setDropSkipped = (d: GoalDraft, id: string, skipped: boolean): GoalDraft => ({ ...d, drops: d.drops.map(x => (x.id === id ? { ...x, skipped } : x)) });
+export const setAddSkipped = (d: GoalDraft, key: string, skipped: boolean): GoalDraft => ({ ...d, adds: d.adds.map(x => (x.key === key ? { ...x, skipped } : x)) });
+/** Flip a step's answer; a new step's too (by its key). */
+export const setMoves = (d: GoalDraft, id: string, moves: boolean): GoalDraft => ({
+  ...d, steps: d.steps.map(x => (x.id === id ? { ...x, moves } : x)), adds: d.adds.map(x => (x.key === id ? { ...x, moves } : x)),
+});
+
+function goalChanges(d: GoalDraft, advances: ReadonlyMap<string, boolean>): unknown[] {
+  const out: unknown[] = [];
+  const set: Record<string, unknown> = {};
+  for (const p of d.props) if (!p.skipped) set[p.key] = p.to;
+  if (Object.keys(set).length) out.push({ op: 'project.update', id: d.project, set });
+  const dropped = new Set(d.drops.filter(x => !x.skipped).map(x => x.id));
+  for (const x of d.steps) if (!dropped.has(x.id) && x.moves !== (advances.get(x.id) ?? false)) out.push({ op: 'task.update', id: x.id, set: { advances: x.moves } });
+  for (const id of dropped) out.push({ op: 'task.drop', id });
+  for (const a of d.adds) if (!a.skipped) out.push({ op: 'task.create', ref: `g${d.project}-${a.key.slice(4)}`, set: { ...clean(a.step), project: d.project, important: true, ...(a.moves ? { advances: true } : {}) } });
+  return out;
+}
+
+
+/** What a review of goals ends in, for every project reviewed: one change-set for the review screen. Null when nothing is left to change. */
+export function goalReviewChangeSet(drafts: readonly GoalDraft[], advances: ReadonlyMap<string, boolean>): ChangeSet | null {
+  const note = drafts.map(d => d.note).filter(Boolean).join(' ').slice(0, 1000);
+  return toChangeSet(drafts.flatMap(d => goalChanges(d, advances)), note);
 }

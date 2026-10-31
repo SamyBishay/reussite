@@ -2,12 +2,13 @@
 // screen, plus the Later allotment, ending with how the week's estimates compared with reality.
 import { useState } from 'preact/hooks';
 import { tasks, projects, today, here, sessions, decisions } from '../app/store';
-import { T, isOpen, quad, inPlace, byPriority, byOrder, rawPlan, dayDoc, estPoints, type T as Tk } from '../app/model';
-import { patchTask, dropTask, planOn, cloneTemplate, dayPatch, dueOn } from '../app/actions';
+import { T, isOpen, quad, inPlace, byPriority, byOrder, rawPlan, dayDoc, estPoints, goalSteps, type T as Tk } from '../app/model';
+import { patchTask, patchProject, dropTask, planOn, cloneTemplate, dayPatch, dueOn } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
+import { toast } from '../app/store';
 import { Title, quadName } from '../app/ui';
-import { SmartEditor } from '../app/smart';
-import { outcomeOf } from '../domain/goal';
+import { SmartEditor, projectProgress, progressLine } from '../app/smart';
+import { outcomeOf, startOf } from '../domain/goal';
 import { reviewDecision } from './decision';
 import { t, fmtDate, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -24,11 +25,28 @@ import { prepareReview, ReviewList } from '../ai/Review';
 import { OfferChips, offerFieldsFor, type OfferChoice } from '../app/OfferChips';
 import type { Plan as ChangePlan } from '../ai/apply';
 
+/** The review by hand: the questions, with a Goals screen per active project after the next steps. */
 export function openReview() {
+  openSheet(<Review key={'rv' + Date.now()} goals />, true);
+}
+/** The review without the goals (an AI has just been through them: src/flows/reviewai.tsx). */
+export function openReviewRest() {
   openSheet(<Review key={'rv' + Date.now()} />, true);
 }
 
-const STEPS: Key[] = ['rv1', 'rv2', 'rv3', 'rv4', 'rv5', 'rv6', 'rv7', 'rv8', 'rvLater', 'rvEnd'];
+/** A screen of the review: a question, or a project's goal, or the steps of a project that may move it. */
+type Screen = { k: Key; p?: undefined } | { k: 'rvGoal' | 'rvMoves'; p: string };
+const FIRST: Key[] = ['rv1', 'rv2', 'rv3', 'rv4'];
+const LAST: Key[] = ['rv5', 'rv6', 'rv7', 'rv8', 'rvLater', 'rvEnd'];
+/** The screens, fixed when the review opens (closing a goal does not renumber them): two for each active project when the goals are by hand. */
+function screensOf(goals: boolean): Screen[] {
+  const ps = goals ? [...projects.value.values()].filter(p => p.status === 'active' && p.id !== 'inbox').sort(byOrder) : [];
+  return [
+    ...FIRST.map((k): Screen => ({ k })),
+    ...ps.flatMap((p): Screen[] => [{ k: 'rvGoal', p: p.id }, ...(goalSteps(p.id).length ? [{ k: 'rvMoves', p: p.id } as Screen] : [])]),
+    ...LAST.map((k): Screen => ({ k })),
+  ];
+}
 const week = () => Array.from({ length: 7 }, (_, i) => addDays(today.value, i + 1));
 const dayLabel = (k: string) => fmtDate(k, { weekday: 'short', day: 'numeric' });
 
@@ -70,7 +88,8 @@ function Resort({ tk }: { tk: Tk }) {
   );
 }
 
-function Review() {
+function Review({ goals }: { goals?: boolean }) {
+  const [STEPS] = useState(() => screensOf(!!goals));
   const [i, setI] = useState(0);
   const [later, setLater] = useState<Record<string, string>>({});
   // The offer picked for each standing obligation before it is given a day (brief §5, Feeding the plan).
@@ -86,7 +105,8 @@ function Review() {
     </div>
   );
   let body;
-  switch (STEPS[i]) {
+  const cur = STEPS[i]!;
+  switch (cur.k) {
     case 'rv1':
       body = <><p class="hint">{t('rv1Hint')}</p><ul class="picklist">{open.slice(0, 40).map(x => <Resort key={x.id} tk={x} />)}</ul></>;
       break;
@@ -170,6 +190,12 @@ function Review() {
       </>;
       break;
     }
+    case 'rvGoal':
+      body = <GoalScreen id={cur.p!} onNext={next} onClosed={() => setI(Math.min(STEPS.length - 1, STEPS[i + 1]?.k === 'rvMoves' && STEPS[i + 1]?.p === cur.p ? i + 2 : i + 1))} />;
+      break;
+    case 'rvMoves':
+      body = <MovesScreen id={cur.p!} />;
+      break;
     default:
       body = <WeekNumbers onFinish={async () => {
         const pool = open.filter(x => quad(x) === 4);
@@ -186,9 +212,83 @@ function Review() {
   return (
     <div class="flow" data-testid={'rv-' + i}>
       <p class="eyebrow">{t('rvStep', { n: i + 1, of: STEPS.length })}</p>
-      <h3>{t(STEPS[i]!)}</h3>
+      <h3>{t(cur.k)}</h3>
       {body}
       {nav(i === STEPS.length - 1)}
+    </div>
+  );
+}
+
+/** The goal as one block: its sentence, its bar or "no bar", its dates. Shared by the screens by hand and the AI conversation. */
+export function GoalBlock({ id }: { id: string }) {
+  const p = projects.value.get(id);
+  if (!p) return null;
+  const out = outcomeOf(p), pr = projectProgress(p), start = startOf(p);
+  const dates = start && p.due ? t('rvGoalFromTo', { from: fmtDate(start), to: fmtDate(p.due) }) : start ? t('rvGoalFrom', { from: fmtDate(start) }) : p.due ? t('rvGoalFromTo', { from: '…', to: fmtDate(p.due) }) : t('rvGoalNoDates');
+  return (
+    <div class="goalblock" data-testid="goal-block">
+      <p><b>{p.name}</b></p>
+      <p class={out ? 't' : 'hint'} data-testid="goal-sentence">{out || t('rvGoalNone')}</p>
+      {pr ? <p class="meta" data-testid="goal-bar">{progressLine(pr)}</p> : <p class="hint" data-testid="goal-nobar">{t('rvGoalNoBar')}</p>}
+      <p class="meta">{dates}</p>
+    </div>
+  );
+}
+
+/** Sunday review, by hand: is the goal still right? Still right, Edit it, or Close it (reached, or let go). */
+function GoalScreen({ id, onNext, onClosed }: { id: string; onNext: () => void; onClosed: () => void }) {
+  const p = projects.value.get(id);
+  const [editing, setEditing] = useState(false);
+  const [closing, setClosing] = useState(false);
+  if (!p) return null;
+  const close = async (reached: boolean) => {
+    await patchProject(id, reached ? { status: 'done', doneAt: new Date().toISOString() } : { status: 'dropped', doneAt: null });
+    toast(t(reached ? 'rvClosedReached' : 'rvClosedLetGo', { name: p.name }));
+    onClosed();
+  };
+  return (
+    <div data-testid="rv-goal" data-project={id}>
+      <GoalBlock id={id} />
+      {editing && <SmartEditor projectId={id} />}
+      {closing && (
+        <div class="notice" data-testid="rv-goal-close">
+          <p>{t('rvCloseAsk')}</p>
+          <div class="go" style="margin-top:var(--s2)">
+            <button class="btn small" type="button" onClick={() => void close(true)} data-testid="rv-goal-reached">{t('rvCloseReached')}</button>
+            <button class="btn small" type="button" onClick={() => void close(false)} data-testid="rv-goal-letgo">{t('rvCloseLetGo')}</button>
+            <button class="btn small ghost" type="button" onClick={() => setClosing(false)}>{t('cancel')}</button>
+          </div>
+        </div>
+      )}
+      <div class="go" style="margin-top:var(--s3)">
+        <button class="btn primary" type="button" onClick={onNext} data-testid="rv-goal-still">{t('rvStill')}</button>
+        <button class="btn" type="button" aria-pressed={editing} onClick={() => setEditing(!editing)} data-testid="rv-goal-edit">{editing ? t('rvGoalDoneEditing') : t('edit')}</button>
+        {!closing && <button class="btn ghost" type="button" onClick={() => setClosing(true)} data-testid="rv-goal-closeit">{t('rvClose')}</button>}
+      </div>
+    </div>
+  );
+}
+
+/** Sunday review, by hand: for each open step, does finishing it move the goal? The answer is the step's own, shown as it stands. */
+function MovesScreen({ id }: { id: string }) {
+  const p = projects.value.get(id);
+  if (!p) return null;
+  const steps = goalSteps(id);
+  const pr = projectProgress(p);
+  return (
+    <div data-testid="rv-moves" data-project={id}>
+      <p class="meta"><b>{t('rvMovesProject', { name: p.name })}</b>{pr ? ' · ' + progressLine(pr) : ''}</p>
+      <p class="hint">{pr ? t('movesGoalHint') : t('rvMovesNoBar')}</p>
+      <ul class="picklist">{steps.map(x => (
+        <li key={x.id} data-testid="rv-move" data-task={x.id}>
+          <div><p><Title s={x.title} /></p>{x.advances == null && <p class="meta">{t('movesNotSaid')}</p>}</div>
+          <div class="seg small" role="group" aria-label={t('movesGoal')}>
+            <button type="button" aria-pressed={x.advances === true} onClick={() => { if (x.advances !== true) void patchTask(x.id, { advances: true }); }} data-testid="rv-move-yes">{t('movesYes')}</button>
+            <button type="button" aria-pressed={x.advances === false} onClick={() => { if (x.advances !== false) void patchTask(x.id, { advances: false }); }} data-testid="rv-move-no">{t('movesNo')}</button>
+          </div>
+        </li>
+      ))}</ul>
+      {!steps.length && <p class="hint">{t('rvMovesNone')}</p>}
     </div>
   );
 }

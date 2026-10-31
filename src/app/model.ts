@@ -79,6 +79,8 @@ export const elapsedSec = (t: T, now = Date.now()) => (t.started ? Math.max(0, (
 
 const byOrder = L.byOrder;
 export { byOrder };
+/** A project's open steps that can move its goal, in the project's own order: not a standing step, not something the person waits for (the Sunday review's "Moves the goal?"). */
+export const goalSteps = (projectId: string): T[] => [...tasks.value.values()].filter(x => x.project === projectId && x.status === 'open' && !x.template && !L.isEvent(x)).sort(byOrder);
 export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
 
 export function candidates(k = today.value, place = pagePlace.value): T[] {

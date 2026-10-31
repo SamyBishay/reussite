@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
+import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -203,6 +203,7 @@ for (const w of [320, 375, 430]) {
 // ---------- features 2–6 ----------
 /** The AI answers whatever `answer.text` holds at the time of the call. */
 async function aiSession(page: Page) {
+  await morningClock(page); // Start here and the plan must not depend on the hour the suite runs at
   await importSample(page);
   await setUpAnthropic(page);
   const answer = { text: '' };
@@ -212,7 +213,12 @@ async function aiSession(page: Page) {
 }
 const userText = (seen: Record<string, unknown>[], i = -1) => String(((seen.at(i)!.body as { messages: { content: string }[] }).messages[0]!).content);
 async function toPlan(page: Page) {
+  // With an AI on, Plan the day opens the AI morning and its request preview; these tests are about the ritual's plan, one tap away ("Plan it myself").
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await expect(page.getByTestId('ai-preview')).toBeVisible();
+  await page.getByTestId('ai-preview').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByTestId('ai-preview')).toHaveCount(0);
+  await page.getByTestId('morning-ritual').click();
   await carryAll(page);
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();

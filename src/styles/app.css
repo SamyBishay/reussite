@@ -13,11 +13,11 @@ p{margin:0}
    --dock is how much of the bottom edge the bar takes (nothing while the keyboard is open, body.kb) and
    --kb how far the keyboard covers the bottom of the layout viewport (src/app/keyboard.ts). Anything else
    fixed at the bottom of a screen, like Home's input, sits at calc(var(--dock) + var(--kb)). */
-:root{--tabbar-h:calc(57px + env(safe-area-inset-bottom,0px));--dock:var(--tabbar-h);--kb:0px}
+:root{--tabbar-h:calc(57px + env(safe-area-inset-bottom,0px));--dock:var(--tabbar-h);--kb:0px;--fabr:max(16px,env(safe-area-inset-right,0px))}
 body.kb{--dock:0px}
-.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:12px calc(var(--tabbar-h) + var(--inputh,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
+.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:12px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
 @media (min-width:920px){
-  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:28px calc(var(--tabbar-h) + var(--inputh,0px) + 24px)}
+  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:28px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
   .app.bare{grid-template-columns:minmax(0,1fr)}
   .mast{grid-column:1;grid-row:1}
   #runbar{grid-column:1;grid-row:2}
@@ -92,13 +92,14 @@ body.kb .tabbar{display:none}
 .homecard .picks{display:grid;gap:var(--s2)}
 .homecard .pickbtn{justify-content:flex-start;text-align:left;white-space:normal;width:100%}
 .homecard .ai-note{margin:0}
-.receipt{display:flex;align-items:center;justify-content:space-between;gap:var(--s1) var(--s2);color:var(--ink-2);font-size:14.5px;padding-inline:4px}
+.receipt{position:fixed;left:0;right:0;bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px));z-index:5;background:var(--ground);display:flex;align-items:center;justify-content:space-between;gap:var(--s1) var(--s2);color:var(--ink-2);font-size:14.5px;margin:0;padding-block:2px;padding-inline-start:max(20px,calc((100vw - 1048px)/2 + 4px));padding-inline-end:calc(var(--fabr) + 68px)}
+/* The receipt rests in its own row just above the input, so that nothing floats over its Undo: the round Add button's column is left free (56px and 12px), and the toast lifts above it. Its height is --rcpt, set by Home. */
 .receipt .undo{min-height:44px;padding-inline:6px;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 /* The input is fixed above the tab bar (and the keyboard); its height is --inputh, set by Home. */
-.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + 16px);z-index:7;width:56px;height:56px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(0,0,0,.22),0 1px 3px rgba(0,0,0,.16)}
+.fab{position:fixed;right:var(--fabr);bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + 16px);z-index:7;width:56px;height:56px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(0,0,0,.22),0 1px 3px rgba(0,0,0,.16)}
 .fab:active{transform:scale(.95)}
 body.kb .fab{display:none}
-@media (min-width:1128px){.fab{right:calc((100vw - 1080px)/2 + 16px)}}
+@media (min-width:1128px){:root{--fabr:calc((100vw - 1080px)/2 + 16px)}}
 .homein{position:fixed;left:0;right:0;bottom:calc(var(--dock) + var(--kb));z-index:5;background:var(--ground);border-top:1px solid var(--line);padding:8px 16px}
 .homein-in{max-width:1048px;margin:0 auto;display:flex;gap:var(--s2);align-items:flex-end}
 .homein textarea{flex:1 1 auto;min-height:44px;max-height:128px;resize:none;line-height:1.4;overflow-y:auto}
@@ -308,7 +309,7 @@ table.sess{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
 .flycard.red{color:var(--pc-red)}
 
 /* ---------- toast ---------- */
-.toast{position:fixed;left:50%;bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + 14px);transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:11px 16px;border-radius:10px;font-size:14.5px;z-index:40;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.toast{position:fixed;left:50%;bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + var(--rcpt,0px) + 14px);transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:11px 16px;border-radius:10px;font-size:14.5px;z-index:40;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 
 /* ---------- asking Claude ---------- */
 .cmd{margin-top:var(--s4);display:grid;gap:var(--s3);background:var(--panel);border:1px solid transparent;border-radius:14px;padding:14px}

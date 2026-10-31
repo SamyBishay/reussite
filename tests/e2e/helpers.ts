@@ -1,6 +1,17 @@
 import { expect, type Page } from '@playwright/test';
 import { sampleExport } from './fixture';
 
+/**
+ * Fix the clock at 09:00 on the app's today (the day starts at 05:00; fixtures are dated from the real date). Evening items (a standing 18:30 or 19:00
+ * item, the day's end) take over Start here and empty the plan later in the day, so a test that is not about the hour calls this before it loads the app.
+ */
+export async function morningClock(page: Page) {
+  const x = new Date();
+  if (x.getHours() < 5) x.setDate(x.getDate() - 1);
+  x.setHours(9, 0, 0, 0);
+  await page.clock.setFixedTime(x);
+}
+
 /** Settings sections are folded (only the first is open); most tests want them all open. */
 export async function expandSettings(page: Page) {
   const root = page.getByTestId('settings');

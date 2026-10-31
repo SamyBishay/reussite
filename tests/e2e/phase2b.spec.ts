@@ -92,6 +92,28 @@ const store = (page: Page, name: string) => page.evaluate(n => new Promise<Recor
 const live = async (page: Page, name: string) => (await store(page, name)).filter(d => !d._del);
 const RECEIPTS = 'Open Files and sort the scanned receipts';
 
+// The round Add button floats over the page's right edge: the receipt's Undo must never sit under it.
+for (const width of [320, 375, 430]) {
+  test(`the receipt's Undo is not covered by the floating Add button at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await importSample(page);
+    await goTab(page, 'home');
+    await say(page, 'choir every Monday 19:00 at Hill House 602');
+    const undo = page.getByTestId('undo');
+    await expect(undo).toBeVisible();
+    await expect(page.getByTestId('add-card')).toBeVisible();
+    await undo.scrollIntoViewIfNeeded();
+    const hit = await undo.evaluate(el => {
+      const r = el.getBoundingClientRect();
+      // the centre and the four corners (a little inside): each must hit Undo itself
+      const pts: [number, number][] = [[.5, .5], [.1, .1], [.9, .1], [.1, .9], [.9, .9]];
+      return pts.map(([x, y]) => { const top = document.elementFromPoint(r.left + r.width * x, r.top + r.height * y); return !!top && (top === el || el.contains(top)); });
+    });
+    expect(hit).toEqual([true, true, true, true, true]);
+    await noSideways(page, 'Home with a receipt');
+  });
+}
+
 test('the choir phrase makes a standing item with its time and weekday, and Undo removes it', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'home');

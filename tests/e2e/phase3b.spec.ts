@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { importSample, carryAll, noSideways, expandSettings, expandSheet, addCard } from './helpers';
+import { morningClock, importSample, carryAll, noSideways, expandSettings, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 // The app's day starts at 05:00; before that it is still the day before.
@@ -11,6 +11,7 @@ const todayName = () => {
 };
 
 async function addChoir(page: Page) {
+  await morningClock(page);
   await importSample(page);
   await addCard(page, 'Choir, Hill House 602');
   // Added by hand with nothing running, it goes to the top of what is left: it is the first card.

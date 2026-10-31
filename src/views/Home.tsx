@@ -201,8 +201,22 @@ function Card() {
 function Receipt() {
   const ex = openExchange(clockNow.value);
   if (!ex || !canUndo(ex)) return null;
+  return <ReceiptLine ex={ex} />;
+}
+function ReceiptLine({ ex }: { ex: NonNullable<ReturnType<typeof openExchange>> }) {
+  const el = useRef<HTMLParagraphElement>(null);
+  // The receipt is fixed in a row just above the input, where a toast would cover Undo. Its height is published (as --rcpt) for the page's bottom
+  // padding and so that the toast lifts above it.
+  useEffect(() => {
+    const p = el.current!, root = document.documentElement.style;
+    const set = () => root.setProperty('--rcpt', p.offsetHeight + 'px');
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(p);
+    return () => { ro.disconnect(); root.removeProperty('--rcpt'); };
+  }, []);
   return (
-    <p class="receipt" data-testid="receipt" role="status">
+    <p class="receipt" ref={el} data-testid="receipt" role="status">
       <span>{receiptLine(ex)}</span>
       <button class="linklike undo" type="button" onClick={() => void undoExchange(ex.id)} data-testid="undo">{t('undo')}</button>
     </p>

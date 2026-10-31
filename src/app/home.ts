@@ -119,6 +119,11 @@ export async function recordPlanning(cs: ChangeSet, n: number, undo: UndoDoc[]):
   await addTurn({ at: new Date().toISOString(), text: t('mornRequest'), kind: 'changes', reply: cs.note || undefined, n }, { cs: gen.id('c'), undo });
 }
 
+/** The Sunday review's goal changes, ticked on the review screen (src/flows/reviewai.tsx): an exchange of Home's own, with its receipt and Undo, as the morning's. */
+export async function recordReview(cs: ChangeSet, n: number, undo: UndoDoc[]): Promise<void> {
+  await addTurn({ at: new Date().toISOString(), text: t('grRequest'), kind: 'changes', reply: cs.note || undefined, n }, { cs: gen.id('c'), undo });
+}
+
 /** The receipt line of an exchange: what one change did, else how many changes. */
 export function receiptLine(ex: Exchange): string {
   const applied = ex.turns.filter(x => x.n);

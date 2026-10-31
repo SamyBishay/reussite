@@ -14,7 +14,7 @@ import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
 import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
-import { openReview } from '../flows/review';
+import { startReview } from '../flows/reviewai';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { groupPlan, inArea, type PlanGroup } from '../domain/areas';
@@ -293,7 +293,7 @@ export function Today() {
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
       {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
-      {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
+      {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button></div>}
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (

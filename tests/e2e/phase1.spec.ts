@@ -323,10 +323,13 @@ for (const width of [320, 375, 430]) {
     await page.keyboard.press('Escape');
     // The weekly review, each screen.
     await openWeeklyReview(page);
-    for (let i = 0; i < 10; i++) {
+    // Every screen, to the last: the questions and a Goals screen and a steps screen for each active project.
+    for (let i = 0; i < 40; i++) {
       await check('review ' + i);
-      if (i < 9) await page.getByTestId('rv-next').click();
+      if (await page.getByTestId('rv-end').count()) break;
+      await page.getByTestId('rv-next').click();
     }
+    await expect(page.getByTestId('rv-end')).toBeVisible();
   });
 }
 

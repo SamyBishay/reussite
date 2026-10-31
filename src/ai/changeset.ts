@@ -75,7 +75,7 @@ const smart = z.object({ specific: text(400), measurable: text(400), attainable:
  * keeps its tick, one left out is gone.
  */
 const milestone = z.union([text(120).pipe(z.string().min(1)).transform(t => ({ text: t, done: undefined as boolean | string | null | undefined })), z.object({ text: text(120).pipe(z.string().min(1)), done: z.union([z.boolean(), day, z.null()]).optional() })]);
-const measure = z.discriminatedUnion('kind', [
+export const MeasureSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('none') }),
   z.object({
     kind: z.literal('count'),
@@ -84,7 +84,7 @@ const measure = z.discriminatedUnion('kind', [
   }),
   z.object({ kind: z.literal('milestones'), items: z.array(milestone).max(30) }),
 ]);
-export type MeasureSet = z.infer<typeof measure>;
+export type MeasureSet = z.infer<typeof MeasureSchema>;
 const projectSet = z.object({
   name: text(120).optional(),
   suit: suit.optional(),
@@ -93,7 +93,7 @@ const projectSet = z.object({
   outcome: text(400).nullable().optional(),
   /** The old name of `outcome`, still accepted (it sets the outcome; the stored `goal` is never written again). */
   goal: text(400).nullable().optional(),
-  measure: measure.optional(),
+  measure: MeasureSchema.optional(),
   /** The day the goal starts. */
   start: day.nullable().optional(),
   smart: smart.nullable().optional(),

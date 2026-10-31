@@ -25,7 +25,7 @@ The bar is filled by steps, not by the number of cards done. Open a step of a pr
 - With a count, each such step adds 1 when you mark it done. A small sheet then asks if it added more ("+5 pages"), or you keep +1. A step can also hold its own amount in the step sheet (**Adds**).
 - With milestones, marking such a step done asks **Tick a milestone?** and lists the ones still open. Pick one, or **Not now**: the bar only moves when you tick a milestone, here or in the project.
 
-A step you never answered counts as No, and the bar never counts steps just because they are done. If you un-do a step, a count goes back down. Steps you add in the project, on Today or by talking to an AI can all say whether they move the goal.
+The weekly review asks about every open step of a project once a week, so the answers do not depend on you remembering. A step you never answered counts as No, and the bar never counts steps just because they are done. If you un-do a step, a count goes back down. Steps you add in the project, on Today or by talking to an AI can all say whether they move the goal.
 
 **Research says:** untested here. `[E?]`
 

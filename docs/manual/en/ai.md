@@ -20,7 +20,7 @@ With a key, Réussite can (without a key saved on this device, none of these sho
 - **Break it down with AI**: propose small steps with starters and estimates;
 - help with decisions: draft the problem, suggest options you missed, suggest pros and cons (marked "suggested", weight 3 until you set it), draft the steps and a SMART goal. It never sets weights;
 - suggest a smaller starter when you're stuck;
-- propose a SMART goal and next steps in the weekly review. A goal stays "proposed" until you confirm it.
+- review your goals in the weekly review, one project at a time: check each against SMART, say which open steps move it, and propose a clearer sentence, a measure, dates, and steps to drop or add. You keep, skip or flip each one. The daily loop page has the details. On a project's page in the review, **Propose a goal and next steps** still proposes a goal and next steps for that project, and a goal stays "proposed" until you confirm it.
 
 **You see every change before it is written.** Tick what you want, untick what you don't. Nothing is applied without your ticks, and what you apply can be undone.
 

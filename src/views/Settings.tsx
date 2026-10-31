@@ -20,6 +20,8 @@ import { addCategory, moveCategory, removeCategory, renameCategory } from '../do
 import { categoryName, addressesOn } from '../app/model';
 import { openTrip } from '../ai/ui';
 import { openReview } from '../flows/review';
+import { openGoalReview } from '../flows/reviewai';
+import { aiOn } from '../ai/ask';
 import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { AiSettings } from '../ai/AiSettings';
@@ -279,7 +281,7 @@ function Method() {
           {[1, 2, 3, 4, 5, 6, 7].map(d => <option value={d}>{new Date(Date.UTC(2026, 9, 4 + d)).toLocaleDateString(lang.value === 'fr' ? 'fr-FR' : 'en-GB', { weekday: 'long', timeZone: 'UTC' })}</option>)}
         </select>
       </label>
-      <div class="actions"><button class="btn small ghost" type="button" data-testid="start-review-now" onClick={openReview}>{t('startReview')}</button></div>
+      <div class="actions"><button class="btn small ghost" type="button" data-testid="start-review-now" onClick={openReview}>{t('startReview')}</button>{aiOn.value && <button class="btn small ghost" type="button" data-testid="start-review-ai" onClick={openGoalReview}>{t('reviewGoalsAi')}</button>}</div>
       <More n={changedFrom(s, ['urgencyDays', 'planningMin', 'suits', 'obligationAt', 'reviewTime', 'morningAt', 'eveningAt', 'addressesPeople', 'addressCategories']) + placeCount + stayCount} testid="method-more">
         <div class="row2">
           <NumberField label={t('urgencyWindow')} value={s.urgencyDays} min={1} max={120} onSave={n => set({ urgencyDays: n })} />

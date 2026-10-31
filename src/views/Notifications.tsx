@@ -6,7 +6,7 @@ import { dayDoc, decisionsToCheck, carriedOn } from '../app/model';
 import { openCarried } from '../app/CarryUi';
 import { KeyCard } from '../app/SyncSettings';
 import { syncOn, keySaved } from '../app/sync';
-import { openReview } from '../flows/review';
+import { startReview } from '../flows/reviewai';
 import { openDecisionPage } from '../flows/decision';
 import { isoDow } from '../domain/repeat';
 import { t } from '../i18n';
@@ -19,7 +19,7 @@ export function notifications(): ComponentChild[] {
   for (const dc of decisionsToCheck(k)) out.push(<div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>);
   const y = carriedOn(k);
   if (y.length) out.push(<div class="banner" data-testid="carry-nudge"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried}>{t('carryButton')}</button></div>);
-  if (isoDow(k) === settings.value.reviewDay && !dayDoc(k)?.review) out.push(<div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>);
+  if (isoDow(k) === settings.value.reviewDay && !dayDoc(k)?.review) out.push(<div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button></div>);
   return out;
 }
 

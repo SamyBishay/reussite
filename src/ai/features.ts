@@ -186,11 +186,13 @@ export function reviewChangeSet(r: ReviewReply, p: { id: string; where?: string 
 // pillar. Whatever it sends is checked against those candidates here: an id it was not given, a section it left out or a pillar it
 // forgot falls back to the candidates themselves, so the five sections are always there. The person then keeps, swaps or skips each
 // item (`swapItem`, `setSkipped`), and `morningChangeSet` turns what is left into the one change-set for the review screen.
+/** The AI's words for the person: a line that names a card or a suit (the app's own jargon) is dropped. */
+const plain = (max: number) => text(max).transform(s => (/\b(cards?|suits?)\b/i.test(s) ? '' : s));
 const pick = z.object({
   id: id.optional().catch(undefined),
   new: StepSchema.optional().catch(undefined),
   /** The AI's wording: one short sentence on why it is there. */
-  line: text(200).optional().catch(undefined),
+  line: plain(200).optional().catch(undefined),
   /** The AI proposes leaving it out, because the day is over-full. */
   cut: z.boolean().optional().catch(undefined),
 });
@@ -203,7 +205,7 @@ export const MorningReply = z.object({
   /** The step to start with (an id from the sections). */
   first: id.optional().catch(undefined),
   split: z.array(z.object({ id, steps: z.array(StepSchema).min(2).max(8) })).max(5).optional().catch(undefined),
-  note: note.catch(''),
+  note: plain(600).optional().transform(s => s ?? '').catch(''),
 });
 export type MorningReply = z.infer<typeof MorningReply>;
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_TITLE, OPEN_URL, payloadJson, payloadOf, pushToNotification } from './notification';
+import { APP_TITLE, OPEN_URL, PLAN_URL, payloadJson, payloadOf, pushToNotification } from './notification';
 import { MAX_PUSH_PLAINTEXT } from './protocol';
 
 const SCOPE = 'https://app.example/reussite/';
@@ -50,5 +50,10 @@ describe('payloadJson', () => {
   });
   it('leaves a short one alone', () => {
     expect(JSON.parse(payloadJson(payloadOf({ id: 'a', text: 'Hi' })))).toEqual({ title: APP_TITLE, body: 'Hi', tag: 'a', url: OPEN_URL });
+  });
+  it('the morning notification opens the planning, every other one opens Today', () => {
+    expect(payloadOf({ id: 'checkin:2026-11-02', text: 'Morning.' }).url).toBe(PLAN_URL);
+    for (const id of ['fixed:t1:2026-11-02', 'close:2026-11-02', 'review:2026-11-01', 'decision:d1:2026-11-02']) expect(payloadOf({ id, text: 'x' }).url).toBe(OPEN_URL);
+    expect(pushToNotification({ url: PLAN_URL }, SCOPE).options.data.url).toBe(SCOPE + '#plan');
   });
 });

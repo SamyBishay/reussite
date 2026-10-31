@@ -114,6 +114,11 @@ export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox' | 'past
   await addTurn({ at: new Date().toISOString(), text: cs.note.slice(0, 200) || t(src === 'link' ? 'arrivedLink' : src === 'paste' ? 'arrivedPaste' : 'arrivedInbox'), kind: 'changes', n }, { cs: gen.id('c'), undo }, src);
 }
 
+/** The morning's change-set, ticked on the planning screen (src/flows/morning.tsx): an exchange of Home's own, so its receipt and Undo show on Home and in History. */
+export async function recordPlanning(cs: ChangeSet, n: number, undo: UndoDoc[]): Promise<void> {
+  await addTurn({ at: new Date().toISOString(), text: t('mornRequest'), kind: 'changes', reply: cs.note || undefined, n }, { cs: gen.id('c'), undo });
+}
+
 /** The receipt line of an exchange: what one change did, else how many changes. */
 export function receiptLine(ex: Exchange): string {
   const applied = ex.turns.filter(x => x.n);

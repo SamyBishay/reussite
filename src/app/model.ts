@@ -12,6 +12,7 @@ import { addDays } from '../domain/dates';
 import { fixedOnDay } from '../domain/agenda';
 import { greeting, nearGoal, type LineInput } from '../domain/greeting';
 import { dayOrder, type DayOrder, type FixedItem } from '../domain/dayOrder';
+import { proposeDay, loadOf, type Proposal, type PropStep } from '../domain/propose';
 import { atOnDay, placeOfDay, wallOf } from '../domain/zone';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
 import { onPage, zoneOfPlace } from '../domain/places';
@@ -169,6 +170,41 @@ export function dayOrderOf(k: string = today.value): DayOrder {
     now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: start, end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone),
     cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: T(rid)!.started! } : null, optional: new Set(dayDoc(k)?.optional ?? []),
   });
+}
+
+/**
+ * The morning's proposal for a day (src/domain/propose.ts) from the list as it stands, and the suit and project of every step it names
+ * (what the AI's reply is read against). The day is laid out from now (or its start) to the end of the day, around its fixed-time items.
+ */
+export function proposalFor(k: string = today.value): { proposal: Proposal; known: Map<string, { suit: Task['suit']; project: string }>; loadFor: (ids: string[], extra?: Record<string, number | null>) => Proposal['load'] } {
+  const s = settings.value;
+  const zone = dayZone(k), place = here.value;
+  const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
+  const events = fixedOnDay(data, s, k).filter(e => e.taskId && T(e.taskId)).sort((a, b) => a.at - b.at);
+  const fixed: FixedItem[] = events.map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template }));
+  const timed = new Set(events.map(e => e.taskId!));
+  const onList = new Set(rawPlan(k));
+  const steps: PropStep[] = [...tasks.value.values()]
+    // Not a standing item, a fixed-time one (those are the first section's) or a step the person put on a later day.
+    .filter(x => isOpen(x) && !isObligation(x) && !x.at && !timed.has(x.id) && !((L.ownerDay(data, x.id) ?? k) > k))
+    .map(x => ({
+      id: x.id, suit: x.suit, project: x.project, quad: quad(x), due: x.due, blocked: blocked(x), order: x.order || 0, onList: onList.has(x.id),
+      atPlace: inPlace(x, place), specific: whereOf(x) !== 'any' && inPlace(x, place),
+    }));
+  const floor = atOnDay(k, s.dayStart, s.dayStart, zone), shape = dayDoc(k)?.shape;
+  const layout = {
+    now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: shape?.start ? Math.max(floor, atOnDay(k, shape.start, s.dayStart, zone)) : floor,
+    end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone), est: (id: string) => { const x = T(id); return x ? planEst(x) : null; }, fixed,
+  };
+  const checks = nudges.value.map(x => x.id);
+  const carried = carriedOn(k);
+  const proposal = proposeDay({
+    today: k, steps, fixed: events.map(e => e.taskId!), checks, carried, layout,
+    projects: [...projects.value.values()].map(p => ({ id: p.id, status: p.status, due: p.due, order: p.order || 0, hasGoal: !!p.goal })),
+  });
+  const known = new Map<string, { suit: Task['suit']; project: string }>();
+  for (const id of [...steps.map(x => x.id), ...timed, ...checks, ...carried]) { const x = T(id); if (x) known.set(id, { suit: x.suit, project: x.project }); }
+  return { proposal, known, loadFor: (ids, extra = {}) => loadOf({ ...layout, est: id => (id in extra ? extra[id] : layout.est(id)) }, ids) };
 }
 
 /** The zone a day's clock is read in (its stay's place, else the one chosen by hand). */

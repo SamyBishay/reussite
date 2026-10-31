@@ -20,6 +20,7 @@ import { aiOn } from '../ai/ask';
 import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
+import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { withTime } from '../domain/calendar';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
@@ -126,7 +127,10 @@ function GreetingBody() {
       <section class="first" data-testid="greeting-plan">
         <p class="eyebrow">{t('noListYet')}</p>
         <p class="t">{t('planTheDayQ')}</p>
-        <div class="go"><button class="btn primary" type="button" onClick={openCheckin} data-testid="home-plan">{t('planTheDay')}</button></div>
+        <div class="go">
+          <button class="btn primary" type="button" onClick={openPlanDay} data-testid="home-plan">{t('planTheDay')}</button>
+          {aiOn.value && <button class="btn ghost" type="button" onClick={openCheckin} data-testid="home-plan-ritual">{t('mornMyself')}</button>}
+        </div>
       </section>
     );
   }

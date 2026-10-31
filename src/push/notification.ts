@@ -8,12 +8,14 @@ import { MAX_PUSH_PLAINTEXT } from './protocol';
 export const APP_TITLE = 'Réussite';
 /** Where a tap on a notification goes, relative to the worker's scope. */
 export const OPEN_URL = './#today';
+/** Where a tap on the morning's notification goes: the planning conversation when an AI is set up (src/flows/morning.tsx), else Today. */
+export const PLAN_URL = './#plan';
 
 /** What is encrypted for one push, as JSON. */
 export interface PushPayload { title: string; body: string; tag: string; url: string }
 
 export function payloadOf(item: { id: string; text: string }): PushPayload {
-  return { title: APP_TITLE, body: item.text, tag: item.id, url: OPEN_URL };
+  return { title: APP_TITLE, body: item.text, tag: item.id, url: item.id.startsWith('checkin:') ? PLAN_URL : OPEN_URL };
 }
 
 const encoder = new TextEncoder();

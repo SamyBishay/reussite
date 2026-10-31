@@ -40,10 +40,32 @@ export async function decideOnboarding(): Promise<Why> {
   const why = await onboardingWhy(db, mirrored());
   if (why === 'sync' || why === 'data') await recordOnboarded(db, 'existing');
   onboarding.value = why === 'new' ? 'show' : 'off';
+  await loadNextSteps();
   return why;
 }
 
-export async function finishedOnboarding(how: 'done' | 'skipped'): Promise<void> {
+/**
+ * Home's "Next steps" card (S9): what first-run setup no longer asks (sync, notifications, Addresses & people, the recovery key,
+ * and the connector if a chatbot app was chosen). Device-local like the record of having finished, and only on the device that ran
+ * setup: an install from before has none, and a card dismissed stays dismissed. `connector`: the person chose Claude or ChatGPT.
+ */
+export interface NextSteps { on: boolean; connector: boolean }
+const NEXT = 'nextSteps';
+export const nextSteps = signal<NextSteps>({ on: false, connector: false });
+
+export async function loadNextSteps(d: ReussiteDb = db): Promise<void> {
+  const v = await getLocal<NextSteps>(d, NEXT);
+  nextSteps.value = v?.on ? { on: true, connector: !!v.connector } : { on: false, connector: false };
+}
+export async function dismissNextSteps(): Promise<void> {
+  nextSteps.value = { ...nextSteps.value, on: false };
+  await setLocal(db, NEXT, nextSteps.value);
+}
+
+export async function finishedOnboarding(how: 'done' | 'skipped', o: { connector?: boolean } = {}): Promise<void> {
   await recordOnboarded(db, how);
+  const n: NextSteps = { on: true, connector: !!o.connector };
+  await setLocal(db, NEXT, n);
+  nextSteps.value = n;
   onboarding.value = 'off';
 }

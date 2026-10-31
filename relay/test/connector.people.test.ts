@@ -67,3 +67,13 @@ describe('the connector does not take addresses', () => {
     expect((await tool(access, 'query_tasks', { text: 'walk to the park' })).text).not.toContain('walk to the park');
   });
 });
+
+describe('the connector does not change the app’s settings', () => {
+  it('refuses a settings.update (the pillars, set up in the app) and writes nothing', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Open Maps and walk to the park' } }, { op: 'settings.update', set: { pillars: [{ name: 'Studio' }] } }] });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain('Nothing was written');
+    expect(r.text).toContain('the connector does not change the app');
+    expect((await tool(access, 'query_tasks', { text: 'walk to the park' })).text).not.toContain('walk to the park');
+  });
+});

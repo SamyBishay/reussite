@@ -25,6 +25,7 @@ When something in my list should change, end your reply with one change-set: one
 | `day.update` | `date`, and any of `plan`, `add`, `remove`, `first` (`launches` is accepted and stored but the app no longer uses launch points: leave it out) |
 | `decision.create` / `decision.update` | `ref?` or `id`, `set` (`title`, `problem`, `options`, `chosen`, `why`, `mustBeTrue`, `falsifier`, `reviewOn`, `steps`) |
 | `address.create` | `set`: `name`, `category?`, `place?`, `mapsUrl?` (only a real Maps link), `street?`, `note?` (why, and what you checked). A place to try, saved as *want to go*; only in the app, not through the connector |
+| `settings.update` | `set`: `pillars` (one to four, in order: `{name, short?}`: the four parts of my days that matter to me, in my words), `preferences` (`detail`: `very short`, `short` or `full`; `know`; `never`). Setting the app up with an AI; only in the app, not through the connector |
 | `place.create` / `place.update` | `ref?` or `id`, `set` (`name`, `timeZone`, `parent`: the place this is an area of; one level only; an area has its parent's time zone) |
 | `memory.add` / `memory.edit` / `memory.remove` | `note`, `text`, `line`, `kind?` (only for what I said, in my words) |
 

@@ -67,3 +67,18 @@ describe('when onboarding shows', () => {
     expect(await onboardingWhy(fresh(), true)).toBe('flag');
   });
 });
+
+describe('the Next steps card', () => {
+  it('shows only on the device that ran set-up, and a dismissal stays', async () => {
+    const { nextSteps, loadNextSteps, finishedOnboarding, dismissNextSteps } = await import('./onboarding');
+    await loadNextSteps(fresh());
+    expect(nextSteps.value.on).toBe(false); // an install from before has none
+    await finishedOnboarding('done', { connector: true });
+    expect(nextSteps.value).toEqual({ on: true, connector: true });
+    await loadNextSteps();
+    expect(nextSteps.value).toEqual({ on: true, connector: true }); // kept on this device
+    await dismissNextSteps();
+    await loadNextSteps();
+    expect(nextSteps.value.on).toBe(false);
+  });
+});

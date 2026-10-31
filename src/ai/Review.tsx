@@ -21,7 +21,7 @@ const FIELD: Record<string, Key> = {
   launches: 'fLaunches', timeZone: 'timeZone', place: 'fPlace', from: 'stayFrom', to: 'stayTo', option: 'fOption', items: 'fItems', steps: 'fSteps',
   template: 'fTemplate', weekdays: 'weekdaysField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
   category: 'addrCategory', mapsUrl: 'addrLink', street: 'addrStreet', state: 'addrState',
-  chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
+  preferences: 'aiPrefsTitle', chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
 };
 const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge', 'start']);
 const IDS = new Set(['after', 'plan', 'order', 'steps', 'first']);
@@ -48,7 +48,7 @@ function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {
 }
 
 const TAG: Record<Planned['kind'], Key | null> = { create: 'chgNew', update: null, done: 'chgDone', drop: 'chgDrop', reorder: 'chgOrder', remember: null };
-const TARGET: Record<Planned['target'], Key | null> = { task: null, project: 'project', day: 'chgDay', place: 'fPlace', stay: 'chgStay', decision: 'chgDecision', memory: null, address: 'chgAddress' };
+const TARGET: Record<Planned['target'], Key | null> = { task: null, project: 'project', day: 'chgDay', place: 'fPlace', stay: 'chgStay', decision: 'chgDecision', memory: null, address: 'chgAddress', settings: 'chgSetup' };
 
 function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () => void; refs: Plan['refTitles'] }) {
   const tag = createsNote(it) ? 'chgNew' : TAG[it.kind], target = TARGET[it.target];
@@ -63,7 +63,8 @@ function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () =>
             if (d.field === 'line' && d.after === undefined) return <span class="diff">{t('chgForget')}: <s>{fmt('line', d.before, refs)}</s></span>;
             const f = d.field.startsWith('problem.') ? 'problem' : d.field;
             const show = (v: unknown) => (d.field === 'problem.deadline' && typeof v === 'string' && v ? fmtIfDay(v) : fmt(f, v, refs));
-            const label = (FIELD[f] ? t(FIELD[f]) : f) + (f === 'problem' ? ' · ' + d.field.slice(8) : '');
+            const pillar = /^pillar (\d)$/.exec(f);
+            const label = (pillar ? t('chgPillar', { n: pillar[1]! }) : FIELD[f] ? t(FIELD[f]) : f) + (f === 'problem' ? ' · ' + d.field.slice(8) : '');
             return <span class="diff">{label}: {d.before !== undefined && it.kind !== 'create' ? <>{show(d.before)} → </> : null}<b>{show(d.after)}</b></span>;
           })}
         </span>

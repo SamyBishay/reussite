@@ -1,5 +1,5 @@
 // The app's Writer for change-sets: every write goes through store.ts and actions.ts.
-import { db, createDoc, update, tasks, today, places, projects, days, decisions, stays, memory, addresses, settings } from '../app/store';
+import { db, createDoc, saveSettings, update, tasks, today, places, projects, days, decisions, stays, memory, addresses, settings } from '../app/store';
 import { createTask, newTaskDoc, finishTask, dropTask, dayPatch, saveStay } from '../app/actions';
 import { addressesOn } from '../app/model';
 import type { Snapshot, Writer } from './apply';
@@ -13,11 +13,13 @@ export const appWriter: Writer = {
   drop: async id => { await dropTask(id); },
   day: (k, patch) => dayPatch(k, patch).then(() => undefined),
   stay: (id, s) => saveStay(id, s),
+  settings: p => saveSettings(p),
   read: async (c, id) => { const d = await db.table_(c).get(id); return d && !d._del ? fieldsOf(d as Stored<Record<string, unknown>>) : undefined; },
 };
 
 export const snapshot = (): Snapshot => ({
   today: today.value, tasks: tasks.value, projects: projects.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, memory: memory.value,
+  settings: { suits: settings.value.suits, language: settings.value.language, aiPreferences: settings.value.aiPreferences },
   // With the module off nothing is suggested: the screens are hidden, and a new address would be unseen.
   ...(addressesOn() ? { addresses: addresses.value, categories: settings.value.addressCategories.map(c => c.id) } : {}),
 });

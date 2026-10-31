@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { ReussiteDb, setLocal } from '../db';
 import Dexie from 'dexie';
-import { runMigrations, migrateData, upgradeEntries, type Migration } from './index';
+import { runMigrations, migrateData, upgradeEntries, goalsReport, type Migration } from './index';
 import { ZERO } from '../hlc';
 import { merge } from '../doc';
 import { SCHEMA_VERSION } from '../schema';
@@ -47,7 +47,7 @@ describe('migration 1 → 2', () => {
       options: [{ name: 'Stay', pros: [['cheaper', 4]], cons: [['small', 2]], prosNot: [], consNot: [], score: 2 }, { name: 'Move', pros: [], cons: [] }],
     });
     await db.decisions.put({ id: 'd2', _v: 1, _hlc: {}, title: 'Later?' });
-    expect(await runMigrations(db)).toEqual({ status: 'migrated', from: 1 });
+    expect(await runMigrations(db)).toMatchObject({ status: 'migrated', from: 1 });
     const d = (await db.decisions.get('d1'))!;
     expect(d).toMatchObject({
       _v: 2, title: 'Stay or move?', mystery: 1, why: 'Cheaper', status: 'decided', chosen: 'Stay', chosenId: 'o0',
@@ -66,8 +66,8 @@ describe('migration 1 → 2', () => {
   });
 });
 
-describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
-  // A schema-1, 2, 3, 4 or 5 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
+describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6 and 6 → 7', () => {
+  // A schema-1, 2, 3, 4, 5 or 6 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
   // exchanges tables), 2 (schema 3: no addresses or people tables) or 3 (schemas 4 and 5).
   async function oldDb(name: string, schema: number): Promise<void> {
     const old = new Dexie(name);
@@ -84,6 +84,11 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
     // A step as every version before 6 wrote it, with a kind of its own; and one that never had a kind.
     await old.table('tasks').put({ id: 't4', _v: schema, _hlc: { title: 'h1', kind: 'h1' }, title: 'A decision step', kind: 'decision', status: 'open' });
     await old.table('tasks').put({ id: 't5', _v: schema, _hlc: { title: 'h1' }, title: 'No kind at all', status: 'open' });
+    // Projects as every version before 7 wrote them: one with a goal and a SMART answer, one with neither, one deleted; steps get `advances: null`.
+    await old.table('projects').put({ id: 'pr1', _v: schema, _hlc: { name: 'h1', goal: 'h2' }, name: 'Thesis', suit: 'S', where: 'any', goal: 'Method drafted by June', goalBy: 'me', smart: { specific: 'Method', measurable: '', attainable: '', relevant: '', dated: '' }, smartBy: 'me', due: '2026-12-15', order: 1, status: 'active', created: '2026-09-03T08:30:00.000Z', mystery: 'kept' });
+    await old.table('projects').put({ id: 'pr2', _v: schema, _hlc: { name: 'h1' }, name: 'Flat', suit: 'C', where: 'any', goal: null, goalBy: null, due: null, order: 2, status: 'active' });
+    await old.table('projects').put({ id: 'pr3', _v: schema, _hlc: { name: 'h1' }, _del: 'h2', name: 'Gone', goal: 'Not counted', created: '2026-01-01T00:00:00.000Z' });
+    await old.table('projects').put({ id: 'pr4', _v: schema, _hlc: { name: 'h1', goal: 'h2' }, name: 'Taxes', suit: 'D', where: 'any', goal: 'Filed by May', goalBy: 'ai', due: null, order: 4, status: 'paused', created: '2026-02-10T10:00:00.000Z' });
     await old.table('decisions').put(schema === 1
       ? { id: 'd1', _v: 1, _hlc: { title: 'h1', problem: 'h1' }, title: 'Stay?', problem: 'Rent', chosen: 'Stay', options: [{ name: 'Stay', pros: [['cheap', 3]], cons: [] }] }
       : { id: 'd1', _v: 2, _hlc: { title: 'h1', problem: 'h1' }, title: 'Stay?', problem: { what: 'Rent', should: '', gap: '', constraints: '', deadline: '', control: '' }, status: 'decided', chosen: 'Stay', chosenId: 'o0', options: [{ id: 'o0', name: 'Stay', pros: [{ id: 'i', text: 'cheap', w: 3 }], cons: [], prosNot: [], consNot: [] }] });
@@ -101,11 +106,12 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
     old.close();
   }
 
-  for (const from of [1, 2, 3, 4, 5]) {
+  for (const from of [1, 2, 3, 4, 5, 6]) {
     it(`brings a schema ${from} database to ${SCHEMA_VERSION}: nothing lost`, async () => {
       await oldDb('upgrade-' + from, from);
       const db = new ReussiteDb('upgrade-' + from); // Dexie upgrades version 1 to 2 when it opens: the new tables exist before the migration runs
-      expect(await runMigrations(db)).toEqual({ status: 'migrated', from });
+      const ran = await runMigrations(db);
+      expect(ran).toMatchObject({ status: 'migrated', from, goals: { outcomes: 2, steps: 6 } });
       expect(await db.tasks.get('t1')).toMatchObject({ title: 'Kept', status: 'open', mystery: { deep: [1, 2] }, _hlc: { title: 'h1' } });
       expect((await db.tasks.get('t2'))!._del).toBe('h2');
       expect(await db.meta.get('settings')).toMatchObject({ language: 'fr' });
@@ -120,7 +126,7 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
       const tm1 = (await db.tasks.get('tm1'))!;
       if (from <= 4) {
         expect(tm1).toMatchObject({ title: 'Choir', template: true, urgent: false, important: false, weekdays: [1], at: '19:00', mystery: 'kept' });
-        expect(tm1._hlc).toEqual({ title: 'h1', template: 'h1', urgent: '0000000000005:0002:abc', important: '0000000000004:0004:abc' });
+        expect(tm1._hlc).toEqual({ title: 'h1', template: 'h1', urgent: '0000000000005:0002:abc', important: '0000000000004:0004:abc', advances: ZERO });
       } else {
         expect(tm1).toMatchObject({ title: 'Choir', template: true, urgent: true, important: true, weekdays: [1], at: '19:00', mystery: 'kept' });
       }
@@ -133,12 +139,48 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
       expect(await db.tasks.get('t3')).toMatchObject({ urgent: true, important: true, _hlc: { title: 'h1', urgent: 'h4' } });
       expect((await db.tasks.get('tm1'))).not.toHaveProperty('label');
       expect((await db.places.toArray()).every(p => !('parentId' in p))).toBe(true);
+      // Schema 7 (SMART goals v2): the goal is copied into the outcome and stays; no bar; the start is the creation day; the five answers and every other field stay.
+      expect(await db.projects.get('pr1')).toMatchObject({ goal: 'Method drafted by June', goalBy: 'me', outcome: 'Method drafted by June', measure: { kind: 'none' }, start: '2026-09-03', smart: { specific: 'Method' }, smartBy: 'me', due: '2026-12-15', mystery: 'kept', _v: 7 });
+      expect((await db.projects.get('pr1'))!._hlc).toMatchObject({ name: 'h1', goal: 'h2', outcome: ZERO, measure: ZERO, start: ZERO });
+      expect(await db.projects.get('pr2')).toMatchObject({ goal: null, outcome: null, measure: { kind: 'none' }, start: null });
+      expect(await db.projects.get('pr4')).toMatchObject({ goal: 'Filed by May', outcome: 'Filed by May', goalBy: 'ai', start: '2026-02-10' });
+      expect(await db.projects.get('pr3')).not.toHaveProperty('outcome');
+      expect((await db.projects.get('pr3'))!._del).toBe('h2');
+      expect(await db.tasks.get('t1')).toMatchObject({ advances: null, _hlc: { title: 'h1', advances: ZERO } });
+      expect(await db.tasks.get('t2')).not.toHaveProperty('advances');
+      for (const t of await db.tasks.toArray()) if (!t._del) expect(t.advances).toBeNull();
+      expect(await db.local.get('goalsReport')).toMatchObject({ key: 'goalsReport', value: { from, outcomes: 2, steps: 6 } });
       expect(await db.local.get('node')).toEqual({ key: 'node', value: 'abc12345' });
       expect(await db.local.get('schema')).toEqual({ key: 'schema', value: SCHEMA_VERSION });
       expect((await db.backups.toArray()).map(b => b.schema)).toEqual([from]);
       expect(await runMigrations(db)).toEqual({ status: 'current' });
     });
   }
+
+  it('6 → 7: a document that already has the goal fields keeps them, a second run changes nothing, and a project with an outcome of its own keeps it', () => {
+    const data = {
+      projects: [
+        { id: 'a', _v: 6, _hlc: { goal: 'h1' }, goal: 'Old', created: '2026-05-01T00:00:00.000Z' },
+        { id: 'b', _v: 7, _hlc: { outcome: 'h9', measure: 'h9', start: 'h9' }, goal: 'Old', outcome: 'Newer words', measure: { kind: 'count', target: 10, unit: 'pages' }, start: '2026-06-01' },
+        { id: 'c', _v: 6, _hlc: {}, goal: '   ' },
+      ],
+      tasks: [{ id: 't', _v: 6, _hlc: {}, title: 'x', advances: true, advanceBy: 3 }, { id: 'u', _v: 6, _hlc: {}, title: 'y' }],
+    };
+    const out = migrateData(structuredClone(data), 6, 7);
+    const by = (c: 'projects' | 'tasks', id: string) => out[c]!.find(x => x.id === id)!;
+    expect(by('projects', 'a')).toMatchObject({ outcome: 'Old', measure: { kind: 'none' }, start: '2026-05-01', goal: 'Old' });
+    expect(by('projects', 'b')).toMatchObject({ outcome: 'Newer words', measure: { kind: 'count', target: 10, unit: 'pages' }, start: '2026-06-01', _hlc: { outcome: 'h9' } });
+    expect(by('projects', 'c')).toMatchObject({ outcome: null, start: null });
+    expect(by('tasks', 't')).toMatchObject({ advances: true, advanceBy: 3 });
+    expect(by('tasks', 'u')).toMatchObject({ advances: null });
+    expect(migrateData(structuredClone(out), 7, 7)).toEqual(out);
+    expect(goalsReport(data, out)).toEqual({ outcomes: 1, steps: 1 });
+  });
+
+  it('6 → 7: a partial document from an older device is not given the new fields', () => {
+    const [part] = upgradeEntries([{ c: 'projects', d: { id: 'p', _v: 6, _hlc: { goal: 'h1' }, goal: 'Typed on the old phone' } }]);
+    expect(part!.d).toEqual({ id: 'p', _v: SCHEMA_VERSION, _hlc: { goal: 'h1' }, goal: 'Typed on the old phone' });
+  });
 
   it('changes no data: migrations 2 → 3, 3 → 4 and 5 → 6 are the identity', () => {
     const data = { tasks: [{ id: 'a', _v: 2, _hlc: { title: 'h' }, title: 'x', odd: 1 }], memory: [], exchanges: [] };

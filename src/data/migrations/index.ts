@@ -5,6 +5,7 @@ import { COLLECTIONS, SCHEMA_VERSION } from '../schema';
 import { type ReussiteDb, dumpAll, getLocal, setLocal } from '../db';
 import { ZERO, after } from '../hlc';
 import { normDecision } from '../normalize';
+import { goalFieldsFor } from '../../domain/goal';
 
 export type Data = Record<string, Record<string, unknown>[]>;
 export type Migration = (data: Data) => Data;
@@ -79,8 +80,52 @@ const v5: Migration = data => ({
  */
 const v6: Migration = data => data;
 
+/**
+ * 6 → 7 (SMART goals v2): additive, and undone by ignoring the new fields. A project gets an `outcome` (its `goal` copied, the
+ * `goal` itself untouched; null when it has none), `measure: { kind: 'none' }` (no bar until the person picks one) and a `start`
+ * (the day it was made; null when it has no creation date). A step gets `advances: null` (not said yet: it moves no bar). `smart`,
+ * `goalBy`, `smartBy` and every other field stay as they are. Every new field takes the oldest clock (`rewrite`), so it never wins
+ * over a real edit, and a document that already carries one (a device that migrated first, or a newer app) keeps it. Deleted
+ * documents are left alone. What it did is counted by `goalsReport`.
+ */
+const v7: Migration = data => ({
+  ...data,
+  projects: (data.projects ?? []).map(p => {
+    const d = p as Doc;
+    if (d._del) return p;
+    const f = goalFieldsFor(d);
+    const next: Record<string, unknown> = {};
+    if (!('outcome' in d)) next.outcome = f.outcome;
+    if (!('measure' in d)) next.measure = f.measure;
+    if (!('start' in d)) next.start = f.start;
+    return rewrite(d, next, 7);
+  }),
+  tasks: (data.tasks ?? []).map(t => {
+    const d = t as Doc;
+    if (d._del) return t;
+    return rewrite(d, 'advances' in d ? {} : { advances: null }, 7);
+  }),
+});
+
+/** What the 6 → 7 migration did: projects given an outcome (they had a goal to copy), and steps given `advances`. */
+export interface GoalsReport { outcomes: number; steps: number }
+export function goalsReport(before: Data, after: Data): GoalsReport {
+  let outcomes = 0, steps = 0;
+  const was = new Map((before.projects ?? []).map(p => [p.id as string, p]));
+  for (const p of after.projects ?? []) {
+    const b = was.get(p.id as string);
+    if (!(p as Doc)._del && b && !('outcome' in b) && typeof p.outcome === 'string' && p.outcome) outcomes++;
+  }
+  const wasT = new Map((before.tasks ?? []).map(t => [t.id as string, t]));
+  for (const t of after.tasks ?? []) {
+    const b = wasT.get(t.id as string);
+    if (!(t as Doc)._del && b && !('advances' in b) && 'advances' in t) steps++;
+  }
+  return { outcomes, steps };
+}
+
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6];
+export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6, v7];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;
@@ -113,7 +158,7 @@ export function upgradeEntries<E extends { c: string; d: { _v: number } }>(entri
   });
 }
 
-export type MigrateResult = { status: 'current' } | { status: 'migrated'; from: number } | { status: 'newer'; found: number };
+export type MigrateResult = { status: 'current' } | { status: 'migrated'; from: number; goals?: GoalsReport } | { status: 'newer'; found: number };
 
 /**
  * Bring the local database up to SCHEMA_VERSION. If the data was written by a newer
@@ -136,5 +181,11 @@ export async function runMigrations(db: ReussiteDb, list = MIGRATIONS, target = 
     }
   });
   await setLocal(db, 'schema', target);
+  // The goals migration (schema 7) says what it did; the app shows it once and Settings keeps it.
+  if (found < 7 && target >= 7) {
+    const goals = goalsReport(before as Data, after);
+    await setLocal(db, 'goalsReport', { at: new Date().toISOString(), from: found, ...goals });
+    return { status: 'migrated', from: found, goals };
+  }
   return { status: 'migrated', from: found };
 }

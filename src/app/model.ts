@@ -19,6 +19,7 @@ import { onPage, zoneOfPlace } from '../domain/places';
 import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
+import { outcomeOf } from '../domain/goal';
 
 export type T = WithId<Task>;
 
@@ -200,7 +201,7 @@ export function proposalFor(k: string = today.value): { proposal: Proposal; know
   const carried = carriedOn(k);
   const proposal = proposeDay({
     today: k, steps, fixed: events.map(e => e.taskId!), checks, carried, layout,
-    projects: [...projects.value.values()].map(p => ({ id: p.id, status: p.status, due: p.due, order: p.order || 0, hasGoal: !!p.goal })),
+    projects: [...projects.value.values()].map(p => ({ id: p.id, status: p.status, due: p.due, order: p.order || 0, hasGoal: !!outcomeOf(p) })),
   });
   const known = new Map<string, { suit: Task['suit']; project: string }>();
   for (const id of [...steps.map(x => x.id), ...timed, ...checks, ...carried]) { const x = T(id); if (x) known.set(id, { suit: x.suit, project: x.project }); }

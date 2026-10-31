@@ -84,6 +84,8 @@ const live = <T>(c: Collection) => (docs: Stored<Record<string, unknown>>[]) => 
 export async function start(): Promise<void> {
   const m = await runMigrations(db);
   if (m.status === 'newer') readOnly.value = true;
+  // The goals migration (schema 7) says once what it did.
+  if (m.status === 'migrated' && m.goals) window.setTimeout(() => toast(t('goalsMigrated', { p: m.goals!.outcomes, s: m.goals!.steps })), 600);
   let node = await getLocal<string>(db, 'node');
   if (!node) {
     node = Math.random().toString(36).slice(2, 10);

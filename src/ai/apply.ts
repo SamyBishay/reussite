@@ -11,6 +11,8 @@ import { isAllowedLink } from '../domain/links';
 import { norm } from '../domain/names';
 import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
 import { toEventFields } from '../domain/events';
+import { mergeMilestones, measureOf, outcomeOf, sameMeasure } from '../domain/goal';
+import type { Measure } from '../data/schema';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -314,7 +316,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       }
       case 'project.create': {
         const f = projectFields(c.set, null);
-        const fields: Project = { name: c.set.name, suit: c.set.suit ?? 'S', where: f.where ?? 'any', goal: null, goalBy: null, due: null, order: Date.parse(gen.now()), status: 'active', created: gen.now(), ...f, by: 'ai' };
+        const fields: Project = { name: c.set.name, suit: c.set.suit ?? 'S', where: f.where ?? 'any', goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: s.today, due: null, order: Date.parse(gen.now()), status: 'active', created: gen.now(), ...f, by: 'ai' };
         items.push({ target: 'project', kind: 'create', title: c.set.name, diffs: Object.entries(f).filter(([k]) => !k.endsWith('By') && k !== 'name').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'create', c: 'projects', ref: c.ref, fields }] });
         break;
       }
@@ -325,8 +327,10 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k.endsWith('By')) continue;
-          if (same(p[k], v)) { delete (f as Record<string, unknown>)[k]; delete (f as Record<string, unknown>)[k + 'By']; continue; }
-          diffs.push({ field: k, before: p[k], after: v });
+          // The outcome falls back to the old goal, and a missing measure is "no bar": compare what the person sees.
+          const was = k === 'outcome' ? outcomeOf(p) || null : k === 'measure' ? measureOf(p) : p[k];
+          if (k === 'measure' ? sameMeasure(was as Measure, v as Measure) : same(was, v)) { delete (f as Record<string, unknown>)[k]; delete (f as Record<string, unknown>)[k + 'By']; continue; }
+          diffs.push({ field: k, before: was, after: v });
         }
         if (!diffs.length) break;
         if (f.status === 'done') f.doneAt = gen.now();
@@ -533,12 +537,22 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     return item(hit, [{ field: 'line', before: ln.text, after: c.text }], { t: 'update', c: 'memory', id: hit.id, patch: { lines: hit.lines.map(l => (l.id === ln.id ? edited : l)), updated: now }, delta: { lines: { edit: edited } } });
   }
 
+  function measureFor(m: NonNullable<Extract<Change, { op: 'project.update' }>['set']['measure']>, cur: Measure): Measure {
+    if (m.kind === 'none') return { kind: 'none' };
+    if (m.kind === 'count') return { kind: 'count', target: m.target, unit: m.unit ?? (cur.kind === 'count' ? cur.unit : '') };
+    return mergeMilestones(cur, m.items.map(i => ({ text: i.text, done: i.done })), s.today, () => gen.id('m'));
+  }
+
   function projectFields(set: Extract<Change, { op: 'project.update' }>['set'], cur: Project | null): Partial<Project> {
     const f: Partial<Project> = {};
     if (set.name) f.name = set.name;
     if (set.suit) f.suit = set.suit;
     if (set.where) { const w = set.where === 'any' ? 'any' : resolve(set.where, s.places, 'place'); if (w) f.where = w; }
-    if (set.goal !== undefined) { f.goal = set.goal || null; f.goalBy = set.goal ? 'ai' : null; }
+    // `goal` is the old name of `outcome`: either sets the outcome (the stored `goal` is left as it was).
+    const outcome = set.outcome !== undefined ? set.outcome : set.goal;
+    if (outcome !== undefined) { f.outcome = outcome || null; f.goalBy = outcome ? 'ai' : null; }
+    if (set.measure) f.measure = measureFor(set.measure, cur ? measureOf(cur) : { kind: 'none' });
+    if (set.start !== undefined) f.start = set.start;
     if (set.smart !== undefined) {
       const base: Smart = { specific: '', measurable: '', attainable: '', relevant: '', dated: '', ...(cur?.smart ?? {}) };
       f.smart = set.smart ? { ...base, ...Object.fromEntries(Object.entries(set.smart).filter(([, v]) => v !== undefined)) } : null;

@@ -9,6 +9,7 @@ import { openSheet, closeSheet } from '../app/sheet';
 import { openDone, showMoment } from '../app/sheets';
 import { celebrate } from '../app/celebrate';
 import { SmartEditor, smartFilled } from '../app/smart';
+import { outcomeOf } from '../domain/goal';
 import { More, countSet } from '../app/More';
 import { DayPick } from '../app/due';
 import { t, fmtDate, fmtIfDay, fmtMin, type Key } from '../i18n';
@@ -331,7 +332,7 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
   const projs = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped' && p.id !== 'inbox');
   const task = d.taskId ? T(d.taskId) : undefined;
   const newProject = async () => {
-    const id = await createDoc<Project>('projects', { name: d.title || d.chosen || t('decisions'), suit: task?.suit ?? 'S', where: task?.where ?? 'any', goal: null, goalBy: null, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
+    const id = await createDoc<Project>('projects', { name: d.title || d.chosen || t('decisions'), suit: task?.suit ?? 'S', where: task?.where ?? 'any', goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: today.value, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
     setPid(id);
     void save(d.id, { projectId: id });
   };
@@ -383,7 +384,7 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
       </form>
       {smartRv ? <ReviewList plan={smartRv.plan} note={smartRv.note} inline onApplied={() => { setSmartRv(null); setSv(sv + 1); }} />
         : <AiAction ai={ai} label={t('aiDraftSteps')} onClick={() => void draft_()} testid="ai-dw-steps" />}
-      {pid && <More open={sv > 0} n={countSet(projects.value.get(pid)?.goal, smartFilled(projects.value.get(pid)?.smart) > 0)} testid="dw-smart-more"><p class="field-label">{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</p><SmartEditor key={sv} projectId={pid} /></More>}
+      {pid && <More open={sv > 0} n={countSet(outcomeOf(projects.value.get(pid) ?? { goal: null }), smartFilled(projects.value.get(pid)?.smart) > 0)} testid="dw-smart-more"><p class="field-label">{t('smartGoalFor', { name: projects.value.get(pid)?.name ?? '' })}</p><SmartEditor key={sv} projectId={pid} /></More>}
       <div class="field"><span>{t('firstStepWhen')}</span>
         <div class="seg" role="group" style="flex-wrap:wrap">
           {(['today', 'tomorrow', 'none'] as const).map(w => <button type="button" aria-pressed={when === w} onClick={() => setWhen(w)}>{t(w === 'today' ? 'pickToday' : w === 'tomorrow' ? 'pickTomorrow' : 'notYet')}</button>)}

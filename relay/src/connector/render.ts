@@ -6,6 +6,7 @@ import { fit, predict, type Model } from '../../../src/domain/estimates';
 import {
   blocked, byPriority, decisionsToCheck, estPointsOf, fixedOn, isEvent, isOpen, listOf, oneLine, planOf, projName, quadOf, stepLine, yesterdayOpen, type TaskW,
 } from '../../../src/domain/lists';
+import { goalLines } from '../../../src/domain/goal';
 import { nudgesDue, waitingList } from '../../../src/domain/events';
 import { addDays } from '../../../src/domain/dates';
 import { fixedOnDay } from '../../../src/domain/agenda';
@@ -247,7 +248,7 @@ export function projectText(v: View, id: string): string {
   const smart = p.smart ? Object.entries(p.smart).filter(([, x]) => x).map(([k, x]) => `${k}: ${oneLine(String(x))}`).join('; ') : '';
   const where = p.where && p.where !== 'any' ? `, place ${v.places.get(p.where)?.name ?? p.where}` : '';
   const done = all.length - open.length + (v.cold?.x.done[id] ?? 0);
-  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\ngoal: ${p.goal ? oneLine(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${done} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
+  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\n${goalLines(p, all, oneLine, !!v.cold?.x.done[id]).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${done} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
 }
 
 // ---------- memory ----------

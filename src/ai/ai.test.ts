@@ -213,7 +213,7 @@ describe('planning and applying change-sets', () => {
     expect(p.skipped).toBe(3);
     const { w, calls } = fakeWriter();
     await applyPlanned(p, () => true, w);
-    expect(calls[0]).toMatchObject(['create', 'projects', { name: 'Move out', goal: 'Keys back by November', goalBy: 'ai', by: 'ai' }]);
+    expect(calls[0]).toMatchObject(['create', 'projects', { name: 'Move out', goal: null, outcome: 'Keys back by November', goalBy: 'ai', by: 'ai', measure: { kind: 'none' } }]);
     expect(calls[1]![1]).toMatchObject({ title: 'Open Mail and ask for the date', project: 'new0', est: 10, estBy: 'ai', by: 'ai' });
     expect(calls[1]![1]).not.toHaveProperty('link');
     expect(calls[2]![1]).toMatchObject({ project: 'new0', after: ['new1'] });

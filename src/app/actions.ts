@@ -12,6 +12,7 @@ import { liveNextHeads, nudgeAfter } from '../domain/events';
 import { releaseFrom } from '../domain/lists';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
+import { offerFor, tickMilestone, measureOf } from '../domain/goal';
 import { t } from '../i18n';
 
 const nowISO = () => new Date().toISOString();
@@ -68,6 +69,8 @@ export interface Finished {
   last: boolean; projectDone: string | null; nextId: string | null; addressId: string | null;
   /** The steps this one freed (the next heads of its chain; never an event, which stays dormant). */
   unlocked: string[];
+  /** The step moves its project's goal and the project has a bar: what to offer (`advanceBy` for a count, a milestone to tick), else null. */
+  goal: { projectId: string; kind: 'count' | 'milestones' } | null;
 }
 
 /**
@@ -86,7 +89,8 @@ export async function finishTask(tk: Tk, typed: number | null, day = today.value
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
   if (tk.personId) await seeStepPerson(tk.personId, day);
-  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value), unlocked: passing };
+  const offer = offerFor(tk, projects.value.get(tk.project));
+  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value), unlocked: passing, goal: offer ? { projectId: tk.project, kind: offer } : null };
 }
 
 /** A project whose real steps are all done moves to the Completed shelf. */
@@ -295,6 +299,13 @@ export async function closeDay(firstId: string | null, newTitle: string) {
 
 // ---------- projects ----------
 export const patchProject = (id: string, p: Partial<Project>) => update<Project>('projects', id, p);
+
+/** Tick a milestone of a project's goal on a day (`day` null opens it again). */
+export async function tickGoalMilestone(projectId: string, milestoneId: string, day: string | null = today.value): Promise<void> {
+  const p = projects.value.get(projectId);
+  if (!p) return;
+  await patchProject(projectId, { measure: tickMilestone(measureOf(p), milestoneId, day) });
+}
 /** Swap a step with its neighbour in its project's order. */
 export async function moveStep(id: string, dir: -1 | 1) {
   const tk = T(id);

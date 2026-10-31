@@ -8,6 +8,7 @@ import { PILLARS, type Plan, type PlanInput } from '../domain/planner';
 import type { Proposal } from '../domain/propose';
 import { lang, fmtMin } from '../i18n';
 import type { Decision, SuitId } from '../data/schema';
+import { outcomeOf } from '../domain/goal';
 import type { DecisionAsk } from './features';
 
 /** `notes`: the names of the memory notes in the request (the profile is in the system prompt), for "Show me what's sent". */
@@ -58,7 +59,7 @@ Reply with JSON only: {"steps": [${STEP_JSON}], "note": "one sentence"}`);
   const user = join([
     header(),
     STEP_HEADER + '\n' + stepLine(tk),
-    p && p.id !== 'inbox' ? `Project: ${one(p.name)}${p.goal ? '; goal: ' + one(p.goal) : ''}` : '',
+    p && p.id !== 'inbox' ? `Project: ${one(p.name)}${outcomeOf(p) ? '; goal: ' + one(outcomeOf(p)) : ''}` : '',
     tk.starter ? 'Its starter now: ' + one(tk.starter) : '',
     tk.note ? 'Its note: ' + one(tk.note).slice(0, 400) : '',
     calibrationLine([tk.app]),
@@ -152,7 +153,7 @@ export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[
   const sec = (head: string, rows: string[]) => `${head}\n${rows.length ? rows.join('\n') : '(no candidates)'}`;
   const proj = (g: Proposal['goals'][number]) => {
     const pr = projects.value.get(g.project);
-    return `${g.project} | ${one(pr?.name ?? g.project)} | goal: ${pr?.goal ? one(pr.goal) : '-'} | due ${pr?.due ?? '-'}\n   first step: ${line(g.step)}${g.more.length ? '\n   then: ' + g.more.map(line).join('\n         ') : ''}`;
+    return `${g.project} | ${one(pr?.name ?? g.project)} | goal: ${pr && outcomeOf(pr) ? one(outcomeOf(pr)) : '-'} | due ${pr?.due ?? '-'}\n   first step: ${line(g.step)}${g.more.length ? '\n   then: ' + g.more.map(line).join('\n         ') : ''}`;
   };
   const load = o.load ?? p.load;
   const place = here.value === 'any' ? 'Anywhere (no place set for today)' : places.value.get(here.value)?.name ?? here.value;

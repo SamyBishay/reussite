@@ -9,6 +9,15 @@ async function openManual(page: Page) {
   await page.getByTestId('open-manual').click();
   await expect(sheet(page).getByTestId('manual')).toBeVisible();
 }
+/** Pictures load as they come into view: bring them in one at a time, so one scrolled past at once is not skipped by the lazy loading. */
+async function showPictures(page: Page) {
+  const n = await page.locator('.manual img.shot').count();
+  for (let i = 0; i < n; i++) {
+    const img = page.locator('.manual img.shot').nth(i);
+    await img.scrollIntoViewIfNeeded();
+    await expect.poll(() => img.evaluate(e => (e as HTMLImageElement).complete && (e as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  }
+}
 const loaded = (page: Page) => page.locator('.manual img.shot').evaluateAll(els => els.map(e => { const i = e as HTMLImageElement; return [i.getAttribute('src'), i.complete && i.naturalWidth > 0]; }));
 
 test('About opens the manual: the contents, a page, a picture, and back', async ({ page }) => {
@@ -61,8 +70,7 @@ test('the French manual does not scroll sideways at 320px', async ({ page }) => 
   for (const link of ['Prise en main', 'La boucle du jour', 'Adresses et proches', 'Synchronisation et appareil perdu', 'Confidentialité']) {
     await sheet(page).locator('article[data-page=index]').getByRole('link', { name: link }).first().click();
     await expect(sheet(page).locator('article:not([data-page=index])')).toBeVisible();
-    await page.locator('.manual img.shot').evaluateAll(els => els.forEach(e => e.scrollIntoView()));
-    await expect.poll(async () => (await loaded(page)).every(([, ok]) => ok)).toBe(true);
+    await showPictures(page);
     await page.locator('.manual').evaluate(el => el.closest('.sheet')?.scrollTo(0, 0));
     await noSideways(page, link);
     await sheet(page).getByTestId('manual-contents').click();
@@ -77,9 +85,7 @@ for (const width of [320, 375, 430]) {
     for (const link of ['Getting started', 'The daily loop', 'Addresses and people', 'Sync and recovering a lost device', 'Privacy']) {
       await sheet(page).locator('article[data-page=index]').getByRole('link', { name: link }).first().click();
       await expect(sheet(page).locator('article:not([data-page=index])')).toBeVisible();
-      // Pictures load as they come into view.
-      await page.locator('.manual img.shot').evaluateAll(els => els.forEach(e => e.scrollIntoView()));
-      await expect.poll(async () => (await loaded(page)).every(([, ok]) => ok)).toBe(true);
+      await showPictures(page);
       await page.locator('.manual').evaluate(el => el.closest('.sheet')?.scrollTo(0, 0));
       await noSideways(page, link);
       await sheet(page).getByTestId('manual-contents').click();

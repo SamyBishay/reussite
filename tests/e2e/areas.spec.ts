@@ -88,6 +88,7 @@ test('the morning check-in can say "afternoon in Heliopolis": the plan puts them
   }
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
+  await page.getByTestId('ci-start-at').fill('09:30'); // the start is now by default; the morning's area needs a morning start
   await page.getByTestId('ci-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
   const halves = page.getByTestId('ci-halves');
   await expect(halves.locator('[data-half=am]')).toBeVisible();

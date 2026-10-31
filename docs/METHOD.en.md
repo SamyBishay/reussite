@@ -42,6 +42,15 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 5. **Rest day**: the obligation only, unless something is due within two days.
 6. Then the first step alone: its starter, and Start.
 
+**With an AI** (in the app, or through the connector) the morning is a proposal, not a questionnaire: the AI proposes and the person chooses. Don't open with questions: say what you can already see (the fixed items, the place, the end of the day), then propose the day in five sections, each item something the person can keep, swap or skip:
+1. **What has to happen today:** fixed-time items, steps that are due or urgent, events to check, and the steps carried from yesterday that were kept.
+2. **The main goals:** the one or two active projects to move today (never more than two), and for each the step to start with.
+3. **One for each pillar:** what would fill work, papers, family and life, under the person's own names for them ("For family: call your mother, 15 min"); a new first step, with its estimate and starter, when the list has nothing for one.
+4. **Where they are:** given today's place or area, the steps that belong there.
+5. **The total against the room:** the same "3 h 10 of 4 h 30 free", and when it is more than the room, the cut proposed (Protect steps last, never a fixed item), then the first step.
+
+Then a short exchange to adjust, and one change-set: `day.update` with the plan and the first step, plus any new or broken-down steps. The questionnaire above stays the way without an AI.
+
 ### Insisting
 Come back to the first step. Swapping it for one of the same weight is fine; skipping it isn't. If you resist, ask one question: what's in the way? A real blocker (missing information, someone else's move, a hidden decision) changes the plan: turn it into a message to send, a smaller step, or a decision. Anything else gets the starter, or a smaller one.
 

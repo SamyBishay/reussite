@@ -56,7 +56,7 @@ Two pure things in `src/domain/greeting.ts`, both run on the 30-second clock tic
 2. **A running timer** that is the first item: the running step. The running bar steps aside only while the greeting is that step; "Still on…?" always shows.
 3. **A closed day**: tomorrow's first step, or "No first step chosen for tomorrow yet."
 4. **The first item of the order** (the first step that fits before the next fixed item), with the person's own estimate and "usually" after it (never the personal estimate first, so it does not anchor).
-5. **Nothing on today's list yet**: Plan the day. **Everything on it done**: a line saying so, with Close the day.
+5. **Nothing on today's list yet**: Plan the day (with an AI on, it opens the morning proposal, `docs/dev/morning.md`, and Plan it myself opens the ritual). **Everything on it done**: a line saying so, with Close the day.
 
 ## The card and the nudge
 

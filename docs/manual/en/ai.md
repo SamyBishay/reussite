@@ -16,6 +16,7 @@ With a key, Réussite can (without a key saved on this device, none of these sho
 
 - turn plain words into changes ("drop the games; the photos are due Friday"): the **Change the list** box on Today, the Matrix and Projects, and the one box on Home;
 - **Improve with AI**: reorder the day's plan, pick between steps, write starters and split big steps. If its plan breaks the method's rules, Réussite says why and keeps the plan made by the rules;
+- **Plan the day with an AI**: Home's **Plan the day** and the morning notification open a proposal in five parts (what has to happen, your main goals, one step for each pillar, what fits where you are, the total against your free time) that you keep, swap or skip, then confirm on the review screen. The daily loop page has the details;
 - **Break it down with AI**: propose small steps with starters and estimates;
 - help with decisions: draft the problem, suggest options you missed, suggest pros and cons (marked "suggested", weight 3 until you set it), draft the steps and a SMART goal. It never sets weights;
 - suggest a smaller starter when you're stuck;

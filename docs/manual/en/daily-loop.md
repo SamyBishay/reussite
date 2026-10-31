@@ -4,7 +4,7 @@ The loop is short: plan the day, start the first step, close the day. Once a wee
 
 ## Plan the day
 
-Open Home and tap **Plan the day**. A notification at your morning check-in time opens it too: it says what the day holds and the room it leaves ("Morning. Today has the 10:00 dentist and room for about 3 h. Plan it?"), or "A free day so far. Plan it?". It is a short morning ritual, one question per screen.
+Open Home and tap **Plan the day**. A notification at your morning check-in time opens it too: it says what the day holds and the room it leaves ("Morning. Today has the 10:00 dentist and room for about 3 h. Plan it?"), or "A free day so far. Plan it?". It is a short morning ritual, one question per screen. With an AI set up, it opens a proposal instead (see **Plan the day with an AI** below), and the ritual is one tap away.
 
 1. **Yesterday.** One line of what was played. Then each step left open is asked about on its own card, one at a time: **Today**, **Another day** (tomorrow or one of the next days), **Drop it** (a second tap confirms; it says what it unlocked) or **Make it a decision** (it opens the decision with the step). If it was done and not ticked, **Already done** asks how long it took. Nothing moves until you answer. A fixed-time thing from yesterday whose time passed is asked about the same way, **Move** (to another day or time) or **Remove**. Réussite says nothing about what didn't happen, and never counts it.
 2. **Today's shape.** What kind of day is it (a usual day, afternoon only, an hour or less, a rest day)? **From when** and **until when**: the start begins at the next five minutes, and the end at the day's end (Settings → Method, 19:00 by default); this morning's answer stands in for that setting, today only. What is fixed today? If one of your places has areas, **Where will you be?** lets you pick one for the morning and one for the afternoon (see [Places and trips](places-and-trips.md)).
@@ -28,6 +28,22 @@ What the plan contains:
 Réussite adds up the estimates and shows what the day will probably take for you.
 
 There are no launch points or restart reminders: steps float between your fixed times, and the order is the one Today follows (see Start here below).
+
+### Plan the day with an AI
+
+When an AI is set up (Settings → AI, with a key on this device), **Plan the day** on Home and the morning notification open a proposal instead of the questions. The AI proposes and you choose; it does not ask you open questions. Before the first one, Réussite shows you what will be sent, as always.
+
+You see your day in five parts, each item with **Skip** and, when there is something else to put in its place, **Swap**:
+
+1. **What has to happen today.** Things at a fixed time (they stay, they are not a choice), steps that are due or urgent, steps from yesterday you still have, and the things you are waiting for that are due to be checked.
+2. **Your main goals.** The one or two projects to move today, and for each the step to start with. **Swap** changes the step, or the project.
+3. **One for each pillar.** What the AI would put in work, papers, family and life, under the names you gave them ("For family: call your mother, 15 min"). When your list has nothing for a pillar, it may write a new step; it is marked **New**.
+4. **Where you are.** Given your place today, the steps that belong there.
+5. **The day, against the time you have.** "3 h 10 of 4 h 30 free", updated as you skip and swap, and the step to start with. When there is more than the time, it says by how much and leaves out what it would cut first, struck out; **Keep it** brings one back.
+
+A skipped step is only left off today's list; it stays on your list. To change the proposal in your own words, type in the box ("lighter on work, add a walk") and tap **Adjust**, or tap **Too much, cut it** or **Room for one more**. What you skipped is not offered again.
+
+**Make the plan** shows the changes the way every AI change is shown, with a tick for each: the new steps, the broken-down ones, and the day's list with its first step. Nothing is written before you tick. Undo is on Home's receipt and in History. If the AI is unreachable you still get the five parts, made by the rules and without its wording, with a way to the ritual. **Plan it myself** opens the ritual at any time. With no AI set up, nothing changes.
 
 **Research says:** untested here. `[E?]`
 

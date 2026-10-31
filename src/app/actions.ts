@@ -9,7 +9,7 @@ import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
 import { parentProblem } from '../domain/places';
 import { liveNextHeads, nudgeAfter } from '../domain/events';
-import { releaseFrom, yesterdayOpen } from '../domain/lists';
+import { releaseFrom } from '../domain/lists';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
 import { t } from '../i18n';
@@ -254,14 +254,6 @@ export async function cloneTemplate(id: string, k = today.value, at?: string, ex
   await addToday(nid, true, k);
   return nid;
 }
-export async function carryOver() {
-  const k = today.value;
-  const add = yesterdayCarry(k);
-  if (!add.length) return;
-  await carry(add, k);
-  toast(t('carried', { n: add.length }));
-}
-const yesterdayCarry = (k: string) => yesterdayOpen({ days: days.value, tasks: tasks.value }, k, addDays(k, -1));
 /**
  * Carry steps to a day's list; each carry counts (at 3, the step is too big or hides a decision). `release` false
  * leaves them on the list they come from too, for a flow that writes the day's final list itself (the check-in).

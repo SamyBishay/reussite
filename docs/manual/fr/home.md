@@ -16,13 +16,15 @@ Sous la ligne, dans cet ordre, le premier cas qui s’applique :
 4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. C’est la même étape que sur Aujourd’hui. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
 5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**.
 
+Si une chose à heure fixe d’aujourd’hui est passée sans être faite, une petite carte sous le texte le dit, « Appeler la banque » était à 10:00, avec **Déplacer** et **Retirer**. Jamais en rouge, une seule à la fois, sans chiffre.
+
 L’accueil n’a ni compteurs, ni liste, ni séries. Ce qui vous attend ne gêne pas : une petite **cloche** en haut montre un point discret quand quelque chose attend, et ouvre la page **Notifications**.
 
 ## La cloche
 
 ![La page Notifications](shot:notifications)
 
-La page **Notifications** liste tout ce qui attend, et pas seulement le plus pressant : votre clé de récupération si vous ne l’avez pas gardée, les décisions à vérifier, les étapes d’hier reportées et le jour de la revue. Le point n’a pas de chiffre et n’est jamais rouge. Quand rien n’attend, la page le dit.
+La page **Notifications** liste tout ce qui attend, et pas seulement le plus pressant : votre clé de récupération si vous ne l’avez pas gardée, les décisions à vérifier, les étapes d’hier restées ouvertes (**Les décider une par une** les ouvre une carte à la fois ; rien ne bouge tout seul) et le jour de la revue. Le point n’a pas de chiffre et n’est jamais rouge. Quand rien n’attend, la page le dit.
 
 ## La boîte unique
 

@@ -49,6 +49,18 @@ export async function importSample(page: Page) {
   await expect(page.getByTestId('first')).toContainText('Doctolib');
 }
 
+/** The ritual's first screens: each step left open yesterday is carried to today, one tap on its own card (nothing moves by itself now), until the shape screen. */
+export async function carryAll(page: Page) {
+  const card = page.getByTestId('carried-card'), shape = page.getByTestId('ci-shape');
+  for (;;) {
+    await expect(card.or(shape)).toBeVisible();
+    if (await shape.isVisible()) return;
+    const title = await card.innerText();
+    await page.getByTestId('carried-today').click();
+    await expect(card.filter({ hasText: title })).toHaveCount(0);
+  }
+}
+
 export async function noSideways(page: Page, where: string) {
   const r = await page.evaluate(() => {
     const doc = document.documentElement;

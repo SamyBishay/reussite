@@ -16,13 +16,15 @@ Under the line, in this order, the first that applies:
 4. **There is a next step.** You see **Start here**, the starter and **Start**. It is the same step Today shows. **Drop it** drops the step if it no longer matters: tap it twice.
 5. **Nothing is planned yet.** You see **Plan the day**.
 
+If something at a fixed time today has passed and is not done, one small card under the greeting says so, "“Call the bank” was at 10:00", with **Move** and **Remove**. It is never red, there is one at a time, and it has no number.
+
 Home has no counts, no list and no streaks. What waits for you is not in the way: a small **bell** at the top shows a quiet dot when something is waiting, and opens the **Notifications** page.
 
 ## The bell
 
 ![The Notifications page](shot:notifications)
 
-The **Notifications** page lists everything that waits, all of it and not only the most urgent: your recovery key if you haven't saved it, decisions to check, yesterday's steps that carried over, and the review day. The dot has no number and is never red. When nothing waits, the page says so.
+The **Notifications** page lists everything that waits, all of it and not only the most urgent: your recovery key if you haven't saved it, decisions to check, yesterday's steps left open (**Decide them one at a time** opens them one card at a time; nothing moves by itself), and the review day. The dot has no number and is never red. When nothing waits, the page says so.
 
 ## The one box
 

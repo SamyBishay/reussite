@@ -2,13 +2,14 @@
 // which edits any day's plan and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places, hereZone } from '../app/store';
-import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, nudges, type T as Tk } from '../app/model';
-import { startTask, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
+import { T, dayCards, dayDoc, whereOf, candidates, carriedOn, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, nudges, type T as Tk } from '../app/model';
+import { startTask, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { DoneFold } from '../app/DoneFold';
 import { Clock } from '../app/Clock';
+import { MissedNow, openCarried } from '../app/CarryUi';
 import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
 import { openCheckin } from '../flows/checkin';
@@ -268,7 +269,7 @@ export function Today() {
   const sd = splitDone(plan, id => T(id)!.status === 'done');
   const inOrder = new Set(sd.open);
   const seq = [...dorder.map(x => x.id).filter(id => inOrder.has(id)), ...sd.open.filter(id => !dorder.some(x => x.id === id))];
-  const yOpen = yesterdayOpen(k);
+  const yOpen = carriedOn(k);
   const rest = seq.filter(id => id !== fid);
   const zone = hereZone.value;
   const proj: Projected = new Map(dorder.filter(x => x.kind === 'step' && x.id !== fid).map(x => [x.id, wallOf(x.start, zone)]));
@@ -305,8 +306,9 @@ export function Today() {
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
+      <MissedNow />
       {yOpen.length > 0 && (
-        <div class="carry"><p>{t('carryText', { n: yOpen.length })}</p><button class="btn small" type="button" onClick={carryOver}>{t('carryButton', { n: yOpen.length })}</button></div>
+        <div class="carry" data-testid="carry-card"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried} data-testid="carry-open">{t('carryButton')}</button></div>
       )}
       <div class="after-first">
         <div class="adders" data-testid="adders">

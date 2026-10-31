@@ -4,12 +4,12 @@
 import { More } from '../app/More';
 import { useState } from 'preact/hooks';
 import { today, settings, tasks, here, days, places, stays, decisions, createDoc } from '../app/store';
-import { yesterdayOpen } from '../domain/lists';
 import { areaOfStep } from '../app/areas';
 import { areaName, placeName } from '../app/sheets';
 import { areasOnPage, HALF_DAY_AT, type Half, type HalfDay } from '../domain/areas';
-import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, personal, planEst, lastDoneOf, cardsOn, minutesOn, timeOnDay, dayZone, dayOrderOf, type T as Tk } from '../app/model';
-import { finishTask, carry, dayPatch, cloneTemplate, patchTask, addSession, newTaskDoc, startTask } from '../app/actions';
+import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, personal, planEst, lastDoneOf, cardsOn, minutesOn, timeOnDay, dayZone, dayOrderOf, carriedOn, missedOn, type T as Tk } from '../app/model';
+import { dayPatch, cloneTemplate, addSession, newTaskDoc, startTask } from '../app/actions';
+import { CarriedFlow, MissedFlow } from '../app/CarryUi';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Meta, Est, Suit, quadName, suitName } from '../app/ui';
 import { flows } from '../app/sheets';
@@ -71,7 +71,7 @@ export function planInput(k: string, shape: { start: string; preset: Preset; fix
   };
 }
 
-type Screen = 'yesterday' | 'carry' | 'shape' | 'pillars' | 'plan' | 'first';
+type Screen = 'yesterday' | 'missed' | 'shape' | 'pillars' | 'plan' | 'first';
 interface FixedIn { title: string; at: string; dur: number }
 
 const STEPS = 4;
@@ -94,10 +94,12 @@ function YesterdayLine({ y }: { y: string }) {
 function Checkin() {
   const k = today.value, y = addDays(k, -1);
   const [started] = useState(() => Date.now());
-  const yOpen = yesterdayOpen({ days: days.value, tasks: tasks.value }, k, y).map(id => T(id)).filter(isOpen); // not those a later list holds
-  const [screen, setScreen] = useState<Screen>(yOpen.length ? 'yesterday' : 'shape');
-  const [ticked, setTicked] = useState<Record<string, number | null>>({});
-  const [heavy, setHeavy] = useState<string[]>([]);
+  // Yesterday's open steps and timed items that passed, decided one at a time; fixed when the ritual opens, so the lists don't shift under the cards.
+  const [carriedIds] = useState(() => carriedOn(k));
+  const [missedIds] = useState(() => missedOn(y));
+  const [first] = useState<Screen>(carriedIds.length ? 'yesterday' : missedIds.length ? 'missed' : 'shape');
+  const [screen, setScreen] = useState<Screen>(first);
+  const afterCarried = () => setScreen(missedIds.length ? 'missed' : 'shape');
   const [start, setStart] = useState(dayDoc(k)?.shape?.start ?? startNow());
   const [preset, setPreset] = useState<Preset>('normal');
   // Until when: this morning's end of the day, which stands in for the `dayEnd` setting.
@@ -123,46 +125,22 @@ function Checkin() {
   const [proposed, setProposed] = useState<ChangePlan | null>(null);
   const [reviewing, setReviewing] = useState(false);
 
-  const yesterdayDone = async () => {
-    for (const x of yOpen) if (x.id in ticked) await finishTask(x, ticked[x.id] ?? null, y);
-    const rest = yOpen.filter(x => !(x.id in ticked));
-    await carry(rest.map(x => x.id), k, false); // they leave yesterday's list only if the plan keeps them
-    const h = rest.filter(x => (x.carried || 0) + 1 >= 3).map(x => x.id);
-    setHeavy(h);
-    setScreen(h.length ? 'carry' : 'shape');
-  };
-
   if (screen === 'yesterday') return (
     <div class="flow" data-testid="ci-yesterday">
       <p class="eyebrow">{t('ciStep', { n: 1, of: STEPS })}</p>
-      <h3>{t('ciYesterday')}</h3>
+      <h3>{t('ciCarriedTitle')}</h3>
       <YesterdayLine y={y} />
-      <p class="hint">{t('ciYesterdayHint')}</p>
-      <ul class="picklist">{yOpen.map(x => (
-        <li><div><p><Title s={x.title} /></p>
-          <div class="chips-pick small">
-            {[5, 15, 30, 60].map(m => <button type="button" aria-pressed={ticked[x.id] === m} onClick={() => setTicked({ ...ticked, [x.id]: m })}>{m === 60 ? '60+' : m}</button>)}
-            <button type="button" aria-pressed={x.id in ticked && ticked[x.id] == null} onClick={() => setTicked({ ...ticked, [x.id]: null })}>{t('didntTimeShort')}</button>
-            {x.id in ticked && <button type="button" onClick={() => { const n = { ...ticked }; delete n[x.id]; setTicked(n); }}>{t('notDone')}</button>}
-          </div></div></li>
-      ))}</ul>
-      <p class="hint" style="margin-top:var(--s3)">{t('ciCarryNote')}</p>
-      <div class="actions"><button class="btn primary" type="button" onClick={() => void yesterdayDone()} data-testid="ci-next">{t('next_')}</button></div>
+      <p class="hint">{t('ciCarriedHint')}</p>
+      <CarriedFlow ids={carriedIds} k={k} release={false} onDone={afterCarried} />
     </div>
   );
 
-  if (screen === 'carry') return (
-    <div class="flow" data-testid="ci-carry">
-      <h3>{t('ciHeavy')}</h3>
-      <p class="hint">{t('ciHeavyHint')}</p>
-      <ul class="picklist">{heavy.map(id => T(id)).filter(isOpen).map(x => (
-        <li><div><p><Title s={x.title} /></p><p class="meta">{t('carriedTag', { n: x.carried })}</p>
-          <div class="go" style="margin-top:var(--s2)">
-            <button class="btn small" type="button" onClick={() => flows.breakDown(x.id)}>{t('shrinkIt')}</button>
-            <button class="btn small" type="button" onClick={() => { void patchTask(x.id, { kind: 'decision' }); flows.decide(null, { taskId: x.id }); }}>{t('makeDecision')}</button>
-          </div></div></li>
-      ))}</ul>
-      <div class="actions"><button class="btn primary" type="button" onClick={() => setScreen('shape')}>{t('keepGoingPlan')}</button></div>
+  if (screen === 'missed') return (
+    <div class="flow" data-testid="ci-missed">
+      <p class="eyebrow">{t('ciStep', { n: 1, of: STEPS })}</p>
+      <h3>{t('ciMissedTitle')}</h3>
+      {first === 'missed' && <YesterdayLine y={y} />}
+      <MissedFlow ids={missedIds} on={y} onDone={() => setScreen('shape')} />
     </div>
   );
 
@@ -189,7 +167,7 @@ function Checkin() {
       <div class="flow" data-testid="ci-shape">
         <p class="eyebrow">{t('ciStep', { n: 2, of: STEPS })}</p>
         <h3>{t('ciShape')}</h3>
-        {!yOpen.length && <YesterdayLine y={y} />}
+        {first === 'shape' && <YesterdayLine y={y} />}
         <div class="field"><span>{t('ciKindOfDay')}</span>
           <div class="chips-pick">{PRESETS.map(([p, key]) => <button type="button" aria-pressed={preset === p} onClick={() => pick(p)}>{t(key)}</button>)}</div>
         </div>

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { importSample, noSideways, expandSettings, expandSheet, addCard } from './helpers';
+import { importSample, carryAll, noSideways, expandSettings, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 // The app's day starts at 05:00; before that it is still the day before.
@@ -45,7 +45,7 @@ test(`a standing item with weekdays sits in the plan at its time, with its leave
 
   await page.getByTestId('tab-today').click();
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
-  await page.getByTestId('ci-next').click();
+  await carryAll(page);
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();
   // The plan is in the order of the day: the choir sits at its time (leave at 18:30), after the steps that come before it.

@@ -737,6 +737,13 @@ body > .row,body > li{list-style:none}
 .waitlist .go{margin-top:var(--s1)}
 .banner.nudge{display:grid;justify-content:stretch;gap:var(--s2)}
 .banner.nudge p{overflow-wrap:anywhere}
+.banner.missed{display:grid;justify-content:stretch;gap:var(--s2);background:var(--panel);border:1px dashed var(--line);color:var(--ink-2);margin-top:var(--s3)}
+.banner.missed p{overflow-wrap:anywhere}
+.banner.missed .go{margin-top:0;flex-wrap:wrap}
+.missed-move{display:grid;gap:var(--s2)}
+.carrycard{display:grid;gap:var(--s2)}
+.carrycard .t{overflow-wrap:anywhere}
+.carrycard .go{flex-wrap:wrap}
 /* ---------- the morning ritual: pillars ---------- */
 .pillar{margin-top:var(--s4)}
 .pillar h4{font:600 13px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin:0}

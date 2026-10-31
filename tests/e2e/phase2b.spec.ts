@@ -314,7 +314,15 @@ test('what is waiting is behind the bell: Home has a dot, the page lists it with
   await expect(page.locator('.mast')).toHaveCount(0);
   const n = page.getByTestId('carry-nudge');
   await expect(n).toContainText('from yesterday');
+  const before = (await live(page, 'days')).map(d => JSON.stringify(d.plan)).join();
   await n.getByRole('button').click();
+  await expect(page.getByTestId('carried-sheet')).toBeVisible(); // no bulk carry: the steps are asked one at a time
+  expect((await live(page, 'days')).map(d => JSON.stringify(d.plan)).join()).toBe(before);
+  while (await page.getByTestId('carried-today').isVisible()) {
+    const title = await page.getByTestId('carried-card').innerText();
+    await page.getByTestId('carried-today').click();
+    await expect(page.getByTestId('carried-card').filter({ hasText: title })).toHaveCount(0);
+  }
   await expect(page.getByTestId('carry-nudge')).toHaveCount(0);
   await expect(page.getByTestId('notifications-empty')).toBeVisible();
   await goTab(page, 'home');

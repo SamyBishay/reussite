@@ -30,7 +30,7 @@ Touchez **Je bloque**. Choisissez la friction, faites juste le démarreur, et si
 
 ## Une étape n’arrête pas de revenir.
 
-Une étape reportée trois fois ou plus est trop grosse, ou cache une décision. Touchez **La réduire** ou **C’est une décision** dans le point du matin.
+Une étape reportée trois fois ou plus est trop grosse, ou cache une décision. Sur sa carte, dans le point du matin, touchez **La réduire** ou **En faire une décision**.
 
 ## J’ai oublié de lancer le chrono.
 

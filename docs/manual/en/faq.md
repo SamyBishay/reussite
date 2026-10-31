@@ -30,7 +30,7 @@ Tap **I'm stuck**. Pick the friction, do just the starter, and if it still won't
 
 ## A step keeps carrying over.
 
-A step carried three times or more is too big, or hides a decision. Tap **Shrink it** or **It's a decision** in the check-in.
+A step carried three times or more is too big, or hides a decision. On its card in the check-in, tap **Shrink it** or **Make it a decision**.
 
 ## I forgot to start the timer.
 

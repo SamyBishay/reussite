@@ -135,6 +135,13 @@ describe('missed and over', () => {
     expect(dayOrder(day('10:30', { cards: [], fixed: [plain] })).order).toEqual([]);
   });
 
+  it('yesterday, read the next morning: everything that was not done is missed, the running one excepted (the ritual asks about each)', () => {
+    const next = day('08:00', { now: at('08:00') + 24 * 3_600_000, cards: [] });
+    expect(dayOrder({ ...next, fixed: [call, dentist] }).missed).toEqual(['call', 'dentist']);
+    const timed = { ...next, fixed: [call, dentist], running: { id: 'dentist', started: new Date(at('13:50')).toISOString() } };
+    expect(dayOrder(timed).missed).toEqual(['call']);
+  });
+
   it('a standing item that was never placed on the day is not missed once it is over', () => {
     const choir: FixedItem = { id: 'choir', at: at('19:00'), lead: 30, standing: true };
     expect(dayOrder(day('18:30', { cards: [], fixed: [choir] })).order[0]).toMatchObject({ id: 'choir', start: at('18:30') });

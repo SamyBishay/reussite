@@ -208,7 +208,16 @@ export async function setPlanOrder(shown: string[], k = today.value) {
   if (next.some((x, i) => x !== p[i])) await dayPatch(k, { plan: next });
 }
 export const removeToday = (id: string, k = today.value) => dayPatch(k, { plan: rawPlan(k).filter(x => x !== id) });
-export async function movePlan(id: string, dir: -1 | 1, k = today.value) {
+/** One place earlier or later. With `shown` (the open cards in the order they are shown, which is the day's order and may differ from the list's), it is one place among those. */
+export async function movePlan(id: string, dir: -1 | 1, k = today.value, shown?: readonly string[]) {
+  if (shown) {
+    const i = shown.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= shown.length) return;
+    const next = [...shown];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    await setPlanOrder(next, k);
+    return;
+  }
   const p = rawPlan(k).includes(id) ? rawPlan(k) : dayCards(k);
   const i = p.indexOf(id), j = i + dir;
   if (i < 0 || j < 0 || j >= p.length) return;

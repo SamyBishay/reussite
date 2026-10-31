@@ -11,6 +11,7 @@ import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
 import { SmartEditor, smartFilled } from '../app/smart';
 import { More, Fold, countSet } from '../app/More';
+import { DoneFold } from '../app/DoneFold';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
 import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
@@ -100,7 +101,8 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
       ))}</ul>}
       <details open={openProj.has(p.id)} onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) openProj.add(p.id); else openProj.delete(p.id); }}>
         <summary>{tmpl.length && !total ? t('standingItems') : tmpl.length ? t('stepsAndStanding') : t('steps')}</summary>
-        <ol class="steps" ref={listRef}>{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} sortable />)}{doneSorted.map(x => <Step key={x.id} tk={x} />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
+        <ol class="steps" ref={listRef}>{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} sortable />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
+        <DoneFold n={doneSorted.length} testid="project-done"><ol class="steps">{doneSorted.map(x => <Step key={x.id} tk={x} />)}</ol></DoneFold>
         <form class="addstep" onSubmit={add}>
           <input type="text" name="title" placeholder={t('nextStepPlaceholder')} aria-label={t('newStepFor', { name: p.name })} autocomplete="off" required />
           <input type="number" name="est" min="1" max="600" placeholder={t('minShort')} aria-label={t('estimateMin')} />

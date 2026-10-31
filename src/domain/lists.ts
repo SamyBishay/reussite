@@ -114,6 +114,13 @@ export const dayCards = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): string[] =
   return out;
 };
 
+/** A list's cards with the done ones set apart: the open ones in their order, then the done ones in theirs (one "N done" fold under every list). */
+export function splitDone(ids: readonly string[], isDone: (id: string) => boolean): { open: string[]; done: string[] } {
+  const open: string[] = [], done: string[] = [];
+  for (const id of ids) (isDone(id) ? done : open).push(id);
+  return { open, done };
+}
+
 /** Steps on yesterday's list still open and not on `k`'s list. */
 export const yesterdayOpen = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey, prev: DayKey) => {
   const plan = rawPlan(d.days, k);

@@ -3,7 +3,8 @@
 // has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, clockNow } from '../app/store';
-import { T, dayDoc, greetingNow, planEst } from '../app/model';
+import { T, dayDoc, greetingNow, planEst, fixedFirst, lineInputNow } from '../app/model';
+import { shownGreetings, rememberGreeting } from '../app/greetingShown';
 import { openSheet, closeSheet, Title, Est } from '../app/ui';
 import { openPause, openDone, DurationPicker, DropButton } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
@@ -20,6 +21,7 @@ import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
 import { withTime } from '../domain/calendar';
+import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
 
 function HomeMenu() {
@@ -55,17 +57,43 @@ function Step({ id }: { id: string }) {
   );
 }
 
+/** A fixed-time item that has taken over: its time and when to leave. A standing item not yet placed on the day has nothing to start. */
+function FixedStep() {
+  const f = fixedFirst(), tk = f && T(f.id);
+  if (!f || !tk) return null;
+  return (
+    <>
+      <p class="t" data-testid="greeting-line"><Title s={withTime(tk.title, f.time)} /> · {t('leaveAtLine', { t: f.leave })}</p>
+      {!tk.template && (
+        <div class="go">
+          <button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button>
+          <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * The line above the card: one sentence from the templates, filled with what is true today (src/domain/greeting.ts). It is chosen
+ * when Home opens and kept while it stays open (unless what it says stops being true), and is not the same as one said earlier today
+ * while another fits. It is the same with an AI on: the AI's work lives in the conversation, not in this wording.
+ */
+function GreetingLine() {
+  const day = today.value;
+  const chosen = useRef<GreetingKey | null>(null);
+  const input = lineInputNow();
+  let line = chosen.current ? eligibleLines(input).find(l => l.key === chosen.current) : undefined;
+  if (!line) {
+    line = greetingLine(input, shownGreetings(day), seedOf(day)) ?? undefined;
+    chosen.current = line?.key ?? null;
+    if (line) rememberGreeting(day, line.key);
+  }
+  return line ? <p class="greetline" data-testid="greeting-hello" data-key={line.key}>{t(line.key, line.slots)}</p> : null;
+}
+
 function GreetingBody() {
   const g = greetingNow.value;
-  if (g.kind === 'fixed') {
-    const e = g.event;
-    return (
-      <section class="first" data-testid="greeting-fixed">
-        <p class="eyebrow">{t('homeUpNext')}</p>
-        <p class="t" data-testid="greeting-line">{withTime(e.title ?? '', e.time)} · {t('leaveAtLine', { t: g.leave })}</p>
-      </section>
-    );
-  }
   if (g.kind === 'running') {
     const tk = T(g.id);
     if (!tk) return null;
@@ -90,7 +118,7 @@ function GreetingBody() {
     );
   }
   if (g.kind === 'next') {
-    return <section class="first focus" data-testid="greeting-next"><p class="eyebrow">{t('startHere')}</p><Step id={g.id} /></section>;
+    return <section class="first focus" data-testid="greeting-next"><p class="eyebrow">{t('startHere')}</p>{g.fixed ? <FixedStep /> : <Step id={g.id} />}</section>;
   }
   if (g.kind === 'plan') {
     return (
@@ -234,6 +262,7 @@ export function Home() {
           </button>
           </div>
         </div>
+        <GreetingLine />
         <GreetingBody />
       </section>
       <Card />

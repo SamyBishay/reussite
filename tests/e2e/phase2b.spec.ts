@@ -9,7 +9,7 @@ for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await importSample(page);
-    const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' }); // by hand with nothing running: the first card
+    const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' });
 
     await newCardSheet(page, 'Dentist 14:30');
     await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
@@ -30,8 +30,8 @@ for (const width of [320, 375, 430]) {
     await expect(sheet(page)).toBeHidden();
     await expect(row).toHaveCount(1);
 
-    // Saved with its time, and on today's list.
-    await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
+    // Saved with its time, and on today's list (Start here, or a row, whatever the clock says).
+    await row.getByRole('button', { name: /^(Edit|Details)$/ }).click();
     await sheet(page).locator('details.more summary').click();
     await expect(sheet(page).locator('input[name=at]')).toHaveValue('14:30');
     await expect(sheet(page).getByTestId('set-time')).toHaveCount(0);
@@ -122,7 +122,7 @@ test('the choir phrase makes a standing item with its time and weekday, and Undo
   await expect(page.locator('[data-project=inbox] [data-task]', { hasText: 'Choir' })).toHaveCount(0);
 });
 
-test('on a Monday the greeting is the next step until 18:30, then the choir with when to leave', async ({ page }) => {
+test('on a Monday Start here is the next step until the choir needs the time, then the choir with when to leave', async ({ page }) => {
   const at = (hh: number, mm: number) => new Date(2026, 9, 26, hh, mm, 0); // Monday 26 October, this computer's clock
   await page.clock.setFixedTime(at(10, 0));
   await page.goto('/');
@@ -132,18 +132,27 @@ test('on a Monday the greeting is the next step until 18:30, then the choir with
   await addCard(page, 'Call the bank');
   await expect(page.getByTestId('first')).toContainText('Call the bank');
 
-  await page.clock.setFixedTime(at(18, 29));
+  // The step has no estimate, so it counts 15 minutes, and 5 more of margin: it is Start here until 18:10 (15 + 5 before 18:30).
+  await page.clock.setFixedTime(at(18, 10));
   await page.reload();
   await goTab(page, 'home');
   await expect(page.getByTestId('greeting-next')).toContainText('Call the bank');
-  await expect(page.getByTestId('greeting-fixed')).toHaveCount(0);
+  await expect(page.getByTestId('greeting-line')).toHaveCount(0);
+
+  // A minute later it would run into the time to leave: the choir takes over, with when to leave. Today shows the same one.
+  await page.clock.setFixedTime(at(18, 11));
+  await page.reload();
+  await goTab(page, 'home');
+  await expect(page.getByTestId('greeting-next')).toContainText('Choir 19:00, Hill House 602 · leave at 18:30');
+  await expect(page.getByTestId('greeting-line')).toHaveText('Choir 19:00, Hill House 602 · leave at 18:30');
+  await expect(page.locator('.mast, .side')).toHaveCount(0);
+  await goTab(page, 'today');
+  await expect(page.getByTestId('first')).toContainText('Choir 19:00, Hill House 602 · leave at 18:30');
 
   await page.clock.setFixedTime(at(18, 30));
   await page.reload();
   await goTab(page, 'home');
   await expect(page.getByTestId('greeting-line')).toHaveText('Choir 19:00, Hill House 602 · leave at 18:30');
-  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
-  await expect(page.locator('.mast, .side')).toHaveCount(0);
 
   // It lets go once the item is over (30 minutes with no length of its own).
   await page.clock.setFixedTime(at(19, 30));

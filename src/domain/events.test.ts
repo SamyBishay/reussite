@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { chainIndex, isWaiting, nextHeads } from './chains';
 import { finishEffects, newTaskFields, projectCompletes } from './effects';
 import { liveNextHeads, nudgeAfter, nudgesDue, snoozeNudge, toEventFields, waitingList } from './events';
-import { startHere } from './greeting';
+import { dayOrder } from './dayOrder';
 import { blocked, estPointsOf, fixedOn, isEvent, isOpen, planOf, stepLine, type TaskW } from './lists';
 
 const mk = (id: string, p: Partial<TaskW> = {}): [string, TaskW] => [id, { ...newTaskFields(id, 'S', 'p1', {}, new Map(), '2026-10-20T08:00:00.000Z', 1), id, ...p } as TaskW];
@@ -11,7 +11,7 @@ const map = (...a: [string, TaskW][]) => new Map(a);
 const TODAY = '2026-10-31';
 
 describe('a dormant event', () => {
-  it('is not open work: not in isOpen, a day’s list, Start here or the fixed-time items', () => {
+  it('is not open work: not in isOpen, a day’s list, the day’s order or the fixed-time items', () => {
     const e = ev('e')[1];
     expect(isEvent(e)).toBe(true);
     expect(isOpen(e)).toBe(false);
@@ -20,8 +20,9 @@ describe('a dormant event', () => {
     const d = { days: new Map([['2026-10-31', { plan: ['e', 'a'] } as never]]), tasks };
     expect(planOf(d, '2026-10-31')).toEqual(['a']);
     expect(fixedOn(d, '2026-10-31')).toEqual([]);
-    expect(startHere(planOf(d, '2026-10-31'), id => isOpen(tasks.get(id)), () => false).id).toBe('a');
-    expect(startHere(['e'], id => isOpen(tasks.get(id)), () => false).id).toBeNull();
+    const order = (ids: string[]) => dayOrder({ now: 0, floor: 0, end: 1e12, cards: ids.filter(id => isOpen(tasks.get(id))), est: () => null, fixed: [] }).order.map(x => x.id);
+    expect(order(planOf(d, '2026-10-31'))).toEqual(['a']);
+    expect(order(['e'])).toEqual([]);
   });
 
   it('is kept out of the estimates even with a stray frozen estimate', () => {

@@ -94,7 +94,7 @@ describe('settings.update', () => {
     };
     expect(await applyPlanned(p, i => i === 0, w)).toBe(1);
     expect(wrote).toHaveLength(1);
-    expect(wrote[0]![0]).toBe('settings');
+    expect((wrote[0] as unknown[])[0]).toBe('settings');
     expect(await applyPlanned(p, () => false, w)).toBe(0);
     expect(wrote).toHaveLength(1);
   });

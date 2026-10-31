@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
 import { settings, saveSettings, createDoc, places, toast } from '../app/store';
+import { applyTheme } from '../app/theme';
 import { go } from '../app/nav';
 import { Mark } from '../app/Mark';
 import { finishedOnboarding } from '../app/onboarding';
@@ -116,6 +117,8 @@ export function Onboarding() {
   useEffect(() => {
     if (/^fr\b/i.test(navigator.language ?? '') && lang.value !== 'fr') { lang.value = 'fr'; set({ language: 'fr' }); }
   }, []);
+  // The language shows as it is chosen (and the default look: St George, light or dark as the system has it); nothing is saved until the end.
+  useEffect(() => { applyTheme(merged); });
   // The key tutorial's provider is used by the conversation at once; it is saved with the rest at the end.
   useEffect(() => { draftProvider.value = id === 'key' || id === 'chat' ? provider : null; return () => { draftProvider.value = null; }; }, [id, provider]);
 

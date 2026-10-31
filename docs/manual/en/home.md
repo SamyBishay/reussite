@@ -72,7 +72,7 @@ Open **History** from the menu at the top of Home. It lists the last 90 days of 
 
 ## The menu
 
-The menu icon at the top of Home holds what has no tab: **Settings**, **Places**, **Addresses & people**, **+ Address**, **Memory** and **History**. The bell sits next to it.
+The menu icon at the top of Home holds what has no tab: **Settings**, **Places**, **Addresses & people**, **+ Address**, **Memory**, **Waiting for** and **History**. The bell sits next to it.
 
 ## The tab bar
 

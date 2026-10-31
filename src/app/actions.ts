@@ -1,6 +1,6 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
-import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
+import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects } from './store';
 import type { Address, Day, Launch, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
 import { fieldsOf } from '../data/doc';
@@ -8,7 +8,7 @@ import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
 import { parentProblem } from '../domain/places';
-import { nextHeads } from '../domain/chains';
+import { liveNextHeads, nudgeAfter } from '../domain/events';
 import { releaseFrom, yesterdayOpen } from '../domain/lists';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
@@ -46,8 +46,9 @@ export const deleteSession = (id: string) => removeDoc('sessions', id);
 /** Start the timer, now or backdated ("I started earlier"). */
 export async function startTask(id: string, startedAt?: Date) {
   const cur = running();
-  if (cur && cur.id !== id) await stopTimer(cur, 'switched', null);
   const tk = T(id);
+  if (isEvent(tk)) return; // something waited for has no timer
+  if (cur && cur.id !== id) await stopTimer(cur, 'switched', null);
   // The first session freezes the estimate the learning uses (brief §5).
   const freeze = tk && tk.est0 == null && tk.est ? { est0: tk.est } : {};
   await patchTask(id, { started: (startedAt ?? new Date()).toISOString(), stillAt: null, ...freeze });
@@ -63,7 +64,11 @@ export async function stopTimer(tk: Tk, why: string | null, resume: string | nul
 const sessionDay = (tk: Tk) => (tk.started && tk.started.slice(0, 10) < today.value && Date.now() - Date.parse(tk.started) < 36e5 * 30 ? addDays(today.value, -1) : today.value);
 
 /** `addressId`: the address whose after-visit screen to show (a step that feeds it was just done and no visit came from it yet). */
-export interface Finished { last: boolean; projectDone: string | null; nextId: string | null; addressId: string | null }
+export interface Finished {
+  last: boolean; projectDone: string | null; nextId: string | null; addressId: string | null;
+  /** The steps this one freed (the next heads of its chain; never an event, which stays dormant). */
+  unlocked: string[];
+}
 
 /**
  * Mark a step done, today or on another day. With a running timer, its time is saved
@@ -72,16 +77,16 @@ export interface Finished { last: boolean; projectDone: string | null; nextId: s
  */
 export async function finishTask(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
-  const passing = nextHeads(tasks.value, tk.id);
+  const passing = liveNextHeads(tasks.value, tk.id);
   const wasLast = rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0;
   const { patch, session } = finishEffects(tk, { today: k, day, nowIso: nowISO(), nowMs: Date.now(), typed, minutes });
   if (session) await addSession(tk.id, session.m, session.why, session.source, session.d);
   await patchTask(tk.id, patch);
-  const passed = await placeHeads(tk.id, passing);
+  const passed = await placeFreed(tk.id, passing, false, isEvent(tk));
   const nextId = tk.repeat ? await createNext(tk, day) : null;
   const projectDone = await maybeCompleteProject(tk.project);
   if (tk.personId) await seeStepPerson(tk.personId, day);
-  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value) };
+  return { last: wasLast && !passed && day === k, projectDone, nextId, addressId: visitPromptFor(tk, addresses.value), unlocked: passing };
 }
 
 /** A project whose real steps are all done moves to the Completed shelf. */
@@ -99,9 +104,10 @@ export async function reopen(id: string) {
 }
 /** Drop a step for good (a repeating one stops repeating). */
 export async function dropTask(id: string) {
-  const passing = nextHeads(tasks.value, id);
+  const passing = liveNextHeads(tasks.value, id);
+  const ev = isEvent(T(id));
   await patchTask(id, { status: 'dropped', started: null });
-  await placeHeads(id, passing, true);
+  await placeFreed(id, passing, true, ev);
 }
 
 /**
@@ -126,6 +132,30 @@ async function placeHeads(id: string, heads: string[], drop = false): Promise<bo
     await dayPatch(k, { plan: rm ? next.filter(x => x !== id) : next });
   }
   return placed;
+}
+
+/**
+ * `placeHeads`, and for an event too: it is on no day's list, so the steps it frees have no place to take. They go on
+ * today's list instead, unless a list from today on holds them already. True when a step was placed or was already on a list.
+ */
+async function placeFreed(id: string, heads: string[], drop: boolean, event: boolean): Promise<boolean> {
+  let placed = await placeHeads(id, heads, drop);
+  if (!event) return placed;
+  const k0 = today.value;
+  for (const h of heads) {
+    if ([...days.value.entries()].some(([k, d]) => k >= k0 && Array.isArray(d.plan) && d.plan.includes(h))) { placed = true; continue; }
+    await addToday(h, true);
+    placed = true;
+  }
+  return placed;
+}
+
+// ---------- events: something the person waits for ----------
+/** "Still waiting": ask again on `day` (never today or earlier). */
+export const snoozeEvent = (id: string, day: string) => patchTask(id, { nudge: nudgeAfter(today.value, day) });
+/** A step that became an event leaves every day's list: it is not something to do. */
+export async function leaveLists(id: string) {
+  for (const [k, d] of [...days.value.entries()]) if (Array.isArray(d.plan) && d.plan.includes(id)) await dayPatch(k, { plan: d.plan.filter(x => x !== id) });
 }
 
 // ---------- repeating steps ----------

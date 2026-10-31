@@ -36,8 +36,10 @@ export const inPlace = (t: Pick<Task, 'where' | 'project'>, place: string, proje
   const w = whereOf(t, projects);
   return places ? onPage(places, w, place) : w === 'any' || w === place;
 };
-/** An open work step: not a standing obligation, not a fixed commitment. */
-export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed;
+/** Something the person waits for, not a step to do (schema 6): dormant until it happens, and kept out of every list of work. */
+export const isEvent = (t: Pick<Task, 'kind'> | undefined): boolean => t?.kind === 'event';
+/** An open work step: not a standing obligation, not a fixed commitment, not an event the person waits for. */
+export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'> & Partial<Pick<Task, 'kind'>>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed && t.kind !== 'event';
 /** A standing obligation, daily ones above all, or a copy of one placed on a day (choir, a walk, seeing someone): it has a time, not a quadrant. */
 export const isObligation = (t: Pick<Task, 'template' | 'from'>, tasks: ReadonlyMap<string, Pick<Task, 'template'>>): boolean => !!t.template || (!!t.from && !!tasks.get(t.from)?.template);
 export const quadOf = (t: Pick<Task, 'urgent' | 'important' | 'due'>, today: DayKey, urgencyDays: number): Quadrant => quadrant(t, today, urgencyDays);
@@ -88,12 +90,12 @@ export function releaseFrom(days: Iterable<[string, Pick<Day, 'plan'>]>, k: DayK
   return out;
 }
 /** A day's list without steps that no longer exist or were dropped, or that another day's list owns. */
-export const planOf = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey) => rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped' && ownerDay(d, id) === k);
+export const planOf = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey) => rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped' && !isEvent(d.tasks.get(id)) && ownerDay(d, id) === k);
 
 /** Fixed-time items on a day: commitments and timed steps due that day, and timed steps on its
  *  list with no due date (copies of timed standing items saved before they were given one). */
 export const fixedOn = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): TaskW[] => {
-  return [...d.tasks.values()].filter(t => t.at && (t.due === k || (!t.due && ownerDay(d, t.id) === k)) && t.status !== 'dropped' && !t.template)
+  return [...d.tasks.values()].filter(t => t.at && (t.due === k || (!t.due && ownerDay(d, t.id) === k)) && t.status !== 'dropped' && !t.template && !isEvent(t))
     .sort((a, b) => String(a.at).localeCompare(String(b.at)));
 };
 
@@ -136,7 +138,7 @@ export function estPointsOf(tasks: Iterable<TaskW>, sessions: Iterable<Pick<Sess
   for (const t of tasks) {
     const x = by.get(t.id);
     const est0 = t.est0 ?? null;
-    if (t.status !== 'done' || !x || !est0 || !t.doneDay) continue;
+    if (t.status !== 'done' || !x || !est0 || !t.doneDay || isEvent(t)) continue;
     out.push({ id: t.id, title: t.title, est0, real: x.m, w0: x.wm / x.m, doneDay: t.doneDay, app: t.app ?? null, project: t.project, suit: t.suit, by: t.estBy ?? 'me' });
   }
   return out;
@@ -148,13 +150,18 @@ export const oneLine = one;
 
 export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, id: string) => (id === 'inbox' ? 'Inbox' : projects.get(id)?.name ?? id);
 
-/** `id | title | Q1 | due | est | project`, as v1 sent them. */
-export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
-  const done = t.status === 'done' ? ' (done)' : t.status === 'dropped' ? ' (dropped)' : '';
+/**
+ * `id | title | Q1 | due | est | project`, as v1 sent them. Something the person waits for (an event, schema 6) says so
+ * after its title, with its check date, and has no quadrant, due date or estimate: it is not a step to do or to schedule.
+ */
+export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'> & Partial<Pick<TaskW, 'kind' | 'nudge'>>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
+  const event = t.kind === 'event';
+  const done = t.status === 'done' ? (event ? ' (happened)' : ' (done)') : t.status === 'dropped' ? ' (dropped)' : '';
   // The head of a chain says how many steps wait after it, and its quadrant follows the chain's earliest due date.
   const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
+  const wait = event && t.status === 'open' ? ` [waiting for${t.nudge ? ', check ' + t.nudge : ''}]` : '';
   const q = chain && chain !== 'waiting' && chain.due && (!t.due || chain.due < t.due) ? { ...t, due: chain.due } : t;
-  return [t.id, one(t.title) + done + note, 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
+  return [t.id, one(t.title) + wait + done + note, event ? '-' : 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
 

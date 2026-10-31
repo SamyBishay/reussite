@@ -37,6 +37,13 @@ describe('standing obligations', () => {
   });
 });
 
+describe('an event step (something the person waits for)', () => {
+  it('is never a fixed-time item, even with a time left on it by another device', () => {
+    expect(fixed({ tasks: [task('e', { kind: 'event', at: '09:00', due: '2026-10-22', title: 'The bellman calls back' })] })).toEqual([]);
+    expect(fixed({ tasks: [task('e', { kind: 'event', at: '09:00', due: '2026-10-22' }), task('s', { at: '10:00', due: '2026-10-22' })] }).map(e => e.taskId)).toEqual(['s']);
+  });
+});
+
 describe('a check-in copy and its standing item are one event', () => {
   const copy = (o = {}) => task('c1', { title: 'Choir, Hill House 602', from: 'choir', at: '19:00', due: '2026-10-19', ...o });
   it('the copy is the event, with the same id the standing item would have had', () => {

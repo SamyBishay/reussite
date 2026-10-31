@@ -35,6 +35,11 @@ describe('the calendar’s events', () => {
     expect(kinds(calViewEvents(d, opts(), '2026-10-22', '2026-10-22'))).toEqual(['fixed:a']);
   });
 
+  it('has no event for a step the person waits for, even with a time left on it', () => {
+    const d = data({ tasks: [task('e', { kind: 'event', title: 'The bellman calls back', at: '09:00', due: '2026-10-22' }), task('s', { at: '10:00', due: '2026-10-22' })] });
+    expect(kinds(calViewEvents(d, opts(), '2026-10-22', '2026-10-22'))).toEqual(['fixed:s']);
+  });
+
   it('shows a step’s own short name', () => {
     const evs = calViewEvents(data({ tasks: [task('a', { title: 'Open Mail and reply', label: 'Landlord', at: '10:00', due: '2026-10-22' })] }), opts(), '2026-10-22', '2026-10-22');
     expect(evs[0]!.title).toBe('Landlord');

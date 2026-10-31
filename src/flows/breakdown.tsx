@@ -6,14 +6,46 @@ import { patchTask, createTask, newTaskDoc } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
 import { toast } from '../app/store';
 import { Title, basisLine, learningLine } from '../app/ui';
-import { t, fmtMin } from '../i18n';
+import { t, fmtMin, fmtDate } from '../i18n';
+import { toEventFields } from '../domain/events';
 import { ask } from '../ai/ask';
 import { BreakDownReply, estByOf } from '../ai/features';
 import { breakDownPrompt } from '../ai/prompts';
 import { useAi, AiAction } from '../ai/ui';
 
 /** A step the AI proposed, as the person ticks and edits it. `est0` is the AI's number. */
-interface Proposed { on: boolean; title: string; starter: string; est: string; est0: number | null; app: string | null }
+interface Proposed { on: boolean; title: string; starter: string; est: string; est0: number | null; app: string | null; event?: boolean; nudge?: string }
+/** A step typed after the first, or something the person waits for (an event: no estimate, no starter; it asks again on `nudge`). */
+interface Next { title: string; est: string; event?: boolean; nudge?: string }
+
+/** The row that adds a step, and next to it "Something I'm waiting for", which adds the same words as an event in the chain's order. */
+function AddRow({ onAdd }: { onAdd: (n: Next) => void }) {
+  const [d, setD] = useState({ title: '', est: '' });
+  const [nudge, setNudge] = useState('');
+  const add = (event: boolean) => {
+    const title = d.title.trim();
+    if (!title) return;
+    onAdd(event ? { title, est: '', event: true, nudge } : { title, est: d.est });
+    setD({ title: '', est: '' });
+    setNudge('');
+  };
+  return (
+    <>
+      <form class="addstep" onSubmit={e => { e.preventDefault(); add(false); }}>
+        <input type="text" value={d.title} onInput={e => setD({ ...d, title: (e.target as HTMLInputElement).value })} placeholder={t('nextStepPlaceholder')} aria-label={t('bdThen')} autocomplete="off" />
+        <input type="number" min="1" max="600" value={d.est} onInput={e => setD({ ...d, est: (e.target as HTMLInputElement).value })} placeholder={t('minShort')} aria-label={t('estimateMin')} />
+        <button class="btn small" type="submit">{t('add')}</button>
+      </form>
+      <div class="go" style="margin-top:var(--s2)">
+        <button class="btn small" type="button" disabled={!d.title.trim()} onClick={() => add(true)} data-testid="bd-add-event">{t('bdWaitingFor')}</button>
+        <label class="row-inline"><small class="muted">{t('nudgeField')}</small><input type="date" value={nudge} onInput={e => setNudge((e.target as HTMLInputElement).value)} aria-label={t('nudgeField')} data-testid="bd-nudge" /></label>
+      </div>
+    </>
+  );
+}
+
+/** The fields of a step made in Break it down that is an event: set to nothing what a step has, in the chain's order. */
+const eventOf = (n: { nudge?: string }, tk: { where: string }, after: string | null, order: number) => ({ ...toEventFields(), where: tk.where, after, order, nudge: n.nudge || null });
 
 export function openBreakDown(id: string) {
   openSheet(<BreakDown key={'bd' + id + Date.now()} id={id} />, true);
@@ -27,8 +59,7 @@ function BreakDown({ id }: { id: string }) {
   const [starter, setStarter] = useState(tk?.starter ?? '');
   const [checks, setChecks] = useState([false, false, false]);
   const [est, setEst] = useState('');
-  const [next, setNext] = useState<{ title: string; est: string }[]>([]);
-  const [draft, setDraft] = useState({ title: '', est: '' });
+  const [next, setNext] = useState<Next[]>([]);
   const ai = useAi();
   const [proposed, setProposed] = useState<Proposed[]>([]);
   const [note, setNote] = useState('');
@@ -46,17 +77,20 @@ function BreakDown({ id }: { id: string }) {
   const edit = (i: number, p: Partial<Proposed>) => setProposed(proposed.map((x, j) => (j === i ? { ...x, ...p } : x)));
   const kept = proposed.filter(x => x.on && x.title.trim());
   const saveProposed = async () => {
-    const [first, ...rest] = kept;
-    if (!first) return;
+    if (!kept.length) return;
+    // The step itself becomes the first one asked for; if what is kept starts with something waited for, it stays as it was and they all come after it.
+    const first = kept[0]!.event ? null : kept[0]!;
+    const rest = first ? kept.slice(1) : kept;
     const original = tk.title;
-    await patchTask(id, {
+    if (first) await patchTask(id, {
       title: first.title.trim(), starter: first.starter.trim() || tk.starter || null, app: first.app || tk.app || null, est: Number(first.est) || tk.est, estBy: estByOf(first.est, first.est0) ?? tk.estBy,
       note: [tk.note, original !== first.title.trim() ? t('partOf', { title: original }) : ''].filter(Boolean).join('\n'),
     });
     let prev = id;
     for (const [i, n] of rest.entries()) {
-      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
-        where: tk.where, starter: n.starter.trim() || null, app: n.app || null, est: Number(n.est) || null, estBy: estByOf(n.est, n.est0), after: ordered ? prev : null, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + i, src: 'ai',
+      const order = (tk.order || 0) + 1 + i;
+      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, n.event ? eventOf(n, tk, ordered ? prev : null, order) : {
+        where: tk.where, starter: n.starter.trim() || null, app: n.app || null, est: Number(n.est) || null, estBy: estByOf(n.est, n.est0), after: ordered ? prev : null, important: tk.important, due: tk.due, order, src: 'ai',
       }));
       if (ordered) prev = made;
     }
@@ -82,8 +116,9 @@ function BreakDown({ id }: { id: string }) {
     });
     let prev = id;
     for (const n of chain) {
-      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, {
-        where: tk.where, est: Number(n.est) || null, estBy: Number(n.est) ? 'me' : null, after: ordered ? prev : null, important: tk.important, due: tk.due, order: (tk.order || 0) + 1 + chain.indexOf(n),
+      const order = (tk.order || 0) + 1 + chain.indexOf(n);
+      const made = await createTask(newTaskDoc(n.title.trim(), tk.suit, tk.project, n.event ? eventOf(n, tk, ordered ? prev : null, order) : {
+        where: tk.where, est: Number(n.est) || null, estBy: Number(n.est) ? 'me' : null, after: ordered ? prev : null, important: tk.important, due: tk.due, order,
       }));
       if (ordered) prev = made;
     }
@@ -135,13 +170,9 @@ function BreakDown({ id }: { id: string }) {
       <p class="hint">{t('bdOrderHint')}</p>
       <ol class="mini">
         <li><span><b>{title}</b>{typed ? ' · ' + fmtMin(typed) : ''}</span></li>
-        {next.map((n, i) => <li><span>{n.title}{Number(n.est) ? ' · ' + fmtMin(Number(n.est)) : ''}</span><button type="button" class="chip-x" onClick={() => setNext(next.filter((_, j) => j !== i))} aria-label={t('remove', { what: n.title })}>×</button></li>)}
+        {next.map((n, i) => <li data-testid={n.event ? 'bd-event-row' : undefined}><span>{n.event && t('waitingForCard', { what: '' })}{n.title}{!n.event && Number(n.est) ? ' · ' + fmtMin(Number(n.est)) : ''}{n.event && n.nudge ? ' · ' + t('nudgeOn', { date: fmtDate(n.nudge) }) : ''}</span><button type="button" class="chip-x" onClick={() => setNext(next.filter((_, j) => j !== i))} aria-label={t('remove', { what: n.title })}>×</button></li>)}
       </ol>
-      <form class="addstep" onSubmit={e => { e.preventDefault(); if (draft.title.trim()) { setNext([...next, draft]); setDraft({ title: '', est: '' }); } }}>
-        <input type="text" value={draft.title} onInput={e => setDraft({ ...draft, title: (e.target as HTMLInputElement).value })} placeholder={t('nextStepPlaceholder')} aria-label={t('bdThen')} autocomplete="off" />
-        <input type="number" min="1" max="600" value={draft.est} onInput={e => setDraft({ ...draft, est: (e.target as HTMLInputElement).value })} placeholder={t('minShort')} aria-label={t('estimateMin')} />
-        <button class="btn small" type="submit">{t('add')}</button>
-      </form>
+      <AddRow onAdd={n => setNext([...next, n])} />
       <div class="actions">
         <button class="btn ghost" type="button" onClick={() => setScreen(2)}>{t('back')}</button>
         <button class="btn primary" type="button" onClick={() => void finish()} data-testid="bd-finish">{t('bdFinish', { n: next.length + 1 })}</button>
@@ -157,12 +188,17 @@ function BreakDown({ id }: { id: string }) {
           <input type="checkbox" checked={x.on} onChange={() => edit(i, { on: !x.on })} aria-label={t('aiKeepStep', { n: i + 1 })} />
           <div class="fields">
             <input type="text" value={x.title} onInput={e => edit(i, { title: (e.target as HTMLInputElement).value })} aria-label={t('fTitle')} />
-            <input type="text" value={x.starter} onInput={e => edit(i, { starter: (e.target as HTMLInputElement).value })} placeholder={t('starterPh')} aria-label={t('starterField')} />
-            <label class="row-inline"><input class="est" type="number" min="1" max="600" value={x.est} onInput={e => edit(i, { est: (e.target as HTMLInputElement).value })} aria-label={t('estimateMin')} />
-              <small class="muted">{t('minShort')}{x.est0 && Number(x.est) === x.est0 ? ' · ' + t('aiEstimate') : ''}</small></label>
+            {x.event ? <small class="muted">{t('bdWaitingFor')}{x.nudge ? ' · ' + t('nudgeOn', { date: fmtDate(x.nudge) }) : ''}</small> : (
+              <>
+                <input type="text" value={x.starter} onInput={e => edit(i, { starter: (e.target as HTMLInputElement).value })} placeholder={t('starterPh')} aria-label={t('starterField')} />
+                <label class="row-inline"><input class="est" type="number" min="1" max="600" value={x.est} onInput={e => edit(i, { est: (e.target as HTMLInputElement).value })} aria-label={t('estimateMin')} />
+                  <small class="muted">{t('minShort')}{x.est0 && Number(x.est) === x.est0 ? ' · ' + t('aiEstimate') : ''}</small></label>
+              </>
+            )}
           </div>
         </li>
       ))}</ol>
+      <AddRow onAdd={n => setProposed([...proposed, { on: true, title: n.title, starter: '', est: n.est, est0: null, app: null, ...(n.event ? { event: true, nudge: n.nudge } : {}) }])} />
       <div class="actions">
         <button class="btn ghost" type="button" onClick={() => setScreen(0)}>{t('aiManual')}</button>
         <button class="btn primary" type="button" disabled={!kept.length} onClick={() => void saveProposed()} data-testid="ai-bd-save">{t('bdFinish', { n: kept.length })}</button>

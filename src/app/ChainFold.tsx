@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { chainOfHead, T as taskById, type T } from './model';
+import { chainOfHead, isEvent, T as taskById, type T } from './model';
 import { openTask } from './sheets';
 import { Title } from './ui';
 import { t, fmtDate } from '../i18n';
@@ -20,9 +20,9 @@ export function ChainFold({ tk }: { tk: T }) {
       {shown && (
         <ol class="chain-list" aria-label={t('chainSteps')}>
           {c.members.slice(1).map(id => { const m = taskById(id); return m && (
-            <li key={id} style={{ marginLeft: Math.max(0, (c.depth.get(id) ?? 1) - 1) * 14 + 'px' }} data-task={id}>
-              <button type="button" class="linklike" onClick={e => { e.stopPropagation(); openTask(id); }}><Title s={m.title} /></button>
-              {m.due && <small class="muted"> · {fmtDate(m.due)}</small>}
+            <li key={id} style={{ marginLeft: Math.max(0, (c.depth.get(id) ?? 1) - 1) * 14 + 'px' }} data-task={id} {...(isEvent(m) ? { 'data-event': '' } : {})}>
+              <button type="button" class="linklike" onClick={e => { e.stopPropagation(); openTask(id); }}>{isEvent(m) ? <>{t('waitingForCard', { what: '' })}<Title s={m.title} /></> : <Title s={m.title} />}</button>
+              {m.due && !isEvent(m) && <small class="muted"> · {fmtDate(m.due)}</small>}
             </li>
           ); })}
         </ol>

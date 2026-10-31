@@ -3,9 +3,10 @@
 import { useState } from 'preact/hooks';
 import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace } from '../app/store';
 import { onPage } from '../domain/places';
-import { isOpen, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
+import { isOpen, isEvent, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
 import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
 import { openTask, PlaceSelect, placeName } from '../app/sheets';
+import { openHappened } from '../app/EventUi';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, Due, DueChip, suitName } from '../app/ui';
 import { SmartEditor, smartFilled } from '../app/smart';
@@ -27,6 +28,8 @@ const openProj = new Set<string>();
 
 function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: boolean; sortable?: boolean }) {
   const done = tk.status === 'done';
+  // Something the person waits for: a calm "Waiting for" line, no estimate, no due date, answered with "It happened".
+  const ev = isEvent(tk);
   const w = waitingOn(tk)[0];
   // A step that waits is greyed and indented by how far down its chain it is.
   const waiting = !done && blocked(tk);
@@ -35,13 +38,15 @@ function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: bo
     <li class={(done ? 'done' : '') + (waiting ? ' waiting' : '')} data-task={tk.id} {...(depth > 1 ? { style: { marginLeft: (depth - 1) * 12 + 'px' } } : {})} {...(sortable ? { 'data-sort': '' } : {})}>
       <span class={'g suit-' + tk.suit} aria-hidden="true">{tk.template ? '↻' : done ? '✓' : '·'}</span>
       <span class="stept">
-        <button class="linklike" type="button" onClick={() => openTask(tk.id)}><Title s={tk.title} /></button>
+        <button class="linklike" type="button" onClick={() => openTask(tk.id)} {...(ev ? { 'data-testid': 'event-step' } : {})}>{ev && !done && t('waitingForCard', { what: '' })}<Title s={tk.title} /></button>
+        {ev && done && tk.doneDay && <small class="muted"> · {t('eventHappenedOn', { date: fmtDate(tk.doneDay) })}</small>}
         {!done && areaOfStep(tk) && <> <AreaTag id={areaOfStep(tk)!} /></>}
         {!done && w && <small class="muted"> · {t('waitsFor', { what: w.title.length > 30 ? w.title.slice(0, 28) + '…' : w.title })}</small>}
       </span>
       <span class="stepctl">
-        {!done && !tk.template && <DueChip tk={tk} />}
-        <span class="due">{tk.template ? t('standing') : tk.est ? fmtMin(tk.est) : ''}</span>
+        {!done && !tk.template && !ev && <DueChip tk={tk} />}
+        {ev && !done && <button type="button" class="btn small" onClick={() => openHappened(tk.id)} data-testid="event-happened">{t('happenedBtn')}</button>}
+        <span class="due">{tk.template ? t('standing') : tk.est && !ev ? fmtMin(tk.est) : ''}</span>
         {!done && !tk.template && <>
           <span class="grip sm" aria-hidden="true" data-testid="grip">{GRIP}</span>
           <button type="button" class="icon-btn sm kbd-only" disabled={first} onClick={() => moveStep(tk.id, -1)} aria-label={t('earlier')}>↑</button>
@@ -53,16 +58,19 @@ function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: bo
 }
 
 function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
-  const real = ts.filter(x => !x.template && x.status !== 'dropped');
+  const mine = ts.filter(x => !x.template && x.status !== 'dropped');
+  // Something waited for is not a step: it is in the list below, but not in the bar, the count, "next" or "left".
+  const real = mine.filter(x => !isEvent(x));
   const done = real.filter(x => x.status === 'done');
-  const open = real.filter(x => x.status === 'open').sort(byOrder);
+  const open = mine.filter(x => x.status === 'open').sort(byOrder);
+  const openSteps = open.filter(x => !isEvent(x));
   const tmpl = ts.filter(x => x.template && x.status !== 'dropped');
   const total = real.length;
-  const next = open.find(x => !blocked(x)) ?? open[0];
-  const doneSorted = done.sort((a, b) => String(a.doneAt ?? '').localeCompare(String(b.doneAt ?? '')));
+  const next = openSteps.find(x => !blocked(x)) ?? openSteps[0];
+  const doneSorted = mine.filter(x => x.status === 'done').sort((a, b) => String(a.doneAt ?? '').localeCompare(String(b.doneAt ?? '')));
   const label = t('stepsDone', { d: done.length, n: total });
   const linked = [...decisions.value.values()].filter(d => d.projectId === p.id);
-  const left = open.length;
+  const left = openSteps.length;
   const listRef = useSortable<HTMLOListElement>(ids => void setStepOrder(ids));
   const add = async (e: Event) => {
     e.preventDefault();
@@ -208,7 +216,7 @@ function Shelf({ done, by }: { done: P[]; by: Map<string, T[]> }) {
   return (
     <Fold title={t('closedProjects', { n: done.length })} testid="shelf">
       <ul class="shelf-list">{done.sort((a, b) => String(b.doneAt ?? '').localeCompare(String(a.doneAt ?? ''))).map(p => {
-        const n = (by.get(p.id) ?? []).filter(x => x.status === 'done' && !x.template).length;
+        const n = (by.get(p.id) ?? []).filter(x => x.status === 'done' && !x.template && !isEvent(x)).length;
         return (
           <li><span class={'pc stack suit-' + p.suit} aria-hidden="true"><span class="big">{settings.value.suits[p.suit]?.glyph}</span></span>
             <span><b>{p.name}</b><br /><small class="muted">{t('stepsDoneShort', { n })}{p.doneAt ? ' · ' + fmtDate(p.doneAt.slice(0, 10), { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</small></span>

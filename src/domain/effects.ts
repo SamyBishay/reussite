@@ -62,12 +62,14 @@ export function nextOccurrence(tk: WithId<Task>, day: DayKey, existing: Iterable
   return { fields: { ...extra, due, prev: tk.id, est0: null, src: 'repeat' } };
 }
 
-/** A project whose real steps are all done moves to the Completed shelf (needs two or more steps). */
-export function projectCompletes(pid: string, projects: ReadonlyMap<string, Pick<Project, 'status'>>, tasks: Iterable<Pick<Task, 'project' | 'template' | 'status'>>): boolean {
+/** A project whose real steps are all done moves to the Completed shelf (needs two or more steps; events do not count, and a pending one holds it back). */
+export function projectCompletes(pid: string, projects: ReadonlyMap<string, Pick<Project, 'status'>>, tasks: Iterable<Pick<Task, 'project' | 'template' | 'status'> & Partial<Pick<Task, 'kind'>>>): boolean {
   const p = projects.get(pid);
   if (!p || pid === 'inbox' || p.status === 'done') return false;
-  const real = [...tasks].filter(x => x.project === pid && !x.template && x.status !== 'dropped');
-  return real.length >= 2 && !real.some(x => x.status === 'open');
+  const mine = [...tasks].filter(x => x.project === pid && !x.template && x.status !== 'dropped');
+  // An event is not a step: it does not count, but while one is still pending the project is still waiting.
+  const real = mine.filter(x => x.kind !== 'event');
+  return real.length >= 2 && !mine.some(x => x.status === 'open');
 }
 
 /** "Before I leave" steps move with their stay's dates, so they turn urgent on their own. */

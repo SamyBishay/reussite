@@ -112,6 +112,18 @@ describe('what is scheduled', () => {
   });
 });
 
+describe('an event step (something the person waits for)', () => {
+  it('has no notification of any kind, whatever it carries, and is not the step a launch names', () => {
+    const e = task('e', { kind: 'event', title: 'The bellman calls back', at: '09:00', due: '2026-10-20', nudge: '2026-10-20' });
+    const items = build({ tasks: [e, task('s1', { title: 'Write the report' })], days: [day('2026-10-20', { plan: ['e', 's1'], launches: [{ t: '14:00', k: 'start' }] })] });
+    expect(items.some(i => i.id.includes(':e:'))).toBe(false);
+    expect(items.filter(i => i.type === 'fixed')).toEqual([]);
+    const texts = build({ tasks: [e, task('s1', { title: 'Write the report' })], days: [day('2026-10-20', { plan: ['e', 's1'], launches: [{ t: '14:00', k: 'start' }] })] }, settings({ notifyText: 'titles' })).map(i => i.text).join('\n');
+    expect(texts).not.toContain('bellman');
+    expect(texts).toContain('Write the report');
+  });
+});
+
 describe('time zones and the day start', () => {
   it('the 26 October choir is at 19:00 on the wall after daylight-saving time ends on the 25th', () => {
     const [, second] = build({ tasks: [choir()] }, only('fixed'));

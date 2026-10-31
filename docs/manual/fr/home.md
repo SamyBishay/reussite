@@ -50,7 +50,7 @@ Ouvrez l’**Historique** depuis le menu en haut de l’accueil. Il liste les 90
 
 ## Le menu
 
-L’icône de menu en haut de l’accueil contient ce qui n’a pas d’onglet : **Réglages**, **Lieux**, **Adresses et proches**, **+ Adresse**, **Mémoire** et **Historique**. La cloche est à côté.
+L’icône de menu en haut de l’accueil contient ce qui n’a pas d’onglet : **Réglages**, **Lieux**, **Adresses et proches**, **+ Adresse**, **Mémoire**, **En attente de** et **Historique**. La cloche est à côté.
 
 ## La barre d’onglets
 

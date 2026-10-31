@@ -44,6 +44,10 @@ A calendar is for what is at a time and what is on a day. Launch points stay in 
 
 Steps that wait for another are one card: the first, with "+4 after". Tap it to see the others. When the first is done, the next takes its place. If you'd rather have them separate, choose **In any order** when you break a step down, or empty "Waits for" on a step.
 
+## How do I note something I'm waiting for, like a call back?
+
+Don't write it as a task. When you break a step down, tap **Something I'm waiting for**, or set a step's **Kind** to it. It sits in the chain before the step it holds back, with no estimate or time, and you can give it a day to be asked. When it happens, tap **It happened**. See [Projects](projects.md).
+
 ## Where did my standing items go from the matrix?
 
 They are in the folded **Obligations** line under the grid. A time places them, not a quadrant.

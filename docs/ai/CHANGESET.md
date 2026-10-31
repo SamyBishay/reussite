@@ -19,7 +19,7 @@ When something in my list should change, end your reply with one change-set: one
 | --- | --- |
 | `task.create` | `ref?`, `set` (needs `title`) |
 | `task.update` | `id`, `set` |
-| `task.done` / `task.drop` | `id` |
+| `task.done` / `task.drop` | `id`; `task.done` also takes `day?` (the day it was done; for a waiting-for step, the day it happened) |
 | `task.reorder` | `ids` (a project's steps, in order) |
 | `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `goal`, `due`, `status`) |
 | `day.update` | `date`, and any of `plan`, `add`, `remove`, `first`, `launches` (`[{"t": "09:30", "k": "start"}]`, `k` is `start` or `restart`) |
@@ -28,7 +28,7 @@ When something in my list should change, end your reply with one change-set: one
 | `place.create` / `place.update` | `ref?` or `id`, `set` (`name`, `timeZone`, `parent`: the place this is an area of; one level only; an area has its parent's time zone) |
 | `memory.add` / `memory.edit` / `memory.remove` | `note`, `text`, `line`, `kind?` (only for what I said, in my words) |
 
-A step's `set` takes: `title` (start with the first action: "Open Mail and reply to…"), `label` (a short name for calendars, five or six keywords: "Choir · Hill House"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` people, leisure, health), `urgent`, `important`, `due`, `est`, `starter`, `app`, `link` (https only), `note`, `after` (ids it waits for), `at` and `dur`.
+A step's `set` takes: `title` (start with the first action: "Open Mail and reply to…"), `label` (a short name for calendars, five or six keywords: "Choir · Hill House"), `project`, `suit` (`S` work and studies, `D` money and papers, `C` family and home, `H` people, leisure, health), `urgent`, `important`, `due`, `est`, `starter`, `app`, `link` (https only), `note`, `after` (ids it waits for), `at` and `dur`, and `kind`: `task` (the default), `decision` or `event`. An `event` is something outside my hands that a step waits for (a call back, a reply): it sits in a chain with `after`, with an optional `nudge` (a day: Today asks me then whether it happened) and no `est`, `starter`, `due`, `at`, `urgent` or `important`. `task.done` on it means it happened (`day` is the day it did) and frees the steps behind it.
 
 ## Example
 

@@ -20,6 +20,8 @@ Chaque projet devrait avoir une étape suivante concrète, écrite comme une pre
 
 Faites glisser les étapes ouvertes d’un projet par leur poignée pour changer leur ordre. Quand une étape en attend une autre, seule la première apparaît ailleurs comme une carte (Aujourd’hui, la matrice), avec « +n après » sous son titre. Ici, dans le projet, toutes les étapes sont listées.
 
+Certaines choses d’une chaîne ne sont pas des étapes à faire mais des choses que vous attendez, comme le rappel du concierge. Ajoutez-en une avec **Quelque chose que j’attends** en découpant une étape, ou choisissez-la dans le **Type** d’une étape. Elle n’a ni durée, ni heure, ni carte à elle : dans la chaîne et dans le projet, elle apparaît comme « En attente de : … », et les étapes qui suivent l’attendent. Vous pouvez lui donner un jour où vous la redemander (voir [La boucle du jour](daily-loop.md)). Quand elle arrive, touchez **C’est arrivé** et choisissez le jour (aujourd’hui ou un jour passé) : les étapes qui suivent sont libérées et vont sur la liste d’aujourd’hui. L’abandonner les libère aussi. Tout ce que vous attendez est sur l’écran **En attente de**, dans le menu de l’accueil.
+
 Si vos lieux ont des zones, les projets d’une famille sont groupés sous la zone de leur lieu.
 
 ## Les statuts

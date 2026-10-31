@@ -47,6 +47,8 @@ Vous pouvez faire glisser une étape par sa poignée pour changer l’ordre de l
 
 Quand vous finissez une étape que d’autres attendaient, la suivante prend sa place juste après elle dans la liste.
 
+Si vous avez donné à une chose que vous attendez un jour où vous la redemander, une ligne **Vérifier : …** apparaît dans Aujourd’hui à partir de ce jour, et y reste jusqu’à votre réponse. **C’est arrivé** demande quel jour et libère les étapes qui suivent. **Toujours en attente** redemande dans 3 jours, dans une semaine ou un jour de votre choix. **Abandonner** renonce à attendre. Ce n’est jamais une carte de la liste, et sans jour elle ne se présente jamais toute seule.
+
 Si une étape vient avec une appli ou un lien, le bouton l’ouvre pour vous et lance le chrono.
 
 ## Pause et blocage

@@ -8,6 +8,8 @@
 import { isLowRisk, planChanges, applyPlanned, pinLines, type Plan } from '../../../src/ai/apply';
 import { ChangeSchema, NOTE_MAX, type Change, type ChangeSet } from '../../../src/ai/changeset';
 import { undoWrites } from '../../../src/ai/undo';
+import { liveNextHeads } from '../../../src/domain/events';
+import { isEvent, oneLine } from '../../../src/domain/lists';
 import { b64uDecode } from '../../../src/sync/bytes';
 import { decryptJson, sealToText } from '../../../src/sync/crypto';
 import type { Env } from '../env';
@@ -75,6 +77,8 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
 
   const cs: ChangeSet = { v: 1, note: (input.note ?? '').trim().slice(0, NOTE_MAX), changes: found.changes, bad: 0 };
   const plan = planChanges(cs, c.v.snapshot(), gen(c.v));
+  // An event given what only a step has (an estimate, a time), or a step given a check date: said, and nothing written, like any invalid change.
+  if (plan.notes?.length) return err(`${noWrite} The change-set is not valid:\n${plan.notes.map(n => `Change ${n.at + 1} (${cs.changes[n.at]!.op}): ${n.text}`).join('\n')}\nThe contract is in get_method.`);
   const skipped = plan.skippedAt.map(i => `Change ${i + 1} (${cs.changes[i]!.op}): nothing to change (already so, or it does not apply).`);
   if (!plan.items.length) return { text: `${noWrite} Nothing to change.\n${skipped.join('\n')}` };
 
@@ -127,6 +131,12 @@ async function commit(c: Ctx, plan: Plan, how: string, notes: string[]): Promise
   await applyPlanned(plan, () => true, writer);
   if (edits.empty) return { text: 'Nothing changed.' };
   const lines = plan.items.map(it => describe(it, c.v));
+  // The connector never puts a step on a day's list (so an event's happening does not either): say what it freed, so the person can be asked where it goes.
+  for (const it of plan.items) for (const op of it.ops) {
+    if (op.t !== 'finish' || !isEvent(c.v.tasks.get(op.id))) continue;
+    const freed = liveNextHeads(c.v.tasks, op.id).map(id => `${id} ${oneLine(c.v.tasks.get(id)?.title ?? '')}`.trim());
+    if (freed.length) notes = [...notes, `Freed by it: ${freed.join('; ')}. It is on no day's list yet; day.update adds it to one.`];
+  }
   const seq = await edits.flush(c.env);
   if (seq === null) return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
   await refreshFeed(c.env, c.s).catch(() => false); // the calendar follows; a failure leaves it to the next device that opens

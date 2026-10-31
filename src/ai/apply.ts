@@ -3,13 +3,14 @@
 // wouldn't change anything, and prepares low-level writes. `applyPlanned` runs only the ticked
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
-import type { Change, ChangeSet, TaskSet } from './changeset';
+import { eventClash, eventClashes, NUDGE_ONLY, type Change, type ChangeSet, type TaskSet } from './changeset';
 import type { Address, Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
 import { isAllowedLink } from '../domain/links';
 import { norm } from '../domain/names';
 import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
+import { toEventFields } from '../domain/events';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -68,6 +69,8 @@ export interface Plan {
   /** Positions in `cs.changes` of the changes that came to nothing: an unknown id, or nothing to change. */
   skippedAt: number[];
   refTitles: Map<string, string>;
+  /** Why a change was left out or cut back, by its position in `cs.changes` (an event given an estimate, a nudge on a step): the connector refuses these and says so; the review screen just counts the change as skipped. */
+  notes?: { at: number; text: string }[];
 }
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -138,6 +141,9 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
   const items: Planned[] = [];
   let skipped = cs.bad;
   const skippedAt: number[] = [];
+  const refused: { at: number; text: string }[] = [];
+  /** Refs of events made earlier in this change-set (they are on no day's list). */
+  const eventRefs = new Set<string>();
 
   /** Clean a task's fields: unknown references and unsafe links are dropped. */
   const by = cs.by ?? 'ai';
@@ -225,8 +231,12 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'task.create': {
         const f = cleanTask(c.set);
         if (!f.label) delete f.label;
+        const event = f.kind === 'event';
+        if (!event) delete f.nudge; // only an event has a check date
+        else if (c.ref) eventRefs.add(asRef(c.ref));
         const p = f.project && !isRef(f.project) ? s.projects.get(f.project) : undefined;
-        const fields = { ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
+        // An event is made with nothing a step has (no estimate, not important): the change-set may not give any (the contract refuses it).
+        const fields = { ...(event ? toEventFields() : {}), ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
         items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
         break;
       }
@@ -241,6 +251,28 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
           if ('weekdays' in f && !f.weekdays?.length) delete f.weekdays;
           delete f.due; delete f.dueRule;
         }
+        // Events (kind 'event': something the person waits for). A step turned into one is set to nothing, as the card sheet does;
+        // an event keeps none of a step's fields, and a step has no check date. What cannot be so is cut back, with the reason.
+        const wasEvent = tk.kind === 'event';
+        const becomes = (f.kind ?? tk.kind) === 'event';
+        const ops: Op[] = [];
+        if (becomes) {
+          const clash = eventClashes(f as Partial<TaskSet>);
+          if (clash.length) { refused.push({ at: ci, text: eventClash(clash) }); for (const k of clash) delete (f as Record<string, unknown>)[k]; }
+          if (!wasEvent) {
+            if (tk.template) { refused.push({ at: ci, text: 'a standing step cannot become an event' }); break; }
+            if (tk.status !== 'open') { refused.push({ at: ci, text: 'only an open step can become an event' }); break; }
+            if (tk.started) { refused.push({ at: ci, text: 'its timer is running; the person stops it in the app first, then it can become an event' }); break; }
+            const nothing = toEventFields() as Record<string, unknown>;
+            for (const k of Object.keys(nothing)) if ((tk[k] ?? false) !== (nothing[k] ?? false)) (f as Record<string, unknown>)[k] = nothing[k];
+            // It leaves every day's list: it is not something to do.
+            for (const [k, d] of s.days) if (Array.isArray(d.plan) && d.plan.includes(tk.id)) ops.push({ t: 'day', k, patch: { plan: d.plan.filter(x => x !== tk.id) } });
+          }
+        } else if (f.nudge != null && !wasEvent) {
+          refused.push({ at: ci, text: NUDGE_ONLY });
+          delete f.nudge;
+        } else if (wasEvent && tk.nudge) f.nudge = null; // an event turned back into a step has no check date
+        if (!becomes && !wasEvent) delete f.nudge;
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
           if (k === 'estBy' || k === 'dueRule') continue;
@@ -251,7 +283,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (!diffs.length) break;
         if (!('est' in f)) delete f.estBy;
         if (!('due' in f)) delete f.dueRule;
-        items.push({ target: 'task', kind: 'update', title: tk.title, diffs, ops: [{ t: 'update', c: 'tasks', id: tk.id, patch: f }] });
+        items.push({ target: 'task', kind: 'update', title: tk.title, diffs, ops: [{ t: 'update', c: 'tasks', id: tk.id, patch: f }, ...ops] });
         break;
       }
       case 'task.done': {
@@ -304,7 +336,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'day.update': {
         const d = s.days.get(c.date);
         const cur = Array.isArray(d?.plan) ? d!.plan : [];
-        const okStep = (id: string) => { const r = taskId(id); if (!r) return undefined; const tk = s.tasks.get(r); return !tk || tk.status !== 'dropped' ? r : undefined; };
+        // An event (something waited for) is on no day's list.
+        const okStep = (id: string) => { const r = taskId(id); if (!r) return undefined; const tk = s.tasks.get(r); return (tk ? tk.status !== 'dropped' && tk.kind !== 'event' : !eventRefs.has(r)) ? r : undefined; };
         let plan = c.plan ? c.plan.map(okStep).filter((x): x is string => !!x) : [...cur];
         for (const a of c.add ?? []) { const r = okStep(a); if (r && !plan.includes(r)) plan.push(r); }
         const rm = new Set((c.remove ?? []).map(taskId).filter(Boolean));
@@ -411,7 +444,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     }
     if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
-  return { items, skipped, skippedAt, refTitles };
+  return { items, skipped, skippedAt, refTitles, ...(refused.length ? { notes: refused } : {}) };
 
   /**
    * An address an AI suggests (brief §5, Planning a trip): saved as *want to go*, `by: 'ai'`, its reason in the note. Not

@@ -72,8 +72,15 @@ const v5: Migration = data => ({
   }),
 });
 
+/**
+ * 5 → 6 (event steps): a step may be `kind: 'event'` (something the person waits for, dormant until it happens) and carry a
+ * `nudge` day, both optional. Nothing stored changes: a step written before reads as a task. The bump keeps a device on
+ * schema 5 from reading a schema 6 batch (it goes read-only instead of showing an event as a step it can plan).
+ */
+const v6: Migration = data => data;
+
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3, v4, v5];
+export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;

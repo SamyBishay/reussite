@@ -42,6 +42,10 @@ A device remembers `{ seq, watermark, snapshotSeq }` (in `local`): the last rela
 
 **Schema 4** (phase 4) adds the `addresses` and `people` collections, and the optional step fields `addressId`, `personId` and `offer` (what the planner offers for a standing obligation: `address` or `person`). Migration 4 changes no stored data; as for schema 3, the number is what matters: a device on schema 3 reads a schema-4 batch as newer and goes read-only instead of skipping addresses and people it doesn't know. Arrays merge whole, so an address's `visits` are one value: two devices recording a visit to the same address before syncing keep the later write's visits. The relay and the connector take `COLLECTIONS` and `SCHEMA_VERSION` from `src/data/schema.ts`, so both know schema 4 without a separate list; no tool of the connector reads an address or a person (docs/dev/connector.md), and no AI request carries them. See "Rolling out schema 4" below.
 
+**Schema 6** (event steps) makes `tasks.kind` also `'event'` and adds the optional `tasks.nudge`; the migration changes no stored data, and the rollout is the same as schema 5's (the app first, then the relay, which must be redeployed: its connector reads `SCHEMA_VERSION` from the app's source).
+
+Someone marks an event "happened" on one device and drops it on another: both write `status`, so the per-field last writer by HLC (`merge` in `src/data/doc.ts`) decides, as for any field, and the loser leaves no trace.
+
 A document with `_v` above the app's `SCHEMA_VERSION` (or a batch/snapshot with a higher `v`) stops the round: nothing from that page is applied or saved, the result says `newer`, and the app goes read-only and asks to reload. The data stays on the relay.
 
 ## Snapshots and pruning

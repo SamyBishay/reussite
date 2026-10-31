@@ -4,8 +4,9 @@ import { createsNote, type Planned } from '../../../src/ai/apply';
 import type { Task } from '../../../src/data/schema';
 import { fit, predict, type Model } from '../../../src/domain/estimates';
 import {
-  blocked, byPriority, decisionsToCheck, estPointsOf, fixedOn, isOpen, listOf, oneLine, planOf, projName, quadOf, stepLine, yesterdayOpen, type TaskW,
+  blocked, byPriority, decisionsToCheck, estPointsOf, fixedOn, isEvent, isOpen, listOf, oneLine, planOf, projName, quadOf, stepLine, yesterdayOpen, type TaskW,
 } from '../../../src/domain/lists';
+import { nudgesDue, waitingList } from '../../../src/domain/events';
 import { addDays } from '../../../src/domain/dates';
 import { chainIndex, chainOf, effectiveDue, isWaiting, type ChainIndex } from '../../../src/domain/chains';
 import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
@@ -64,6 +65,9 @@ export function header(v: View): string {
   return `Today is ${weekday(today)} ${today}${where}. Urgent means due within ${v.settings.urgencyDays} days.`;
 }
 
+/** A step's title in a "waiting on" list: something the person waits for (an event) is named as such. */
+const waitName = (v: View, id: string): string => { const x = v.tasks.get(id); return x ? oneLine(x.title) + (isEvent(x) ? ' [waiting for]' : '') : id; };
+
 /** One step with what a person needs to start it. */
 function step(v: View, t: TaskW): string {
   const extra: string[] = [];
@@ -71,7 +75,7 @@ function step(v: View, t: TaskW): string {
   if (t.starter) extra.push(`starter: ${oneLine(t.starter)}`);
   if (t.resume) extra.push(`resume: ${oneLine(t.resume)}`);
   if (t.started) extra.push(`timer running since ${t.started.slice(11, 16)} UTC`);
-  if (blocked(t, v.tasks)) extra.push('waiting on ' + listOf(t.after).map(id => v.tasks.get(id)?.title ?? id).join(', '));
+  if (blocked(t, v.tasks)) extra.push('waiting on ' + listOf(t.after).map(id => waitName(v, id)).join(', '));
   return line(v, t) + (extra.length ? '\n    ' + extra.join(' · ') : '');
 }
 
@@ -103,16 +107,23 @@ export function dayText(v: View, k: string): string {
   if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
   const fixed = fixedOn(d, k);
   if (fixed.length) L.push('Fixed times:\n' + fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`).join('\n'));
+  // Things the person waits for whose check date has come: asked from that day until answered, as Today does. Not steps, never on the list.
+  if (k >= v.today) {
+    const checks = nudgesDue(v.tasks.values(), k);
+    if (checks.length) L.push(checks.map(t => `Check: ${oneLine(t.title)} (${t.id}, since ${t.nudge}). Ask whether it happened: task.done with the day it did, task.update nudge to ask again later, or task.drop.`).join('\n'));
+  }
   if (isToday) {
     const carried = yesterdayOpen(d, k, addDays(k, -1)).map(id => v.tasks.get(id)!);
     if (carried.length) L.push(`Carried from yesterday, not on today's list yet (${carried.length}):\n${lines(v, carried, 10)}`);
     const check = decisionsToCheck(v.decisions.values(), k);
     if (check.length) L.push('Decisions to check: ' + check.map(c => `${c.id} ${oneLine(c.title)}`).join('; '));
   }
-  const done = [...v.tasks.values()].filter(t => t.status === 'done' && !t.template && t.doneDay === k);
+  const dayDone = [...v.tasks.values()].filter(t => t.status === 'done' && !t.template && t.doneDay === k);
+  const done = dayDone.filter(t => !isEvent(t)), happened = dayDone.filter(isEvent);
   let minutes = 0;
   for (const s of v.sessions.values()) if (s.d === k) minutes += Number(s.m) || 0;
   if (done.length || minutes) L.push(`Done: ${done.length} step${done.length === 1 ? '' : 's'}, ${mins(Math.round(minutes))} worked.${done.length ? '\n' + lines(v, done, 10) : ''}`);
+  if (happened.length) L.push(`Happened (things waited for):\n${lines(v, happened, 10)}`);
   if (day?.first && !isToday) L.push(`First step chosen: ${oneLine(day.first.title)}`);
   return L.join('\n\n');
 }
@@ -121,7 +132,7 @@ export function dayText(v: View, k: string): string {
 const effective = (t: TaskW, ix: ChainIndex): TaskW => { const d = effectiveDue(ix, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
 
 /** `standing`: only standing steps; `status: 'all'` includes them with the rest; otherwise they are left out. */
-export interface Query { quadrant?: number; project?: string; place?: string; status?: 'open' | 'done' | 'dropped' | 'all'; standing?: boolean; dueFrom?: string; dueTo?: string; text?: string; limit?: number }
+export interface Query { quadrant?: number; project?: string; place?: string; status?: 'open' | 'done' | 'dropped' | 'all'; standing?: boolean; waitingFor?: boolean; dueFrom?: string; dueTo?: string; text?: string; limit?: number }
 
 export function queryText(v: View, q: Query, ids: { project?: string; place?: string }): string {
   const status = q.status ?? 'open';
@@ -131,10 +142,11 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
   let hidden = 0;
   const hit = [...v.tasks.values()].filter(t => {
     if (q.standing ? !t.template : t.template && status !== 'all') return false;
-    // A step that waits is under its head ("+n after"); naming words finds it anyway.
-    if (!words.length && isWaiting(ix, t.id)) { if (status === 'open' || status === 'all') hidden++; return false; }
+    if (q.waitingFor && !isEvent(t)) return false;
+    // A step that waits is under its head ("+n after"); naming words finds it anyway. A thing waited for is always listed when asked for.
+    if (!words.length && !q.waitingFor && isWaiting(ix, t.id)) { if (status === 'open' || status === 'all') hidden++; return false; }
     if (status !== 'all' && t.status !== status) return false;
-    if (q.quadrant && quadOf(effective(t, ix), d.today, d.urgencyDays) !== q.quadrant) return false;
+    if (q.quadrant && (isEvent(t) || quadOf(effective(t, ix), d.today, d.urgencyDays) !== q.quadrant)) return false; // a thing waited for has no quadrant
     if (ids.project && t.project !== ids.project) return false;
     if (ids.place) { const w = t.where || v.projects.get(t.project)?.where || 'any'; if (!onPage(v.places, w, ids.place)) return false; }
     if (q.dueFrom && !(t.due && t.due >= q.dueFrom)) return false;
@@ -147,6 +159,16 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
   });
   hit.sort(status === 'done' || status === 'dropped' ? (a, b) => String(b.doneDay ?? '').localeCompare(String(a.doneDay ?? '')) || a.order - b.order : (a, b) => byPriority(effective(a, ix), effective(b, ix), d));
   const max = Math.min(q.limit ?? MAX_LINES, MAX_LINES);
+  if (q.waitingFor) {
+    // What each holds back and how long it has been waited for (src/domain/events.ts, as the app's Waiting for screen).
+    const by = new Map(waitingList(v.tasks.values(), d.today).map(w => [w.id, w]));
+    const body = hit.slice(0, max).map(t => {
+      const w = by.get(t.id);
+      const extra = w ? [`waiting ${w.days} day${w.days === 1 ? '' : 's'}`, ...(w.unlocks.length ? [`holds back: ${w.unlocks.map(x => oneLine(x.title)).join(', ')}`] : [])] : [];
+      return line(v, t) + (extra.length ? '\n    ' + extra.join(' · ') : '');
+    }).join('\n');
+    return hit.length ? `${hit.length} thing${hit.length === 1 ? '' : 's'} waited for (outside events, not steps to do or schedule)${hit.length > max ? `, showing the first ${max}` : ''}.\n${'id | title | - | - | - | project'}\n${body}` : 'Nothing is being waited for.';
+  }
   const waiting = hidden ? ` ${hidden} more wait${hidden === 1 ? 's' : ''} for another step, under its head; get_task on a head lists its chain.` : '';
   if (!hit.length) return 'No steps match.' + waiting;
   return `${hit.length} step${hit.length === 1 ? '' : 's'} match${hit.length > max ? `, showing the first ${max}` : ''}.${waiting}\n${'id | title | quadrant | due | estimate | project'}\n${lines(v, hit, max)}`;
@@ -163,10 +185,11 @@ export function taskText(v: View, t: TaskW): string {
   const d = v.data;
   const f = (label: string, val: unknown) => (val == null || val === '' || (Array.isArray(val) && !val.length) ? null : `${label}: ${typeof val === 'object' ? JSON.stringify(val) : val}`);
   const p = personal(v, t);
+  const event = isEvent(t);
   const L = [
     line(v, t),
-    f('status', t.status + (t.doneDay ? ' on ' + t.doneDay : '')),
-    f('quadrant', `Q${quadOf(t, d.today, d.urgencyDays)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
+    f('status', (event && t.status === 'done' ? 'happened' : t.status) + (t.doneDay ? ' on ' + t.doneDay : '')),
+    event ? f('waiting for', `something outside the person's hands, not a step to do or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t, d.today, d.urgencyDays)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
     f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}` : null),
     f('standing', t.template ? `${standingText(t)}${t.lead != null ? `, leave ${mins(t.lead)} before` : ''}; drop it to end the series` : null),
@@ -174,7 +197,7 @@ export function taskText(v: View, t: TaskW): string {
     f('where', t.where && t.where !== 'any' ? v.places.get(t.where)?.name ?? t.where : null),
     f('label', t.label), f('starter', t.starter), f('resume', t.resume), f('note', t.note),
     f('app', t.app), f('link', t.link), f('prompt', t.prompt),
-    f('waiting on', listOf(t.after).filter(id => v.tasks.get(id)?.status !== 'dropped').map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}`)),
+    f('waiting on', listOf(t.after).filter(id => v.tasks.get(id)?.status !== 'dropped').map(id => `${id} ${oneLine(v.tasks.get(id)?.title ?? '')}${isEvent(v.tasks.get(id)) ? ' [waiting for]' : ''}`)),
     f('chain', chainLines(v, t)),
     f('repeats', t.repeat), f('carried', t.carried || null), f('stuck', t.stalls || null), f('frictions', t.friction),
     f('created', t.created), f('by', t.src === 'ai' ? 'an AI' : null),
@@ -267,11 +290,15 @@ const show = (x: unknown): string => {
   return String(x);
 };
 
+/** Whether a planned "done" is for something waited for (an event): then it is marked happened. */
+const happens = (it: Planned, v: View): boolean => { const op = it.ops[0]; return op?.t === 'finish' && isEvent(v.tasks.get(op.id)); };
+
 /** One planned change as a line, with `before → after` for each field. */
 export function describe(it: Planned, v: View): string {
   const what = it.target === 'task' ? 'step' : it.target === 'memory' ? 'memory note' : it.target;
   const name = it.title ? ` "${oneLine(it.title)}"` : '';
-  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${what}${name}` : it.kind === 'done' ? `Mark done:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
+  const waitingFor = it.target === 'task' && it.kind === 'create' && it.diffs.some(x => x.field === 'kind' && x.after === 'event');
+  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${waitingFor ? 'waiting-for step' : what}${name}` : it.kind === 'done' ? `Mark ${happens(it, v) ? 'happened' : 'done'}:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
   const diffs = it.diffs.map(d => {
     const nice = (x: unknown) => (d.field === 'plan' || d.field === 'order' || d.field === 'after') && Array.isArray(x) ? x.map(i => v.tasks.get(String(i))?.title ?? i).join(', ') : show(x);
     return d.before === undefined ? `${d.field} ${nice(d.after)}` : `${d.field} ${nice(d.before)} → ${nice(d.after)}`;

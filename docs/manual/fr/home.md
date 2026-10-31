@@ -6,12 +6,14 @@ L’accueil, c’est là où vous commencez. Il ne montre que votre **étape sui
 
 ## Ce que dit l’accueil
 
-Dans cet ordre, le premier cas qui s’applique :
+En haut, une ligne vous accueille. Elle est choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« Quelque chose à déplacer avant “Dentiste” à 14:00 ? »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient. Toutes finissent pareil : écrivez dans la boîte ci-dessous ce qu’il faut ajouter, déplacer ou cocher.
 
-1. **Une heure fixe approche.** Peu avant que vous deviez partir, elle prend le dessus et dit « partir à… ».
+Sous la ligne, dans cet ordre, le premier cas qui s’applique :
+
+1. **Une heure fixe a pris le dessus.** Commencez ici suit l’horloge (voir [Démarrer](daily-loop.md)). Quand l’étape en cours, avec une petite marge, empiéterait sur l’heure à laquelle vous devez partir, la prochaine chose à heure fixe prend le dessus. Elle dit son heure et « partir à… ».
 2. **Un chrono tourne.** Vous voyez l’étape, l’horloge, **Pause** et **Fait**.
 3. **La journée est close.** Vous voyez la première étape de demain.
-4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
+4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. C’est la même étape que sur Aujourd’hui. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
 5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**.
 
 L’accueil n’a ni compteurs, ni liste, ni séries. Ce qui vous attend ne gêne pas : une petite **cloche** en haut montre un point discret quand quelque chose attend, et ouvre la page **Notifications**.

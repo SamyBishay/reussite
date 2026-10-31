@@ -41,6 +41,10 @@ Today's list is the day's cards, and that includes the things at a fixed time: t
 
 ![Today: the first step and the rest of the list](shot:today)
 
+**Start here follows the clock.** It is the first step that fits before your next fixed time, in the order of your list. A step that does not fit the gap waits for the next one, and a shorter step further down moves up; a step is never cut in two. When the next thing at a fixed time gets close, it takes over: Start here becomes that item, with its time and when to leave. That happens when the step you are on (what is left of it if the timer is running, or its estimate if not), plus a margin of a fifth of its length and at least 5 minutes, would run into the time you need to leave. A step with no estimate counts as 15 minutes. Something at a fixed time whose time has passed leaves the order. Home, Today's card and list, and the next-step bar on the other tabs all follow this one order. Today's list shows when each step is expected to start ("≈10:40"); that is a projection that moves with the clock, not a promise. Dragging a step by its grip still sets the order of your list. Things at a fixed time keep their time, wherever you drop them.
+
+**Done steps fold.** Under the list, the steps you ticked off are gathered in a row, "3 done ▸". Tap it, or press Enter on it, to see them; they are closed by default. Projects fold their done steps the same way.
+
 Adding a step by hand to today (the round **+** button, **Add to today**, **From your list**) puts it right after the step you are timing, or before the first one not done yet. It doesn't wait at the end behind the whole plan.
 
 You can drag a step by its grip to put the list in another order. The arrows still work. When a step has areas, the list is grouped under the area's name.

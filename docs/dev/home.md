@@ -46,12 +46,16 @@ Rules that are easy to get wrong:
 
 ## The greeting
 
-One pure function, `greeting` in `src/domain/greeting.ts`, run on the 30-second clock tick. In this order, the first that applies:
+Two pure things in `src/domain/greeting.ts`, both run on the 30-second clock tick, and one order they read, `dayOrder` (`src/domain/dayOrder.ts`, also what Today's Start here, its list and the next-step bar read; `dayOrderOf` in `src/app/model.ts` gathers the data).
 
-1. **A fixed-time item** (from the agenda: the same one that feeds push and the calendar feed) from `at − lead` until `at + dur` (30 minutes if it has no length), even over a running timer or a closed day. It shows the item and "leave at …". The earliest one wins.
-2. **A running timer**: the running step. The running bar steps aside only while the greeting is that step; "Still on…?" always shows.
+**The line** is a template from `en.ts`/`fr.ts` (`greet…` keys) with slots filled from real data, chosen when Home opens (`GreetingLine` in `Home.tsx`). Kinds, each eligible only when its data exists: the next fixed item ahead today ({time}, {title}), a project close to its goal (an active project with a step done and one or two left; the SMART measure replaces this), the time of day (morning until noon, afternoon until 18:00, evening after, by `dayStart`), steps done today ({n}, done only) and planned but not started ({n}, nothing done or running). Every template ends by inviting the person to type in the box, never counts what was missed or carried, and never says database, record, entry or field (a unit test scans both languages). `pickGreeting` returns the candidate shown longest ago (never shown first), in an order seeded by the day, so a template is not repeated within a day while another is eligible; the shown keys are in `localStorage` under the day (`reussite.greet.<day>`, `src/app/greetingShown.ts`, try/catch, older days dropped), one more each time Home mounts. It is the same with an AI on: no call is made.
+
+**The card** is `greeting()` over the first item of `dayOrder`. In this order, the first that applies:
+
+1. **A fixed-time item has taken over** (the first item of the order is a fixed one): it shows the item, its time and "leave at …", even over a running timer or a closed day. Fixed items are the agenda's (the same that feed push and the calendar feed) for the day, standing items not yet placed included.
+2. **A running timer** that is the first item: the running step. The running bar steps aside only while the greeting is that step; "Still on…?" always shows.
 3. **A closed day**: tomorrow's first step, or "No first step chosen for tomorrow yet."
-4. **The first open step on today's list**, with the person's own estimate and "usually" after it (never the personal estimate first, so it does not anchor).
+4. **The first item of the order** (the first step that fits before the next fixed item), with the person's own estimate and "usually" after it (never the personal estimate first, so it does not anchor).
 5. **Nothing on today's list yet**: Plan the day. **Everything on it done**: a line saying so, with Close the day.
 
 ## The card and the nudge

@@ -299,8 +299,10 @@ export function Today() {
   const open = plan.filter(id => isOpen(T(id)));
   // The day's one order (src/domain/dayOrder.ts): its first item is Start here (a fixed-time item once it takes over), the list follows it,
   // with the time each floating step is projected to start. Cards the order leaves out (a fixed item whose time has passed) come last.
-  const dorder = dayOrderOf(k).order;
+  const day = dayOrderOf(k), dorder = day.order;
   const fo = dorder[0], fid = fo?.id;
+  // A fixed-time item whose time has passed is not a card played, nor one still to play: a list of only those has nothing to say yet.
+  const live = every.filter(id => !day.missed.includes(id));
   const sd = splitDone(plan, id => T(id)!.status === 'done');
   const inOrder = new Set(sd.open);
   const seq = [...dorder.map(x => x.id).filter(id => inOrder.has(id)), ...sd.open.filter(id => !dorder.some(x => x.id === id))];
@@ -331,7 +333,7 @@ export function Today() {
       {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
-      ) : s ? <SuggestCard tk={s} played={every.length > 0} /> : !every.length ? (
+      ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (
         <section class="first" data-testid="first">
           <Rings />
           <p class="eyebrow">{t('noListYet')}</p>

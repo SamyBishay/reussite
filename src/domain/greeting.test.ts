@@ -51,7 +51,7 @@ describe('the line: which kinds are eligible', () => {
     const l = eligibleLines(line({ fixed: { time: '14:00', title: 'Dentist' } })).filter(x => x.key.startsWith('greetFixed'));
     expect(l).toHaveLength(3);
     expect(l[0]!.slots).toEqual({ time: '14:00', title: 'Dentist' });
-    expect(translate('en', 'greetFixed1', l[0]!.slots)).toBe('Anything to move before the 14:00 Dentist? Type it in the box.');
+    expect(translate('en', 'greetFixed1', l[0]!.slots)).toBe('Anything to move before “Dentist” at 14:00? Type it in the box.');
   });
   it('a project close to its goal is named', () => {
     const l = eligibleLines(line({ project: { name: 'Flat move' } })).filter(x => x.key.startsWith('greetProject'));

@@ -13,7 +13,6 @@ import { fixedOnDay } from '../domain/agenda';
 import { greeting, nearGoal, type LineInput } from '../domain/greeting';
 import { dayOrder, type DayOrder, type FixedItem } from '../domain/dayOrder';
 import { atOnDay, placeOfDay, wallOf } from '../domain/zone';
-import { shortLabel } from '../domain/label';
 import { offerAddresses, offerPeople, lastVisit } from '../domain/offers';
 import { onPage, zoneOfPlace } from '../domain/places';
 import { showsInArea } from './areas';
@@ -145,8 +144,9 @@ export function dayOrderOf(k: string = today.value): DayOrder {
 
 /** What Home's greeting card says now (src/domain/greeting.ts): the first item of the day's order, so a fixed-time item takes over on time. */
 export const greetingNow = computed(() => {
-  const k = today.value, first = dayOrderOf(k).order[0];
-  const planned = dayCards(k).filter(id => !isWaiting(id) && showsInArea('today', T(id)!)).length;
+  const k = today.value, o = dayOrderOf(k), first = o.order[0];
+  // A fixed-time item whose time has passed is not a card played, nor one still to play: a day with only those has no list yet.
+  const planned = dayCards(k).filter(id => !o.missed.includes(id) && !isWaiting(id) && showsInArea('today', T(id)!)).length;
   return greeting({
     closed: !!dayDoc(k)?.closed, planned, tomorrow: tomorrowFirst(k),
     first: first ? { id: first.id, kind: first.kind, running: !!T(first.id)?.started } : null,
@@ -160,6 +160,14 @@ export function fixedFirst(): { id: string; time: string; leave: string } | null
   const zone = hereZone.value;
   return { id: f.id, time: wallOf(f.at!, zone), leave: wallOf(f.start, zone) };
 }
+
+/** A step's title in a sentence: cut at a word within 40 characters. */
+const nameOf = (x: Pick<T, 'title'>): string => {
+  const s = x.title.trim();
+  if (s.length <= 40) return s;
+  const cut = s.slice(0, 39), i = cut.lastIndexOf(' ');
+  return (i > 20 ? cut.slice(0, i) : cut).trimEnd() + '…';
+};
 
 /** What the greeting's line can say now (src/domain/greeting.ts): the real data its templates are filled with. */
 export function lineInputNow(): LineInput {
@@ -176,7 +184,7 @@ export function lineInputNow(): LineInput {
   const near = [...projects.value.values()].filter(p => p.status === 'active').map(p => ({ name: p.name, order: p.order, ...(counts.get(p.id) ?? { open: 0, done: 0 }) }));
   return {
     clock: wallOf(clockNow.value, zone), dayStart: settings.value.dayStart,
-    fixed: next ? { time: wallOf(next.at!, zone), title: shortLabel(T(next.id)!) } : null,
+    fixed: next ? { time: wallOf(next.at!, zone), title: nameOf(T(next.id)!) } : null,
     project: nearGoal(near), doneToday: cardsOn(k).length,
     planned: order.filter(x => x.kind === 'step').length, running: !!running(),
   };

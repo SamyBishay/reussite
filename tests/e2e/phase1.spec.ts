@@ -345,7 +345,7 @@ test('a timed standing item added by hand is a card on Today’s list and on the
   await sheet(page).getByRole('button', { name: 'Add to today' }).click();
   await page.getByTestId('tab-today').click();
   // On Today it is a card of the day's list, with its time; Today has no separate list of fixed times.
-  await expect(page.locator('.row', { hasText: 'Walk to the park' })).toContainText('17:00');
+  await expect(page.locator('[data-task]', { hasText: 'Walk to the park' })).toContainText('17:00'); // a row, or Start here once its time is near
   await expect(page.locator('ul.fixed')).toHaveCount(0);
   await page.getByTestId('tab-calendar').click();
   // A fixed time is on the hour grid (not in the all-day row), at its time.

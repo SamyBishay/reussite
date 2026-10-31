@@ -105,3 +105,15 @@ for (const width of [320, 375, 430]) {
     await noSideways(page, 'today with the done fold open');
   });
 }
+
+test('a fixed item whose time has passed leaves the order: a day of only that has no list yet, not an all-done one', async ({ page }) => {
+  await page.clock.setFixedTime(at(10, 0));
+  await page.goto('/');
+  await say(page, CALL);
+  await expect(page.getByTestId('receipt')).toBeVisible();
+  await at_(page, 15, 0); // the call (14:00, 30 minutes long) is over
+  await goTab(page, 'home');
+  await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
+  await expect(page.getByTestId('greeting-done')).toHaveCount(0);
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+});

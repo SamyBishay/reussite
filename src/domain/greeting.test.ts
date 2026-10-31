@@ -69,11 +69,11 @@ describe('the line: which kinds are eligible', () => {
     expect(kinds(line({ planned: 3, doneToday: 1 }))).not.toContain('planned');
     expect(kinds(line({ planned: 3, running: true }))).not.toContain('planned');
   });
-  it('a project is near its goal with a step done and one or two left, the fewest first', () => {
-    const p = (name: string, order: number, open: number, done: number) => ({ name, order, open, done });
-    expect(nearGoal([p('A', 1, 5, 4), p('B', 2, 3, 3), p('C', 3, 0, 4), p('D', 4, 2, 0)])).toBeNull();
-    expect(nearGoal([p('A', 2, 2, 1), p('B', 1, 1, 3), p('C', 0, 2, 5)])).toEqual({ name: 'B' });
-    expect(nearGoal([p('A', 2, 2, 1), p('C', 0, 2, 5)])).toEqual({ name: 'C' });
+  it('a project is near its goal when its bar is at least 60 % full and not full, the fullest first; cards never count', () => {
+    const p = (name: string, order: number, frac: number | null) => ({ name, order, frac });
+    expect(nearGoal([p('A', 1, null), p('B', 2, 0.5), p('C', 3, 1), p('D', 4, 0)])).toBeNull();
+    expect(nearGoal([p('A', 2, 0.7), p('B', 1, 0.9), p('C', 0, 0.6)])).toEqual({ name: 'B' });
+    expect(nearGoal([p('A', 2, 0.7), p('C', 0, 0.7)])).toEqual({ name: 'C' });
   });
 });
 

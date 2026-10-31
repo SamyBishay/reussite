@@ -86,9 +86,12 @@ export function eligibleLines(i: LineInput): GreetingLine[] {
   return out;
 }
 
-/** The project closest to its goal for now: active, with a step done and at most two left (the SMART measure replaces this). Fewest left first, then the project's order. */
-export function nearGoal(projects: readonly { name: string; order: number; open: number; done: number }[]): { name: string } | null {
-  const near = projects.filter(p => p.done >= 1 && p.open >= 1 && p.open <= 2).sort((a, b) => a.open - b.open || a.order - b.order);
+/**
+ * The project closest to its goal for now: active, with a bar (a measure) that is at least 60 % full and not full. How many cards
+ * are done never counts; a project with no measure has no bar and is not named. The fullest first, then the project's order.
+ */
+export function nearGoal(projects: readonly { name: string; order: number; frac: number | null }[]): { name: string } | null {
+  const near = projects.filter(p => p.frac !== null && p.frac >= 0.6 && p.frac < 1).sort((a, b) => b.frac! - a.frac! || a.order - b.order);
   return near[0] ? { name: near[0].name } : null;
 }
 

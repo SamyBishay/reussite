@@ -19,7 +19,7 @@ import { onPage, zoneOfPlace } from '../domain/places';
 import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
-import { outcomeOf } from '../domain/goal';
+import { outcomeOf, progressOf } from '../domain/goal';
 
 export type T = WithId<Task>;
 
@@ -246,14 +246,7 @@ export function lineInputNow(): LineInput {
   const k = today.value, zone = hereZone.value;
   const order = dayOrderOf(k).order;
   const next = order.find(x => x.kind === 'fixed' && !T(x.id)?.started && x.at! > clockNow.value);
-  const counts = new Map<string, { open: number; done: number }>();
-  for (const x of tasks.value.values()) {
-    if (x.template || isEvent(x) || !projects.value.get(x.project)) continue;
-    const c = counts.get(x.project) ?? { open: 0, done: 0 };
-    if (x.status === 'done') c.done++; else if (x.status === 'open') c.open++;
-    counts.set(x.project, c);
-  }
-  const near = [...projects.value.values()].filter(p => p.status === 'active').map(p => ({ name: p.name, order: p.order, ...(counts.get(p.id) ?? { open: 0, done: 0 }) }));
+  const near = [...projects.value.values()].filter(p => p.status === 'active').map(p => ({ name: p.name, order: p.order, frac: progressOf(p, tasks.value.values())?.frac ?? null }));
   return {
     clock: wallOf(clockNow.value, zone), dayStart: settings.value.dayStart,
     fixed: next ? { time: wallOf(next.at!, zone), title: nameOf(T(next.id)!) } : null,

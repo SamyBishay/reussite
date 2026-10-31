@@ -20,6 +20,8 @@ Each project should have a concrete next step, written as a first action. Add on
 
 Drag a project's open steps by their grip to change their order. When a step waits for another, only the first shows as a card elsewhere (Today, the matrix), with "+n after" under its title. Here, in the project, every step is listed.
 
+Some things in a chain are not steps to do but things you wait for, like the bellman calling back. Add one with **Something I'm waiting for** when you break a step down, or choose it as a step's **Kind**. It has no estimate, no time and no card of its own: in the chain and in the project it shows as "Waiting for: …", and the steps behind it wait for it. You can give it a day to be asked about (see [The daily loop](daily-loop.md)). When it happens, tap **It happened** and pick the day (today, or one in the past): the steps behind it are freed and go on today's list. Dropping it frees them too. Everything you are waiting for is on the **Waiting for** screen, in the Home menu.
+
 If your places have areas, a suit's projects are grouped under the area of their place.
 
 ## Statuses

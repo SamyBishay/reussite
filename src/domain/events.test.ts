@@ -3,7 +3,7 @@ import { chainIndex, isWaiting, nextHeads } from './chains';
 import { finishEffects, newTaskFields, projectCompletes } from './effects';
 import { liveNextHeads, nudgeAfter, nudgesDue, snoozeNudge, toEventFields, waitingList } from './events';
 import { startHere } from './greeting';
-import { blocked, estPointsOf, fixedOn, isEvent, isOpen, planOf, type TaskW } from './lists';
+import { blocked, estPointsOf, fixedOn, isEvent, isOpen, planOf, stepLine, type TaskW } from './lists';
 
 const mk = (id: string, p: Partial<TaskW> = {}): [string, TaskW] => [id, { ...newTaskFields(id, 'S', 'p1', {}, new Map(), '2026-10-20T08:00:00.000Z', 1), id, ...p } as TaskW];
 const ev = (id: string, p: Partial<TaskW> = {}) => mk(id, { kind: 'event', important: false, ...p });
@@ -163,5 +163,15 @@ describe('events and the counts', () => {
     // Two real steps are still needed: an event is not one of them.
     expect(projectCompletes('p1', p, [t('done'), t('done', 'event'), t('done', 'event')])).toBe(false);
     expect(projectCompletes('p1', p, [t('done'), t('done'), t('dropped', 'event')])).toBe(true);
+  });
+});
+
+describe('an event as a line for an AI', () => {
+  const d = { today: TODAY, urgencyDays: 21, projects: new Map([['p1', { name: 'Wedding' }]]) as never };
+  it('says it is waited for, with its check day, and has no quadrant, due date or estimate', () => {
+    expect(stepLine(ev('e', { title: 'The bellman calls back', nudge: '2026-11-05' })[1], d)).toBe('e | The bellman calls back [waiting for, check 2026-11-05] | - | - | - | Wedding');
+    expect(stepLine(ev('e', { title: 'A reply' })[1], d, { after: 2, due: '2026-11-02' })).toBe('e | A reply [waiting for] (+2 after, chain due 2026-11-02) | - | - | - | Wedding');
+    expect(stepLine(ev('e', { title: 'A reply', status: 'done', doneDay: '2026-10-30' })[1], d)).toBe('e | A reply (happened) | - | - | - | Wedding');
+    expect(stepLine(mk('t', { title: 'A step', est: 5 })[1], d)).toBe('t | A step | Q2 | - | 5m | Wedding');
   });
 });

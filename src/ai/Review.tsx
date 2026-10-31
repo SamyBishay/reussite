@@ -14,19 +14,20 @@ import type { SuitId, UndoDoc } from '../data/schema';
 
 const FIELD: Record<string, Key> = {
   title: 'fTitle', project: 'project', suit: 'suit', urgent: 'fUrgent', important: 'fImportant', due: 'fDue', est: 'fEst', starter: 'fStarter',
-  app: 'fApp', link: 'fLink', prompt: 'fPrompt', note: 'fNote', where: 'where', after: 'fAfter', kind: 'fKind', at: 'fAt', dur: 'fDur',
+  app: 'fApp', link: 'fLink', prompt: 'fPrompt', note: 'fNote', where: 'where', after: 'fAfter', kind: 'fKind', nudge: 'nudgeField', at: 'fAt', dur: 'fDur',
   doneDay: 'fDoneDay', order: 'fOrder', name: 'fName', goal: 'fGoal', smart: 'fSmart', status: 'fStatus', plan: 'fPlan', first: 'fFirst',
   launches: 'fLaunches', timeZone: 'timeZone', place: 'fPlace', from: 'stayFrom', to: 'stayTo', option: 'fOption', items: 'fItems', steps: 'fSteps',
   template: 'fTemplate', weekdays: 'weekdaysField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
   category: 'addrCategory', mapsUrl: 'addrLink', street: 'addrStreet', state: 'addrState',
   chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
 };
-const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn']);
+const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge']);
 const IDS = new Set(['after', 'plan', 'order', 'steps', 'first']);
 
 function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {
   if (v == null || v === '' || (Array.isArray(v) && !v.length)) return t('chgNone');
   const title = (id: string) => (isRef(id) ? refs.get(id) ?? '?' : tasks.value.get(id)?.title ?? id);
+  if (field === 'kind' && (v === 'event' || v === 'task' || v === 'decision')) return t(v === 'event' ? 'kindEvent' : v === 'decision' ? 'kindDecision' : 'kindTask');
   if (DATES.has(field) && typeof v === 'string') return fmtDate(v);
   if (field === 'weekdays' && Array.isArray(v)) return weekdayNames().filter(([d]) => v.includes(d)).map(([, n]) => n).join(', ');
   if ((field === 'est' || field === 'dur' || field === 'lead') && typeof v === 'number') return fmtMin(v);

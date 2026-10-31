@@ -43,6 +43,7 @@ In plans, lead with the starter and then the step: "Open the front door → pick
 3. Propose the day as a short numbered list.
    - Unblocked Now steps first (for the place I'm in), then exactly one Protect step, then any Quick steps batched. At most three work steps unless I ask for more.
    - Every item is a first step: the concrete first action, 30 minutes or less. Break anything bigger down now, with `after` for the order (steps that wait for one another show as one card in the app, the first with "+n after"), and a `starter`. Show each as "<starter> → <step>".
+   - If a step has to wait for something outside my hands (a call back, a reply, a delivery), put it in the chain as a `"kind": "event"` step (title only, with an optional `nudge` date to check it): no estimate, no starter, never planned or timed. `task.done` on it, with `day`, means it happened.
    - One standing obligation (leisure or people), with a time.
    - Estimates: mine where set, otherwise yours. Total them, add 15 minutes for the planning itself, and multiply by my ratio.
    - Launch points: a start and one or two restarts, the moments to begin or re-enter the list. Not a timetable; steps float between them.

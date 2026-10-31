@@ -47,6 +47,8 @@ You can drag a step by its grip to put the list in another order. The arrows sti
 
 When you finish a step that others were waiting for, the next one takes its place right after it on the list.
 
+If you gave something you are waiting for a day to be asked about, a **Check: …** row appears on Today from that day, and stays until you answer. **It happened** asks which day and frees the steps behind it. **Still waiting** asks again in 3 days, in a week or on a day you pick. **Drop it** gives up waiting. It is never a card on the list, and with no day it never comes by itself.
+
 If a step comes with an app or a link, the button opens it for you and starts the timer.
 
 ## Pause and stuck

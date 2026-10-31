@@ -34,7 +34,10 @@ const taskSet = z.object({
   note: text(2000).optional(),
   where: id.optional(),
   after: ids.nullable().optional(),
-  kind: z.enum(['task', 'decision']).optional(),
+  /** `event`: something the person waits for (the bellman calls back), not a step to do; it has no estimate, time or due date. */
+  kind: z.enum(['task', 'decision', 'event']).optional(),
+  /** An event's check date: from that day Today asks "did it happen?" until answered. Events only. */
+  nudge: day.nullable().optional(),
   at: hhmm.nullable().optional(),
   dur: minutes.nullable().optional(),
   /** A standing obligation (needs `at` and `weekdays`), and minutes of notice before it; null = the person's default. */
@@ -43,6 +46,23 @@ const taskSet = z.object({
   lead: minutes0.nullable().optional(),
 });
 export type TaskSet = z.infer<typeof taskSet>;
+
+/** What an event cannot carry (it is not done, estimated or scheduled). Nothing, false and empty are fine: "no estimate" is not a clash. */
+const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'at', 'dur', 'lead', 'weekdays', 'template'] as const;
+const has = (v: unknown) => v != null && v !== false && v !== '' && !(Array.isArray(v) && !v.length);
+/** The fields of `set` an event may not have, set to something. */
+export const eventClashes = (set: Partial<TaskSet>): string[] => EVENT_NO.filter(k => has(set[k]));
+export const eventClash = (fields: string[]) => `an event (kind "event", something the person waits for) has no ${fields.join(', ')}; leave ${fields.length === 1 ? 'it' : 'them'} out, or make it a step (kind "task")`;
+export const NUDGE_ONLY = 'nudge is the check date of an event (kind "event"); a step has none';
+/** `creating`: with no `kind` a new step is a task, so a nudge on it is a mistake; an update with no kind leaves that to the step it names. */
+const eventRules = (creating: boolean) => (set: TaskSet, ctx: z.RefinementCtx) => {
+  if (set.kind === 'event') {
+    const bad = eventClashes(set);
+    if (bad.length) ctx.addIssue({ code: 'custom', message: eventClash(bad), path: ['kind'] });
+  } else if (has(set.nudge) && (creating || set.kind)) ctx.addIssue({ code: 'custom', message: NUDGE_ONLY, path: ['nudge'] });
+};
+const newTaskSet = taskSet.extend({ title: text(240).pipe(z.string().min(1)) }).superRefine(eventRules(true));
+const taskUpdateSet = taskSet.superRefine(eventRules(false));
 
 const smart = z.object({ specific: text(400), measurable: text(400), attainable: text(400), relevant: text(400), dated: text(400) }).partial();
 const projectSet = z.object({
@@ -71,7 +91,7 @@ const decisionSet = z.object({
   mustBeTrue: text(1000).optional(),
   falsifier: text(1000).optional(),
   reviewOn: day.nullable().optional(),
-  steps: z.array(taskSet.extend({ title: text(240) })).max(20).optional(),
+  steps: z.array(taskSet.extend({ title: text(240) }).superRefine(eventRules(true))).max(20).optional(),
 });
 export type DecisionSet = z.infer<typeof decisionSet>;
 
@@ -102,8 +122,8 @@ export type AddressSet = z.infer<typeof addressSet>;
 
 const ref = text(40).optional();
 export const ChangeSchema = z.discriminatedUnion('op', [
-  z.object({ op: z.literal('task.create'), ref, set: taskSet.extend({ title: text(240).pipe(z.string().min(1)) }) }),
-  z.object({ op: z.literal('task.update'), id, set: taskSet }),
+  z.object({ op: z.literal('task.create'), ref, set: newTaskSet }),
+  z.object({ op: z.literal('task.update'), id, set: taskUpdateSet }),
   z.object({ op: z.literal('task.done'), id, day: day.optional() }),
   z.object({ op: z.literal('task.drop'), id }),
   z.object({ op: z.literal('task.reorder'), ids: z.array(id).min(2) }),

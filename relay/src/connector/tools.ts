@@ -26,7 +26,9 @@ Call read_memory when the person names someone, a place or a matter ("what does 
 
 Never change the list without the person's yes, except one low-risk change they asked for (add one step, tick one done, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
 
-A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. Never give weights to decision items; the person weighs them.`;
+A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. Never give weights to decision items; the person weighs them.
+
+A step marked [waiting for] is something outside the person's hands (a call back, a reply): never plan, estimate or schedule it. Make one with kind "event" in a chain (and an optional check date, "nudge"); when it has happened, task.done with the day it did frees what waits for it.`;
 
 export interface Row { wrapped: string; wall: number; counter: number }
 
@@ -102,19 +104,20 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     throw unknown('step', value, 'Use query_tasks to find it (status "all" includes standing and dropped steps).');
   };
 
-  tool('today', "Today: the current place, today's list in order with launch points and fixed times, the next step, steps carried from yesterday, and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
+  tool('today', "Today: the current place, today's list in order with launch points and fixed times, the next step, steps carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
 
-  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, launch points, fixed times, and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
+  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, launch points, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
     if (needsCold(c.s) && date < c.s.split!.from) throw new NeedCold(); // before the hot window
     return { text: dayText(c.v, date) };
   });
 
-  tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first. Standing steps (fixed times that come back on weekdays, marked "(standing, …)") are listed with status "all", or alone with standing: true.', z.object({
+  tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first. Standing steps (fixed times that come back on weekdays, marked "(standing, …)") are listed with status "all", or alone with standing: true. Things the person waits for are marked "[waiting for]"; waiting_for: true lists only those, with what each holds back.', z.object({
     quadrant: z.number().int().min(1).max(4).optional(),
     project: z.string().optional().describe('A project id or name'),
     place: z.string().optional().describe('A place id or name, or "any"; includes steps that can be done anywhere'),
     status: z.enum(['open', 'done', 'dropped', 'all']).optional(),
     standing: z.boolean().optional().describe('Only standing steps (with status, default open)'),
+    waiting_for: z.boolean().optional().describe('Only things the person waits for (events), with how long and what each holds back (with status, default open)'),
     due_from: day.optional(), due_to: day.optional(),
     text: z.string().optional().describe('Words that must all appear in the title, note or project name'),
     limit: z.number().int().min(1).max(50).optional(),
@@ -129,7 +132,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
       const f = a.place === 'any' || c.v.places.has(a.place) ? { id: a.place } : findByName(a.place, [...c.v.places.values()].map(p => ({ id: p.id, name: p.name })));
       if ('id' in f) ids.place = f.id; else throw unknown('place', a.place, '');
     }
-    return { text: queryText(c.v, { quadrant: a.quadrant, status: a.status, standing: a.standing, dueFrom: a.due_from, dueTo: a.due_to, text: a.text, limit: a.limit }, ids) };
+    return { text: queryText(c.v, { quadrant: a.quadrant, status: a.status, standing: a.standing, waitingFor: a.waiting_for, dueFrom: a.due_from, dueTo: a.due_to, text: a.text, limit: a.limit }, ids) };
   });
 
   tool('get_task', 'One step with everything on it, and its work sessions. The id, or its title.', z.object({ id: z.string() }), read, (c, { id }) => ({ text: taskText(c.v, task(c, id)) }));

@@ -150,13 +150,18 @@ export const oneLine = one;
 
 export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, id: string) => (id === 'inbox' ? 'Inbox' : projects.get(id)?.name ?? id);
 
-/** `id | title | Q1 | due | est | project`, as v1 sent them. */
-export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
-  const done = t.status === 'done' ? ' (done)' : t.status === 'dropped' ? ' (dropped)' : '';
+/**
+ * `id | title | Q1 | due | est | project`, as v1 sent them. Something the person waits for (an event, schema 6) says so
+ * after its title, with its check date, and has no quadrant, due date or estimate: it is not a step to do or to schedule.
+ */
+export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'> & Partial<Pick<TaskW, 'kind' | 'nudge'>>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
+  const event = t.kind === 'event';
+  const done = t.status === 'done' ? (event ? ' (happened)' : ' (done)') : t.status === 'dropped' ? ' (dropped)' : '';
   // The head of a chain says how many steps wait after it, and its quadrant follows the chain's earliest due date.
   const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
+  const wait = event && t.status === 'open' ? ` [waiting for${t.nudge ? ', check ' + t.nudge : ''}]` : '';
   const q = chain && chain !== 'waiting' && chain.due && (!t.due || chain.due < t.due) ? { ...t, due: chain.due } : t;
-  return [t.id, one(t.title) + done + note, 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
+  return [t.id, one(t.title) + wait + done + note, event ? '-' : 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
 

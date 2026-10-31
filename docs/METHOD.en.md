@@ -13,6 +13,8 @@ The core difficulty it addresses is **starting**. Once work has begun it usually
 3. **Estimate every step while you schedule it**, including the time it takes to get started, and the planning itself. `[E?]`
 4. **Time it, and write the real time down.** Comparing the estimate with the real time corrects the next estimate. Most people, and especially people with ADHD, underestimate; seeing your own ratio is how that changes. `[E?]`
 5. **Break things down until the first step is simple and low-friction**, and title it with the concrete first action: the app or place, then what to do there ("Open Mail and reply to…", "Open the bank app and download…"). Watch the friction points: starting, restarting after a break, and where attention drifts. `[E?]`
+
+   When the next step depends on something outside your hands (a call back, a reply, a delivery), don't write it as a task to do: write it as a **"waiting for"** step in the chain, before the step it holds back, with a date to check if you like. Never estimate it or schedule it; when it happens, mark it happened and the next step is freed.
 6. **Make progress visible.** Played cards, progress bars, the close of the day. Seeing progress is the reward; nothing else is invented. `[E?]`
 7. **Leisure, going out and seeing people are obligations**, to your mental health and to the list. Schedule them like any step, never as a prize for work. `[E?]`
 8. **Decisions and problems get a method of their own**: define the problem, list every option, weigh the pros and cons of doing and of not doing each one, choose, then turn the choice into steps. See *Decisions* below. `[E?]`

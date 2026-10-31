@@ -44,6 +44,10 @@ Un calendrier sert à ce qui a une heure et à ce qui tombe un jour. Les points 
 
 Les étapes qui en attendent une autre forment une seule carte : la première, avec « +4 après ». Touchez-la pour voir les autres. Quand la première est faite, la suivante prend sa place. Si vous les préférez séparées, choisissez **Dans n’importe quel ordre** en découpant une étape, ou videz « Attend » sur une étape.
 
+## Comment noter quelque chose que j’attends, comme un rappel ?
+
+Ne l’écrivez pas comme une tâche. En découpant une étape, touchez **Quelque chose que j’attends**, ou réglez le **Type** d’une étape sur cela. Elle se place dans la chaîne avant l’étape qu’elle retient, sans durée ni heure, et vous pouvez lui donner un jour où vous la redemander. Quand elle arrive, touchez **C’est arrivé**. Voir [Les projets](projects.md).
+
 ## Où sont passés mes rendez-vous fixes dans la matrice ?
 
 Ils sont sur la ligne repliée **Obligations**, sous la grille. C’est une heure qui les place, pas un quadrant.

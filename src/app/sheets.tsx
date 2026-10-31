@@ -6,7 +6,7 @@ import { settings, projects, today, places, toast, stays, clockNow, update, here
 import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
-  patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
+  patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, droppedLine, reopen, setFirst, startTask, addSession, editSession,
   deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists, type Finished,
 } from './actions';
 import { openHappened } from './EventUi';
@@ -298,7 +298,7 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 export function DropButton({ tk, onDrop }: { tk: Tk; onDrop?: () => void }) {
   const [armed, setArmed] = useState(false);
   return (
-    <button class="btn ghost small" type="button" data-testid="drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id); onDrop?.(); toast(t('dropped')); }}>
+    <button class="btn ghost small" type="button" data-testid="drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id).then(f => toast(droppedLine(f))); onDrop?.(); }}>
       {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
     </button>
   );

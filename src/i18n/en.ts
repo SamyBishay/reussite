@@ -211,6 +211,7 @@ export const en = {
   dropIt: 'Drop it',
   dropAgain: 'Tap again to drop it',
   dropped: 'Dropped.',
+  droppedUnlocked: 'Dropped. Unlocked: {what}',
   promptCopied: 'Prompt copied. Paste it into the new chat.',
   copyBlocked: 'Copy was blocked here. Open the step and copy the prompt from there.',
   // done sheet

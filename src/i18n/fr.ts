@@ -186,6 +186,7 @@ export const fr: Partial<Strings> = {
   dropIt: 'Abandonner',
   dropAgain: 'Touchez encore pour abandonner',
   dropped: 'Abandonnée.',
+  droppedUnlocked: 'Abandonnée. Débloqué : {what}',
   promptCopied: 'Consigne copiée. Collez-la dans la nouvelle conversation.',
   copyBlocked: 'La copie est bloquée ici. Ouvrez l’étape et copiez la consigne depuis la fiche.',
   howLong: 'Combien de temps ça a pris ?',

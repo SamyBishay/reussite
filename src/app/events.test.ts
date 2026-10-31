@@ -74,7 +74,7 @@ describe('event steps in the app', () => {
     await event('e', 'The bellman calls back', { order: 1 });
     await mk('b', 'Book the tailor', { order: 2, after: 'e' });
     await settle();
-    await dropTask('e');
+    expect(await dropTask('e')).toEqual(['b']);
     await settle();
     expect(T('e')!.status).toBe('dropped');
     expect(planOf(today.value)).toEqual(['b']);

@@ -102,13 +102,19 @@ export async function reopen(id: string) {
   const p = tk && projects.value.get(tk.project);
   if (p?.status === 'done') await update<Project>('projects', p.id, { status: 'active', doneAt: null });
 }
-/** Drop a step for good (a repeating one stops repeating). */
-export async function dropTask(id: string) {
+/** Drop a step for good (a repeating one stops repeating). Returns the steps it freed, as `finishTask` does. */
+export async function dropTask(id: string): Promise<string[]> {
   const passing = liveNextHeads(tasks.value, id);
   const ev = isEvent(T(id));
   await patchTask(id, { status: 'dropped', started: null });
   await placeFreed(id, passing, true, ev);
+  return passing;
 }
+/** What a drop says: "Dropped.", and the steps it freed when there are some. */
+export const droppedLine = (freed: string[]) => {
+  const names = freed.map(x => T(x)?.title).filter((x): x is string => !!x);
+  return names.length ? t('droppedUnlocked', { what: names.join(', ') }) : t('dropped');
+};
 
 /**
  * When the head of a chain leaves (done, or dropped), the step that takes its place goes on the lists the old head

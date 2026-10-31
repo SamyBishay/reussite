@@ -66,9 +66,9 @@ describe('migration 1 → 2', () => {
   });
 });
 
-describe('migrations 2 → 3, 3 → 4 and 4 → 5', () => {
-  // A schema-1, 2, 3 or 4 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
-  // exchanges tables), 2 (schema 3: no addresses or people tables) or 3 (schema 4).
+describe('migrations 2 → 3, 3 → 4, 4 → 5 and 5 → 6', () => {
+  // A schema-1, 2, 3, 4 or 5 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
+  // exchanges tables), 2 (schema 3: no addresses or people tables) or 3 (schemas 4 and 5).
   async function oldDb(name: string, schema: number): Promise<void> {
     const old = new Dexie(name);
     old.version(1).stores({ tasks: 'id, status, project, doneDay, due', sessions: 'id, taskId, d', projects: 'id', days: 'id', decisions: 'id', places: 'id', stays: 'id, from', meta: 'id', local: 'key', backups: '++id, at' });
@@ -81,6 +81,9 @@ describe('migrations 2 → 3, 3 → 4 and 4 → 5', () => {
     await old.table('tasks').put({ id: 'tm1', _v: schema, _hlc: { title: 'h1', urgent: '0000000000005:0001:abc', important: '0000000000004:0003:abc', template: 'h1' }, title: 'Choir', template: true, urgent: true, important: true, weekdays: [1], at: '19:00', mystery: 'kept' });
     await old.table('tasks').put({ id: 'tm2', _v: schema, _hlc: { title: 'h1', urgent: 'h2' }, title: 'Walk', template: true, urgent: false, important: false });
     await old.table('tasks').put({ id: 't3', _v: schema, _hlc: { title: 'h1', urgent: 'h4' }, title: 'Ordinary', urgent: true, important: true });
+    // A step as every version before 6 wrote it, with a kind of its own; and one that never had a kind.
+    await old.table('tasks').put({ id: 't4', _v: schema, _hlc: { title: 'h1', kind: 'h1' }, title: 'A decision step', kind: 'decision', status: 'open' });
+    await old.table('tasks').put({ id: 't5', _v: schema, _hlc: { title: 'h1' }, title: 'No kind at all', status: 'open' });
     await old.table('decisions').put(schema === 1
       ? { id: 'd1', _v: 1, _hlc: { title: 'h1', problem: 'h1' }, title: 'Stay?', problem: 'Rent', chosen: 'Stay', options: [{ name: 'Stay', pros: [['cheap', 3]], cons: [] }] }
       : { id: 'd1', _v: 2, _hlc: { title: 'h1', problem: 'h1' }, title: 'Stay?', problem: { what: 'Rent', should: '', gap: '', constraints: '', deadline: '', control: '' }, status: 'decided', chosen: 'Stay', chosenId: 'o0', options: [{ id: 'o0', name: 'Stay', pros: [{ id: 'i', text: 'cheap', w: 3 }], cons: [], prosNot: [], consNot: [] }] });
@@ -98,7 +101,7 @@ describe('migrations 2 → 3, 3 → 4 and 4 → 5', () => {
     old.close();
   }
 
-  for (const from of [1, 2, 3, 4]) {
+  for (const from of [1, 2, 3, 4, 5]) {
     it(`brings a schema ${from} database to ${SCHEMA_VERSION}: nothing lost`, async () => {
       await oldDb('upgrade-' + from, from);
       const db = new ReussiteDb('upgrade-' + from); // Dexie upgrades version 1 to 2 when it opens: the new tables exist before the migration runs
@@ -113,10 +116,19 @@ describe('migrations 2 → 3, 3 → 4 and 4 → 5', () => {
       expect(await db.addresses.count()).toBe(from >= 4 ? 1 : 0);
       expect(await db.people.count()).toBe(from >= 4 ? 1 : 0);
       if (from >= 4) expect(await db.addresses.get('a1')).toMatchObject({ name: 'Chez Zed', futureField: 'kept' });
-      // Schema 5: a standing obligation loses its flags, on a clock right after the old one; nothing else changes.
+      // Schema 5: a standing obligation loses its flags, on a clock right after the old one; nothing else changes. A database already at 5 keeps what it wrote.
       const tm1 = (await db.tasks.get('tm1'))!;
-      expect(tm1).toMatchObject({ title: 'Choir', template: true, urgent: false, important: false, weekdays: [1], at: '19:00', mystery: 'kept' });
-      expect(tm1._hlc).toEqual({ title: 'h1', template: 'h1', urgent: '0000000000005:0002:abc', important: '0000000000004:0004:abc' });
+      if (from <= 4) {
+        expect(tm1).toMatchObject({ title: 'Choir', template: true, urgent: false, important: false, weekdays: [1], at: '19:00', mystery: 'kept' });
+        expect(tm1._hlc).toEqual({ title: 'h1', template: 'h1', urgent: '0000000000005:0002:abc', important: '0000000000004:0004:abc' });
+      } else {
+        expect(tm1).toMatchObject({ title: 'Choir', template: true, urgent: true, important: true, weekdays: [1], at: '19:00', mystery: 'kept' });
+      }
+      // Schema 6 (event steps): old steps read as tasks. Nothing is added, nothing is rewritten, and no step becomes an event.
+      expect(await db.tasks.get('t4')).toMatchObject({ title: 'A decision step', kind: 'decision', _hlc: { title: 'h1', kind: 'h1' } });
+      expect(await db.tasks.get('t5')).toMatchObject({ title: 'No kind at all', _hlc: { title: 'h1' } });
+      expect(await db.tasks.get('t5')).not.toHaveProperty('kind');
+      for (const t of await db.tasks.toArray()) { expect(t.kind).not.toBe('event'); expect(t).not.toHaveProperty('nudge'); }
       expect(await db.tasks.get('tm2')).toMatchObject({ urgent: false, important: false, _hlc: { title: 'h1', urgent: 'h2' } });
       expect(await db.tasks.get('t3')).toMatchObject({ urgent: true, important: true, _hlc: { title: 'h1', urgent: 'h4' } });
       expect((await db.tasks.get('tm1'))).not.toHaveProperty('label');
@@ -128,10 +140,11 @@ describe('migrations 2 → 3, 3 → 4 and 4 → 5', () => {
     });
   }
 
-  it('changes no data: migrations 2 → 3 and 3 → 4 are the identity', () => {
+  it('changes no data: migrations 2 → 3, 3 → 4 and 5 → 6 are the identity', () => {
     const data = { tasks: [{ id: 'a', _v: 2, _hlc: { title: 'h' }, title: 'x', odd: 1 }], memory: [], exchanges: [] };
     expect(migrateData(structuredClone(data), 2, 3)).toEqual(data);
     expect(migrateData(structuredClone(data), 3, 4)).toEqual(data);
+    expect(migrateData(structuredClone(data), 5, 6)).toEqual(data);
   });
 
   it('4 → 5 clears urgent and important on standing obligations only, through their field clocks', () => {

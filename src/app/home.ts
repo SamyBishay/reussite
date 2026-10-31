@@ -160,7 +160,8 @@ function parseContext(): ParseContext {
     dayStart: settings.value.dayStart,
     zone: hereZone.value,
     places: [...places.value.values()].map(p => ({ id: p.id, name: p.name })),
-    tasks: [...tasks.value.values()].map(x => ({ id: x.id, title: x.title, status: x.status, template: x.template })),
+    // Something waited for is not a step to name ("done X"): it is answered with "It happened".
+    tasks: [...tasks.value.values()].filter(x => x.kind !== 'event').map(x => ({ id: x.id, title: x.title, status: x.status, template: x.template })),
     notes: [...memory.value.values()].filter(n => !n.private).flatMap(n => [n.name, ...n.aliases]),
   };
 }

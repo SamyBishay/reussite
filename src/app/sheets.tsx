@@ -3,12 +3,13 @@
 import { useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, quad, type T as Tk } from './model';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
   patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, reopen, setFirst, startTask, addSession, editSession,
-  deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, type Finished,
+  deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists, type Finished,
 } from './actions';
+import { openHappened } from './EventUi';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
 import { More, countSet } from './More';
@@ -22,7 +23,7 @@ import { stillOnDue, minutesBetween, shiftTime } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
 import { deriveLabel } from '../domain/label';
-import { nextHeads } from '../domain/chains';
+import { liveNextHeads, toEventFields } from '../domain/events';
 import { dueBeforeEnd, isArea } from '../domain/places';
 import { placePath, placeRows } from '../domain/areas';
 import { SUIT_ORDER } from '../data/settings';
@@ -55,7 +56,7 @@ export function showMoment(kind: 'project' | 'decision', name: string) {
 export async function complete(tk: Tk, typed: number | null, day = today.value, minutes?: number): Promise<Finished> {
   const k = today.value;
   const isLast = day === k && rawPlan(k).includes(tk.id) && planOf(k).filter(id => id !== tk.id && T(id)?.status === 'open' && !T(id)?.fixed).length === 0
-    && !nextHeads(tasks.value, tk.id).length; // a step it frees takes its place on the list, so the list is not played
+    && !liveNextHeads(tasks.value, tk.id).length; // a step it frees takes its place on the list, so the list is not played
   if (day === k) celebrate(isLast ? 'last' : 'step', tk.id, tk.suit, cardsOn(k).length + 1, isLast ? { title: t('listPlayed'), sub: t('allDone') } : undefined);
   const r = await finishTask(tk, typed, day, minutes);
   if (r.projectDone) {
@@ -370,11 +371,11 @@ function AfterField({ id, value, onChange }: { id: string; value: string[]; onCh
   const found = open ? [...tasks.value.values()].filter(x => x.id !== id && x.status === 'open' && !x.template && !value.includes(x.id) && (!q || x.title.toLowerCase().includes(q.toLowerCase()))).sort(byOrder).slice(0, 8) : [];
   return (
     <div class="field"><span>{t('waitsForField')}</span>
-      {value.length > 0 && <ul class="mini">{value.filter(x => T(x)?.status !== 'dropped').map(x => <li><span>{T(x)?.title ?? x}</span><button type="button" class="chip-x" onClick={() => onChange(value.filter(y => y !== x))} aria-label={t('remove', { what: T(x)?.title ?? x })}>×</button></li>)}</ul>}
+      {value.length > 0 && <ul class="mini">{value.filter(x => T(x)?.status !== 'dropped').map(x => <li><span>{isEvent(T(x)) && t('waitingForCard', { what: '' })}{T(x)?.title ?? x}</span><button type="button" class="chip-x" onClick={() => onChange(value.filter(y => y !== x))} aria-label={t('remove', { what: T(x)?.title ?? x })}>×</button></li>)}</ul>}
       {open ? (
         <>
           <input type="text" value={q} placeholder={t('searchSteps')} aria-label={t('searchSteps')} onInput={e => setQ((e.target as HTMLInputElement).value)} />
-          <ul class="mini pickable">{found.map(x => <li><button type="button" class="linklike" onClick={() => { onChange([...value, x.id]); setQ(''); }}><Title s={x.title} /></button></li>)}</ul>
+          <ul class="mini pickable">{found.map(x => <li><button type="button" class="linklike" onClick={() => { onChange([...value, x.id]); setQ(''); }}>{isEvent(x) && t('waitingForCard', { what: '' })}<Title s={x.title} /></button></li>)}</ul>
         </>
       ) : <div><button class="btn small" type="button" onClick={() => setOpen(true)}>{t('addWaitsFor')}</button></div>}
     </div>
@@ -423,6 +424,10 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const [weekdays, setWeekdays] = useState<number[]>(tk.weekdays ?? []);
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
+  // Something the person waits for (an event) hides what a step has: time, estimate, quadrant, due date.
+  const [kindV, setKindV] = useState<Task['kind']>(tk.kind ?? 'task');
+  const ev = kindV === 'event';
+  const wasEvent = isEvent(tk);
   // What the step feeds (Addresses and people): one address or one person, picked from its place's lists.
   const [feed, setFeed] = useState(tk.addressId ? 'a:' + tk.addressId : tk.personId ? 'p:' + tk.personId : '');
   const feedOn = addressesOn();
@@ -436,14 +441,14 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const seen = atV ? null : findTime(titleV) ?? findTime(noteV);
   const inPlan = !draft && rawPlan(today.value).includes(id);
   const projs = [...projects.value.values()].filter(p => p.status !== 'dropped').sort((a, b) => SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || byOrder(a, b));
-  const hint: Key = tk.kind === 'decision' ? 'hintDecision' : tk.template ? 'hintStanding' : 'hintStep';
+  const hint: Key = ev ? 'hintEvent' : tk.kind === 'decision' ? 'hintDecision' : tk.template ? 'hintStanding' : 'hintStep';
   const spent = spentOf(id);
   const open = tk.status === 'open';
   const typed = Number(estV) || null;
   const pe = typed ? personal({ ...tk, est: typed }) : null;
   const proj = projects.value.get(tk.project);
   // Optional fields live under More; the summary counts the ones that have a value.
-  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, tk.kind === 'decision', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
+  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -503,6 +508,18 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
     setIf('after', after.length ? after : null, Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : null);
     setIf('dueRule', rule, tk.dueRule);
     if (rule) { const s = stays.value.get(rule.beforeEndOf); if (s) setIf('due', dueBeforeEnd(s, rule.daysBefore), tk.due); }
+    if (ev) {
+      // Something waited for has no estimate, starter, time, due date, quadrant or repeat: set to nothing (kept values are entered again if it turns back into a step).
+      const nothing = toEventFields() as Record<string, unknown>;
+      for (const k of Object.keys(nothing)) {
+        const was = (tk as unknown as Record<string, unknown>)[k], now = nothing[k];
+        // Nothing, false and missing are the same here, so a saved event is not rewritten each time.
+        if ((was ?? false) !== (now ?? false) && !(now === false && was == null) && !(now == null && was === false)) (p as Record<string, unknown>)[k] = now;
+        else delete (p as Record<string, unknown>)[k];
+      }
+      setIf('nudge', v('nudge') || null, tk.nudge);
+      if (!wasEvent && !draft) { if (tk.started) void stopTimer(tk, 'later', null); void leaveLists(id); }
+    }
     const est = Number(v('est')) || null;
     if (est !== (tk.est || null)) {
       p.est = est;
@@ -535,6 +552,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <button class="btn small primary" type="submit">{t('save')}</button>
         {draft ? null : tk.template ? (
           <button class="btn small" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
+        ) : open && wasEvent ? (
+          <button class="btn small primary" type="button" onClick={() => openHappened(id)} data-testid="task-happened">{t('happenedBtn')}</button>
         ) : open ? (
           <>
             {inPlan
@@ -552,7 +571,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
             <button class="btn small" type="button" onClick={() => { void movePlan(id, 1); closeSheet(); }}>{t('later')}</button>
           </>
         )}
-        {open && !tk.template && !draft && (
+        {open && !tk.template && !draft && !wasEvent && (
           <>
             <button class="btn small" type="button" onClick={() => openMove(id, moveMode)}>{t('moveTo')}</button>
             <button class="btn small" type="button" onClick={() => flows.breakDown(id)}>{t('breakItDown')}</button>
@@ -566,6 +585,14 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         )}
       </div>
       <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
+      {ev && (
+        <>
+          <label class="field" data-testid="nudge-field"><span>{t('nudgeField')}</span><input type="date" name="nudge" defaultValue={tk.nudge ?? ''} data-testid="nudge" /></label>
+          <p class="hint">{t('nudgeHint')}</p>
+        </>
+      )}
+      {!ev && (
+        <>
       <div class="row2 timebox" data-testid="timebox">
         <label class="field"><span>{t('startField')}</span>
           <span class="clockpick"><input type="time" name="at" value={atV} onInput={e => setStart((e.target as HTMLInputElement).value)} data-testid="at" />
@@ -598,26 +625,34 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
       {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
+        </>
+      )}
       {err && <p class="err">{err}</p>}
       <More n={hiddenSet} testid="task-more">
-      <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
-      <p class="hint">{t('labelHint')}</p>
-      <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
+      {!ev && (
+        <>
+          <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
+          <p class="hint">{t('labelHint')}</p>
+          <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
+        </>
+      )}
       <label class="field"><span>{t('suit')}</span>
         <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
       </label>
       <label class="field"><span>{t('project')}</span>
         <select name="project">{projs.map(p => <option value={p.id} selected={p.id === tk.project}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
-      {feedOn && !tk.template && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
+      {feedOn && !tk.template && !ev && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
       <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
         <div class="row2">
           <label class="field"><span>{t('kindField')}</span>
-            <select name="kind"><option value="task" selected={tk.kind !== 'decision'}>{t('kindTask')}</option><option value="decision" selected={tk.kind === 'decision'}>{t('kindDecision')}</option></select>
+            <select name="kind" data-testid="kind" onChange={e => setKindV((e.target as HTMLSelectElement).value as Task['kind'])}>
+              <option value="task" selected={kindV === 'task'}>{t('kindTask')}</option><option value="decision" selected={kindV === 'decision'}>{t('kindDecision')}</option><option value="event" selected={kindV === 'event'}>{t('kindEvent')}</option>
+            </select>
           </label>
-          <div class="field"><span>{t('standingField')}</span><label class="tog"><input type="checkbox" name="template" defaultChecked={!!tk.template} /> {t('standingLabel')}</label></div>
+          {!ev && <div class="field"><span>{t('standingField')}</span><label class="tog"><input type="checkbox" name="template" defaultChecked={!!tk.template} /> {t('standingLabel')}</label></div>}
         </div>
-        {feedOn && tk.template && (
+        {feedOn && tk.template && !ev && (
           <label class="field"><span>{t('offerField')}</span>
             <select name="offer" data-testid="offer">
               <option value="" selected={!tk.offer}>{t('offerNone')}</option><option value="address" selected={tk.offer === 'address'}>{t('offerAddress')}</option><option value="person" selected={tk.offer === 'person'}>{t('offerPerson')}</option>
@@ -626,19 +661,21 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           </label>
         )}
         <AfterField id={id} value={after} onChange={setAfter} />
+        {!ev && <>
         <div class="row2">
           <label class="field"><span>{t('appField')}</span><input type="text" name="app" defaultValue={tk.app ?? ''} placeholder="Mail, WhatsApp…" autocomplete="off" /></label>
           <label class="field"><span>{t('linkField')}</span><input type="text" name="link" inputMode="url" defaultValue={tk.link ?? ''} placeholder="https://…" autocomplete="off" /></label>
         </div>
         <label class="field"><span>{t('promptField')}</span><textarea name="prompt" defaultValue={tk.prompt ?? ''} /></label>
         <RepeatField value={repeat} onChange={setRepeat} />
-        {tk.template && (
+        </>}
+        {tk.template && !ev && (
           <div class="field" data-testid="weekdays"><span>{t('weekdaysField')}</span>
             <div class="toggles">{weekdayNames().map(([d, name]) => <label class="tog small"><input type="checkbox" checked={weekdays.includes(d)} onChange={e => setWeekdays((e.target as HTMLInputElement).checked ? [...weekdays, d].sort() : weekdays.filter(x => x !== d))} /> {name}</label>)}</div>
             <p class="hint">{t('weekdaysHint')}</p>
           </div>
         )}
-        {stayList.length > 0 && (
+        {stayList.length > 0 && !ev && (
           <div class="field"><span>{t('beforeLeave')}</span>
             <div class="row2">
               <select aria-label={t('beforeLeave')} value={rule?.beforeEndOf ?? ''} onChange={e => { const v = (e.target as HTMLSelectElement).value; setRule(v ? { beforeEndOf: v, daysBefore: rule?.daysBefore ?? 1 } : null); }}>
@@ -655,8 +692,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <input type="date" defaultValue={tk.doneDay} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void moveDone(id, v); }} data-testid="done-day" />
         </label>
       )}
-      {(spent > 0 || sessionsOf(id).length > 0 || tk.status === 'done') && <Sessions tk={tk} />}
-      {spent > 0 && <p class="hint" style="margin-top:var(--s3)">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
+      {!ev && (spent > 0 || sessionsOf(id).length > 0 || tk.status === 'done') && <Sessions tk={tk} />}
+      {!ev && spent > 0 && <p class="hint" style="margin-top:var(--s3)">{tk.est ? t('timedAgainst', { t: fmtMin(spent), e: fmtMin(tk.est0 ?? tk.est) }) : t('timedOnly', { t: fmtMin(spent) })}</p>}
     </form>
   );
 }
@@ -857,5 +894,5 @@ function PileSheet({ suit }: { suit: Task['suit'] }) {
 }
 
 /** A project's linked steps left, for "2 steps left" (goal gradient, brief §5). */
-export const stepsLeft = (p: Project & { id: string }) => [...tasks.value.values()].filter(x => x.project === p.id && x.status === 'open' && !x.template).length;
+export const stepsLeft = (p: Project & { id: string }) => [...tasks.value.values()].filter(x => x.project === p.id && x.status === 'open' && !x.template && !isEvent(x)).length;
 

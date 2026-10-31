@@ -28,6 +28,7 @@ import { Settings } from '../views/Settings';
 import { Home } from '../views/Home';
 import { Memory } from '../views/Memory';
 import { History } from '../views/History';
+import { Waiting } from '../views/Waiting';
 import { Addresses } from '../views/Addresses';
 import { openVisit } from './AddressSheets';
 import { openBreakDown } from '../flows/breakdown';
@@ -102,7 +103,7 @@ const TAB_ICON: Record<string, string> = {
 /** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
 function Tabs() {
   const v = view.value;
-  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' || v === 'notifications' : v === x);
+  const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' || v === 'notifications' || v === 'waiting' : v === x);
   return (
     <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
       <div class="tabbar-in">
@@ -159,7 +160,7 @@ function SyncStaleBanner() {
 }
 
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || (view.value === 'calendar' && calMode.value === 'log')) return null;
+  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || view.value === 'waiting' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
       <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
@@ -193,10 +194,10 @@ function Toast() {
 }
 
 /** Home, Settings and the screens behind Home's bell and menu have no masthead, suit piles or footer; the others keep them. */
-const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses'];
+const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses', 'waiting'];
 /** Views that get a wider column above 1024 px (brief §16). */
 const WIDE: View[] = ['matrix', 'calendar'];
-const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications };
+const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications, waiting: Waiting };
 
 /** A link with `#task/<id>` (an event in a calendar app) opens that step's sheet, if it still exists. */
 function openLinkedTask() {

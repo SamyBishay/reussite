@@ -732,3 +732,10 @@ body > .row,body > li{list-style:none}
 .show-heart path{stroke:#C6708E}
 .show-heart.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 .set>div>p+p,.foldbody>div>p+p{margin-top:var(--s3)}
+/* Waiting for (event steps): a calm row, the answers under the words; long words wrap, nothing runs sideways. */
+.waitlist li{grid-template-columns:minmax(0,1fr)}
+.waitlist .h-text{font-weight:600;text-align:left;overflow-wrap:anywhere}
+.waitlist small{overflow-wrap:anywhere}
+.waitlist .go{margin-top:var(--s1)}
+.banner.nudge{display:grid;justify-content:stretch;gap:var(--s2)}
+.banner.nudge p{overflow-wrap:anywhere}

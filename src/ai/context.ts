@@ -141,7 +141,8 @@ export function scopeLines(s: Scope): string {
   if (s.kind === 'project') {
     const p = projects.value.get(s.id) as (Project & { id: string }) | undefined;
     if (!p) return '';
-    const all = [...tasks.value.values()].filter(x => x.project === s.id && !x.template && x.status !== 'dropped');
+    // Something the person waits for is not a step the AI plans (the connector's next step gives it a place of its own).
+    const all = [...tasks.value.values()].filter(x => x.project === s.id && !x.template && x.status !== 'dropped' && x.kind !== 'event');
     const open = all.filter(x => x.status === 'open').sort(byOrder);
     const smart = p.smart ? Object.entries(p.smart).filter(([, v]) => v).map(([k, v]) => `${k}: ${one(String(v))}`).join('; ') : '';
     return `Project ${p.id}: ${one(p.name)} (${p.status}), due ${p.due ?? '-'}\ngoal: ${p.goal ? one(p.goal) : '-'}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} steps done, ${open.length} open:\n${stepLines(open)}`;

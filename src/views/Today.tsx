@@ -2,12 +2,13 @@
 // which edits any day's plan, launch points and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places } from '../app/store';
-import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, startHereOf, type T as Tk } from '../app/model';
+import { T, dayCards, dayDoc, whereOf, candidates, yesterdayOpen, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, startHereOf, nudges, type T as Tk } from '../app/model';
 import { startTask, addLaunch, delLaunch, carryOver, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
 import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { Clock } from '../app/Clock';
+import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
 import { openCheckin } from '../flows/checkin';
 import { openClose } from '../flows/close';
@@ -287,6 +288,7 @@ export function Today() {
       {checks.map(dc => (
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
+      {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
       {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={openReview}>{t('startReview')}</button></div>}
       {fid ? <FirstCard tk={T(fid)!} /> : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>

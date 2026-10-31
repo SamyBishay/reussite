@@ -111,7 +111,7 @@ export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: Da
     lead: leadOf(t.lead) ?? leadOf(tpl?.lead) ?? leadOf(s.notifyLead) ?? 30, dur: t.dur ?? tpl?.dur ?? t.est ?? null,
   });
   for (const t of data.tasks.values()) {
-    if (t.template || (!t.at && !t.from)) continue;
+    if (t.template || t.kind === 'event' || (!t.at && !t.from)) continue;
     const root = t.from ?? t.id;
     const tpl = t.from ? data.tasks.get(t.from) : undefined;
     for (const k of t.due ? [t.due] : planDays.get(t.id) ?? []) {

@@ -33,6 +33,7 @@ function HomeMenu() {
         {addressesOn() && <li><button type="button" class="linklike" onClick={() => to('addresses')} data-testid="menu-addresses"><b>{t('addrTitle')}</b></button></li>}
         {addressesOn() && <li><button type="button" class="linklike" onClick={() => { closeSheet(); openNewAddress(); }} data-testid="menu-add-address"><b>{t('addrNewBtn')}</b></button></li>}
         <li><button type="button" class="linklike" onClick={() => to('memory')} data-testid="menu-memory"><b>{t('memoryTitle')}</b></button></li>
+        <li><button type="button" class="linklike" onClick={() => to('waiting')} data-testid="menu-waiting"><b>{t('waitingTitle')}</b></button></li>
         <li><button type="button" class="linklike" onClick={() => to('history')} data-testid="menu-history"><b>{t('historyTitle')}</b></button></li>
       </ul>
     </div>

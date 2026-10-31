@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -18,7 +18,8 @@ export interface Task {
   title: string;
   project: string;
   suit: SuitId;
-  kind: 'task' | 'decision';
+  /** `event`: something outside the person's hands they wait for ("the bellman calls back"), not a step to do. Dormant until it happens. */
+  kind: 'task' | 'decision' | 'event';
   urgent: boolean;
   important: boolean;
   due: DayKey | null;
@@ -46,6 +47,8 @@ export interface Task {
   created: string;
   src?: string;
   from?: string;
+  /** An event's nudge: the day to ask "did it happen?" (schema 6). Events only; none means it never surfaces by itself. */
+  nudge?: DayKey | null;
   // v2, phase 1
   /** A repeating step: the next occurrence is created when this one is done or skipped. */
   repeat?: Repeat | null;

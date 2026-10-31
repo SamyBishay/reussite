@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayCards, inPlace, isObligation, ownerDay, planOf, releaseFrom, yesterdayOpen, type TaskW } from './lists';
+import { dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
 
@@ -76,5 +76,15 @@ describe('one list per card', () => {
     const days: [string, { plan: string[] }][] = [[y, { plan: ['a', 'b'] }], [k, { plan: ['a'] }], [n, { plan: ['c'] }]];
     expect(releaseFrom(days, k, ['a'])).toEqual([[y, ['b']]]);
     expect(releaseFrom(days, k, [])).toEqual([]);
+  });
+});
+
+describe('events (schema 6)', () => {
+  it('are not open work, whatever their status', () => {
+    expect(isOpen({ status: 'open', template: false, kind: 'event' })).toBe(false);
+    expect(isOpen({ status: 'open', template: false, kind: 'task' })).toBe(true);
+    expect(isOpen({ status: 'open', template: false })).toBe(true); // a step written before kinds were optional reads as a task
+    expect(isEvent({ kind: 'event' })).toBe(true);
+    expect(isEvent({ kind: 'decision' })).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import { isUrgent, type Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
 import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
+import { nudgesDue, waitingList } from '../domain/events';
 import { addDays } from '../domain/dates';
 import { agenda } from '../domain/agenda';
 import { greeting, startHere } from '../domain/greeting';
@@ -23,8 +24,10 @@ export const T = (id: string): T | undefined => tasks.value.get(id);
 export const whereOf = (t: T): string => L.whereOf(t, projects.value);
 /** On the page being viewed (or `place`): its own steps plus everything marked Anywhere. */
 export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value, places.value);
-/** An open work step: not a standing obligation, not a fixed commitment. */
+/** An open work step: not a standing obligation, not a fixed commitment, not an event the person waits for. */
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
+/** Something the person waits for (schema 6, src/domain/events.ts): dormant, and out of every list of work. */
+export const isEvent = (t: Pick<T, 'kind'> | undefined): boolean => L.isEvent(t);
 /** Obligations (standing, or a copy of one) never sit in the matrix or the planner's pool; their urgent and important flags are ignored. */
 export const isObligation = (t: T): boolean => L.isObligation(t, tasks.value);
 /** The chains of the open steps (src/domain/chains.ts), rebuilt once whenever the steps change. */
@@ -52,7 +55,7 @@ export const spent = computed(() => minutesByTask(sessions.value.values()));
 export const spentOf = (id: string) => spent.value.get(id) ?? 0;
 
 export function cardsOn(k: string): T[] {
-  const out = [...tasks.value.values()].filter(t => t.status === 'done' && !t.template && t.doneDay === k);
+  const out = [...tasks.value.values()].filter(t => t.status === 'done' && !t.template && !isEvent(t) && t.doneDay === k);
   return out.sort((a, b) => String(a.doneAt ?? '').localeCompare(String(b.doneAt ?? '')));
 }
 export function minutesOn(k: string): number {
@@ -65,9 +68,9 @@ export function minutesOnFor(k: string, taskId: string): number {
   for (const s of sessions.value.values()) if (s.d === k && s.taskId === taskId) m += Number(s.m) || 0;
   return m;
 }
-export const allCards = () => [...tasks.value.values()].filter(t => t.status === 'done' && !t.template).length;
+export const allCards = () => [...tasks.value.values()].filter(t => t.status === 'done' && !t.template && !isEvent(t)).length;
 export const ratio = computed(() => ratioOf(tasks.value.values(), spent.value));
-export const running = (): T | undefined => [...tasks.value.values()].find(t => t.started && t.status === 'open');
+export const running = (): T | undefined => [...tasks.value.values()].find(t => t.started && t.status === 'open' && !isEvent(t));
 export const elapsedSec = (t: T, now = Date.now()) => (t.started ? Math.max(0, (now - Date.parse(t.started)) / 1000) : 0);
 
 const byOrder = L.byOrder;
@@ -78,6 +81,9 @@ export function candidates(k = today.value, place = pagePlace.value): T[] {
   const plan = new Set(rawPlan(k));
   return [...tasks.value.values()].filter(t => isOpen(t) && !isObligation(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
 }
+/** Events to ask about today (their nudge day has come), and every open event with what it holds back (src/domain/events.ts). */
+export const nudges = computed(() => nudgesDue(tasks.value.values(), today.value));
+export const waiting = computed(() => waitingList(tasks.value.values(), today.value));
 export const sessionsOf = (id: string): WithId<Session>[] =>
   [...sessions.value.values()].filter(s => s.taskId === id).sort((a, b) => String(a.d + a.at).localeCompare(String(b.d + b.at)));
 

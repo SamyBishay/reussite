@@ -4,11 +4,13 @@
 const DARK = new URL('../assets/dove/mark-dark.webp', import.meta.url).href;
 const LIGHT = new URL('../assets/dove/mark-light.webp', import.meta.url).href;
 
-export function Mark({ size = 64, class: cls }: { size?: number; class?: string }) {
+/** `size` is pixels, or any CSS length (Home sets it from the screen's height and shrinks it when cards are under it). */
+export function Mark({ size = 64, class: cls }: { size?: number | string; class?: string }) {
+  const px = typeof size === 'number';
   return (
-    <span class={'mark' + (cls ? ' ' + cls : '')} style={{ height: size + 'px' }} aria-hidden="true">
-      <img class="mark-l" src={LIGHT} alt="" height={size} decoding="async" />
-      <img class="mark-d" src={DARK} alt="" height={size} decoding="async" />
+    <span class={'mark' + (cls ? ' ' + cls : '')} style={{ height: px ? size + 'px' : size }} aria-hidden="true">
+      <img class="mark-l" src={LIGHT} alt="" height={px ? size : undefined} decoding="async" />
+      <img class="mark-d" src={DARK} alt="" height={px ? size : undefined} decoding="async" />
     </span>
   );
 }

@@ -3,7 +3,7 @@ import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, pageView, places, setView, viewingElsewhere, clockNow } from './store';
-import { cardsOn, minutesOn, allCards, running, T, dayDoc } from './model';
+import { cardsOn, minutesOn, running, T, dayDoc } from './model';
 import { regionOf, viewsElsewhere } from '../domain/view';
 import { applyTheme } from './theme';
 import { SheetHost, suitName } from './ui';
@@ -69,10 +69,8 @@ function Mast() {
   const d = dayDoc(today.value);
   return (
     <header class="mast">
-      <div>
-        <h1 class="word">{t('appName')}</h1>
-        <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
-      </div>
+      <h1 class="vh">{t(TAB_KEY[view.value] ?? 'appName')}</h1>
+      <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
       <PlacePill />
     </header>
   );
@@ -96,7 +94,7 @@ function Side() {
           </button>
         );
       })}</div>
-      <p class="daystat"><span>{t('cardsToday', { n: cards.length })}</span><span>{t('timed', { t: fmtMin(minutesOn(today.value)) })}</span><span>{t('allTime', { n: allCards() })}</span></p>
+      <p class="daystat"><span>{t('cardsToday', { n: cards.length })}</span><span>{t('timed', { t: fmtMin(minutesOn(today.value)) })}</span></p>
       <button class="btn primary wide" id="closeSide" type="button" onClick={openClose}>{t('closeTheDay')}</button>
     </aside>
   );
@@ -217,6 +215,8 @@ async function openLinkedPlan() {
 export function App() {
   useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
+  // Home never scrolls, and the phone's rubber band is off while it is shown (html.home-lock, src/styles/app.css).
+  useEffect(() => { const on = view.value === 'home'; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value]);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) { openLinkedTask(); void openLinkedPlan(); } };
     window.addEventListener('hashchange', onHash);

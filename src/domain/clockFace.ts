@@ -1,8 +1,12 @@
-// The Dove clock's arithmetic (src/app/DoveClock.tsx): where the hands point and how the time is said. Pure.
+// The Dove clock's arithmetic (src/app/DoveClock.tsx): how far round each ring is filled, and how the time is said. Pure.
 
-/** Degrees clockwise from twelve: the hour hand creeps with the minutes, the minute hand moves once a minute. */
-export function handAngles(hh: number, mm: number): { hour: number; minute: number } {
-  return { hour: ((hh % 12) + mm / 60) * 30, minute: mm * 6 };
+/**
+ * How far round each ring is, 0 to 1, clockwise from twelve: the outer ring is the hour on a 12-hour dial (it creeps with the minutes and is empty at twelve),
+ * the inner one the minutes (empty on the hour).
+ */
+export function ringFractions(hh: number, mm: number): { hour: number; minute: number } {
+  const h = ((hh % 12) + 12) % 12, m = ((mm % 60) + 60) % 60;
+  return { hour: (h + m / 60) / 12, minute: m / 60 };
 }
 
 /**

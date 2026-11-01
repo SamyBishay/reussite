@@ -45,7 +45,6 @@ export const en = {
   todaysCards: "Today's cards",
   cardsToday: { one: '{n} card today', other: '{n} cards today' } as P,
   timed: '{t} timed',
-  allTime: '{n} all-time',
   pileLabel: '{suit}: {n} done today. Show them.',
   cardsPlayedToday: { one: '{n} card played today.', other: '{n} cards played today.' } as P,
   noCardsSuit: 'No cards in this suit yet today.',

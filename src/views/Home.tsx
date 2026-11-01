@@ -22,6 +22,7 @@ import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
 import { openPlanDay, openMorning } from '../flows/morning';
+import { ChatOffer } from '../app/ChatOffer';
 import { openClose } from '../flows/close';
 import { withTime } from '../domain/calendar';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
@@ -139,6 +140,7 @@ function GreetingBody() {
         <div class="go">
           <button class="btn primary" type="button" onClick={openPlanDay} data-testid="home-plan">{t('planTheDay')}</button>
           {aiOn.value && <button class="btn ghost" type="button" onClick={openCheckin} data-testid="home-plan-ritual">{t('mornMyself')}</button>}
+          <ChatOffer what="day" testid="home-plan-chat" />
         </div>
       </section>
     );

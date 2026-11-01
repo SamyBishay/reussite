@@ -1,7 +1,8 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type Route, type TestInfo } from '@playwright/test';
 import { importSample, noSideways, goTab, expandSettings } from './helpers';
 
-// First-run setup (S9): language, then one choice, "Set up with an AI" or "Set up by myself". A new device is one that has no data and no
+// First-run setup (S9 and its follow-up): language, then three explicit choices (AI inside the app with a key, your AI chat app through the connector,
+// no AI) and a link for another chatbot, by copy and paste. A new device is one that has no data and no
 // record of having finished. Every other test runs as a device that has (playwright.config.ts puts the record in localStorage); these ask for a new one.
 const NEW_DEVICE = { cookies: [], origins: [] };
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
@@ -44,8 +45,9 @@ const SETUP = [
 const ASKING = { say: 'What does a usual week look like for you?', changes: [] };
 const PROPOSAL = { say: 'You are finishing a thesis, you have two kids, and you want time for your sister. Here are four pillars and two places.', changes: SETUP };
 
-/** The first screen's choice, with the language left as it is. */
-const choose = (page: Page, how: 'ai' | 'myself') => page.getByTestId(how === 'ai' ? 'ob-with-ai' : 'ob-by-myself').click();
+/** The first screen's choice, with the language left as it is. `chatbot` is the link under the three. */
+const choose = (page: Page, how: 'key' | 'connector' | 'myself' | 'chatbot') =>
+  page.getByTestId({ key: 'ob-way-key', connector: 'ob-way-connector', myself: 'ob-way-none', chatbot: 'ob-copypaste-link' }[how]).click();
 
 /** Finish the by-hand way: keep the pillars, one place. */
 async function byMyself(page: Page, place = 'Home') {
@@ -59,20 +61,30 @@ async function byMyself(page: Page, place = 'Home') {
 test.describe('on a new device', () => {
   test.use({ storageState: NEW_DEVICE });
 
-  test('the first screen is the language and one choice, with the pairing link, and no tabs, look or cards', async ({ page }) => {
+  test('the first screen is the language and three explicit choices, each saying what it gives, with the copy-and-paste link and the pairing link, and no tabs, look or cards', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('ob-language')).toBeVisible();
     await expect(page.getByTestId('ob-not-therapy')).toContainText('doesn’t replace therapy');
     await expect(page.getByTestId('ob-pair-link')).toBeVisible();
-    await expect(page.getByTestId('ob-with-ai')).toContainText('Set up with an AI');
-    await expect(page.getByTestId('ob-by-myself')).toContainText('Set up by myself');
+    await expect(page.getByTestId('ob-skip')).toBeVisible();
+    await expect(page.getByTestId('ob-way-key')).toContainText('AI inside the app (a key)');
+    await expect(page.getByTestId('ob-way-key')).toContainText('conversation inside the app');
+    await expect(page.getByTestId('ob-way-key')).toContainText('few cents a month');
+    await expect(page.getByTestId('ob-way-connector')).toContainText('Your AI chat app, through the connector');
+    await expect(page.getByTestId('ob-way-connector')).toContainText('talking to your AI chat app');
+    await expect(page.getByTestId('ob-way-connector')).toContainText('with your yes');
+    await expect(page.getByTestId('ob-way-none')).toContainText('No AI');
+    await expect(page.getByTestId('ob-way-none')).toContainText('a few questions, one at a time');
+    await expect(page.getByTestId('ob-way-none')).toContainText('without AI');
+    await expect(page.getByTestId('ob-copypaste-link')).toContainText('Any chatbot');
     await expect(page.locator('.tabbar')).toHaveCount(0);
     await noJargon(page, 'first screen');
     // The language switches the UI at once.
     await page.getByTestId('ob-lang-fr').click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    await expect(page.getByTestId('ob-way-connector')).toContainText('Votre appli de chat IA, par le connecteur');
     await page.getByTestId('ob-lang-en').click();
-    await expect(page.getByTestId('ob-with-ai')).toContainText('Set up with an AI');
+    await expect(page.getByTestId('ob-way-none')).toContainText('No AI');
   });
 
   test('by myself: four plain questions, a place, done; every answer is an ordinary setting afterwards, in the default look', async ({ page }) => {
@@ -179,19 +191,14 @@ test.describe('on a new device', () => {
 
   // ---- With an AI
 
-  test('with an AI and a key: the tutorial, then a conversation that ends on the review screen, then Home with the Next steps', async ({ page }) => {
+  test('with a key in the app: the tutorial, then a conversation that ends on the review screen, then Home with the Next steps', async ({ page }) => {
     const seen = await stub(page, ASKING, PROPOSAL);
     await page.goto('/');
-    await choose(page, 'ai');
-    // The tutorial: three ways to connect one.
-    await expect(page.getByTestId('ob-connect')).toBeVisible();
-    await noJargon(page, 'connect');
-    await expect(page.getByTestId('ob-way-key')).toBeVisible();
-    await expect(page.getByTestId('ob-way-app')).toBeVisible();
-    await expect(page.getByTestId('ob-way-other')).toBeVisible();
-    await page.getByTestId('ob-way-key').click();
+    await choose(page, 'key');
+    // The tutorial: get a key, test it.
     await expect(page.getByTestId('ob-key')).toBeVisible();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', 'https://openrouter.ai/keys');
+    await expect(page.getByTestId('ob-provider-hint')).toContainText('many models');
     await expect(page.getByTestId('ob-next')).toBeDisabled(); // nothing to talk to yet
     await page.getByTestId('ob-ai-anthropic').click();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', /anthropic\.com/);
@@ -239,6 +246,7 @@ test.describe('on a new device', () => {
 
     await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.getByTestId('next-steps')).toBeVisible();
+    await expect(page.getByTestId('next-connector')).toHaveCount(0); // a key was chosen: no connector to connect
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
     await expect(page.locator('.pile[data-suit=D]')).toHaveAttribute('aria-label', /Papers|Paperwork/);
@@ -258,8 +266,7 @@ test.describe('on a new device', () => {
   test('with an AI: unticking everything goes back to the conversation, and an AI that is down offers a chatbot instead', async ({ page }) => {
     await stub(page, PROPOSAL, 500);
     await page.goto('/');
-    await choose(page, 'ai');
-    await page.getByTestId('ob-way-key').click();
+    await choose(page, 'key');
     await page.getByTestId('ai-key').fill('sk-or-test');
     await page.getByTestId('ai-key-save').click();
     await next(page);
@@ -277,11 +284,12 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-paste')).toBeVisible();
   });
 
-  test('with Claude or ChatGPT, or any chatbot: copy the message in, paste the reply back, and the same review', async ({ page }) => {
+  test('any chatbot: the link under the choices, copy the message in, paste the reply back, and the same review; no connector', async ({ page }) => {
     await page.goto('/');
-    await choose(page, 'ai');
-    await page.getByTestId('ob-way-app').click();
+    await choose(page, 'chatbot');
     await expect(page.getByTestId('ob-paste')).toBeVisible();
+    await expect(page.getByTestId('ob-paste')).toContainText('any chatbot');
+    await expect(page.getByTestId('ob-paste').locator('.eyebrow')).toHaveCount(0); // one screen: no "n of N"
     await noJargon(page, 'paste');
     // The message it copies: the job, the block it must end with, and nothing of the person's.
     await page.getByTestId('ob-paste').locator('details summary').click();
@@ -289,7 +297,7 @@ test.describe('on a new device', () => {
     expect(pack).toContain('four parts of my days');
     expect(pack).toContain('settings.update');
     expect(pack).toContain('fenced code block labelled reussite');
-    await expect(page.getByTestId('ob-connector-note')).toBeVisible();
+    await expect(page.getByTestId('ob-connector-note')).toHaveCount(0);
     // A reply with no block says so; one that holds nothing to set up says so.
     await page.getByTestId('ob-paste-text').fill('Sure! Here are your pillars: work, home...');
     await page.getByTestId('ob-paste-go').click();
@@ -307,14 +315,134 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-done')).toBeVisible();
     await page.getByTestId('ob-home').click();
     await expect(page.getByTestId('home')).toBeVisible();
-    // Chose a chatbot app: the connector is on the Next steps.
-    await expect(page.getByTestId('next-connector')).toBeVisible();
+    await expect(page.getByTestId('next-connector')).toHaveCount(0);
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /My kids/);
     await goTab(page, 'settings');
     await expect(page.getByTestId('places')).toContainText('Flat');
     await expect(page.getByTestId('places')).toContainText('Library');
     await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true'); // no key: no provider
+  });
+
+  // ---- The AI chat app through the connector (needs the relay on :8787, which has a throwaway wrap key)
+
+  /** From "Connect your AI chat app" to the steps in the app: the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
+  async function connectApp(page: Page) {
+    await expect(page.getByTestId('ob-link')).toBeVisible();
+    await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole list');
+    await noJargon(page, 'connect the app');
+    await page.getByTestId('ob-link-on').click();
+    await expect(page.getByTestId('recovery-key')).toBeVisible(); // sync is on, its key to keep
+    await expect(page.locator('svg.qr')).toBeVisible();
+    await noJargon(page, 'recovery key');
+    await page.getByTestId('ob-link-key-saved').click();
+    await expect(page.getByTestId('ob-link-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
+    await expect(page.getByTestId('ob-link-steps')).toContainText('Add custom connector');
+    // Per-app steps, each with the same weight: Claude, and a line for any other app that accepts MCP connectors.
+    await expect(page.getByTestId('ob-link-apps').locator('li')).toHaveCount(2);
+    await expect(page.getByTestId('ob-link-apps').locator('li').nth(1)).toContainText('accepts MCP connectors');
+    await expect(page.getByTestId('connector-code')).toBeVisible();
+    await expect(page.getByTestId('ob-link-state')).toContainText('Waiting for your app');
+  }
+
+  test('through the connector, the pillars and places by a copy and paste in the app, then Connect your AI chat app: sync and its key, the address and code, a check; the Next steps drop the connector', async ({ page }) => {
+    test.slow();
+    await page.goto('/');
+    await choose(page, 'connector');
+    // First the basics: the connector cannot write settings.
+    await expect(page.getByTestId('ob-basics')).toBeVisible();
+    await expect(page.getByTestId('ob-basics')).toContainText('cannot change your settings');
+    await noJargon(page, 'basics');
+    await page.getByTestId('ob-basics-chat').click();
+    await expect(page.getByTestId('ob-paste')).toContainText('Set up in your AI chat app');
+    await expect(page.getByTestId('ob-connector-note')).toContainText('can’t change your settings');
+    await page.getByTestId('ob-paste-text').fill('```reussite\n' + JSON.stringify({ v: 1, note: 'Your set-up', changes: SETUP }) + '\n```');
+    await page.getByTestId('ob-paste-go').click();
+    await page.getByTestId('apply-changes').click();
+    // Then connect the app, in set-up.
+    await connectApp(page);
+    await expect(page.getByTestId('ob-link-error')).toHaveCount(0);
+    await noSideways(page, 'connect the app, steps');
+    // Not connected yet: the check says so.
+    await page.getByTestId('ob-link-check').click();
+    await expect(page.getByTestId('ob-link-state')).toContainText('hasn’t connected yet');
+    // The relay says the app has come in (it has not, for real: the status is stubbed).
+    await page.route('**/v1/spaces/*/connector', async route => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ on: true, lastUsed: Date.now(), url: 'http://localhost:8787/mcp' }) });
+    });
+    await page.getByTestId('ob-link-check').click();
+    await expect(page.getByTestId('ob-link-state')).toContainText('Your app is connected');
+    await expect(page.getByTestId('ob-link-state')).toContainText('Plan my day with Réussite');
+    await page.getByTestId('ob-link-continue').click();
+    await expect(page.getByTestId('ob-done-text')).toContainText('AI chat app is connected');
+    await page.getByTestId('ob-home').click();
+    await expect(page.getByTestId('home')).toBeVisible();
+    // Everything it set is there; the connector is on, so it is not on the Next steps (the recovery key was saved, sync is on).
+    await expect(page.getByTestId('next-connector')).toHaveCount(0);
+    await expect(page.getByTestId('next-sync')).toHaveCount(0);
+    await expect(page.getByTestId('next-key')).toHaveCount(0);
+    await goTab(page, 'today');
+    await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
+    await goTab(page, 'settings');
+    await expect(page.getByTestId('places')).toContainText('Flat');
+    await expandSettings(page);
+    await expect(page.getByTestId('connector-state')).toContainText('The connector is on');
+    await expect(page.getByTestId('sync-status')).toBeVisible();
+    // After a restart it is still on the connector's side.
+    await page.reload();
+    await expect(page.getByTestId('ob-language')).toHaveCount(0);
+    await expect(page.getByTestId('next-connector')).toHaveCount(0);
+  });
+
+  test('through the connector, by hand: pillars, places, then connect the app; "Not now" leaves it on the Next steps, and the Next steps line opens the connector', async ({ page }) => {
+    test.slow();
+    await page.goto('/');
+    await choose(page, 'connector');
+    await page.getByTestId('ob-basics-hand').click();
+    await page.getByTestId('ob-pillar-S').fill('The thesis');
+    await next(page);
+    await page.getByTestId('ob-place-name').first().fill('Flat');
+    await next(page);
+    // The answers are written before connecting (sync would make a restart look like an existing install).
+    await expect(page.getByTestId('ob-link')).toBeVisible();
+    await expect(page.getByTestId('ob-link').locator('.eyebrow')).toContainText('4 of 4');
+    expect(await page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }))).toBe(1);
+    await page.getByTestId('ob-back').click(); // back to the places, nothing lost
+    await expect(page.getByTestId('ob-place-name').first()).toHaveValue('Flat');
+    await next(page);
+    await page.getByTestId('ob-link-later').click();
+    await expect(page.getByTestId('ob-done-text')).not.toContainText('is connected');
+    await page.getByTestId('ob-home').click();
+    await expect(page.getByTestId('next-connector')).toBeVisible();
+    await expect(page.getByTestId('next-connector')).toContainText('Connect your AI chat app');
+    await page.getByTestId('next-connector').click();
+    await expect(page.getByTestId('connector')).toHaveJSProperty('open', true);
+    await goTab(page, 'today');
+    await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
+  });
+
+  test('through the connector, by hand, connected without a copy and paste; a relay without the connector says so and "Not now" still finishes', async ({ page }) => {
+    test.slow();
+    await page.route('**/v1/spaces/*/connector', async route => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      await route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: 'connector_unavailable' }) });
+    });
+    await page.goto('/');
+    await choose(page, 'connector');
+    await page.getByTestId('ob-basics-hand').click();
+    await next(page);
+    await page.getByTestId('ob-place-name').first().fill('Flat');
+    await next(page);
+    await page.getByTestId('ob-link-on').click();
+    await page.getByTestId('ob-link-key-later').click();
+    // The relay has no connector: plain words, and a way on. Sync is on by now, so the button says what is left to do.
+    await expect(page.getByTestId('ob-link-error')).toContainText('no connector set up');
+    await expect(page.getByTestId('ob-link-on')).toContainText('Switch on the connector');
+    await page.getByTestId('ob-link-later').click();
+    await page.getByTestId('ob-home').click();
+    await expect(page.getByTestId('next-connector')).toBeVisible();
+    await expect(page.getByTestId('next-key')).toBeVisible(); // "I'll do it later": the key is still to save
   });
 
   test('the Next steps: each line opens its Settings section, a line that is done goes, and the card can be hidden for good', async ({ page }) => {
@@ -380,15 +508,21 @@ test.describe('on a new device', () => {
       await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-back').click();
-      // With an AI, every screen of the tutorial and the conversation.
-      await choose(page, 'ai');
-      await check('ob-connect');
-      await page.getByTestId('ob-way-other').click();
+      // Any chatbot: the link under the choices.
+      await choose(page, 'chatbot');
       await check('ob-paste');
       await page.getByTestId('ob-paste').locator('details summary').click();
       await check('ob-paste');
       await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-way-key').click();
+      // The connector: the basics, the message to the app, and Connect the app with each of its stages.
+      await choose(page, 'connector');
+      await check('ob-basics');
+      await page.getByTestId('ob-basics-chat').click();
+      await check('ob-paste');
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-back').click();
+      // With a key, every screen of the tutorial and the conversation.
+      await choose(page, 'key');
       await check('ob-key');
       await page.getByTestId('ai-key').fill('sk-or-test');
       await page.getByTestId('ai-key-save').click();
@@ -407,6 +541,41 @@ test.describe('on a new device', () => {
       await check('ob-chat');
       // The pairing screen.
       await page.getByTestId('ob-back').click();
+    });
+
+    test(`Connecting the app fits at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
+      test.slow();
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto('/');
+      if (french) {
+        await page.getByTestId('ob-lang-fr').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+      }
+      const check = async (id: string) => {
+        await expect(page.getByTestId(id)).toBeVisible();
+        await noSideways(page, id);
+        const small = await page.evaluate(() => [...document.querySelectorAll('.ob button, .ob a, .ob input, .ob select, .ob textarea, .ob summary')]
+          .filter(el => !(el instanceof HTMLInputElement && (el.type === 'hidden' || el.type === 'checkbox')))
+          .map(el => { const r = el.getBoundingClientRect(); return { n: el.tagName + '.' + el.className + ' ' + (el.textContent ?? '').slice(0, 20), w: r.width, h: r.height }; })
+          .filter(x => x.w > 0 && (x.h < 43.5 || x.w < 43.5)));
+        expect(small, id + ': small targets').toEqual([]);
+      };
+      await choose(page, 'connector');
+      await page.getByTestId('ob-basics-hand').click();
+      await next(page);
+      await page.getByTestId('ob-place-name').first().fill(french ? 'Maison' : 'Home');
+      await next(page);
+      await check('ob-link');
+      await page.getByTestId('ob-link-on').click();
+      await check('ob-link');
+      await expect(page.getByTestId('recovery-key')).toBeVisible();
+      await page.getByTestId('ob-link-key-saved').click();
+      await expect(page.getByTestId('ob-link-url')).toBeVisible();
+      await check('ob-link');
+      await page.getByTestId('ob-link-check').click();
+      await check('ob-link');
+      await page.getByTestId('ob-link-continue').click();
+      await check('ob-done');
     });
   }
 });

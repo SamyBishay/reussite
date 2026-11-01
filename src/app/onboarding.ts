@@ -47,7 +47,7 @@ export async function decideOnboarding(): Promise<Why> {
 /**
  * Home's "Next steps" card (S9): what first-run setup no longer asks (sync, notifications, Addresses & people, the recovery key,
  * and the connector if a chatbot app was chosen). Device-local like the record of having finished, and only on the device that ran
- * setup: an install from before has none, and a card dismissed stays dismissed. `connector`: the person chose Claude or ChatGPT.
+ * setup: an install from before has none, and a card dismissed stays dismissed. `connector`: the person chose the connector path (their AI chat app).
  */
 export interface NextSteps { on: boolean; connector: boolean }
 const NEXT = 'nextSteps';

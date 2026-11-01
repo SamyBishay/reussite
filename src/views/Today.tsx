@@ -15,6 +15,7 @@ import { Rings, TimerRings } from '../app/Rings';
 import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { startReview } from '../flows/reviewai';
+import { ChatOffer } from '../app/ChatOffer';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { groupPlan, inArea, type PlanGroup } from '../domain/areas';
@@ -293,7 +294,7 @@ export function Today() {
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
       {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
-      {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button></div>}
+      {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button><ChatOffer what="review" small testid="review-chat" /></div>}
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (
@@ -301,7 +302,7 @@ export function Today() {
           <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
-          <div class="go"><button class="btn primary" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button></div>
+          <div class="go"><button class="btn primary" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button><ChatOffer what="day" testid="today-plan-chat" /></div>
         </section>
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
@@ -313,6 +314,7 @@ export function Today() {
       <div class="after-first">
         <div class="adders" data-testid="adders">
           {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openPlanDay}>{t('planTheDay')}</button>}
+          {plan.length > 0 && !d?.checkin && <ChatOffer what="day" testid="today-adder-chat" />}
           <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
           <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
           {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}

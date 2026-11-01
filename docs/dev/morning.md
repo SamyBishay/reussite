@@ -2,6 +2,10 @@
 
 With an AI set up (`aiOn`: a provider and its key on this device), Home's **Plan the day**, the small **Plan the day** in the Start here row, and the morning notification open a planning exchange: the AI proposes the day in five sections, the person keeps, swaps or skips each item, a short exchange adjusts it, and it ends in one change-set on the existing review screen. Plan 2 Nov, "Morning" point 3 (the owner's words of 31 Oct: the AI proposes and the person chooses). With no AI, nothing changes: `openPlanDay` opens the ritual (`src/flows/checkin.tsx`), and the ritual stays one tap away (**Plan it myself**, on Home beside Plan the day and inside the exchange).
 
+## With the connector on and no key: Plan it in your AI chat
+
+A person who set up the connector (`docs/dev/onboarding.md`, Connect your AI chat app) often has no key, so Plan the day opens the ritual. Where it does (Home's greeting when the day has no list, Today's first card and its Plan the day button) `ChatOffer` (`src/app/ChatOffer.tsx`) shows a second button, **Plan it in your AI chat**, and the Sunday review banner (Today and the bell) shows **Review in your AI chat** beside Start the review. It shows only when `!aiOn` and the connector is on (`connector.value?.on`, restored at start from the cached state). It is a button, not a link: no app is named, opened or linked. It copies a short sentence ("Plan my day with Réussite", "Do my weekly review with Réussite", in the app's language; `chatPlanPrompt`, `chatReviewPrompt`; no vendor in either) and a toast says to say it in a new chat in the connected app. No AI call is made from the app, and the ritual and the review by hand are unchanged beside it. With a key on the device, the offer is not shown. The sentence works because the connector's instructions tell the app to call `get_method` before planning.
+
 ## The pieces
 
 | | |

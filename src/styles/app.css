@@ -78,18 +78,26 @@ body.kb .tabbar{display:none}
 .tab[aria-current="page"] svg{color:var(--accent)}
 
 /* ---------- home ---------- */
+/* A chat app's empty state: a slim bar (the date, the bell and the menu), then the mark and the greeting side by side, centred in the room
+   between the bar and the fixed input. The page is at least one screen tall (the top padding, the tab bar, the input and the receipt taken off), so
+   a Home with nothing else on it centres the pair; with a card under it the pair stays on top and the page flows. */
+.home{display:flex;flex-direction:column;gap:var(--s4);min-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}
+@media (min-width:920px){.home{min-height:calc(100dvh - env(safe-area-inset-top,0px) - 28px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
+@media (min-width:1024px){.home{min-height:calc(100dvh - env(safe-area-inset-top,0px) - var(--s7) - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
+body.kb .home{min-height:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
-.hometitle{min-width:0}
-.homebar .word.homeword{font-size:clamp(28px,7vw,36px)}
-.homebar .dateline{margin-top:var(--s1)}
-.greetline{margin:var(--s3) 0 var(--s4);color:var(--ink-2);font:400 16px/1.45 var(--sans);overflow-wrap:anywhere}
-.homebar{align-items:flex-start}
+.homebar .dateline{margin:0;min-width:0;color:var(--ink-3);font-size:13.5px}
+.homestage{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:var(--s4);min-width:0}
+.greeting{display:grid;gap:var(--s4);min-width:0}
+.hello{display:flex;align-items:flex-start;justify-content:center;gap:var(--s3);width:fit-content;max-width:100%;margin-inline:auto}
+.hello .mark{display:block;flex:none;margin-top:-4px}
+.greetline{margin:0;min-width:0;color:var(--ink);font:600 clamp(26px,7.4vw,32px)/1.2 var(--serif);letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+@media (min-width:720px){.hello{gap:var(--s4)}.hello .mark{margin-top:-2px}.greetline{font-size:34px}}
 .homebtns{flex:none}
 .homebtns{display:flex;gap:var(--s2)}
 .icon-btn.bell{position:relative}
 .icon-btn .dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--ink);border:2px solid var(--card)}
-.home{display:grid;gap:var(--s4);align-content:start}
-.greeting .first{margin-top:var(--s2);margin-bottom:0}
 .homecard{background:var(--card);border:1px solid transparent;border-radius:16px;padding:14px 16px;display:grid;gap:var(--s3)}
 .homecard.row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .homecard .t2{font-weight:600;overflow-wrap:anywhere}

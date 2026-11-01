@@ -2,6 +2,7 @@
 // two-line title, a dot when late or soon), and a small button for the rest, and the whole list folded at the bottom. Moves: drag on desktop and tablet; on phones, long-press or the "Move to…" menu. What is
 // shown follows the place menu's View (the page's place, one of its areas, or everywhere).
 import { Cemetery } from './Cemetery';
+import { Decisions } from './Decisions';
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects } from '../app/store';
@@ -163,6 +164,7 @@ export function Matrix() {
       <div class="matrix" data-testid="matrix">
         {QUADS.map(k => <Box key={k} k={k} items={qs[k]!} planSet={planSet} over={over} setOver={setOver} />)}
       </div>
+      <Decisions />
       {oblig.length > 0 && (
         <details class="more obligations" data-testid="obligations">
           <summary>{t('obligationsTitle')} · {oblig.length}</summary>

@@ -14,6 +14,7 @@ import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
 import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
+import { PeriodNav } from '../app/PeriodNav';
 import { ReviewBanner } from '../app/ReviewBanner';
 import { ChatOffer } from '../app/ChatOffer';
 import { openDecisionPage } from '../flows/decision';
@@ -183,12 +184,9 @@ function Navigator({ k }: { k: string }) {
   const n = daysBetween(td, k);
   const label = n === 0 ? t('pickToday') : n === -1 ? t('pickYesterday') : n === 1 ? t('pickTomorrow') : fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' });
   return (
-    <nav class="daynav" aria-label={t('dayNav')}>
-      <button class="icon-btn" type="button" onClick={() => go(addDays(k, -1))} aria-label={t('prevDay')} data-testid="prev-day">‹</button>
-      <label class="daynav-date"><span>{label}</span><input type="date" value={k} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) go(v); }} aria-label={t('pickADay')} /></label>
-      <button class="icon-btn" type="button" onClick={() => go(addDays(k, 1))} aria-label={t('nextDay')} data-testid="next-day">›</button>
-      {n !== 0 && <button class="btn small ghost" type="button" onClick={() => go(null)}>{t('backToToday')}</button>}
-    </nav>
+    <PeriodNav class="daynav" name={t('dayNav')} label={label} sub={fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })} away={n !== 0} onToday={() => go(null)}
+      onPrev={() => go(addDays(k, -1))} onNext={() => go(addDays(k, 1))} prevLabel={t('prevDay')} nextLabel={t('nextDay')}
+      pick={{ value: k, label: t('pickADay'), onPick: go }} testids={{ prev: 'prev-day', next: 'next-day', label: 'day-label' }} />
   );
 }
 
@@ -282,7 +280,7 @@ export function Today() {
   const s = !fid && !(af && every.length && !plan.length) ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
   return (
-    <div>
+    <div class="todayview">
       <Navigator k={k} />
       <StayNotice />
       <SyncCards />

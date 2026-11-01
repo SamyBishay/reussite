@@ -292,7 +292,7 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
 
 test('Decision help drafts the problem, options and items, and never weights', async ({ page }) => {
   const { answer } = await aiSession(page);
-  await goTab(page, 'projects');
+  await goTab(page, 'matrix');
   await page.getByTestId('new-decision').click();
   answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up 8% in January', should: 'Rent under a third of income', gap: '60 a month short' } });
   await page.getByTestId('ai-dw-describe').fill('My rent goes up and I’m not sure whether to move.');
@@ -395,7 +395,7 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'stuck with an AI starter');
     await page.keyboard.press('Escape');
     answer.text = JSON.stringify({ title: 'Stay or move?', problem: { what: 'Rent goes up', should: 'Less than a third of income', constraints: 'Lease ends in June' } });
-    await goTab(page, 'projects');
+    await goTab(page, 'matrix');
     await page.getByTestId('new-decision').click();
     await page.getByTestId('ai-dw-describe').fill('Rent goes up.');
     await page.getByTestId('ai-dw-problem').click();

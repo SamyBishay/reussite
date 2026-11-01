@@ -490,9 +490,17 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .fixed li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s3);align-items:baseline;background:var(--card);border:1px solid transparent;border-radius:10px;padding:8px 12px}
 .fixed li.done .linklike{color:var(--ink-3);text-decoration:line-through}
 .fixed time{font:600 14px var(--mono)}
-.daynav{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s4);flex-wrap:wrap}
-.daynav-date{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-weight:700}
-.daynav-date input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+/* PeriodNav (src/app/PeriodNav.tsx): ‹ at the far left, › at the far right, each in a fixed 44px column; the label between them, with a line under it that is always reserved for "Back to today". Nothing here depends on the label's width. */
+.pnav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;column-gap:var(--s2);width:100%}
+.pnav-arrow{width:44px;height:44px;justify-self:stretch;font-size:20px}
+.pnav-mid{display:grid;grid-template-rows:24px 24px;justify-items:center;align-items:center;min-width:0;text-align:center}
+.pnav-label{position:relative;display:block;max-width:100%;min-width:0;font:700 16px/24px var(--sans);overflow:clip;text-overflow:ellipsis;white-space:nowrap}
+.pnav-label.pickable{cursor:pointer;overflow:visible}
+.pnav-label.pickable span{display:block;overflow:hidden;text-overflow:ellipsis;text-decoration:underline dotted var(--ink-3);text-underline-offset:4px}
+.pnav-label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;min-height:0;padding:0;cursor:pointer}
+.pnav-slot{height:24px;padding-top:2px;display:flex;align-items:center;justify-content:center;max-width:100%}
+.pnav-today{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 var(--s3);height:22px;font:600 12.5px/1 var(--sans);color:var(--ink-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.daynav{margin-top:var(--s4)}
 .flow h3{font-size:22px}
 .flow .eyebrow{margin-bottom:var(--s2)}
 @media (min-width:720px){.sheet.wide{width:min(720px,calc(100% - 32px))}}
@@ -645,7 +653,7 @@ main>.banner{margin-top:var(--s3)}
 
 /* calendar */
 .calbar{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center;justify-content:space-between;margin-top:var(--s4)}
-.calnav{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.calnav{width:min(100%,380px)}
 .linkbtn{border:0;background:none;padding:6px 0;font:inherit;font-weight:600;cursor:pointer;text-align:left;white-space:normal}
 .calfeed{margin-top:var(--s2)}
 /* On a phone the bar is two tight rows (the views, then the dates) and the grid takes the rest of the screen (CalendarGrid.tsx sets its height). */
@@ -653,10 +661,8 @@ main>.banner{margin-top:var(--s3)}
   .calbar{gap:var(--s2);margin-top:var(--s1)}
   .calbar .seg{display:flex;width:100%;flex-wrap:nowrap}
   .calbar .seg button{flex:1 1 auto;min-width:0;padding:6px 4px;min-height:36px;font-size:13.5px}
-  .calnav{flex:1 1 100%;flex-wrap:nowrap;gap:var(--s1)}
-  .calnav b{flex:1 1 auto;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
-  .calnav .icon-btn{flex:none;width:40px;height:36px}
-  .calnav .btn.small{flex:none;min-height:36px}
+  .calnav{flex:1 1 100%;width:100%}
+  .calnav .pnav-label{font-size:15px}
   .app.noside #runbar:empty{display:none}
 }
 .calib{display:grid;gap:var(--s3)}
@@ -890,3 +896,29 @@ body > .row,body > li{list-style:none}
 .pm-tick{display:grid;place-items:center;min-height:48px;cursor:pointer}
 .pm-tick input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 .placemenu .actions{margin-top:var(--s4)}
+/* Today's rhythm: the day navigator, the banners, Start here, the carry card and the list's block are one column with 12px between them (--s3);
+   Start here stands a little apart from the banners above it, and nothing sets its own margin. Rows breathe: the meta line's dots are dropped
+   (the gap says it, so a dot never starts a wrapped line), the buttons of Start here have room between them and above the quiet row. */
+.todayview{display:flex;flex-direction:column;gap:var(--s3)}
+.todayview>*{margin-top:0;margin-bottom:0}
+.todayview>.daynav{margin-top:var(--s4);margin-bottom:var(--s1)}
+.todayview>.first{margin-top:var(--s3)}
+.todayview>.banner~.first,.todayview>.nudge~.first{margin-top:var(--s5)}
+.todayview .first{gap:var(--s4)}
+.todayview .first .go{gap:var(--s3)}
+.todayview .first .go.quiet{gap:var(--s2);margin-top:var(--s1)}
+.todayview .first .hint{margin:0}
+.first .meta>span[aria-hidden="true"],.row .meta>span[aria-hidden="true"]{display:none}
+.first .meta,.row .meta{gap:var(--s1) var(--s3)}
+.row .body{gap:var(--s2)}
+.row .ctrls{margin-top:var(--s1)}
+.todayview .adders{margin-top:var(--s3)}
+.todayview .sec{margin-top:var(--s6)}
+.pnav-sub{font:400 13px/24px var(--sans);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* Decisions on the Matrix: compact rows under the four boxes. */
+.decisions{margin-top:var(--s5)}
+.decisions .sec{margin-top:0}
+.decisions .subsec{font:600 12px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:var(--s3) 0 var(--s2)}
+.decisions .decs li{padding:var(--s2) var(--s3);border-radius:10px;gap:0}
+.decisions .decs .meta{font-size:12.5px;line-height:1.35}

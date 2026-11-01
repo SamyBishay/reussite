@@ -158,9 +158,16 @@ test('the Log is a mode of Calendar, next to Day, Week, Month and Agenda', async
   await expect(page.locator('.sx__week-grid')).toBeVisible();
 });
 
-test('decisions live in Projects, and a decision step in the Matrix opens its decision', async ({ page }) => {
+test('decisions live in the Matrix, under the four boxes and not in Projects, and a decision step in the Matrix opens its decision', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'projects');
+  await expect(page.getByTestId('decisions')).toHaveCount(0);
+  await goTab(page, 'matrix');
+  // Under the four boxes, above the folds.
+  const mb = (await page.getByTestId('matrix').boundingBox())!, db = (await page.getByTestId('decisions').boundingBox())!;
+  expect(db.y).toBeGreaterThanOrEqual(mb.y + mb.height);
+  await expect(page.getByTestId('all-cards')).toBeVisible();
+  expect((await page.getByTestId('all-cards').boundingBox())!.y).toBeGreaterThan(db.y);
   await expect(page.getByTestId('decisions')).toContainText('Stay in the flat or move?');
   await page.getByTestId('decisions').getByRole('button', { name: 'Stay in the flat or move?' }).click();
   await expect(page.getByTestId('sheet')).toContainText('Stay one more year');
@@ -192,7 +199,7 @@ test('a decision\'s deadline that is a day is shown like other dates, not as 202
   await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await expect(page.locator('.toast')).toBeVisible();
   await page.reload();
-  await goTab(page, 'projects');
+  await goTab(page, 'matrix');
   await page.getByTestId('decisions').getByRole('button', { name: 'Stay in the flat or move?' }).click();
   const problem = page.getByTestId('sheet').locator('dl.problem');
   await expect(problem).toContainText('Deadline');

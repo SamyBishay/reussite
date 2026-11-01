@@ -7,7 +7,6 @@ import { createCalendar, createViewDay, createViewList, createViewMonthGrid, cre
 import { createCalendarControlsPlugin } from '@schedule-x/calendar-controls';
 import { createCurrentTimePlugin } from '@schedule-x/current-time';
 import { createDragAndDropPlugin } from '@schedule-x/drag-and-drop';
-import { createScrollControllerPlugin } from '@schedule-x/scroll-controller';
 import '@schedule-x/theme-default/dist/index.css';
 import '../styles/calendar.css';
 import { effect } from '@preact/signals';
@@ -21,6 +20,9 @@ import { isPhone, PHONE_DAYS, type CalMode } from '../app/nav';
 import { t, lang } from '../i18n';
 import { addDays } from '../domain/dates';
 import { appSlot, calViewEvents, type CalViewEvent } from '../domain/calView';
+import { gridScrollTop } from '../domain/calScroll';
+import { weekOf } from '../domain/calendar';
+import { wallOf } from '../domain/zone';
 import { isoDow } from '../domain/repeat';
 import { areaFilter } from '../app/areas';
 
@@ -67,6 +69,9 @@ export interface GridProps {
 export function CalendarGrid({ mode, date }: GridProps) {
   const host = useRef<HTMLDivElement>(null);
   const api = useRef<{ controls: ReturnType<typeof createCalendarControlsPlugin>; sync: () => void } | null>(null);
+  const timed = useRef<{ date: string; time: string }[]>([]);
+  /** The scrolling of the hour grid (see `place` below): `token` ends an earlier run, `moved` is set once the person scrolls or touches the grid. */
+  const scroll = useRef({ token: 0, moved: false, height: 0 });
   const latest = useRef({ mode, date });
   latest.current = { mode, date };
   const zone = hereZone.value || deviceZone();
@@ -117,7 +122,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
           else sync();
         },
       },
-    }, [controls, createDragAndDropPlugin(15), createScrollControllerPlugin({ initialScroll: '07:00' }), createCurrentTimePlugin()]);
+    }, [controls, createDragAndDropPlugin(15), createCurrentTimePlugin()]);
 
     // The events follow the data: any change to what a day is made of puts the library back in line.
     function sync() {
@@ -130,13 +135,17 @@ export function CalendarGrid({ mode, date }: GridProps) {
       // Today's planned steps are not drawn here: projectedEvents (src/domain/calView.ts) is kept but shelved (DECISIONS.md, 2026-11-01).
       byId.clear();
       for (const e of evs) byId.set(e.id, e);
+      timed.current = evs.filter(e => e.time).map(e => ({ date: e.date, time: e.time! }));
       calendar.events.set(evs.map(e => toLibrary(e, zone, phone)));
     }
     api.current = { controls, sync };
+    const stopMoving = () => { scroll.current.moved = true; };
+    for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown']) el.addEventListener(ev, stopMoving, { passive: true });
     calendar.render(el);
     const stop = effect(() => { void [clockNow.value, tasks.value, days.value, projects.value, places.value, stays.value, addresses.value, settings.value, lang.value]; sync(); });
     move(controls, latest.current.mode, latest.current.date, phone);
-    return () => { stop(); calendar.destroy(); api.current = null; };
+    settle();
+    return () => { stop(); scroll.current.token++; for (const ev of ['wheel', 'touchstart', 'pointerdown', 'keydown']) el.removeEventListener(ev, stopMoving); calendar.destroy(); api.current = null; };
   }, [language, zone, phone]);
 
   // A new view or date from the bar.
@@ -145,6 +154,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
     if (!a) return;
     move(a.controls, mode, date, phone);
     a.sync();
+    settle();
   }, [mode, date]);
 
   // On a phone the grid fills the screen down to the tab bar and scrolls inside, so the page does not grow; elsewhere the style's height stands.
@@ -154,7 +164,10 @@ export function CalendarGrid({ mode, date }: GridProps) {
     const fit = () => {
       const top = el.getBoundingClientRect().top + window.scrollY;
       const room = Math.floor(window.innerHeight - top - (document.querySelector('.tabbar')?.getBoundingClientRect().height ?? 0) - 8);
-      el.style.height = Math.max(260, room) + 'px';
+      const h = Math.max(260, room);
+      el.style.height = h + 'px';
+      // The room above the tab bar is known (or has changed): the hour grid is placed again, unless the person has scrolled it.
+      if (h !== scroll.current.height) { scroll.current.height = h; if (!scroll.current.moved) settle(); }
     };
     fit();
     const ro = new ResizeObserver(fit);
@@ -162,6 +175,44 @@ export function CalendarGrid({ mode, date }: GridProps) {
     window.addEventListener('resize', fit);
     return () => { ro.disconnect(); window.removeEventListener('resize', fit); el.style.height = ''; };
   }, [phone, mode]);
+
+  /**
+   * Scroll the hour grid (Day and 3-day views): the time now in the middle of the visible hours when today is shown, else the day's first event (src/domain/calScroll.ts).
+   * Computed from the measured scroll viewport, so it is only right once the grid's height is set (the fit effect above) and the library has drawn the view.
+   */
+  function place(): number | null {
+    const el = host.current;
+    const { mode: m, date: d } = latest.current;
+    if (!el || (m !== 'day' && m !== 'week')) return null;
+    const view = el.querySelector<HTMLElement>('.sx__view-container'), grid = el.querySelector<HTMLElement>('.sx__week-grid');
+    if (!view || !grid || !view.clientHeight || !grid.offsetHeight) return null;
+    const head = el.querySelector<HTMLElement>('.sx__week-header')?.offsetHeight ?? 0;
+    const days = m === 'day' ? [d] : phone ? Array.from({ length: PHONE_DAYS }, (_, i) => addDays(d, i)) : weekOf(d);
+    const nowMs = clockNow.value;
+    const wall = Temporal.Instant.fromEpochMilliseconds(nowMs).toZonedDateTimeISO(zone).toPlainDate().toString();
+    const shown = new Set<string>(days);
+    view.scrollTop = gridScrollTop({
+      pxPerMin: grid.offsetHeight / 1440, visible: view.clientHeight - head,
+      now: shown.has(wall) ? wallOf(nowMs, zone) : null,
+      times: timed.current.filter(x => shown.has(x.date)).map(x => x.time),
+    });
+    return view.scrollTop;
+  }
+  /** Place the grid now and again over the next frames (until it stops changing), while the library draws the view and the height settles; the person's own scrolling ends it. */
+  function settle() {
+    const s = scroll.current, mine = ++s.token;
+    s.moved = false;
+    let n = 0, last: number | null = null, same = 0;
+    // Done once eight frames in a row put it in the same place (the view is drawn and the height has settled), or after 40 frames.
+    const step = () => {
+      if (mine !== s.token || s.moved) return;
+      const at = place();
+      same = at != null && at === last ? same + 1 : 0;
+      last = at;
+      if (same < 8 && ++n < 40) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
 
   return <div ref={host} class="sxhost" data-testid="calendar-grid" data-mode={mode} />;
 }

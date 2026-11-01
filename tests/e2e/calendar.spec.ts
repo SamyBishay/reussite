@@ -130,7 +130,10 @@ test('dragging a step with a time on the hour grid changes its time', async ({ p
   await page.getByTestId('tab-calendar').click();
   const ev = page.getByTestId('calendar-grid').locator('.sx__time-grid-event.k-fixed').first();
   await expect(ev).toBeVisible();
-  await ev.scrollIntoViewIfNeeded();
+  // The grid opens with now in the middle (placed over the first moments); scroll it so the 10:00 step is well clear of the sticky date row, as a person would.
+  await page.waitForTimeout(1000);
+  await page.getByTestId('calendar-grid').dispatchEvent('wheel');
+  await page.locator('.sx__view-container').evaluate(v => { v.scrollTop = 300; });
   await page.waitForTimeout(300);
   const b = (await ev.boundingBox())!;
   await page.mouse.move(b.x + b.width / 2, b.y + 6);

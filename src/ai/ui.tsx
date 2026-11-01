@@ -67,8 +67,9 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
  * Command box (feature 1): plain language → change-set → review. Only with an AI set up and its key on this device, and then it
  * names that AI ("Ask Claude to change the list"). Without one there is nothing here: no button, no copy-and-paste route on the
  * screen (that route lives in set-up and in Plan this trip). `scope` is kept for the callers; the box no longer uses it.
+ * `compact` (Matrix, Projects): one line, the label out of sight and the button beside the text, so the boxes below stay on the screen.
  */
-export function CommandBox(_: { scope?: Scope }) {
+export function CommandBox({ compact }: { scope?: Scope; compact?: boolean }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ error: ErrorKind | 'empty'; message: string } | null>(null);
@@ -90,15 +91,15 @@ export function CommandBox(_: { scope?: Scope }) {
   const ai = provider === 'none' ? t('aiYours') : aiName(provider, settings.value.aiModels[provider].quick);
   return (
     <div class="aibar">
-      <form class="cmd" onSubmit={go} data-testid="cmd">
+      <form class={'cmd' + (compact ? ' compact' : '')} onSubmit={go} data-testid="cmd">
         <label class="field" style="margin:0"><span data-testid="cmd-label">{t('cmdLabel', { ai })}</span>
-          <textarea rows={2} value={text} placeholder={t('cmdPh', { ai })} disabled={busy} data-testid="cmd-text"
+          <textarea rows={compact ? 1 : 2} value={text} placeholder={t(compact ? 'cmdPhShort' : 'cmdPh', { ai })} disabled={busy} data-testid="cmd-text"
             onInput={e => setText((e.target as HTMLTextAreaElement).value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void go(e); }} />
         </label>
         <div class="go">
           {busy ? <><span class="hint">{t('cmdBusy')}</span><button class="btn small" type="button" onClick={() => ctl.current?.abort()}>{t('stop')}</button></>
-            : <><button class="btn primary" type="submit" data-testid="cmd-go">{t('cmdGo')}</button><span class="hint">{t('cmdHint')}</span></>}
+            : <><button class="btn primary" type="submit" data-testid="cmd-go" title={compact ? t('cmdHint') : undefined}>{t('cmdGo')}</button><span class="hint">{t('cmdHint')}</span></>}
         </div>
         {err && <AiError {...err} />}
       </form>

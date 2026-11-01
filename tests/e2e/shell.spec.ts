@@ -170,6 +170,9 @@ test('decisions live in Projects, and a decision step in the Matrix opens its de
   await page.keyboard.press('Escape');
 
   await goTab(page, 'matrix');
+  // In its box the decision step is marked with ⚖ and no button; the button is in the list of every card.
+  await expect(page.locator('.matrix .item', { hasText: '⚖' })).toHaveCount(1);
+  await page.getByTestId('all-cards').locator('summary').click();
   await expect(page.getByTestId('matrix-decision')).toHaveCount(1);
   await page.getByTestId('matrix-decision').click();
   await expect(page.getByTestId('dw-title')).toHaveValue(/Open a new Claude chat/);

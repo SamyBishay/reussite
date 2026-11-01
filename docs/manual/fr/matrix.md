@@ -25,8 +25,8 @@ Déplacer une étape dans une autre case règle simplement ses deux cases à coc
 
 ## Déplacer, filtrer et chercher
 
-- Faites glisser une étape vers une autre case, ou appuyez longuement dessus sur un téléphone. Ou touchez son bouton **⇄**, ou ouvrez l’étape et utilisez **Déplacer vers…**.
-- **Voir les 5** sous une case ouvre les étapes de ce quadrant dans une feuille.
+- Faites glisser une étape vers une autre case, ou appuyez longuement dessus sur un téléphone. Ou touchez l’étape pour l’ouvrir et utilisez **Déplacer vers…** : les petites cartes n’ont pas de boutons.
+- **Voir les 5** sous une case ouvre les étapes de ce quadrant dans une feuille, chacune avec ses boutons (le déplacement **⇄**, la date).
 - **Toutes les cartes**, en bas, ouvre une seule liste de toutes les étapes, chacune avec son quadrant. Cherchez et filtrez par projet ou par famille là.
 - Si vous regardez l’une des **zones** du lieu, la matrice montre les étapes de cette zone seule (ni celles du lieu, ni celles de Partout).
 - Une étape qui en attend une autre n’apparaît qu’une fois, en une seule carte : la première étape, avec « +2 après » sous son titre. Touchez-la pour déplier le reste, en grisé. Quand la première est faite, la suivante prend sa place.

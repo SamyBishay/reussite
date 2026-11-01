@@ -1,6 +1,6 @@
 # The matrix
 
-The matrix sorts your steps in four boxes. Each shows its first two steps and **View all** for the rest; every step is also in one list, folded at the bottom. Urgency and importance are judged **separately**. On the review day the **Start the review** box is at the top, above the four boxes.
+The matrix sorts your steps in four boxes, always two by two, small enough to be on a phone screen at once. Each box shows its name and how many steps it holds on one line (press and hold the name, or hover, for what it means), its first three steps as small cards (the suit and the title on up to two lines, a red dot when its date is late or near) and **View all** for the rest; every step is also in one list, folded at the bottom. Urgency and importance are judged **separately**. On the review day the **Start the review** box is at the top, above the four boxes.
 
 ![The matrix](shot:matrix)
 
@@ -25,8 +25,8 @@ Moving a step to another box just sets its two ticks.
 
 ## Moving, filtering and searching
 
-- Drag a step to another box, or long-press it on a phone. Or tap its **⇄** button, or open the step and use **Move to…**.
-- **View all 5** under a box opens that quadrant's steps in a sheet.
+- Drag a step to another box, or long-press it on a phone. Or tap the step to open it and use **Move to…**. The small cards have no buttons of their own.
+- **View all 5** under a box opens that quadrant's steps in a sheet, each with its buttons (the **⇄** move button, the date).
 - **All cards** at the bottom opens one list of every step, each with its quadrant named. Search, and filter by project or suit, there.
 - The matrix shows the place you chose to view in the place pill (see [Places and trips](places-and-trips.md)): that place's steps and the ones marked Anywhere, or every step with **Everywhere**.
 - Change a due date wherever a step appears.

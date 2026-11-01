@@ -283,9 +283,11 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
   await page.getByTestId('tab-matrix').click();
   await expect(page.locator('.matrix')).toContainText('Open Mail and find the agency’s address');
   // The steps are in this order, so one card: the second is inside it, under "+1 after".
-  await page.locator('.matrix').getByTestId('chain-toggle').click();
-  await expect(page.locator('.matrix')).toContainText('Attach the signed lease as a PDF');
-  await expect(page.locator('.matrix')).not.toContainText('Ask for a receipt');
+  await expect(page.locator('.matrix').getByTestId('chain-count')).toHaveText('+1');
+  await page.getByTestId('all-cards').locator('summary').click();
+  await page.getByTestId('all-cards-list').locator('.item', { hasText: 'find the agency' }).getByTestId('chain-toggle').click();
+  await expect(page.locator('main')).toContainText('Attach the signed lease as a PDF');
+  await expect(page.locator('main')).not.toContainText('Ask for a receipt');
 });
 
 test('Decision help drafts the problem, options and items, and never weights', async ({ page }) => {

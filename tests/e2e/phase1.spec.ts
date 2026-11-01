@@ -54,7 +54,9 @@ test('moving a step into Now sets its ticks at once, without asking for a date',
   await importSample(page);
   await page.getByTestId('tab-matrix').click();
   const later = page.getByTestId('quad4');
-  await later.locator('.item', { hasText: 'scanned receipts' }).getByTestId('move-btn').click();
+  // A card in a box has no buttons: tap it, then Move to… in its sheet.
+  await later.locator('.item', { hasText: 'scanned receipts' }).locator('.t').click();
+  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
   await sheet(page).getByTestId('to-q1').click();
   await expect(page.getByTestId('ask-due')).toHaveCount(0);
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');

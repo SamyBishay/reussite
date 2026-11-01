@@ -1,6 +1,7 @@
 // Projects by suit (brief §5, Projects): the project editor with its SMART goal, steps in
 // order with what waits for what, linked decisions, progress bars, and the Completed shelf.
 import { useState } from 'preact/hooks';
+import { signal } from '@preact/signals';
 import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace, viewAll, today } from '../app/store';
 import { onPage } from '../domain/places';
 import { isOpen, isEvent, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
@@ -16,7 +17,7 @@ import { DoneFold } from '../app/DoneFold';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
-import type { Decision, Project, Task } from '../data/schema';
+import type { Decision, Project, Task, SuitId } from '../data/schema';
 import { useSortable, GRIP } from '../app/sortable';
 import { groupByArea } from '../domain/areas';
 import { AreaTag } from '../app/AreaUi';
@@ -26,6 +27,12 @@ import { CommandBox } from '../ai/ui';
 
 type P = Project & { id: string };
 const openProj = new Set<string>();
+/** The condensed cards the person has opened in place (a tap on one shows the whole project there). */
+const expanded = signal<string[]>([]);
+const expand = (id: string) => { if (!expanded.value.includes(id)) expanded.value = [...expanded.value, id]; };
+const fold = (id: string) => { expanded.value = expanded.value.filter(x => x !== id); };
+/** How many projects a suit shows before "View all". */
+const PEEK = 2;
 
 function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: boolean; sortable?: boolean }) {
   const done = tk.status === 'done';
@@ -66,7 +73,30 @@ function LinkedDecision({ d }: { d: Decision & { id: string } }) {
   );
 }
 
-function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
+/** A project in the Projects list: condensed (name, open steps, next step, progress) until tapped; the whole project in a sheet or after a tap. */
+function ProjectCard({ p, ts, full }: { p: P; ts: T[]; full?: boolean }) {
+  if (full || p.id === 'inbox' || expanded.value.includes(p.id)) return <ProjectFull p={p} ts={ts} inPlace={!full && p.id !== 'inbox'} />;
+  return <ProjectMini p={p} ts={ts} />;
+}
+
+/** The condensed card: the name, how many steps are open, the next one on a line, and the progress when there is a goal. Tapping opens the project. */
+function ProjectMini({ p, ts }: { p: P; ts: T[] }) {
+  const openSteps = ts.filter(x => !x.template && x.status === 'open' && !isEvent(x)).sort(byOrder);
+  const next = openSteps.find(x => !blocked(x)) ?? openSteps[0];
+  const prog = projectProgress(p);
+  return (
+    <article class="proj mini" data-project={p.id}>
+      <button type="button" class="linklike pj-open" onClick={() => expand(p.id)} data-testid="project-open" aria-label={t('openProjectName', { name: p.name })}>
+        <span class="pj-head"><b class="pj-name">{p.name}</b>{p.status === 'paused' && <span class="tag">{t('pst_paused')}</span>}<span class="pj-n" data-testid="project-open-steps">{t('stepsOpenN', { n: openSteps.length })}</span></span>
+        <span class="pj-next">{next ? <Title s={next.title} /> : <span class="muted">{t('projNoNext')}</span>}</span>
+      </button>
+      {prog && <div class="bar cont goalbar" role="img" aria-label={progressLine(prog)} data-testid="goal-bar" data-frac={Math.round(prog.frac * 100)}><i style={{ width: Math.round(prog.frac * 100) + '%' }} /></div>}
+      {prog && <p class="pj-prog" data-testid="goal-line">{progressLine(prog)}</p>}
+    </article>
+  );
+}
+
+function ProjectFull({ p, ts, inPlace }: { p: P; ts: T[]; inPlace?: boolean }) {
   const mine = ts.filter(x => !x.template && x.status !== 'dropped');
   // Something waited for is not a step: it is in the list below, but not in the bar, the count, "next" or "left".
   const real = mine.filter(x => !isEvent(x));
@@ -98,7 +128,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   return (
     <article class="proj" data-project={p.id}>
       <h4><span>{p.name}{p.status === 'paused' && <> <span class="tag">{t('pst_paused')}</span></>}</span>
-        <span class="frac" aria-label={label}>{total ? done.length + ' / ' + total : ''}{p.id !== 'inbox' && <button type="button" class="btn small ghost" onClick={() => openProject(p.id)} data-testid="edit-project">{t('edit')}</button>}</span></h4>
+        <span class="frac" aria-label={label}>{total ? done.length + ' / ' + total : ''}{inPlace && <button type="button" class="btn small ghost" onClick={() => fold(p.id)} data-testid="project-fold">{t('projFold')}</button>}{p.id !== 'inbox' && <button type="button" class="btn small ghost" onClick={() => openProject(p.id)} data-testid="edit-project">{t('edit')}</button>}</span></h4>
       {prog && <div class="bar cont goalbar" role="img" aria-label={progressLine(prog)} data-testid="goal-bar" data-frac={Math.round(prog.frac * 100)}><i style={{ width: Math.round(prog.frac * 100) + '%' }} /></div>}
       {prog && <p class="next" data-testid="goal-line">{progressLine(prog)}</p>}
       {total >= 4 && left > 0 && left <= 3 && <p class="left">{t('stepsLeft', { n: left })}</p>}
@@ -177,6 +207,7 @@ function NewProject() {
     const suit = (f.elements.namedItem('suit') as HTMLSelectElement).value as Task['suit'];
     const id = await createDoc<Project>('projects', { name, suit, where, goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: today.value, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
     openProj.add(id);
+    expand(id);
     closeSheet();
     toast(t('projectAdded'));
   };
@@ -241,6 +272,26 @@ function Shelf({ done, by }: { done: P[]; by: Map<string, T[]> }) {
   );
 }
 
+/** Every project of one suit, whole, grouped by area. Reads the lists itself, so it follows what changes while it is open. */
+function SuitSheet({ s }: { s: SuitId }) {
+  const by = new Map<string, T[]>();
+  for (const x of tasks.value.values()) { if (!by.has(x.project)) by.set(x.project, []); by.get(x.project)!.push(x); }
+  const page = pagePlace.value;
+  const ps = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped' && p.suit === s && p.id !== 'inbox'
+    && (viewAll.value || !p.where || onPage(places.value, p.where, page) || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x)))).sort(byOrder);
+  return (
+    <div class="suitsheet" data-testid="suit-sheet">
+      <h3><Suit s={s} /> {suitName(s)}</h3>
+      {groupByArea(ps, p => p.where || 'any', places.value, page).map((g, i, all) => (
+        <>
+          {all.length > 1 && (g.area ? <h4 class="areahead">{areaName(g.area)}</h4> : i > 0 && <h4 class="areahead">{t('areaOther')}</h4>)}
+          <div class="projs">{g.items.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} full />)}</div>
+        </>
+      ))}
+    </div>
+  );
+}
+
 export function Projects() {
   const by = new Map<string, T[]>();
   for (const x of tasks.value.values()) { if (!by.has(x.project)) by.set(x.project, []); by.get(x.project)!.push(x); }
@@ -251,18 +302,27 @@ export function Projects() {
   const inbox = by.get('inbox') ?? [];
   return (
     <div>
-      <CommandBox scope={{ kind: 'matrix' }} />
+      <CommandBox scope={{ kind: 'matrix' }} compact />
       {SUIT_ORDER.map(s => {
         const ps = vis.filter(p => p.suit === s && p.id !== 'inbox').sort(byOrder);
         if (!ps.length) return null;
+        // Two projects a suit, in the order of the groups; one the person has opened stays in sight; the rest are behind "View all".
+        const groups = groupByArea(ps, p => p.where || 'any', places.value, page);
+        const shown = new Set(groups.flatMap(g => g.items).slice(0, PEEK).map(p => p.id));
+        for (const id of expanded.value) if (ps.some(p => p.id === id)) shown.add(id);
         return (
-          <section class="suitsec"><h3><Suit s={s} /> {suitName(s)}</h3>
-            {groupByArea(ps, p => p.where || 'any', places.value, page).map((g, i, all) => (
-              <>
-                {all.length > 1 && (g.area ? <h4 class="areahead" data-testid="area-head">{areaName(g.area)}</h4> : i > 0 && <h4 class="areahead">{t('areaOther')}</h4>)}
-                <div class="projs">{g.items.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
-              </>
-            ))}
+          <section class="suitsec" data-testid={'suit-' + s}><h3><Suit s={s} /> {suitName(s)} <small class="muted" data-testid={'suit-count-' + s}>{ps.length}</small></h3>
+            {groups.map((g, i) => {
+              const items = g.items.filter(p => shown.has(p.id));
+              if (!items.length) return null;
+              return (
+                <>
+                  {groups.length > 1 && (g.area ? <h4 class="areahead" data-testid="area-head">{areaName(g.area)}</h4> : i > 0 && <h4 class="areahead">{t('areaOther')}</h4>)}
+                  <div class="projs">{items.map(p => <ProjectCard key={p.id} p={p} ts={by.get(p.id) ?? []} />)}</div>
+                </>
+              );
+            })}
+            {ps.length > shown.size && <button class="linklike suit-more" type="button" data-testid={'suit-all-' + s} onClick={() => openSheet(<SuitSheet s={s} />)}>{t('viewAllN', { n: ps.length })}</button>}
           </section>
         );
       })}

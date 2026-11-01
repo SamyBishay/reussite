@@ -1,6 +1,6 @@
 # Projects
 
-A project groups steps toward a goal. Projects are listed under the four suits. A project card shows its goal, its bar if it has one, and its next step.
+A project groups steps toward a goal. Projects are listed under the four suits, two per suit. Each shows as a small card: its name, how many steps are open, its next step on one line, and its bar if it has one. Tap a card to open the whole project there, with its goal, its steps and the form to add one (**Fold** closes it again). When a suit has more than two projects, **View all 4** opens that suit's whole list, project by project, in a sheet. The Inbox, the decisions and the finished projects stay below.
 
 ![Projects, with decisions below](shot:projects)
 

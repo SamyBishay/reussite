@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet, addCard, newCardSheet } from './helpers';
+import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet, addCard, newCardSheet, morningDate } from './helpers';
 
 // Areas inside places, half days and people's pages (phase 4b). Every name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -51,6 +51,7 @@ async function viewOnly(page: Page, name: string) {
 }
 
 test('an area is made under a place, offered in the place field, and View in the place menu narrows Today, the Matrix and the Calendar to it', async ({ page }) => {
+  await morningDate(page); // its fixed items are at 22:00 and 22:30: in the evening they would have passed
   await cairoWithHeliopolis(page);
   await addStep(page, 'Renew the visa', 'Cairo');
   await addStep(page, 'Buy a SIM card', 'Cairo › Heliopolis');

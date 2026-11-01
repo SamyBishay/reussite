@@ -203,8 +203,10 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await closeSheet(page);
 
       await page.goto('/#projects');
-      await expect(page.getByTestId('decisions')).toBeVisible();
+      await expect(page.locator('.suitsec').first()).toBeVisible();
       await shot(page, 'projects');
+      await page.goto('/#matrix');
+      await expect(page.getByTestId('decisions')).toBeVisible();
       await page.getByTestId('decisions').locator('.linklike').first().click();
       await expect(page.getByTestId('decision-page')).toBeVisible();
       await shot(page, 'decision');

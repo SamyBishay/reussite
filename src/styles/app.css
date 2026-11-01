@@ -641,6 +641,7 @@ textarea.mono{letter-spacing:.04em}
 .obpillar{margin-top:var(--s3)}
 .obpillar .hint{margin:var(--s1) 0 0}
 .obsteps{margin:var(--s3) 0;padding-left:1.4em;display:grid;gap:var(--s2)}
+.obapps{margin:var(--s2) 0 0;padding-left:1.2em;display:grid;gap:var(--s2)}
 .obsteps a{overflow-wrap:anywhere;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
 .obchat{display:grid;gap:var(--s2);margin:var(--s3) 0}
 .obchat .bubble{margin:0;padding:10px 14px;border-radius:16px;max-width:92%;overflow-wrap:anywhere}

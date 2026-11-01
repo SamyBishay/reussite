@@ -99,7 +99,7 @@ test('the first run in French has no English left, by myself and with an AI', as
     const scan = async (where: string) => { const h = await english(page); if (h.length) seen[how + ': ' + where] = h; };
     await scan('first screen');
     if (how === 'myself') {
-      await page.getByTestId('ob-by-myself').click();
+      await page.getByTestId('ob-way-none').click();
       await scan('pillars');
       await noSideways(page, 'pillars in French');
       await page.getByTestId('ob-next').click();
@@ -108,7 +108,6 @@ test('the first run in French has no English left, by myself and with an AI', as
       await page.getByTestId('ob-next').click();
       await scan('done');
     } else {
-      await page.getByTestId('ob-with-ai').click();
       await scan('ways');
       await page.getByTestId('ob-way-key').click();
       await scan('key');
@@ -116,6 +115,26 @@ test('the first run in French has no English left, by myself and with an AI', as
       await page.getByTestId('ob-key-paste').click();
       await scan('paste');
       await noSideways(page, 'paste in French');
+      // The connector: the basics, then by hand to Connect Claude and its steps.
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-way-connector').click();
+      await scan('basics');
+      await page.getByTestId('ob-basics-chat').click();
+      await scan('paste for Claude');
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-basics-hand').click();
+      await page.getByTestId('ob-next').click();
+      await page.getByTestId('ob-place-name').first().fill('Maison');
+      await page.getByTestId('ob-next').click();
+      await scan('connect Claude');
+      await noSideways(page, 'connect Claude in French');
+      await page.getByTestId('ob-link-on').click();
+      await scan('recovery key');
+      await page.getByTestId('ob-link-key-saved').click();
+      await expect(page.getByTestId('ob-link-url')).toBeVisible();
+      await scan('connect Claude, steps');
+      await noSideways(page, 'connect Claude steps in French');
     }
     expect(seen, JSON.stringify(seen, null, 1)).toEqual({});
     await ctx.close();

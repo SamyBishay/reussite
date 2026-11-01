@@ -154,6 +154,8 @@ for (const lang of LANGS) for (const theme of THEMES) {
     test.describe('first run', () => {
       test.use({ storageState: NEW_DEVICE });
       test('onboarding', async ({ page }) => {
+        // Taller than the other pictures: the language, the three choices and the links under them in one view.
+        await page.setViewportSize({ width: 375, height: 1150 });
         await page.goto('/');
         await expect(page.getByTestId('ob-language')).toBeVisible();
         if (lang === 'fr') await page.getByTestId('ob-lang-fr').click();

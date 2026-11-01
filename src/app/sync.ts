@@ -401,6 +401,12 @@ export async function startSync() {
   if (saved) {
     keySaved.value = (await getLocal<boolean>(db, K.saved)) ?? true;
     await open(b64uDecode(saved));
+    // The connector's state as last known, so that Home can offer "Plan it in your AI chat" and the Next steps drop the connector at once;
+    // the relay is asked in the background, and only when it was on.
+    if (await getLocal<boolean>(db, K.conOn)) {
+      connector.value = { on: true, lastUsed: (await getLocal<number | null>(db, K.conUsed)) ?? null, url: '' };
+      void refreshConnector().catch(() => undefined);
+    }
   }
   syncLoaded.value = true;
   await checkBackupDue();

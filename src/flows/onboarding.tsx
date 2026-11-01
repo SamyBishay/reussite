@@ -1,7 +1,9 @@
-// First-run setup (S9), short and friendly: language, then one choice, "Set up with an AI" or "Set up by myself". By myself is
-// the four pillars of the person's days as plain questions, then their places, then done. With an AI is a short tutorial to
-// connect one (a key in the app, Claude or ChatGPT, or any chatbot by copy and paste), then a conversation that ends in a
-// change-set (the pillars, the places, how they want an AI to work with them) on the review screen. No look screen (St George and
+// First-run setup (S9), short and friendly: language, then three explicit choices, each saying what it gives day to day: AI inside the
+// app (a key), the person's AI chat app through the connector, or no AI. No AI is the four pillars of the person's days as plain questions, then their
+// places, then done. A key is a short tutorial, then a conversation that ends in a change-set (the pillars, the places, how they want
+// an AI to work with them) on the review screen. The connector sets the pillars and places first (by one copy and paste in a chat
+// with that app, or by hand: the connector cannot write settings), then connects the app right there (`ConnectStep`: sync and its recovery key,
+// the connector, the address and pairing code, a check). Another chatbot is a link under the choices: the same copy and paste. No look screen (St George and
 // the system's light or dark; the look stays in Settings), and no cards or suits in the words. Sync, notifications, Addresses &
 // people and the recovery key are Home's Next steps card (src/app/NextSteps.tsx).
 // Every answer by hand waits in a draft and is written once, at the end: a device that pairs with an existing space must not push
@@ -11,9 +13,12 @@ import { z } from 'zod';
 import { settings, saveSettings, createDoc, places, toast } from '../app/store';
 import { applyTheme } from '../app/theme';
 import { go } from '../app/nav';
+import { syncOn, connector, relayBase, setupSync, connectorOn, connectorNewCode, refreshConnector, confirmKeySaved } from '../app/sync';
+import { Privacy, PairingCode, failure, type Code } from '../app/ConnectorSettings';
+import { chatPrompt } from '../app/ChatOffer';
 import { Mark } from '../app/Mark';
 import { finishedOnboarding } from '../app/onboarding';
-import { JoinPanel } from '../app/SyncSettings';
+import { JoinPanel, KeyView } from '../app/SyncSettings';
 import { KeyField } from '../ai/AiSettings';
 import { AiError, readReply, PASTE_ERR, useAi } from '../ai/ui';
 import { ask, draftProvider } from '../ai/ask';
@@ -28,16 +33,20 @@ import type { ChangeSet } from '../ai/changeset';
 import { ZONES, deviceZone } from '../domain/zones';
 import type { ComponentChildren } from 'preact';
 
-type Id = 'language' | 'pillars' | 'places' | 'connect' | 'key' | 'chat' | 'paste' | 'pair' | 'done';
-type Way = 'key' | 'app' | 'other';
+type Id = 'language' | 'pillars' | 'places' | 'basics' | 'link' | 'key' | 'chat' | 'paste' | 'pair' | 'done';
+/** The three choices of the first screen, and the link under them: `other` is any chatbot, by copy and paste. */
+type Path = 'hand' | 'key' | 'connector' | 'other';
 interface PlaceRow { name: string; timeZone: string }
 interface Draft { s: Partial<Settings>; places: PlaceRow[] }
 interface AiChoice { want: boolean; provider: Exclude<AiProvider, 'none'>; has: boolean }
 type Provider = Exclude<AiProvider, 'none'>;
 
-/** The screens of each way, for "Set-up · n of N". */
-const BY_HAND: Id[] = ['pillars', 'places'];
-const ai = (way: Way): Id[] => (way === 'key' ? ['connect', 'key', 'chat'] : ['connect', 'paste']);
+/** The screens of each path, for "Set-up · n of N". The connector sets the pillars and places first (by a chat with the person's AI chat app, or by hand), then connects. */
+const screens = (path: Path, basics: 'chat' | 'hand'): Id[] =>
+  path === 'hand' ? ['pillars', 'places']
+    : path === 'key' ? ['key', 'chat']
+      : path === 'other' ? ['paste']
+        : basics === 'chat' ? ['basics', 'paste', 'link'] : ['basics', 'pillars', 'places', 'link'];
 
 /** What the draft turns into: places first (so the first can be where the person is), then one settings write. */
 export async function applyDraft(d: Draft, l: Settings['language'], choice: AiChoice, here?: string): Promise<void> {
@@ -62,7 +71,7 @@ function Frame({ id, n, of, title, hint, children, back, next, nextLabel = 'next
   return (
     <div class="flow ob" data-testid={'ob-' + id}>
       {mark && <Mark size={72} class="ob-mark" />}
-      {n && of ? <p class="eyebrow">{t('obStep', { n, of })}</p> : null}
+      {n && of && of > 1 ? <p class="eyebrow">{t('obStep', { n, of })}</p> : null}
       <h3>{title}</h3>
       {hint && <p class="hint">{hint}</p>}
       {children}
@@ -104,8 +113,8 @@ export function Onboarding() {
   const [skipped, setSkipped] = useState(false);
   const [paired, setPaired] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [path, setPath] = useState<'hand' | 'ai'>('hand');
-  const [way, setWay] = useState<Way>('key');
+  const [path, setPath] = useState<Path>('hand');
+  const [basics, setBasics] = useState<'chat' | 'hand'>('chat');
   const [provider, setProvider] = useState<Provider>('openai');
   const [hasKey, setHasKey] = useState(false);
   /** The AI's change-set was ticked and applied: the places and settings are written already. */
@@ -127,21 +136,22 @@ export function Onboarding() {
   const back = trail.length ? () => { setId(trail[trail.length - 1]!); setTrail(trail.slice(0, -1)); } : undefined;
   const skip = () => { setSkipped(true); goTo('done'); };
 
-  const seq = path === 'hand' ? BY_HAND : ai(way);
+  const seq = screens(path, basics);
   const pos = { n: Math.max(1, seq.indexOf(id) + 1), of: seq.length };
   const frame = { id, ...pos, back };
 
   /** The AI path writes the rest of the draft (the language, the key's provider, where the person is) right after the ticks. */
   const settle = async () => {
     const first = [...places.value.values()].sort((a, b) => a.order - b.order)[0]?.id;
-    await applyDraft(draft, lang.value, { want: path === 'ai' && way === 'key', provider, has: hasKey }, first);
+    await applyDraft(draft, lang.value, { want: path === 'key', provider, has: hasKey }, first);
   };
 
   /** Write what was drafted (unless the space on another device is the source of truth, or the AI's ticks already settled it), then leave. */
   const finish = async (then: 'home' | 'checkin') => {
     setBusy(true);
-    if (!paired && !applied) await applyDraft(draft, lang.value, { want: path === 'ai' && way === 'key', provider, has: hasKey });
-    await finishedOnboarding(skipped ? 'skipped' : 'done', { connector: path === 'ai' && way === 'app' });
+    if (!paired && !applied) await applyDraft(draft, lang.value, { want: path === 'key', provider, has: hasKey });
+    // The connector stays on the Next steps for someone who chose it and did not connect it here (it goes by itself once it is on).
+    await finishedOnboarding(skipped ? 'skipped' : 'done', { connector: path === 'connector' });
     draftProvider.value = null;
     go('home');
     if (then === 'checkin') openCheckin();
@@ -159,7 +169,15 @@ export function Onboarding() {
   const reviewed = async (n: number) => {
     if (n <= 0) return;
     await settle();
-    setApplied(true); setTrail([...trail, id]); setId('done'); window.scrollTo({ top: 0 });
+    setApplied(true); setTrail([...trail, id]); setId(path === 'connector' ? 'link' : 'done'); window.scrollTo({ top: 0 });
+  };
+
+  /** By hand, before connecting: the answers are written now (sync, once on, would make a restart look like an existing install and lose a draft). */
+  const toLink = async () => {
+    setBusy(true);
+    await applyDraft(draft, lang.value, { want: false, provider, has: false });
+    setApplied(true); setBusy(false);
+    goTo('link');
   };
 
   const notTherapy = <p class="hint ob-notherapy" data-testid="ob-not-therapy">{t('notTherapy')}</p>;
@@ -177,9 +195,11 @@ export function Onboarding() {
       </div>
       <p class="field-label ob-how">{t('obHow')}</p>
       <div class="bigchoices">
-        <Choice primary onClick={() => { setPath('ai'); goTo('connect'); }} title={t('obWithAi')} hint={t('obWithAiHint')} testid="ob-with-ai" />
-        <Choice onClick={() => { setPath('hand'); goTo('pillars'); }} title={t('obByMyself')} hint={t('obByMyselfHint')} testid="ob-by-myself" />
+        <Choice onClick={() => { setPath('key'); goTo('key'); }} title={t('obWayKey')} hint={t('obWayKeyHint')} testid="ob-way-key" />
+        <Choice onClick={() => { setPath('connector'); goTo('basics'); }} title={t('obWayConnector')} hint={t('obWayConnectorHint')} testid="ob-way-connector" />
+        <Choice onClick={() => { setPath('hand'); goTo('pillars'); }} title={t('obWayNone')} hint={t('obWayNoneHint')} testid="ob-way-none" />
       </div>
+      <button class="linklike ob-skip" type="button" onClick={() => { setPath('other'); goTo('paste'); }} data-testid="ob-copypaste-link">{t('obCopyPaste')}</button>
     </Frame>
   );
 
@@ -207,7 +227,7 @@ export function Onboarding() {
     const edit = (i: number, p: Partial<PlaceRow>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...p } : r)));
     const zones = (z: string) => (ZONES.includes(z) ? ZONES : [z, ...ZONES]);
     return (
-      <Frame {...frame} title={t('obPlacesQ')} hint={t('obPlacesHint')} next={() => goTo('done')} nextLabel="obFinish" nextDisabled={!rows.some(r => r.name.trim())} skip={skip}>
+      <Frame {...frame} title={t('obPlacesQ')} hint={t('obPlacesHint')} next={() => (path === 'connector' ? void toLink() : goTo('done'))} nextLabel={path === 'connector' ? 'next_' : 'obFinish'} nextDisabled={busy || !rows.some(r => r.name.trim())} skip={skip}>
         {rows.map((r, i) => (
           <div class="obplace" data-testid="ob-place">
             <input type="text" value={r.name} placeholder={t('obPlacePh')} aria-label={t('placeName')} autocomplete="off" data-testid="ob-place-name" onInput={e => edit(i, { name: (e.target as HTMLInputElement).value })} />
@@ -222,21 +242,22 @@ export function Onboarding() {
     );
   }
 
-  if (id === 'connect') return (
-    <Frame {...frame} title={t('obConnectQ')} hint={t('obConnectHint')}>
+  if (id === 'basics') return (
+    <Frame {...frame} title={t('obBasicsQ')} hint={t('obBasicsHint')} skip={skip}>
       <div class="bigchoices">
-        <Choice onClick={() => { setWay('key'); goTo('key'); }} title={t('obWayKey')} hint={t('obWayKeyHint')} testid="ob-way-key" />
-        <Choice onClick={() => { setWay('app'); goTo('paste'); }} title={t('obWayApp')} hint={t('obWayAppHint')} testid="ob-way-app" />
-        <Choice onClick={() => { setWay('other'); goTo('paste'); }} title={t('obWayOther')} hint={t('obWayOtherHint')} testid="ob-way-other" />
+        <Choice onClick={() => { setBasics('chat'); goTo('paste'); }} title={t('obBasicsChat')} hint={t('obBasicsChatHint')} testid="ob-basics-chat" />
+        <Choice onClick={() => { setBasics('hand'); goTo('pillars'); }} title={t('obBasicsHand')} hint={t('obBasicsHandHint')} testid="ob-basics-hand" />
       </div>
     </Frame>
   );
 
-  if (id === 'key') return <KeyStep {...frame} provider={provider} setProvider={setProvider} has={hasKey} setHas={setHasKey} next={() => goTo('chat')} usePaste={() => { setWay('other'); goTo('paste'); }} />;
+  if (id === 'link') return <ConnectStep {...frame} back={basics === 'hand' ? back : undefined} done={() => goTo('done')} />;
 
-  if (id === 'chat') return <Chat {...frame} usePaste={() => { setWay('other'); goTo('paste'); }} reviewed={reviewed} />;
+  if (id === 'key') return <KeyStep {...frame} provider={provider} setProvider={setProvider} has={hasKey} setHas={setHasKey} next={() => goTo('chat')} usePaste={() => { setPath('other'); goTo('paste'); }} />;
 
-  if (id === 'paste') return <PasteStep {...frame} way={way} reviewed={reviewed} />;
+  if (id === 'chat') return <Chat {...frame} usePaste={() => { setPath('other'); goTo('paste'); }} reviewed={reviewed} />;
+
+  if (id === 'paste') return <PasteStep {...frame} way={path === 'connector' ? 'app' : 'other'} reviewed={reviewed} />;
 
   if (id === 'pair') return (
     <div class="flow ob" data-testid="ob-pair">
@@ -249,7 +270,7 @@ export function Onboarding() {
   return (
     <div class="flow ob" data-testid="ob-done">
       <h3>{skipped ? t('obDoneSkipped') : t('obDone')}</h3>
-      <p>{paired ? t('obDonePaired') : applied ? t('obDoneAi') : t('obDoneHint')}</p>
+      <p data-testid="ob-done-text">{paired ? t('obDonePaired') : path === 'connector' && connector.value?.on ? t('obDoneConnected', { say: chatPrompt('day') }) : applied ? t('obDoneAi') : t('obDoneHint')}</p>
       {!paired && <p class="hint" data-testid="ob-done-next">{t('obDoneNext')}</p>}
       <div class="bigchoices">
         <button type="button" class="btn primary" disabled={busy} onClick={() => void finish('checkin')} data-testid="ob-plan"><b>{t('obPlanFirst')}</b><small>{t('obPlanFirstHint')}</small></button>
@@ -280,6 +301,7 @@ function KeyStep({ provider, setProvider, has, setHas, next, back, usePaste, ...
           {([['openai', 'obProviderOpenrouter'], ['anthropic', 'aiAnthropic']] as const).map(([v, k]) =>
             <button type="button" style="min-height:44px" aria-pressed={provider === v} data-testid={'ob-ai-' + v} onClick={() => setProvider(v)}>{t(k)}</button>)}
         </div>
+        <p class="hint" data-testid="ob-provider-hint">{t('obProviderHint')}</p>
       </div>
       <ol class="obsteps" data-testid="ob-key-steps">
         <li>{t(link.steps[0])} <a href={link.href} target="_blank" rel="noopener noreferrer" data-testid="ob-key-link">{link.label}</a></li>
@@ -327,7 +349,7 @@ function Chat({ usePaste, reviewed, back, ...pos }: { id: Id; n: number; of: num
 
   return (
     <div class="flow ob" data-testid="ob-chat">
-      <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>
+      {pos.of > 1 && <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>}
       <h3>{t('obChatQ')}</h3>
       <div class="obchat" role="log" aria-live="polite" data-testid="ob-chat-log">
         <p class="bubble you" data-testid="ob-chat-first">{t('obChatFirst')}</p>
@@ -350,8 +372,8 @@ function Chat({ usePaste, reviewed, back, ...pos }: { id: Id; n: number; of: num
   );
 }
 
-/** Claude, ChatGPT or any chatbot: copy a message in, talk there, paste the reply back (Paste the reply, inside the flow). */
-function PasteStep({ way, reviewed, back, ...pos }: { id: Id; n: number; of: number; back?: () => void; way: Way; reviewed: (n: number) => void | Promise<void> }) {
+/** The AI chat app of the connector path, or any chatbot: copy a message in, talk there, paste the reply back (Paste the reply, inside the flow). */
+function PasteStep({ way, reviewed, back, ...pos }: { id: Id; n: number; of: number; back?: () => void; way: 'app' | 'other'; reviewed: (n: number) => void | Promise<void> }) {
   const pack = setupPack(lang.value);
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
@@ -372,7 +394,7 @@ function PasteStep({ way, reviewed, back, ...pos }: { id: Id; n: number; of: num
   const fromClipboard = async () => { try { setText(await navigator.clipboard.readText()); } catch { toast(t('pasteBlocked')); } };
   return (
     <div class="flow ob" data-testid="ob-paste">
-      <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>
+      {pos.of > 1 && <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>}
       <h3>{way === 'app' ? t('obPasteAppQ') : t('obPasteOtherQ')}</h3>
       <p class="hint">{t('obPasteHint')}</p>
       <ol class="obsteps">
@@ -402,6 +424,133 @@ function PasteStep({ way, reviewed, back, ...pos }: { id: Id; n: number; of: num
         </form>
       )}
       <div class="actions ob-actions">{back && <button class="btn ghost" type="button" onClick={back} data-testid="ob-back">{t('back')}</button>}</div>
+    </div>
+  );
+}
+
+
+/**
+ * Connect the AI chat app, inside set-up: what the connector needs, step by step, with the Settings pieces. Sync first (its recovery key is shown
+ * and kept, as in Settings → Sync), then the connector (privacy said first, as in Settings → Connector), then the address and the
+ * pairing code to give the app, and a check that it has come in (the relay says when the connector was last used). Without a relay
+ * address, or with a relay that has no connector, it says so and leaves the connector on the Next steps.
+ */
+function ConnectStep({ back, done, ...pos }: { id: Id; n: number; of: number; back?: () => void; done: () => void }) {
+  const [stage, setStage] = useState<'intro' | 'key' | 'add'>(() => (syncOn.value && connector.value?.on ? 'add' : 'intro'));
+  const [keyText, setKeyText] = useState('');
+  const [code, setCode] = useState<Code | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [checked, setChecked] = useState(false);
+  const st = connector.value;
+  const connected = !!st?.lastUsed;
+  const say = chatPrompt('day');
+
+  const connect = async () => {
+    setBusy(true); setErr('');
+    try { setCode(await connectorOn()); setStage('add'); }
+    catch (e) { setErr(failure(e)); setStage('intro'); }
+    setBusy(false);
+  };
+  const on = async () => {
+    setErr('');
+    if (syncOn.value) { await connect(); return; }
+    setBusy(true);
+    try { setKeyText(await setupSync()); setStage('key'); }
+    catch (e) { setErr(failure(e)); }
+    setBusy(false);
+  };
+  const newCode = async () => {
+    setBusy(true); setErr('');
+    try { setCode(await connectorNewCode()); } catch (e) { setErr(failure(e)); }
+    setBusy(false);
+  };
+  const check = async () => {
+    setBusy(true);
+    try { await refreshConnector(); } catch (e) { setErr(failure(e)); }
+    setChecked(true); setBusy(false);
+  };
+  // Already on when this screen opens (a restart in the middle): a fresh code, since the first one is shown once.
+  useEffect(() => { if (stage === 'add' && !code) void newCode(); }, []);
+  // While the steps are open, ask the relay every few seconds whether the app has come in.
+  useEffect(() => {
+    if (stage !== 'add' || connected) return;
+    const id = setInterval(() => { if (document.visibilityState === 'visible') void refreshConnector().catch(() => undefined); }, 4000);
+    return () => clearInterval(id);
+  }, [stage, connected]);
+
+  if (!relayBase()) return (
+    <div class="flow ob" data-testid="ob-link">
+      <h3>{t('obLinkQ')}</h3>
+      <p data-testid="ob-link-norelay">{t('obLinkNoRelay')}</p>
+      <div class="actions ob-actions">
+        {back && <button class="btn ghost" type="button" onClick={back} data-testid="ob-back">{t('back')}</button>}
+        <button class="btn primary" type="button" onClick={done} data-testid="ob-link-continue">{t('obLinkContinue')}</button>
+      </div>
+    </div>
+  );
+
+  if (stage === 'key') return (
+    <div class="flow ob" data-testid="ob-link">
+      <h3>{t('obLinkKeyQ')}</h3>
+      <p class="hint">{t('obLinkKeyHint')}</p>
+      <KeyView text={keyText} />
+      {err && <p class="err" role="alert" data-testid="ob-link-error">{err}</p>}
+      <div class="actions ob-actions">
+        <button class="btn primary" type="button" disabled={busy} onClick={async () => { await confirmKeySaved(); await connect(); }} data-testid="ob-link-key-saved">{t('syncKeySavedBtn')}</button>
+        <button class="btn" type="button" disabled={busy} onClick={() => void connect()} data-testid="ob-link-key-later">{t('syncKeyLater')}</button>
+      </div>
+    </div>
+  );
+
+  if (stage === 'intro') return (
+    <div class="flow ob" data-testid="ob-link">
+      {pos.of > 1 && <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>}
+      <h3>{t('obLinkQ')}</h3>
+      <p>{t('obLinkIntro')}</p>
+      <Privacy />
+      {err && <p class="err" role="alert" data-testid="ob-link-error">{err}</p>}
+      <div class="actions ob-actions">
+        {back && <button class="btn ghost" type="button" onClick={back} data-testid="ob-back">{t('back')}</button>}
+        <button class="btn primary" type="button" disabled={busy} onClick={() => void on()} data-testid="ob-link-on">{syncOn.value ? t('obLinkOnOnly') : t('obLinkOn')}</button>
+        <button class="btn" type="button" disabled={busy} onClick={done} data-testid="ob-link-later">{t('obLinkLater')}</button>
+      </div>
+      <p class="hint">{t('obLinkLaterHint')}</p>
+    </div>
+  );
+
+  const copyUrl = () => navigator.clipboard?.writeText(st?.url ?? '').then(() => toast(t('connectorUrlCopied')), () => undefined);
+  return (
+    <div class="flow ob" data-testid="ob-link">
+      <h3>{t('obLinkAddQ')}</h3>
+      <p class="hint">{t('obLinkAddHint')}</p>
+      <ol class="obsteps" data-testid="ob-link-steps">
+        <li>{t('obLinkS1')}</li>
+        <li>{t('obLinkS2')}
+          <ul class="obapps" data-testid="ob-link-apps">
+            <li>{t('obLinkAppClaude')}</li>
+            <li>{t('obLinkAppOther')}</li>
+          </ul>
+        </li>
+        <li>{t('obLinkS3')}</li>
+      </ol>
+      <div class="field"><span>{t('connectorUrlLabel')}</span>
+        <p class="urlbox mono" data-testid="ob-link-url">{st?.url ?? ''}</p>
+        <div class="actions"><button class="btn" type="button" onClick={copyUrl} data-testid="ob-link-copy-url">{t('connectorCopyUrl')}</button></div>
+      </div>
+      <PairingCode code={code} onNew={newCode} busy={busy} />
+      {err && <p class="err" role="alert" data-testid="ob-link-error">{err}</p>}
+      <p role="status" class="hint" data-testid="ob-link-state">
+        {connected ? t('obLinkWorks', { say }) : checked ? t('obLinkNotYet') : t('obLinkWaiting')}
+      </p>
+      <div class="actions">
+        <button class="btn" type="button" disabled={busy} onClick={() => void check()} data-testid="ob-link-check">{t('obLinkCheck')}</button>
+      </div>
+      <p class="hint">{t('obLinkTry', { say })}</p>
+      <div class="actions ob-actions">
+        <button class="btn primary" type="button" onClick={done} data-testid="ob-link-continue">{t('obLinkContinue')}</button>
+      </div>
+      {!connected && <p class="hint">{t('obLinkLaterHint')}</p>}
     </div>
   );
 }

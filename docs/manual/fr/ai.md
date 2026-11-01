@@ -8,7 +8,7 @@ Une IA est **facultative**. Réussite marche pleinement sans. Si vous en voulez 
 
 1. **Votre propre clé, dans l’appli.** Dans Réglages → IA, choisissez OpenRouter (ou tout service compatible OpenAI), ou Anthropic, et collez votre clé. La clé reste sur cet appareil. Elle n’est jamais synchronisée ni mise dans les sauvegardes. Touchez **Tester la connexion**.
 2. **Demander à n’importe quelle IA, sans clé.** Copiez un résumé de la méthode et la partie de votre liste que vous choisissez, avec votre question, dans un chatbot que vous utilisez déjà. Cela ne demande aucune configuration et aucun compte chez Réussite.
-3. **Le connecteur.** Une appli d’IA que vous utilisez déjà, comme Claude, lit et modifie votre liste pendant que vous discutez. Voir plus bas.
+3. **Le connecteur.** Une appli de chat IA que vous utilisez déjà lit et modifie votre liste pendant que vous discutez, si elle accepte les connecteurs de type MCP (Claude les accepte, d’autres applis aussi). La mise en route peut la connecter pas à pas. Voir plus bas.
 
 ## Ce qu’une IA peut faire
 
@@ -46,13 +46,13 @@ Réglages → IA montre les appels et les jetons de ce mois sur cet appareil, et
 
 ## Le connecteur
 
-Le connecteur permet à une appli d’IA (comme Claude) de lire votre liste et de la modifier pendant que vous discutez. Il demande la synchronisation. Dans Réglages → Connecteur :
+Le connecteur permet à une appli de chat IA de lire votre liste et de la modifier pendant que vous discutez. Il demande la synchronisation. La mise en route vous guide (**Connecter votre appli de chat IA** : la synchronisation et sa clé de récupération, le connecteur, l’adresse et le code d’appairage, puis une vérification que votre appli est bien entrée), et Réglages → Connecteur fait de même plus tard. À la main, dans Réglages → Connecteur :
 
 1. Touchez **Activer**. Lisez ce qui est dit : **tant que le connecteur est activé, celui qui fait tourner le relais peut lire toute votre liste.**
-2. Dans Claude, ouvrez Réglages, puis Connecteurs, puis Ajouter un connecteur personnalisé. Collez l’adresse affichée et connectez-vous.
+2. Dans votre appli, ajoutez l’adresse affichée comme connecteur personnalisé, puis connectez-vous. Dans Claude : Réglages, puis Connecteurs, puis Ajouter un connecteur personnalisé. Dans une autre appli qui accepte les connecteurs MCP : ajoutez un connecteur personnalisé ou distant et collez l’adresse.
 3. Saisissez le **code d’appairage** que montre l’appli. Il ne marche qu’une fois, pendant dix minutes.
 
-Un petit changement (ajouter une étape, en cocher une comme faite, déplacer une date) passe directement, avec un moyen d’annuler. Tout le reste attend votre accord dans la conversation. **Désactiver** déconnecte toutes les applis d’IA d’un coup. Les notes que vous avez marquées Privées ne sont jamais lisibles par lui.
+Sans clé sur cet appareil mais avec le connecteur activé, **Planifier la journée** et la bannière de la revue du dimanche proposent aussi **La planifier dans votre chat IA** et **La faire dans votre chat IA**. Elles copient une courte phrase (« Planifie ma journée avec Réussite ») à dire dans une nouvelle conversation de votre appli. Réussite ne fait aucun appel à une IA elle-même. Un petit changement (ajouter une étape, en cocher une comme faite, déplacer une date) passe directement, avec un moyen d’annuler. Tout le reste attend votre accord dans la conversation. **Désactiver** déconnecte toutes les applis d’IA d’un coup. Les notes que vous avez marquées Privées ne sont jamais lisibles par lui.
 
 **La recherche dit :** non testé ici. `[E?]`
 

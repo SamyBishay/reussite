@@ -14,7 +14,7 @@ describe('the Next steps card', () => {
   it('drops what is done or cannot be done here', () => {
     expect(nextSteps(facts({ relay: false, canNotify: false, addressesOn: false }))).toEqual([]);
   });
-  it('adds the connector only for someone who chose Claude or ChatGPT, until it is on', () => {
+  it('adds the connector only for someone who chose the connector, until it is on', () => {
     expect(nextSteps(facts({ wantsConnector: true }))).toEqual(['sync', 'notify', 'addresses', 'connector']);
     expect(nextSteps(facts({ wantsConnector: true, connectorOn: true }))).toEqual(['sync', 'notify', 'addresses']);
   });

@@ -88,7 +88,7 @@ const FIND_PACK = `Find out three things from me, by talking, so that Réussite 
 const HOW_PACK = `Talk plainly and warmly, one question at a time, starting from my life ("tell me about a usual week") and not from the app. ${WORDS} Facts, no praise, no guilt, no advice about my health, nothing about what I should have done. Take at most ${MAX_EXCHANGES} exchanges. As soon as you have my four pillars, end your reply with the change-set below: I will see every line in Réussite and can untick one or come back to you, so do not ask for a yes first. Do not call any tool or connector for this: give me the block.`;
 
 /**
- * The text to paste into any chatbot (Claude, ChatGPT, anything): the same job as the in-app conversation, ending with one
+ * The text to paste into any chatbot: the same job as the in-app conversation, ending with one
  * fenced block labelled `reussite` for Paste the reply. It holds no data of the person's, only the method in short and their
  * lines for an AI if they have any.
  */

@@ -12,13 +12,13 @@ import { More, Fold, openFold } from './More';
 const when = (at: number) => new Date(at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 
 const ERR = { connector_unavailable: 'connectorUnavailable', wrong_key: 'connectorWrongKey', rate_limited: 'connectorBusy', network: 'syncNetwork' } as const;
-const failure = (e: unknown) => {
+export const failure = (e: unknown) => {
   const code = e instanceof RelayError ? e.code : 'error';
   return code in ERR ? t(ERR[code as keyof typeof ERR]) : t('syncFailed', { code });
 };
 
 /** The privacy cost, in plain words. Shown in the section and again in the confirmation. */
-function Privacy() {
+export function Privacy() {
   return (
     <>
       <p>{t('connectorPrivacy1')}</p>
@@ -73,7 +73,7 @@ function SwitchOffSheet({ done }: { done: () => void }) {
 }
 
 /** `ABCD-EFGH` in large grouped characters, with the minutes left. */
-function PairingCode({ code, onNew, busy }: { code: Code | null; onNew: () => void; busy: boolean }) {
+export function PairingCode({ code, onNew, busy }: { code: Code | null; onNew: () => void; busy: boolean }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
   const left = code ? Math.max(0, Math.ceil((code.expires - now) / 1000)) : 0;

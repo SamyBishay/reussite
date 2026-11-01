@@ -12,7 +12,7 @@ export interface NextFacts {
   /** Notifications are offered here and can be switched on (not hidden, not already on). */
   canNotify: boolean;
   addressesOn: boolean;
-  /** The person chose a chatbot app in setup, to be connected for good. */
+  /** The person chose the connector path in setup (their AI chat app), to be connected for good. */
   wantsConnector: boolean;
   connectorOn: boolean;
 }

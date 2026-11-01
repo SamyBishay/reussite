@@ -23,7 +23,7 @@ Touchez un événement pour ouvrir l’étape. Touchez le numéro d’un jour po
 - **Changer une heure ou un jour :** faites glisser une étape à heure fixe sur la grille. Elle se déplace par pas de 15 minutes.
 - Sur un téléphone, touchez une étape pour l’ouvrir et changer son heure ou son jour là.
 
-Si votre lieu a des zones, les **pastilles de zone** réduisent le calendrier à une zone, plus ce qui s’applique partout.
+Si vous regardez l’une des zones de votre lieu (la pastille du lieu), le calendrier montre cette zone, plus ce qui s’applique partout.
 
 ## Ajouter au calendrier
 

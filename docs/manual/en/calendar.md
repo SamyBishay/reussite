@@ -2,7 +2,7 @@
 
 The **Calendar** tab is a real calendar. It has the views **Day**, **Week** (or **3 days** on a phone), **Month**, **Agenda** and **Log**. The one you pick is remembered.
 
-On a phone the tab is kept tight: the views in one row, the dates (‹ the day ›, and **Today** when you have moved away) in the next, and the grid right under them, filling the screen down to the tab bar. It scrolls inside, so the page itself does not move. The suit piles are on Today only, not here.
+The tab is one screen tall, like Home: the page itself never scrolls, only the grid inside it. On a phone it is kept tight: the views in one row, the dates (‹ the day ›, and a small **↩ Today** chip when you have moved away) in the next, and the grid right under them, filling the screen down to the tab bar. The **Log** is one of the views, so it is a tap away, and it scrolls inside its own box, with the version line at its end. The suit piles are on Today only, not here.
 
 ![The week](shot:calendar)
 

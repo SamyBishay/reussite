@@ -1,6 +1,6 @@
 // The Calendar's Day and 3-day views open with the time now in the middle of the hour grid's scroll viewport (src/domain/calScroll.ts, CalendarGrid.tsx).
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, stubNow } from './helpers';
+import { importSample, noSideways, stubNow } from './helpers';
 
 /** Where the now-line sits in the grid's scroll viewport: 0 at its top edge, 1 at its bottom edge. */
 const nowAt = (page: Page) => page.evaluate(() => {
@@ -59,4 +59,58 @@ test('another day opens near 08:00 or its first event, and the grid is not re-sc
   await page.locator('.sxhost').dispatchEvent('wheel');
   await page.waitForTimeout(500);
   expect(await page.evaluate(() => (document.querySelector('.sx__view-container') as HTMLElement).scrollTop)).toBe(500);
+});
+
+// The Calendar tab is one screen tall, like Home: the page never scrolls, the grid (or the Log) fills the room between the bar and the tab bar and scrolls inside.
+const SIZES: [number, number][] = [[320, 568], [375, 667], [390, 844], [1280, 800]];
+for (const [width, height] of SIZES) {
+  test(`the Calendar tab does not scroll at ${width}x${height}: the grid fills the room above the tab bar, in every view`, async ({ page, isMobile }) => {
+    test.skip(isMobile && width > 800, 'a phone has no desktop width');
+    await page.setViewportSize({ width, height });
+    const x = new Date(); x.setHours(15, 30, 0, 0);
+    await stubNow(page, x);
+    await importSample(page);
+    await page.getByTestId('tab-calendar').click();
+    const check = async (where: string) => {
+      const r = await page.evaluate(() => {
+        const se = document.scrollingElement!, grid = document.querySelector('.sxhost')?.getBoundingClientRect(), bar = document.querySelector('.tabbar')!.getBoundingClientRect();
+        return { scroll: se.scrollHeight, inner: innerHeight, gridBottom: grid?.bottom ?? null, gridHeight: grid?.height ?? null, barTop: bar.top, locked: document.documentElement.classList.contains('home-lock') };
+      });
+      expect(r.scroll, where + ': the page scrolls').toBeLessThanOrEqual(r.inner);
+      expect(r.locked, where + ': the page is locked').toBe(true);
+      if (r.gridBottom != null) {
+        expect(r.gridBottom, where + ': the grid runs under the tab bar').toBeLessThanOrEqual(r.barTop + 1);
+        expect(r.gridHeight!, where + ': the grid is too small').toBeGreaterThanOrEqual(height >= 667 ? 300 : 220);
+      }
+      await noSideways(page, where);
+    };
+    for (const mode of ['day', 'week', 'month', 'agenda']) {
+      await page.getByTestId('cal-' + mode).click();
+      await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', mode);
+      await check(mode);
+      // What sits under the grid (the line to Settings → Calendar while the feed is off) is in view, not below the fold.
+      await expect(page.getByTestId('cal-feed-line')).toBeInViewport({ ratio: 1 });
+    }
+    // The Log is a mode of the same bar and scrolls inside its own box; the footer is at its end.
+    await page.getByTestId('cal-log').click();
+    await expect(page.getByTestId('log')).toBeVisible();
+    await check('log');
+    await page.getByTestId('log').evaluate(el => { el.scrollTop = el.scrollHeight; });
+    await expect(page.locator('.foot')).toBeInViewport({ ratio: 0.95 });
+    expect((await page.locator('.foot').boundingBox())!.y + (await page.locator('.foot').boundingBox())!.height).toBeLessThanOrEqual((await page.getByTestId('tabbar').boundingBox())!.y + 1);
+    await check('log, scrolled');
+  });
+}
+
+test('the grid is placed again for the new room when it changes (the window gets shorter)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const x = new Date(); x.setHours(15, 30, 0, 0);
+  await stubNow(page, x);
+  await importSample(page);
+  await page.getByTestId('tab-calendar').click();
+  await page.getByTestId('cal-day').click();
+  await expect.poll(async () => { const r = await nowAt(page); return r != null && r > 0.33 && r < 0.67; }, { timeout: 5000 }).toBe(true);
+  await page.setViewportSize({ width: 390, height: 640 });
+  await expect.poll(async () => { const r = await nowAt(page); return r != null && r > 0.33 && r < 0.67; }, { timeout: 5000 }).toBe(true);
+  expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= innerHeight)).toBe(true);
 });

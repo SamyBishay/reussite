@@ -157,28 +157,22 @@ export function CalendarGrid({ mode, date }: GridProps) {
     settle();
   }, [mode, date]);
 
-  // On a phone the grid fills the screen down to the tab bar and scrolls inside, so the page does not grow; elsewhere the style's height stands.
+  // The grid fills the room the tab leaves it (a flexible height, src/styles/calendar.css) and scrolls inside; when that room changes (a rotation, the keyboard, a banner),
+  // the hour grid is placed again, unless the person has scrolled it.
   useEffect(() => {
     const el = host.current;
-    if (!el || !phone) return;
-    const fit = () => {
-      const top = el.getBoundingClientRect().top + window.scrollY;
-      const room = Math.floor(window.innerHeight - top - (document.querySelector('.tabbar')?.getBoundingClientRect().height ?? 0) - 8);
-      const h = Math.max(260, room);
-      el.style.height = h + 'px';
-      // The room above the tab bar is known (or has changed): the hour grid is placed again, unless the person has scrolled it.
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const h = el.clientHeight;
       if (h !== scroll.current.height) { scroll.current.height = h; if (!scroll.current.moved) settle(); }
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(document.body);
-    window.addEventListener('resize', fit);
-    return () => { ro.disconnect(); window.removeEventListener('resize', fit); el.style.height = ''; };
-  }, [phone, mode]);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   /**
    * Scroll the hour grid (Day and 3-day views): the time now in the middle of the visible hours when today is shown, else the day's first event (src/domain/calScroll.ts).
-   * Computed from the measured scroll viewport, so it is only right once the grid's height is set (the fit effect above) and the library has drawn the view.
+   * Computed from the measured scroll viewport, so it is only right once the grid has its height (the observer above) and the library has drawn the view.
    */
   function place(): number | null {
     const el = host.current;

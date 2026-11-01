@@ -1,7 +1,8 @@
 // The Calendar tab (brief §5, §16): a real calendar with Day, Week, Month and Agenda views, on a library that is
 // loaded when the tab is opened (CalendarGrid.tsx). Fixed-time items sit on the hour grid; the day's cards, due
-// steps and the rest are in the all-day row. The Log (done steps by day) is a mode of this tab. On a phone the bar is two tight rows and the grid fills the
-// rest of the screen; under the grid, a line to Settings → Calendar while this device's feed is off (the one-off .ics file is there too).
+// steps and the rest are in the all-day row. The Log (done steps by day) is a mode of this tab. The tab is one screen tall, like Home: the page does not scroll,
+// the grid (or the Log) scrolls inside itself; on a phone the bar is two tight rows. Under the grid, a line to Settings → Calendar while this device's feed is off
+// (the one-off .ics file is there too), and on a computer a hint; the footer (version, credit) is at the end of the Log.
 import { signal } from '@preact/signals';
 import { useEffect, useState } from 'preact/hooks';
 import type { ComponentType } from 'preact';
@@ -10,6 +11,7 @@ import { calMode as mode, setCalMode as setMode, isPhone, PHONE_DAYS, go, type C
 import { openFold } from '../app/More';
 import { PeriodNav } from '../app/PeriodNav';
 import { Log } from './Log';
+import { Footer } from '../app/Footer';
 import { t, fmtDate, lang } from '../i18n';
 import { addDays } from '../domain/dates';
 import { weekOf } from '../domain/calendar';
@@ -58,7 +60,7 @@ export function Calendar() {
       <button type="button" aria-pressed={m === 'log'} onClick={() => setMode('log')} data-testid="cal-log">{t('tabLog')}</button>
     </div>
   );
-  if (m === 'log') return <div data-testid="calendar"><div class="calbar">{seg}</div><div data-testid="log"><Log /></div></div>;
+  if (m === 'log') return <div class="calview" data-testid="calendar"><div class="calbar">{seg}</div><div class="calscroll" data-testid="log"><Log /><Footer /></div></div>;
   const days = m === 'week' && phone ? PHONE_DAYS : 7;
   const week = weekOf(a);
   const step = (n: number) => {
@@ -70,7 +72,7 @@ export function Calendar() {
   // A week starts on Monday, except on a phone, where the three days start on the date shown.
   const shown = m === 'week' && !phone ? week[0]! : a;
   return (
-    <div data-testid="calendar">
+    <div class="calview" data-testid="calendar">
       <div class="calbar">
         {seg}
         <PeriodNav class="calnav" name={t('calView')} label={title} away={a !== td} onToday={() => (anchor.value = null)}

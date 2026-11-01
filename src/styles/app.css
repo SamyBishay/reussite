@@ -61,8 +61,6 @@ main{min-width:0}
 .pilelist li.todo{border-style:dashed;background:transparent}
 .pile.pop .pc{animation:pop .5s ease}
 @keyframes pop{0%{transform:none}40%{transform:scale(1.1) rotate(-3deg)}100%{transform:none}}
-.daystat{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s4);font-size:14px;color:var(--ink-2)}
-.daystat b{color:var(--ink);font-family:var(--mono);font-weight:600}
 #closeSide{display:none}
 @media (min-width:920px){.pc{max-width:64px}}
 @media (min-width:920px){#closeSide{display:inline-flex;justify-content:center}}
@@ -493,16 +491,19 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .fixed li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--s3);align-items:baseline;background:var(--card);border:1px solid transparent;border-radius:10px;padding:8px 12px}
 .fixed li.done .linklike{color:var(--ink-3);text-decoration:line-through}
 .fixed time{font:600 14px var(--mono)}
-/* PeriodNav (src/app/PeriodNav.tsx): ‹ at the far left, › at the far right, each in a fixed 44px column; the label between them, with a line under it that is always reserved for "Back to today". Nothing here depends on the label's width. */
+/* PeriodNav (src/app/PeriodNav.tsx): one compact row. ‹ at the far left, › at the far right, each in a fixed 44px column; the label between them, with a small
+   "↩ Today" chip beside it when away from today (the arrow alone under 360px). Nothing here depends on the label's width, and no line is reserved. */
 .pnav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;column-gap:var(--s2);width:100%}
 .pnav-arrow{width:44px;height:44px;justify-self:stretch;font-size:20px}
-.pnav-mid{display:grid;grid-template-rows:24px 24px;justify-items:center;align-items:center;min-width:0;text-align:center}
-.pnav-label{position:relative;display:block;max-width:100%;min-width:0;font:700 16px/24px var(--sans);overflow:clip;text-overflow:ellipsis;white-space:nowrap}
+.pnav-mid{display:flex;align-items:center;justify-content:center;gap:var(--s1);min-width:0;text-align:center}
+.pnav-label{position:relative;display:block;flex:0 1 auto;max-width:100%;min-width:0;font:700 16px/24px var(--sans);overflow:clip;text-overflow:ellipsis;white-space:nowrap}
 .pnav-label.pickable{cursor:pointer;overflow:visible}
 .pnav-label.pickable span{display:block;overflow:hidden;text-overflow:ellipsis;text-decoration:underline dotted var(--ink-3);text-underline-offset:4px}
 .pnav-label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;min-height:0;padding:0;cursor:pointer}
-.pnav-slot{height:24px;padding-top:2px;display:flex;align-items:center;justify-content:center;max-width:100%}
-.pnav-today{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 var(--s3);height:22px;font:600 12.5px/1 var(--sans);color:var(--ink-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.pnav-today{flex:none;display:grid;align-items:center;min-height:44px;border:0;background:none;padding:0 2px;cursor:pointer}
+.pnav-today span{display:flex;align-items:center;gap:var(--s1);border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 var(--s2);height:26px;font:600 12.5px/1 var(--sans);color:var(--ink-2);white-space:nowrap}
+.pnav-today b{font-weight:600}
+@media (max-width:359px){.pnav-today b{display:none}.pnav-today span{padding:0;width:30px;justify-content:center;font-size:15px}}
 .daynav{margin-top:var(--s4)}
 .flow h3{font-size:22px}
 .flow .eyebrow{margin-bottom:var(--s2)}
@@ -668,6 +669,16 @@ main>.banner{margin-top:var(--s3)}
   .calnav .pnav-label{font-size:15px}
   .app.noside #runbar:empty{display:none}
 }
+/* The Calendar tab is one screen tall, like Home: the page does not scroll (html.home-lock), the grid fills the room between the bar and the tab bar and scrolls
+   inside itself, and the Log, a mode of the same bar, scrolls inside its own box (.calscroll). */
+.app[data-view="calendar"].noside{height:100dvh;overflow:hidden;row-gap:0;grid-template-rows:auto minmax(0,1fr);padding-block-end:calc(var(--dock) + var(--kb) + 8px)}
+@media (min-width:920px){.app[data-view="calendar"].noside{grid-template-rows:auto auto minmax(0,1fr)}}
+.app[data-view="calendar"] #runbar:not(:empty){margin-top:var(--s2)}
+.app[data-view="calendar"] main{display:flex;flex-direction:column;min-height:0}
+.calview{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s2)}
+.calview>.calbar{flex:none;margin-top:var(--s2)}
+.calview>.calhint,.calview>.calfeed{flex:none;margin:0;font-size:12.5px;line-height:1.35}
+.calscroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .calib{display:grid;gap:var(--s3)}
 @media (min-width:640px){.calib{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .weekstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1);margin:var(--s3) 0;font-size:12px}
@@ -917,7 +928,35 @@ body > .row,body > li{list-style:none}
 .row .ctrls{margin-top:var(--s1)}
 .todayview .adders{margin-top:var(--s3)}
 .todayview .sec{margin-top:var(--s6)}
-.pnav-sub{font:400 13px/24px var(--sans);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* Today on a phone is condensed so that, on a Sunday before the review, the whole of Start here shows on an iPhone SE (375x667) without scrolling (2026-11-01):
+   8px between the blocks (4px more around Start here), the suit piles a row of small cards, the review box's text and button side by side, and Start here
+   with less padding and gap; every button the card has keeps its height (44px for the main ones). */
+@media (max-width:919px){.app[data-view="today"] #runbar:empty{display:none}}
+@media (max-width:767px){
+  .app[data-view="today"]{gap:var(--s2)}
+  .app[data-view="today"] .side,.app[data-view="today"] .found{gap:var(--s2)}
+  .app[data-view="today"] .pile{padding:0;gap:var(--s1)}
+  .app[data-view="today"] .pc{max-width:30px}
+  .app[data-view="today"] .pc .r{font-size:11px}
+  .app[data-view="today"] .pc .s{font-size:8px}
+  .app[data-view="today"] .pc .big{font-size:17px}
+  .app[data-view="today"] .pile small{font-size:10.5px}
+  .todayview{gap:var(--s2)}
+  .app[data-view="today"] .daynav{margin-top:0;margin-bottom:0}
+  .todayview>.first,.todayview>.banner~.first,.todayview>.nudge~.first{margin-top:var(--s1)}
+  .todayview>.banner{padding:8px 12px;gap:var(--s2);font-size:14px;line-height:1.35}
+  .todayview>.banner>p{flex:1 1 11em}
+  .todayview .first{padding:12px 16px;gap:var(--s2)}
+  .todayview .first .t{font-size:clamp(20px,5.6vw,26px)}
+  .todayview .first .go{gap:var(--s2)}
+  .todayview .first .go.quiet{margin-top:0}
+}
+/* On a short phone the line that explains "Open it" (it starts the timer) makes way: the button says it in the sheet it opens. */
+@media (max-width:767px) and (max-height:700px){.todayview .first .hint{display:none}}
+/* Today's minutes timed, in the masthead between the date and the pill: it takes the room that is left (a flex-basis of 0) and, when the text does not fit,
+   the span wraps to a second line that the cell clips, so it goes whole or not at all. */
+.mast-timed{flex:1 1 0;min-width:0;margin:0 0 0 calc(var(--s2) * -1);height:20px;line-height:20px;overflow:hidden;text-align:center;font-size:12.5px;color:var(--ink-3);white-space:normal}
+.mast-timed span{display:inline-block;white-space:nowrap;margin-inline-start:var(--s2)}
 
 /* Decisions on the Matrix: compact rows under the four boxes. */
 .decisions{margin-top:var(--s5)}

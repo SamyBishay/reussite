@@ -34,7 +34,7 @@ import { openVisit } from './AddressSheets';
 import { openBreakDown } from '../flows/breakdown';
 import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
-import { t, lang, locale, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
+import { t, lang, locale, fmtDate, fmtMin, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { aiReady } from '../ai/ask';
@@ -44,6 +44,7 @@ import { pruneExchanges } from './home';
 import { decideOnboarding, onboarding } from './onboarding';
 import { Onboarding } from '../flows/onboarding';
 import { AddCard } from './AddCard';
+import { Footer } from './Footer';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
@@ -67,10 +68,13 @@ function PlacePill() {
 }
 function Mast() {
   const d = dayDoc(today.value);
+  // On Today the minutes timed so far sit between the date and the pill, small and quiet; the cell takes only the room left and its text drops out of sight when it does not fit.
+  const timed = view.value === 'today' ? minutesOn(today.value) : 0;
   return (
     <header class="mast">
       <h1 class="vh">{t(TAB_KEY[view.value] ?? 'appName')}</h1>
       <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+      {timed > 0 && <p class="mast-timed" data-testid="mast-timed" title={t('timed', { t: fmtMin(timed) })}><wbr /><span>{t('timedMast', { t: fmtMin(timed) })}</span></p>}
       <PlacePill />
     </header>
   );
@@ -94,7 +98,6 @@ function Side() {
           </button>
         );
       })}</div>
-      <p class="daystat"><span>{t('cardsToday', { n: cards.length })}</span><span>{t('timed', { t: fmtMin(minutesOn(today.value)) })}</span></p>
       <button class="btn primary wide" id="closeSide" type="button" onClick={openClose}>{t('closeTheDay')}</button>
     </aside>
   );
@@ -176,17 +179,6 @@ function Moment() {
   );
 }
 
-function Footer() {
-  const credit = settings.value.credit?.[lang.value];
-  return (
-    <footer class="foot">
-      <span>{t('version', { v: __APP_VERSION__ })}</span>
-      {credit && <span>{lang.value === 'fr' ? frTypo(credit) : credit}</span>}
-      <span>{t('notTherapy')}</span>
-    </footer>
-  );
-}
-
 function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
@@ -215,8 +207,8 @@ async function openLinkedPlan() {
 export function App() {
   useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
-  // Home never scrolls, and the phone's rubber band is off while it is shown (html.home-lock, src/styles/app.css).
-  useEffect(() => { const on = view.value === 'home'; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value]);
+  // Home and the Calendar never scroll (the page is one screen tall, what is inside scrolls), and the phone's rubber band is off while they are shown (html.home-lock, src/styles/app.css).
+  useEffect(() => { const on = view.value === 'home' || view.value === 'calendar'; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value]);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) { openLinkedTask(); void openLinkedPlan(); } };
     window.addEventListener('hashchange', onHash);
@@ -255,7 +247,7 @@ export function App() {
           {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
           <SyncStaleBanner />
           {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
-          {!bare && <Footer />}
+          {!bare && view.value !== 'calendar' && <Footer />}
         </main>
       </div>
       <Tabs />

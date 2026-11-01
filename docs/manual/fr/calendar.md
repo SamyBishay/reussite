@@ -2,7 +2,7 @@
 
 L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Semaine** (ou **3 jours** sur un téléphone), **Mois**, **Agenda** et **Journal**. Celle que vous choisissez est mémorisée.
 
-Sur un téléphone, l’onglet reste compact : les vues sur une ligne, les dates (‹ le jour ›, et **Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Elle défile à l’intérieur, donc la page elle-même ne bouge pas. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
+L’onglet tient sur un écran, comme l’accueil : la page elle-même ne défile jamais, seule la grille défile à l’intérieur. Sur un téléphone, il reste compact : les vues sur une ligne, les dates (‹ le jour ›, et une petite pastille **↩ Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Le **Journal** est l’une des vues, donc à une touche, et il défile dans sa propre boîte, avec la ligne de version à la fin. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
 
 ![La semaine](shot:calendar)
 

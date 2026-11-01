@@ -48,7 +48,7 @@ The connector lets an AI chat app read your list and edit it while you chat. It 
 2. In your app, add the address shown as a custom connector, and sign in. In Claude: Settings, then Connectors, then Add custom connector. In another app that accepts MCP connectors: add a custom or remote connector and paste the address.
 3. Type the **pairing code** the app shows. It works once, for ten minutes.
 
-With no key on this device but the connector on, **Plan the day** and the Sunday review banner also offer **Plan it in your AI chat** and **Review in your AI chat**. They copy a short sentence (“Plan my day with Réussite”) to say in a new chat in your app. Réussite makes no AI call itself. One small change (adding a step, ticking one done, moving a date) goes straight in, with an undo. Anything else waits for your yes in the chat. **Switch off** signs every AI app out at once. Notes you marked Private are never readable by it.
+With no key on this device but the connector on, Home’s **Plan the day** card also offers **Plan it in your AI chat**, and the Sunday review banner (on Today, the Matrix and the bell) **Review in your AI chat**. They copy a short sentence (“Plan my day with Réussite”) to say in a new chat in your app. Réussite makes no AI call itself. One small change (adding a step, ticking one done, moving a date) goes straight in, with an undo. Anything else waits for your yes in the chat. **Switch off** signs every AI app out at once. Notes you marked Private are never readable by it.
 
 **Research says:** untested here. `[E?]`
 

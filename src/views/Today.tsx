@@ -16,7 +16,6 @@ import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { PeriodNav } from '../app/PeriodNav';
 import { ReviewBanner } from '../app/ReviewBanner';
-import { ChatOffer } from '../app/ChatOffer';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { groupPlan, inArea, type PlanGroup } from '../domain/areas';
@@ -182,9 +181,9 @@ function Navigator({ k }: { k: string }) {
   const td = today.value;
   const go = (d: string | null) => { dayView.value = d === td ? null : d; };
   const n = daysBetween(td, k);
-  const label = n === 0 ? t('pickToday') : n === -1 ? t('pickYesterday') : n === 1 ? t('pickTomorrow') : fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' });
+  const label = n === 0 ? t('pickToday') : n === -1 ? t('pickYesterday') : n === 1 ? t('pickTomorrow') : fmtDate(k, { weekday: 'short', day: 'numeric', month: 'short' });
   return (
-    <PeriodNav class="daynav" name={t('dayNav')} label={label} sub={fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })} away={n !== 0} onToday={() => go(null)}
+    <PeriodNav class="daynav" name={t('dayNav')} label={label} away={n !== 0} onToday={() => go(null)}
       onPrev={() => go(addDays(k, -1))} onNext={() => go(addDays(k, 1))} prevLabel={t('prevDay')} nextLabel={t('nextDay')}
       pick={{ value: k, label: t('pickADay'), onPick: go }} testids={{ prev: 'prev-day', next: 'next-day', label: 'day-label' }} />
   );
@@ -296,7 +295,7 @@ export function Today() {
           <Rings />
           <p class="eyebrow">{t('noListYet')}</p>
           <p class="t">{t('planTheDayQ')}</p>
-          <div class="go"><button class="btn primary" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button><ChatOffer what="day" testid="today-plan-chat" /></div>
+          <div class="go"><button class="btn primary" type="button" onClick={openPlanDay} data-testid="checkin">{t('planTheDay')}</button></div>
         </section>
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
@@ -308,7 +307,6 @@ export function Today() {
       <div class="after-first">
         <div class="adders" data-testid="adders">
           {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openPlanDay}>{t('planTheDay')}</button>}
-          {plan.length > 0 && !d?.checkin && <ChatOffer what="day" testid="today-adder-chat" />}
           <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
           <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
           {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}

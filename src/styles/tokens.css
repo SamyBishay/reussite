@@ -46,6 +46,9 @@
   --mono:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   color-scheme:light;
   --sat:env(safe-area-inset-top,0px);  /* the room the top of a screen leaves for the status bar and the island */
+  /* Home's clock (src/app/DoveClock.tsx): the light painting's pale and rose halves, its mint and teal rings, gold and deep green. */
+  --clk-l:#F8F7F2;--clk-r:#E4B8C4;--clk-edge:#D2BE8C;--clk-pale:#FBFAF6;--clk-1:#B4D6CD;--clk-2:#86B8AF;--clk-3:#5C9A95;--clk-gold:#D2BE8C;--clk-4:#2F6360;--clk-core:#1F3A3A;
+  --clk-dot:#2D5753;--clk-min:#1F2E2E;--clk-hour:#9C4560;--clk-halo:#FBFAF6;--clk-cap:#D2BE8C;
 }
 /* An iPhone's home-screen app (src/app/ios.ts): the inset has been seen to read 0 under a Dynamic Island, so leave at least its height. */
 @media (orientation:portrait){:root.ios-app{--sat:max(env(safe-area-inset-top,0px),54px)}}
@@ -57,6 +60,8 @@
     --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
     --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.4);
+    --clk-l:#3B3052;--clk-r:#B25A78;--clk-edge:#6A96D7;--clk-pale:#E8EDF6;--clk-1:#2E4A94;--clk-2:#4064B3;--clk-3:#6A96D7;--clk-gold:#C6B3C9;--clk-4:#A9C6EE;--clk-core:#0B0C10;
+    --clk-dot:#ECE8F0;--clk-min:#ECE8F0;--clk-hour:#EC9DB8;--clk-halo:#0B0C10;--clk-cap:#C6B3C9;
     color-scheme:dark;
   }
 }
@@ -67,5 +72,7 @@
   --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
   --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.4);
+  --clk-l:#3B3052;--clk-r:#B25A78;--clk-edge:#6A96D7;--clk-pale:#E8EDF6;--clk-1:#2E4A94;--clk-2:#4064B3;--clk-3:#6A96D7;--clk-gold:#C6B3C9;--clk-4:#A9C6EE;--clk-core:#0B0C10;
+  --clk-dot:#ECE8F0;--clk-min:#ECE8F0;--clk-hour:#EC9DB8;--clk-halo:#0B0C10;--clk-cap:#C6B3C9;
   color-scheme:dark;
 }

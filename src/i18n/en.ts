@@ -30,6 +30,17 @@ export const en = {
   anywhere: 'Anywhere',
   inbox: 'Inbox',
   dayClosed: 'day closed',
+  // Home's clock (src/app/DoveClock.tsx): the time in words, for the screen reader
+  clockLabel: 'Clock: {time}',
+  clockOclock: "{h} o'clock",
+  clockPast: '{m} past {h}',
+  clockQuarterPast: 'quarter past {h}',
+  clockHalf: 'half past {h}',
+  clockQuarterTo: 'quarter to {h}',
+  clockTo: '{m} to {h}',
+  clockM5: 'five', clockM10: 'ten', clockM20: 'twenty', clockM25: 'twenty-five',
+  clockH0: 'midnight', clockH1: 'one', clockH2: 'two', clockH3: 'three', clockH4: 'four', clockH5: 'five', clockH6: 'six',
+  clockH7: 'seven', clockH8: 'eight', clockH9: 'nine', clockH10: 'ten', clockH11: 'eleven', clockH12: 'noon',
   // foundations
   todaysCards: "Today's cards",
   cardsToday: { one: '{n} card today', other: '{n} cards today' } as P,

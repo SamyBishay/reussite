@@ -85,15 +85,26 @@ body.kb .tabbar{display:none}
 @media (min-width:920px){.home{min-height:calc(100dvh - var(--sat) - 28px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
 @media (min-width:1024px){.home{min-height:calc(100dvh - var(--sat) - var(--s7) - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
 body.kb .home{min-height:0}
-.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
-.homebar .dateline{margin:0;min-width:0;color:var(--ink-3);font-size:13.5px}
+.homehead{min-width:0}
+.homebar .word{font-size:clamp(24px,6.5vw,30px)}
+.homebar .dateline{margin:2px 0 0;min-width:0;font-size:13.5px}
 .homestage{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:var(--s4);min-width:0}
 .greeting{display:grid;gap:var(--s4);min-width:0}
-.hello{display:flex;align-items:flex-start;justify-content:center;gap:var(--s3);width:fit-content;max-width:100%;margin-inline:auto}
-.hello .mark{display:block;flex:none;margin-top:-4px}
+.hello{display:flex;flex-direction:column;align-items:center;gap:var(--s4);width:100%;margin-inline:auto;text-align:center}
+.hello .mark{display:block;flex:none}
+.homeclock{display:flex;justify-content:center;margin-top:var(--s2)}
+.dclock{display:block;flex:none;max-width:100%;height:auto}
+.dclock .clk-l{fill:var(--clk-l)}.dclock .clk-r{fill:var(--clk-r)}
+.dclock .clk-edge{fill:none;stroke:var(--clk-edge);stroke-width:.9}
+.dclock .clk-pale{fill:var(--clk-pale)}.dclock .clk-1{fill:var(--clk-1)}.dclock .clk-2{fill:var(--clk-2)}.dclock .clk-3{fill:var(--clk-3)}
+.dclock .clk-gold{fill:var(--clk-gold)}.dclock .clk-4{fill:var(--clk-4,var(--clk-core))}.dclock .clk-core{fill:var(--clk-core)}
+.dclock .clk-dot{fill:var(--clk-dot)}
+.dclock .clk-hand{stroke:var(--clk-halo);stroke-width:1.7;stroke-linejoin:round;paint-order:stroke}
+.dclock .clk-hour{fill:var(--clk-hour)}.dclock .clk-min{fill:var(--clk-min)}
+.dclock .clk-cap{fill:var(--clk-cap);stroke:var(--clk-halo);stroke-width:1.4}
 .greetline{margin:0;min-width:0;color:var(--ink);font:600 clamp(26px,7.4vw,32px)/1.2 var(--serif);letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
-@media (min-width:720px){.hello{gap:var(--s4)}.hello .mark{margin-top:-2px}.greetline{font-size:34px}}
+@media (min-width:720px){.greetline{font-size:34px}}
 .homebtns{flex:none}
 .homebtns{display:flex;gap:var(--s2)}
 .icon-btn.bell{position:relative}

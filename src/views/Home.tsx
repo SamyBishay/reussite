@@ -22,6 +22,7 @@ import { openCheckin } from '../flows/checkin';
 import { openPlanDay } from '../flows/morning';
 import { ChatOffer } from '../app/ChatOffer';
 import { Mark } from '../app/Mark';
+import { DoveClock } from '../app/DoveClock';
 import { openClose } from '../flows/close';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
@@ -211,9 +212,11 @@ export function Home() {
   const d = dayDoc(today.value);
   return (
     <div class="home" data-testid="home">
-      <h1 class="word vh">{t('appName')}</h1>
       <div class="homebar">
-        <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+        <div class="homehead">
+          <h1 class="word">{t('appName')}</h1>
+          <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+        </div>
         <div class="homebtns">
           <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
@@ -226,7 +229,8 @@ export function Home() {
       </div>
       <div class="homestage">
         <section class="greeting" data-testid="greeting">
-          <div class="hello"><Mark size={44} /><GreetingLine /></div>
+          <div class="hello"><Mark size={68} /><GreetingLine /></div>
+          <div class="homeclock"><DoveClock /></div>
           <GreetingBody />
           <MissedNow />
         </section>

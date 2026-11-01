@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, goTab, expandSettings, noSideways } from './helpers';
+import { importSample, goTab, expandSettings, noSideways, openAllProjects } from './helpers';
 
 // Declutter 2: closed decisions are folded away in Projects.
 const HLC = '0000000000001:0000:seed';
@@ -37,6 +37,7 @@ test('closed decisions are folded under “Closed (n)”, in the list and inside
   await expect(fold).toHaveJSProperty('open', true);
   await expect(decisions.getByRole('button', { name: 'Old closed one' })).toBeVisible();
   // Inside the project the same.
+  await openAllProjects(page);
   const linked = page.locator('[data-project=p1]').getByTestId('linked-closed');
   await expect(linked).toContainText('Closed (1)');
   await expect(linked).toHaveJSProperty('open', false);

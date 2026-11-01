@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningDate, appDay, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
+import { morningDate, appDay, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet, openAllProjects } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -322,6 +322,7 @@ for (const width of [320, 375, 430]) {
     await page.keyboard.press('Escape');
     // Projects editor, the place switcher, settings with stays.
     await page.getByTestId('tab-projects').click();
+    await openAllProjects(page);
     await page.getByTestId('edit-project').first().click();
     await check('project editor');
     await page.keyboard.press('Escape');
@@ -343,6 +344,7 @@ for (const width of [320, 375, 430]) {
 test('a timed standing item added by hand is a card on Today’s list and on the calendar', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-projects').click();
+  await openAllProjects(page);
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   await page.getByRole('button', { name: 'Walk to the park for 30 minutes' }).first().click();
   await sheet(page).locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
@@ -467,6 +469,7 @@ test('a step added by hand goes right after the one running, not at the bottom',
 test('a project’s steps are ordered by dragging a grip, too', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-projects').click();
+  await openAllProjects(page);
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   const list = page.locator('ol.steps').filter({ has: page.locator('li[data-sort]:nth-of-type(3)') }).first();
   await list.scrollIntoViewIfNeeded();
@@ -486,6 +489,7 @@ test('a project’s steps are ordered by dragging a grip, too', async ({ page })
   expect(after[0]).toBe(before[1]);
   expect(after[1]).toBe(before[0]);
   await page.reload();
+  await openAllProjects(page);
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   expect(await ids()).toEqual(after);
 });

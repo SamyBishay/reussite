@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { carryAll, openWeeklyReview, goTab, importSample, morningDate, openMenu, expandSettings, expandSheet, noSideways } from './helpers';
+import { carryAll, openWeeklyReview, goTab, importSample, morningDate, openMenu, expandSettings, expandSheet, noSideways, openAllProjects } from './helpers';
 
 // The app in French has no English left (plan 2 Nov, S8): the screens a person meets are read in French, and the words that only English has
 // (the, your, step, …) are looked for in what is shown. Names that are the same in both languages (Mail, Maps, Menu, OK, Agenda…) are not on the list.
@@ -72,6 +72,7 @@ test('the app in French has no English left: the tabs, the menu pages, the sheet
   await page.getByTestId('stuck').click(); await scan('stuck'); await page.keyboard.press('Escape');
   await page.goto('/#task/t1'); await expandSheet(page); await scan('step sheet'); await page.keyboard.press('Escape');
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await page.getByTestId('edit-project').first().click(); await expandSheet(page); await scan('project sheet'); await page.keyboard.press('Escape');
   await goTab(page, 'today');
   await page.locator('main').getByRole('button', { name: 'Planifier la journée' }).first().click();

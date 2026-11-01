@@ -322,7 +322,7 @@ export function Projects() {
                 </>
               );
             })}
-            {ps.length > shown.size && <button class="linklike suit-more" type="button" data-testid={'suit-all-' + s} onClick={() => openSheet(<SuitSheet s={s} />)}>{t('viewAllN', { n: ps.length })}</button>}
+            {ps.length > PEEK && <button class="linklike suit-more" type="button" data-testid={'suit-all-' + s} onClick={() => openSheet(<SuitSheet s={s} />)}>{t('viewAllN', { n: ps.length })}</button>}
           </section>
         );
       })}

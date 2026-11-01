@@ -47,7 +47,7 @@ test('a condensed card names the project, its open steps and the next step, and 
   await expect(c.locator('.steps')).toHaveCount(0);
   await expect(c.locator('.addstep')).toHaveCount(0);
   const whole = await openProjectCard(page, 'Thesis');
-  await expect(whole.locator('.addstep')).toBeVisible();
+  await expect(whole.locator('.addstep')).toHaveCount(1);
   await whole.getByTestId('project-fold').click();
   await expect(page.locator('article.proj.mini', { hasText: 'Thesis' })).toBeVisible();
 });

@@ -158,6 +158,12 @@ export async function addProject(page: Page, name: string, suit: 'S' | 'D' | 'C'
   await expect(sh).toBeHidden();
 }
 
+/** Opens every condensed project card in place (tests that read or edit whole cards). */
+export async function openAllProjects(page: Page) {
+  const o = page.getByTestId('project-open');
+  while (await o.count()) await o.first().click();
+}
+
 /** A project's condensed card on Projects is tapped open in place; this opens it if it is still condensed, and returns its whole card. */
 export async function openProjectCard(page: Page, name: string) {
   const mini = page.locator('article.proj.mini', { hasText: name });

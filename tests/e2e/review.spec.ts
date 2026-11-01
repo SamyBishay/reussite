@@ -3,7 +3,7 @@
 // flips each answer before the one change-set is confirmed on the review screen. OpenRouter is stubbed; every name here is invented.
 // The clock is fixed to a Sunday morning (the review day) so nothing depends on the hour.
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { expandSettings, goTab, noSideways, openWeeklyReview } from './helpers';
+import { expandSettings, goTab, noSideways, openWeeklyReview, openAllProjects } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
@@ -95,6 +95,7 @@ async function openGoalsAi(page: Page) {
 }
 async function markDone(page: Page, project: string, title: string, asked = false) {
   await goTab(page, 'projects');
+  await openAllProjects(page);
   const c = card(page, project);
   if (!(await c.locator('details').first().evaluate(d => (d as HTMLDetailsElement).open))) await c.locator('details > summary').first().click();
   await c.locator('ol.steps li', { hasText: title }).getByRole('button', { name: title }).click();
@@ -114,6 +115,7 @@ async function toGoals(page: Page) {
 test('by hand: each project’s goal, then each open step; the answers are the steps’ own, and the bar follows', async ({ page }) => {
   await start(page, { ai: false });
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(line(page, 'Thesis')).toHaveText('1 of 10 pages');
   await toGoals(page);
   // The goal: its sentence, its bar, its dates. One question per screen.
@@ -172,6 +174,7 @@ test('by hand: Close it asks whether the goal was reached or let go, and skips t
   await expect(page.getByTestId('rv-8')).toBeVisible();
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(page.locator('article.proj', { hasText: 'Flat move' })).toHaveCount(0);
   await expect(page.locator('main')).toContainText('Closed (1)');
 });
@@ -180,6 +183,7 @@ test('with an AI: the review of a goal is a proposal; flip one answer, skip one,
   const seen = await stub(page, thesisReply, flatReply);
   await start(page);
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(line(page, 'Thesis')).toHaveText('1 of 10 pages');
   await openGoalsAi(page);
 
@@ -242,6 +246,7 @@ test('with an AI: the review of a goal is a proposal; flip one answer, skip one,
   // The bars follow: page one still moves the goal, the references no longer do, and the new page-two step does.
   await page.getByTestId('goalai-close').click();
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(line(page, 'Thesis')).toHaveText('1 of 10 pages');
   await markDone(page, 'Thesis', 'read page one', true);
   await expect(line(page, 'Thesis')).toHaveText('2 of 10 pages');
@@ -270,6 +275,7 @@ test('a proposal never writes without the yes: cancelling the review leaves the 
   await expect(page.getByTestId('goalai')).toBeVisible();
   await page.keyboard.press('Escape');
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(card(page, 'Thesis')).not.toContainText('ten pages of the draft');
   await expect(card(page, 'Thesis')).toContainText('Hand in the draft');
   await expect(line(page, 'Flat move')).toHaveCount(0);
@@ -378,5 +384,6 @@ test('the Matrix shows the review box on the review day too, and its button star
   await expect(page.getByTestId('rv-0')).toBeVisible();
   await page.keyboard.press('Escape');
   await goTab(page, 'projects');
+  await openAllProjects(page);
   await expect(page.getByTestId('matrix-review-card')).toHaveCount(0);
 });

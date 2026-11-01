@@ -3,10 +3,9 @@
 // 1. The card under the line (`greeting`): Plan the day when there is no list yet, or Close the day when every card on the list is played.
 //    Nothing else: Start here, the running step and tomorrow's first step live on Today alone (DECISIONS.md), and Home shows no card
 //    while a step runs, a plan is open or the day is closed.
-// 2. The line above it (`eligibleLines`, `pickGreeting`): one plain, warm sentence chosen from templates (src/i18n) and filled with real
-//    data. It never asks for anything: no "type", no "add, move or tick off". A kind is eligible only when its data exists. A template
-//    is not repeated within a day while another is eligible. No counts of what was missed or carried, no streaks, and it works
-//    without an AI: the template stays with an AI on.
+// 2. The line above it (`eligibleLines`, `pickGreeting`): a hello, picked from a long list of greetings (src/i18n) for any time of
+//    day and a few for the hour. It says nothing about the day and asks for nothing. A greeting is not repeated within a day while
+//    another is eligible, and it works without an AI: the line stays the same with an AI on.
 
 export interface GreetingInput {
   /** Today's list was closed. */
@@ -33,15 +32,18 @@ export function greeting(i: GreetingInput): Greeting | null {
 }
 
 // ---------- the line ----------
-/** The templates, by kind: i18n keys, each a short warm sentence that asks for nothing. */
+/**
+ * The greetings, by kind: i18n keys. They say hello and nothing else: nothing about the day's list, what was done or what is next
+ * (the owner, 1 Nov: "the greetings shouldn't have anything to do with the cards I've played"). Any time of day, from every register,
+ * place and age (Old English to a wazzaaap, a letter's salutations distinguées), plus a few that belong to the hour. Each language has
+ * its own lines under the same keys: the French ones are not translations of the English.
+ */
 export const GREETING_KEYS = {
-  fixed: ['greetFixed1', 'greetFixed2', 'greetFixed3'],
-  project: ['greetProject1', 'greetProject2', 'greetProject3'],
-  morning: ['greetMorning1', 'greetMorning2'],
-  afternoon: ['greetAfternoon1', 'greetAfternoon2'],
-  evening: ['greetEvening1', 'greetEvening2'],
-  done: ['greetDone1', 'greetDone2', 'greetDone3'],
-  planned: ['greetPlanned1', 'greetPlanned2', 'greetPlanned3'],
+  any: ['greetAny1', 'greetAny2', 'greetAny3', 'greetAny4', 'greetAny5', 'greetAny6', 'greetAny7', 'greetAny8', 'greetAny9', 'greetAny10', 'greetAny11', 'greetAny12', 'greetAny13', 'greetAny14', 'greetAny15', 'greetAny16', 'greetAny17', 'greetAny18', 'greetAny19', 'greetAny20', 'greetAny21', 'greetAny22', 'greetAny23', 'greetAny24', 'greetAny25', 'greetAny26', 'greetAny27', 'greetAny28', 'greetAny29', 'greetAny30', 'greetAny31', 'greetAny32', 'greetAny33', 'greetAny34', 'greetAny35', 'greetAny36', 'greetAny37', 'greetAny38', 'greetAny39', 'greetAny40', 'greetAny41', 'greetAny42', 'greetAny43', 'greetAny44', 'greetAny45', 'greetAny46', 'greetAny47', 'greetAny48', 'greetAny49', 'greetAny50', 'greetAny51', 'greetAny52', 'greetAny53', 'greetAny54', 'greetAny55', 'greetAny56', 'greetAny57', 'greetAny58', 'greetAny59', 'greetAny60', 'greetAny61', 'greetAny62', 'greetAny63', 'greetAny64', 'greetAny65', 'greetAny66', 'greetAny67', 'greetAny68'],
+  morning: ['greetMorning1', 'greetMorning2', 'greetMorning3', 'greetMorning4', 'greetMorning5', 'greetMorning6', 'greetMorning7', 'greetMorning8'],
+  afternoon: ['greetAfternoon1', 'greetAfternoon2', 'greetAfternoon3', 'greetAfternoon4', 'greetAfternoon5', 'greetAfternoon6'],
+  evening: ['greetEvening1', 'greetEvening2', 'greetEvening3', 'greetEvening4', 'greetEvening5', 'greetEvening6'],
+  night: ['greetNight1', 'greetNight2', 'greetNight3', 'greetNight4', 'greetNight5', 'greetNight6'],
 } as const;
 export type GreetingKey = (typeof GREETING_KEYS)[keyof typeof GREETING_KEYS][number];
 
@@ -49,45 +51,19 @@ export interface LineInput {
   /** The clock now where the person is (HH:MM), and the day-start rule. */
   clock: string;
   dayStart: string;
-  /** The next fixed-time item still ahead today (not one that has passed). */
-  fixed: { time: string; title: string } | null;
-  /** A project close to its goal. */
-  project: { name: string } | null;
-  /** Steps done today (done only). */
-  doneToday: number;
-  /** Steps on today's list still open. */
-  planned: number;
-  /** A timer is running. */
-  running: boolean;
 }
-
 export interface GreetingLine { key: GreetingKey; slots: Record<string, string | number> }
 
-/** morning until noon, afternoon until six, evening after; the small hours before the day starts are evening. */
-export function partOfDay(clock: string, dayStart: string): 'morning' | 'afternoon' | 'evening' {
-  if (clock < dayStart || clock >= '18:00') return 'evening';
+/** Morning until noon, afternoon until six, evening until ten, night after, and the small hours before the day starts. */
+export function partOfDay(clock: string, dayStart: string): 'morning' | 'afternoon' | 'evening' | 'night' {
+  if (clock < dayStart || clock >= '22:00') return 'night';
+  if (clock >= '18:00') return 'evening';
   return clock < '12:00' ? 'morning' : 'afternoon';
 }
 
-/** Every template that could be said now, with its slots filled. A kind whose data does not exist has none. */
+/** Every greeting that could be said now: the ones for any time, and the hour's own. */
 export function eligibleLines(i: LineInput): GreetingLine[] {
-  const out: GreetingLine[] = [];
-  const add = (keys: readonly GreetingKey[], slots: GreetingLine['slots'] = {}) => { for (const key of keys) out.push({ key, slots }); };
-  if (i.fixed) add(GREETING_KEYS.fixed, { time: i.fixed.time, title: i.fixed.title });
-  if (i.project) add(GREETING_KEYS.project, { project: i.project.name });
-  add(GREETING_KEYS[partOfDay(i.clock, i.dayStart)]);
-  if (i.doneToday > 0) add(GREETING_KEYS.done, { n: i.doneToday });
-  if (i.planned > 0 && i.doneToday === 0 && !i.running) add(GREETING_KEYS.planned, { n: i.planned });
-  return out;
-}
-
-/**
- * The project closest to its goal for now: active, with a bar (a measure) that is at least 60 % full and not full. How many cards
- * are done never counts; a project with no measure has no bar and is not named. The fullest first, then the project's order.
- */
-export function nearGoal(projects: readonly { name: string; order: number; frac: number | null }[]): { name: string } | null {
-  const near = projects.filter(p => p.frac !== null && p.frac >= 0.6 && p.frac < 1).sort((a, b) => b.frac! - a.frac! || a.order - b.order);
-  return near[0] ? { name: near[0].name } : null;
+  return [...GREETING_KEYS.any, ...GREETING_KEYS[partOfDay(i.clock, i.dayStart)]].map(key => ({ key, slots: {} }));
 }
 
 /** A small stable hash of a word and a seed: the order templates come in is the same all day for the same seed. */

@@ -10,7 +10,7 @@ import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
 import { nudgesDue, waitingList } from '../domain/events';
 import { addDays } from '../domain/dates';
 import { fixedOnDay } from '../domain/agenda';
-import { greeting, nearGoal, type LineInput } from '../domain/greeting';
+import { greeting, type LineInput } from '../domain/greeting';
 import { dayOrder, type DayOrder, type FixedItem } from '../domain/dayOrder';
 import { proposeDay, loadOf, type Proposal, type PropStep } from '../domain/propose';
 import { atOnDay, placeOfDay, wallOf } from '../domain/zone';
@@ -226,18 +226,9 @@ const nameOf = (x: Pick<T, 'title'>): string => {
   return (i > 20 ? cut.slice(0, i) : cut).trimEnd() + '…';
 };
 
-/** What the greeting's line can say now (src/domain/greeting.ts): the real data its templates are filled with. */
+/** What the greeting's line needs (src/domain/greeting.ts): the hour where the person is, for the greetings that belong to it. */
 export function lineInputNow(): LineInput {
-  const k = today.value, zone = hereZone.value;
-  const order = dayOrderOf(k).order;
-  const next = order.find(x => x.kind === 'fixed' && !T(x.id)?.started && x.at! > clockNow.value);
-  const near = [...projects.value.values()].filter(p => p.status === 'active').map(p => ({ name: p.name, order: p.order, frac: progressOf(p, tasks.value.values())?.frac ?? null }));
-  return {
-    clock: wallOf(clockNow.value, zone), dayStart: settings.value.dayStart,
-    fixed: next ? { time: wallOf(next.at!, zone), title: nameOf(T(next.id)!) } : null,
-    project: nearGoal(near), doneToday: cardsOn(k).length,
-    planned: order.filter(x => x.kind === 'step').length, running: !!running(),
-  };
+  return { clock: wallOf(clockNow.value, hereZone.value), dayStart: settings.value.dayStart };
 }
 
 // ---------- addresses and people (phase 4) ----------

@@ -1,5 +1,5 @@
-// One order for the day (plan 2 Nov): Start here follows the clock and is the same on Home and Today, done cards fold under the
-// list, and Home opens with a greeting line that does not repeat. The clock is fixed to a Monday so the tests do not depend on the hour.
+// One order for the day (plan 2 Nov): Start here follows the clock and lives on Today alone (not on Home, not on the other tabs), done cards fold under the
+// list, and Home opens with a plain greeting line that does not repeat. The clock is fixed to a Monday so the tests do not depend on the hour.
 import { test, expect, type Page } from '@playwright/test';
 import { goTab, addCard, noSideways } from './helpers';
 
@@ -24,39 +24,44 @@ async function at_(page: Page, hh: number, mm: number) {
   await page.reload();
 }
 
-test('a call at 14:00 and three floating steps: the first step in the morning, the call once it needs the time, the same one on Home and Today', async ({ page }) => {
+test('a call at 14:00 and three floating steps: the first step in the morning, the call once it needs the time, on Today; Home has no Start here', async ({ page }) => {
   await aDay(page);
 
-  // 11:00: the first step in the list, on Today and on Home.
+  // 11:00: the first step in the list, on Today. Home says hello and shows no Start here.
   await expect(page.getByTestId('first')).toContainText(FIRST);
   await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText(FIRST);
+  await expect(page.getByTestId('greeting-hello')).toBeVisible();
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+  await expect(page.getByText('Start here')).toHaveCount(0);
 
   // 13:00: a step takes 15 minutes and 5 of margin, so there is still time for it before 13:30.
   await at_(page, 13, 0);
   await goTab(page, 'today');
   await expect(page.getByTestId('first')).toContainText(FIRST);
 
-  // 13:30: the call, with when to leave. The same on Today and on Home.
+  // 13:30: the call, with when to leave, on Today.
   await at_(page, 13, 30);
   await goTab(page, 'today');
   await expect(page.getByTestId('first')).toContainText('Call the bank 14:00 · leave at 13:30');
   await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText('Call the bank 14:00 · leave at 13:30');
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
   // The floating steps are still on Today's list, with the time each is expected to start.
   await goTab(page, 'today');
   await expect(page.getByTestId('plan-list').getByTestId('proj-at').first()).toContainText('≈');
   await expect(page.getByTestId('plan-list')).toContainText(FIRST);
 });
 
-test('the next-step bar on another tab follows the same order', async ({ page }) => {
+test('no Start here bar on the other tabs, at any hour', async ({ page }) => {
   await aDay(page);
-  await at_(page, 13, 30);
-  await goTab(page, 'projects');
-  await expect(page.getByTestId('insist')).toContainText('Call the bank');
-  await at_(page, 11, 0);
-  await goTab(page, 'projects');
-  await expect(page.getByTestId('insist')).toContainText(FIRST);
+  for (const [hh, mm] of [[11, 0], [13, 30]] as const) {
+    await at_(page, hh, mm);
+    for (const tab of ['projects', 'matrix', 'calendar'] as const) {
+      await goTab(page, tab);
+      await expect(page.getByTestId('insist')).toHaveCount(0);
+      await expect(page.locator('.runbar')).toHaveCount(0);
+      await expect(page.locator('.insist')).toHaveCount(0);
+    }
+  }
 });
 
 test('a ticked step folds into “1 done”, closed until it is opened', async ({ page }) => {
@@ -83,7 +88,7 @@ test('Home opened three times says three different things', async ({ page }) => 
     const hello = page.getByTestId('greeting-hello');
     await expect(hello).toBeVisible();
     const text = (await hello.innerText()).trim();
-    expect(text).toMatch(/box|below|Type/i); // it invites the person to type
+    expect(text).not.toMatch(/\b(type|box|below|add|move|tick)\b|\?/i); // plain: it asks for nothing
     keys.push((await hello.getAttribute('data-key'))!);
     await goTab(page, 'today');
   }

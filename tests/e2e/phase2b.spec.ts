@@ -157,47 +157,55 @@ test('on a Monday Start here is the next step until the choir needs the time, th
   // The step has no estimate, so it counts 15 minutes, and 5 more of margin: it is Start here until 18:10 (15 + 5 before 18:30).
   await page.clock.setFixedTime(at(18, 10));
   await page.reload();
-  await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText('Call the bank');
-  await expect(page.getByTestId('greeting-line')).toHaveCount(0);
+  await goTab(page, 'today');
+  await expect(page.getByTestId('first')).toContainText('Call the bank');
+  await expect(page.getByTestId('first-fixed-line')).toHaveCount(0);
 
-  // A minute later it would run into the time to leave: the choir takes over, with when to leave. Today shows the same one.
+  // A minute later it would run into the time to leave: the choir takes over, with when to leave. Home has no Start here, only its line.
   await page.clock.setFixedTime(at(18, 11));
   await page.reload();
-  await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText('Choir 19:00, Hill House 602 · leave at 18:30');
-  await expect(page.getByTestId('greeting-line')).toHaveText('Choir 19:00, Hill House 602 · leave at 18:30');
-  await expect(page.locator('.mast, .side')).toHaveCount(0);
   await goTab(page, 'today');
   await expect(page.getByTestId('first')).toContainText('Choir 19:00, Hill House 602 · leave at 18:30');
+  await goTab(page, 'home');
+  await expect(page.getByTestId('greeting-hello')).toBeVisible();
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+  await expect(page.locator('.mast, .side')).toHaveCount(0);
 
   await page.clock.setFixedTime(at(18, 30));
   await page.reload();
-  await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-line')).toHaveText('Choir 19:00, Hill House 602 · leave at 18:30');
+  await goTab(page, 'today');
+  await expect(page.getByTestId('first-fixed-line')).toHaveText('Choir 19:00, Hill House 602 · leave at 18:30');
 
   // It lets go once the item is over (30 minutes with no length of its own).
   await page.clock.setFixedTime(at(19, 30));
   await page.reload();
-  await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText('Call the bank');
+  await goTab(page, 'today');
+  await expect(page.getByTestId('first')).toContainText('Call the bank');
 });
 
-test('no list yet shows Plan the day; a started step is the greeting, and the running bar steps aside on Home', async ({ page }) => {
+test('no list yet shows Plan the day; with a plan open Home has no card, and a started step runs on Today alone', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
   await importSample(page);
   await goTab(page, 'home');
-  await expect(page.getByTestId('greeting-next')).toContainText('Open Doctolib');
-  await page.getByTestId('home-start').click();
-  await expect(page.getByTestId('greeting-running')).toContainText('Open Doctolib');
-  await expect(page.locator('.runbar')).toHaveCount(0);
-  await goTab(page, 'projects');
-  await expect(page.locator('.runbar')).toBeVisible();
-  await goTab(page, 'matrix');
-  await expect(page.locator('.runbar')).toHaveCount(0);
+  await expect(page.getByTestId('greeting-hello')).toBeVisible();
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+  await expect(page.getByTestId('greeting-plan')).toHaveCount(0);
+  await goTab(page, 'today');
+  await expect(page.getByTestId('first')).toContainText('Open Doctolib');
+  await page.getByTestId('first').getByRole('button', { name: /start the timer/i }).click();
+  await expect(page.getByTestId('first')).toContainText('Running');
+  // Neither Home nor the other tabs repeat the running step: no card, no bar.
   await goTab(page, 'home');
-  await page.getByTestId('greeting-running').getByRole('button', { name: 'Pause' }).click();
+  await expect(page.getByTestId('greeting-running')).toHaveCount(0);
+  await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+  await expect(page.locator('.runbar')).toHaveCount(0);
+  for (const tab of ['projects', 'matrix', 'calendar'] as const) {
+    await goTab(page, tab);
+    await expect(page.locator('.runbar')).toHaveCount(0);
+  }
+  await goTab(page, 'today');
+  await page.getByTestId('first').getByRole('button', { name: 'Pause' }).click();
   await sheet(page).getByRole('button', { name: /^(Pause|Save)/ }).first().click();
 });
 

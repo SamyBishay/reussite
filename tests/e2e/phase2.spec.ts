@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings } from './helpers';
+import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings, openTripSheet } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -31,21 +31,30 @@ const changeSet = JSON.stringify({ v: 1, note: 'Three changes.', changes: [
   { op: 'task.create', set: { title: 'Open Mail and thank the agency', project: 'p1', est: 5, w: 5 } },
 ] });
 
-test('the command box is hidden until a provider is chosen and its key saved; Ask any AI is always there', async ({ page }) => {
+/** No AI button of any kind: the command box, and the old Ask any AI and Paste the reply buttons. */
+async function noAiButtons(page: Page) {
+  for (const id of ['cmd', 'ask-any', 'paste-reply']) await expect(page.getByTestId(id)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Ask any AI|Paste the reply/ })).toHaveCount(0);
+}
+
+test('with no key there is no AI button at all; with a key the command box says which AI it asks', async ({ page }) => {
   await importSample(page);
-  await expect(page.getByTestId('cmd')).toHaveCount(0);
-  await expect(page.getByTestId('ask-any')).toBeVisible();
+  await noAiButtons(page);
+  for (const tab of ['matrix', 'projects'] as const) { await page.getByTestId('tab-' + tab).click(); await noAiButtons(page); }
   // A provider with no key: nothing that needs the key shows.
   await page.goto('/#settings'); await expandSettings(page);
   await page.getByTestId('ai-anthropic').click();
   await page.getByTestId('tab-matrix').click();
-  await expect(page.getByTestId('ask-any')).toBeVisible();
-  await expect(page.getByTestId('cmd')).toHaveCount(0);
+  await noAiButtons(page);
   await setUpAnthropic(page);
-  await page.getByTestId('tab-matrix').click();
-  await expect(page.getByTestId('cmd')).toBeVisible();
-  await page.getByTestId('tab-projects').click();
-  await expect(page.getByTestId('cmd')).toBeVisible();
+  for (const tab of ['today', 'matrix', 'projects'] as const) {
+    await page.getByTestId('tab-' + tab).click();
+    await expect(page.getByTestId('cmd')).toBeVisible();
+    await expect(page.getByTestId('cmd-label')).toHaveText('Ask Claude to change the list');
+    await expect(page.getByTestId('cmd-text')).toHaveAttribute('placeholder', /^Ask Claude…/);
+    await expect(page.getByTestId('ask-any')).toHaveCount(0);
+    await expect(page.getByTestId('paste-reply')).toHaveCount(0);
+  }
 });
 
 test('Test the connection, through OpenRouter', async ({ page }) => {
@@ -110,23 +119,16 @@ test('invalid AI output shows one sentence and writes nothing', async ({ page })
   await expect(page.getByTestId('ai-error')).toContainText('couldn’t be read, so nothing was changed');
   await expect(page.getByTestId('review')).toHaveCount(0);
   await expect(page.locator('.matrix .item')).toHaveCount(before);
-  // The manual path: Ask any AI, with the request carried over.
-  await page.getByTestId('ai-error').getByRole('button', { name: 'Ask any AI' }).click();
-  await expect(page.getByTestId('ask-question')).toHaveValue('drop the receipts');
+  // No fallback to a copy-and-paste sheet: the sentence stands alone.
+  await expect(page.getByTestId('ai-error').getByRole('button', { name: 'Ask any AI' })).toHaveCount(0);
 });
 
-test('Ask any AI, then Paste the reply: only ticked changes are applied', async ({ page }) => {
+test('Plan this trip, then Paste the reply: only ticked changes are applied', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('ask-any').click();
-  await page.getByTestId('ask-question').fill('What should I drop?');
+  await openTripSheet(page);
   await page.locator('summary', { hasText: 'See the text' }).click();
-  const pack = page.getByTestId('pack');
-  await expect(pack).toContainText('## My question\n\nWhat should I drop?');
-  await expect(pack).toContainText('fenced code block labelled reussite');
-  await expect(pack).toContainText('Doctolib');
-  await page.getByTestId('ask-scope').selectOption({ label: 'Project: Thesis' });
-  await expect(pack).toContainText('Project p2: Thesis');
-  await sheet(page).getByRole('button', { name: 'Paste the reply' }).click();
+  await expect(page.getByTestId('pack')).toContainText('fenced code block labelled reussite');
+  await sheet(page).getByTestId('pack-paste').click();
   await page.getByTestId('paste-text').fill('No block here, sorry.');
   await page.getByTestId('paste-go').click();
   await expect(page.getByTestId('paste-error')).toContainText('no change-set');
@@ -158,8 +160,8 @@ for (const w of [320, 375, 430]) {
   test(`a pasted standing obligation and memory line: memory sits under Remember, at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
     await importSample(page);
-    await page.getByTestId('ask-any').click();
-    await sheet(page).getByRole('button', { name: 'Paste the reply' }).click();
+    await openTripSheet(page);
+    await sheet(page).getByTestId('pack-paste').click();
     await page.getByTestId('paste-text').fill('```reussite\n' + standing + '\n```');
     await page.getByTestId('paste-go').click();
     await expect(page.getByTestId('chg')).toHaveCount(2);
@@ -192,10 +194,10 @@ for (const w of [320, 375, 430]) {
     await expect(page.getByTestId('review')).toBeVisible();
     await noSideways(page, 'review');
     await page.keyboard.press('Escape');
-    await page.getByTestId('ask-any').click();
+    await openTripSheet(page);
     await page.locator('summary', { hasText: 'See the text' }).click();
-    await noSideways(page, 'ask any AI');
-    await sheet(page).getByRole('button', { name: 'Paste the reply' }).click();
+    await noSideways(page, 'the trip pack');
+    await sheet(page).getByTestId('pack-paste').click();
     await noSideways(page, 'paste the reply');
   });
 }

@@ -56,8 +56,8 @@ test('after planning, the steps sit between the fixed items on today’s grid, f
 
 test('a step run past its estimate pushes the later blocks on', async ({ page }) => {
   await aDay(page);
-  await goTab(page, 'home');
-  await page.getByTestId('home-start').click(); // the first step, at 11:00
+  await goTab(page, 'today');
+  await page.getByTestId('first').getByRole('button', { name: /start the timer/i }).click(); // the first step, at 11:00
   await openDay(page);
   const first = await boxes(page);
   const small = first.find(b => b.run)!.h;

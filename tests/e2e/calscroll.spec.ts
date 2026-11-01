@@ -54,6 +54,7 @@ test('another day opens near 08:00 or its first event, and the grid is not re-sc
   })).toBe(450);
   expect(await nowAt(page)).toBeNull();
   // The person scrolls; a tick of the clock does not move the grid back.
+  await page.waitForTimeout(1500);
   await page.evaluate(() => { (document.querySelector('.sx__view-container') as HTMLElement).scrollTop = 500; });
   await page.locator('.sxhost').dispatchEvent('wheel');
   await page.waitForTimeout(500);

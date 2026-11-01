@@ -14,6 +14,7 @@ test('imports a v1 export, with a summary first', async ({ page }) => {
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await page.getByTestId('tab-projects').click();
   await expect(page.locator('main')).toContainText('Housing papers');
+  await page.getByTestId('tab-matrix').click();
   await expect(page.locator('main')).toContainText('Stay in the flat or move?');
   await goTab(page, 'log');
   await expect(page.locator('main')).toContainText('Timed sessions');

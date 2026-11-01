@@ -180,12 +180,12 @@ export function CalendarGrid({ mode, date }: GridProps) {
    * Scroll the hour grid (Day and 3-day views): the time now in the middle of the visible hours when today is shown, else the day's first event (src/domain/calScroll.ts).
    * Computed from the measured scroll viewport, so it is only right once the grid's height is set (the fit effect above) and the library has drawn the view.
    */
-  function place() {
+  function place(): number | null {
     const el = host.current;
     const { mode: m, date: d } = latest.current;
-    if (!el || (m !== 'day' && m !== 'week')) return;
+    if (!el || (m !== 'day' && m !== 'week')) return null;
     const view = el.querySelector<HTMLElement>('.sx__view-container'), grid = el.querySelector<HTMLElement>('.sx__week-grid');
-    if (!view || !grid || !view.clientHeight || !grid.offsetHeight) return;
+    if (!view || !grid || !view.clientHeight || !grid.offsetHeight) return null;
     const head = el.querySelector<HTMLElement>('.sx__week-header')?.offsetHeight ?? 0;
     const days = m === 'day' ? [d] : phone ? Array.from({ length: PHONE_DAYS }, (_, i) => addDays(d, i)) : weekOf(d);
     const nowMs = clockNow.value;
@@ -196,13 +196,21 @@ export function CalendarGrid({ mode, date }: GridProps) {
       now: shown.has(wall) ? wallOf(nowMs, zone) : null,
       times: timed.current.filter(x => shown.has(x.date)).map(x => x.time),
     });
+    return view.scrollTop;
   }
-  /** Place the grid now and again over the next frames, while the library draws the view and the height settles; the person's own scrolling ends it. */
+  /** Place the grid now and again over the next frames (until it stops changing), while the library draws the view and the height settles; the person's own scrolling ends it. */
   function settle() {
     const s = scroll.current, mine = ++s.token;
     s.moved = false;
-    let n = 0;
-    const step = () => { if (mine !== s.token || s.moved) return; place(); if (++n < 24) requestAnimationFrame(step); };
+    let n = 0, last: number | null = null, same = 0;
+    // Done once eight frames in a row put it in the same place (the view is drawn and the height has settled), or after 40 frames.
+    const step = () => {
+      if (mine !== s.token || s.moved) return;
+      const at = place();
+      same = at != null && at === last ? same + 1 : 0;
+      last = at;
+      if (same < 8 && ++n < 40) requestAnimationFrame(step);
+    };
     requestAnimationFrame(step);
   }
 

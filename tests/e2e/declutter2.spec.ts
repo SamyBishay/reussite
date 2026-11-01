@@ -37,6 +37,7 @@ test('closed decisions are folded under “Closed (n)”, in the list and inside
   await expect(fold).toHaveJSProperty('open', true);
   await expect(decisions.getByRole('button', { name: 'Old closed one' })).toBeVisible();
   // Inside the project the same.
+  await goTab(page, 'projects');
   await openAllProjects(page);
   const linked = page.locator('[data-project=p1]').getByTestId('linked-closed');
   await expect(linked).toContainText('Closed (1)');

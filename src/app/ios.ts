@@ -1,7 +1,7 @@
 // The app installed on an iPhone's home screen. On a phone with a Dynamic Island the page runs under the status bar, but
 // `env(safe-area-inset-top)` has been seen to read 0 there (WebKit bug 301994; and the title sat under the island on the owner's phone),
-// so the top of every screen is padded by `--sat` (src/styles/tokens.css): the inset, or at least a notch's worth when this class says the
-// page is that app. The class goes on <html> at start-up (`markIosApp`, called from main.tsx).
+// so the top of every screen is padded by `--sat` (src/styles/tokens.css): the inset, or at least 62px (an iPhone 16 Pro's or 17's island; 59px on a 14 Pro to 15)
+// when this class says the page is that app. A fixed band of that height in the page's ground (`html::before`, tokens.css) keeps scrolled content from showing under the status bar. The class goes on <html> at start-up (`markIosApp`, called from main.tsx).
 
 /** What the detection reads; the browser's own objects fill it in `markIosApp`, a test fills it by hand. */
 export interface IosEnv {

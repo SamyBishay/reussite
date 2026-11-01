@@ -46,11 +46,14 @@
   --mono:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   color-scheme:light;
   --sat:env(safe-area-inset-top,0px);  /* the room the top of a screen leaves for the status bar and the island */
-  /* Home's clock (src/app/DoveClock.tsx): two rings in the painting's colours, the hour in rose and the minutes in teal (blue in the dark), on a faint track. */
-  --clk-hour:#9C4560;--clk-min:#3F8A84;--clk-track:#D3DAD6;
+  /* Home's clock (src/app/DoveClock.tsx), in the painting's colours on a faint track: the hour pie in rose, the minutes ring in teal (blue in the dark), the seconds ring in gold, the hour ticks in grey. */
+  --clk-hour:#9C4560;--clk-min:#3F8A84;--clk-sec:#9A7420;--clk-tick:#7C8886;--clk-track:#D3DAD6;
 }
-/* An iPhone's home-screen app (src/app/ios.ts): the inset has been seen to read 0 under a Dynamic Island, so leave at least its height. */
-@media (orientation:portrait){:root.ios-app{--sat:max(env(safe-area-inset-top,0px),54px)}}
+/* An iPhone's home-screen app (src/app/ios.ts): the inset has been seen to read 0 under a Dynamic Island, so leave at least its height (59px on an iPhone 14 Pro to 15, 62px on a 16 Pro and 17). */
+@media (orientation:portrait){:root.ios-app{--sat:max(env(safe-area-inset-top,0px),62px)}}
+/* The strip under the status bar and the island is a fixed band in the page's ground, above everything that scrolls and below sheets, scrims and the full-screen overlays (z-index 20 and up),
+   so no content is ever seen under it. It is as tall as --sat, plus 2px above the screen so that a fractional scroll position leaves no hairline at the very top; where there is no inset it is 2px off screen, so nothing shows. */
+html::before{content:"";position:fixed;top:-2px;left:0;right:0;height:calc(var(--sat) + 2px);background:var(--ground);z-index:10}
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --ground:#0B0C10;--panel:#111118;--card:#16161F;--card-2:#211D2D;--ink:#ECE8F0;--ink-2:#A8A0B4;--ink-3:#958DA2;
@@ -59,7 +62,7 @@
     --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
     --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.4);
-    --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-track:#2A2538;
+    --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-tick:#8A8397;--clk-track:#2A2538;
     color-scheme:dark;
   }
 }
@@ -70,6 +73,6 @@
   --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
   --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.4);
-  --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-track:#2A2538;
+  --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-tick:#8A8397;--clk-track:#2A2538;
   color-scheme:dark;
 }

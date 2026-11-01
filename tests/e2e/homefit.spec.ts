@@ -17,7 +17,7 @@ const world = () => ({
   days: { '2026-10-26': { date: '2026-10-26', plan: ['bank', 'a'], launches: [], first: null, checkin: null, closed: null, summary: null } }, decisions: {}, meta: { settings: { here: 'home' } },
 });
 
-/** The island: a phone's home-screen app with the inset read as 0 (--sat is then 54px). */
+/** The island: a phone's home-screen app with the inset read as 0 (--sat is then 62px). */
 async function island(page: Page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'standalone', { value: true });
@@ -55,8 +55,8 @@ for (const size of SIZES) {
       await fits(page, 'empty');
       if (size.height >= 800) {
         const m = (await page.locator('.hello .mark').boundingBox())!;
-        expect(m.height).toBeGreaterThanOrEqual(104);
-        expect(m.height).toBeLessThanOrEqual(120);
+        expect(m.height).toBeGreaterThanOrEqual(180);
+        expect(m.height).toBeLessThanOrEqual(200);
       }
     });
 

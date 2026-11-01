@@ -21,7 +21,8 @@ webp knight 88
 webp dragon 86
 webp disc 82
 webp wreath 86
-# The onboarding mark: each heart at 3 x 72 px.
-magick "$CUT/heart-dark.png" -resize x216 -define webp:alpha-quality=100 -quality 86 "$OUT/mark-dark.webp"
-magick "$CUT/heart-light.png" -resize x216 -define webp:alpha-quality=100 -quality 86 "$OUT/mark-light.webp"
+# Home's and the onboarding mark: each heart at 3 x 200 px (Home shows it up to 200 px tall), Lanczos with a touch of sharpening.
+mark() { magick "$CUT/$1.png" -filter Lanczos -resize x600 -unsharp 0x0.5+0.5+0.02 -define webp:alpha-quality=100 -define webp:method=6 -quality 90 "$OUT/$2.webp"; }
+mark heart-dark mark-dark
+mark heart-light mark-light
 ls -l "$OUT" "$ROOT/public/icons"

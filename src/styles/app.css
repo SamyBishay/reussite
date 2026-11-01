@@ -85,12 +85,12 @@ body.kb .tabbar{display:none}
 .app[data-view="home"]{height:100dvh;overflow:hidden;grid-template-rows:auto minmax(0,1fr);row-gap:0;padding-block-end:calc(var(--dock) + var(--kb) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
 .app[data-view="home"] main{display:flex;flex-direction:column;min-height:0}
 html.home-lock,html.home-lock body{overflow:hidden;overscroll-behavior:none}
-.home{--markh:clamp(56px,13dvh,116px);flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s3)}
-.home:has(.homecards:not(:empty)){--markh:clamp(40px,8dvh,72px)}
-.home:has(.homecards:not(:empty)):not(:has(.homecards>:not(.first))){--markh:clamp(44px,11dvh,100px)}
+.home{--markh:clamp(72px,23dvh,200px);flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s3)}
+.home:has(.homecards:not(:empty)){--markh:clamp(44px,11dvh,92px)}
+.home:has(.homecards:not(:empty)):not(:has(.homecards>:not(.first))){--markh:clamp(56px,16dvh,140px)}
 @media (max-height:640px){
   .home{gap:var(--s2)}.homestage,.homecards{gap:var(--s2)}.hello{gap:var(--s2)}
-  .home:has(.homecards:not(:empty)){--markh:34px}
+  .home:has(.homecards:not(:empty)){--markh:38px}
   .homecards .first{padding:14px 16px;gap:var(--s2)}.homecards .first .t{font-size:19px}.homecards .first .hint{display:none}
 }
 body.kb .hello .mark{display:none}
@@ -106,10 +106,13 @@ body.kb .hello .mark{display:none}
 .homecards{flex:0 1 auto;min-height:0;min-width:0;display:grid;align-content:start;gap:var(--s4);overflow-y:auto;overscroll-behavior:contain;padding:2px;margin:-2px}
 .homecards:empty{display:none}
 .dclock{display:block;flex:none}
-.dclock circle{fill:none;stroke-width:12}
+.dclock circle{fill:none}
+.dclock .clk-disc{fill:var(--clk-track)}.dclock .clk-pie{fill:var(--clk-hour)}
+.dclock .clk-tick{stroke:var(--clk-tick);stroke-width:2.2;stroke-linecap:round}.dclock .clk-tick.q{stroke-width:3.4}
 .dclock .clk-track{stroke:var(--clk-track)}
+.dclock .clk-ring{stroke-width:8}.dclock .clk-secring{stroke-width:3.5}
 .dclock .clk-fill{stroke-linecap:round}
-.dclock .clk-hour{stroke:var(--clk-hour)}.dclock .clk-min{stroke:var(--clk-min)}
+.dclock .clk-min{stroke:var(--clk-min);stroke-width:8}.dclock .clk-sec{stroke:var(--clk-sec);stroke-width:3.5}
 .greetline{margin:0;min-width:0;color:var(--ink);font:600 clamp(26px,7.4vw,32px)/1.2 var(--serif);letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
 @media (min-width:720px){.greetline{font-size:34px}}
 .greetline.long{font-size:clamp(22px,6vw,28px)}

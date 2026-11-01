@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { openMenu, expandSettings } from '../e2e/helpers';
+import { openMenu, expandSettings, stubNow } from '../e2e/helpers';
 
 // The manual's screenshots (docs/dev/manual.md). One run makes every picture the manual shows, in both languages and both
 // themes, from invented data only: nothing here is read from the real list, and `private/` is never touched. Run with
@@ -163,6 +163,10 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
     test('the app', async ({ page }) => {
       test.setTimeout(120_000);
+      // 13:00 on the app's day whatever hour the pictures are taken: the day's invented fixed times (09:30, 11:30) have passed, so Home offers
+      // to plan the day instead of showing one of them as Start here (it follows the clock).
+      const one = new Date(); if (one.getHours() < 5) one.setDate(one.getDate() - 1); one.setHours(13, 0, 0, 0);
+      await stubNow(page, one);
       await seed(page, list(lang));
 
       // The morning check-in and its plan, then the list it made. The room is counted from the hour the pictures are taken to the end

@@ -1,30 +1,27 @@
 // Home (brief §5): where the person types. It holds a greeting, one card (an exchange's), the last receipt and the input,
-// and never more. The greeting is only the next step; the card is what an open exchange has to say (what is waiting is behind the bell); the receipt is the last thing applied, with Undo. The menu icon holds what
+// and never more. The greeting is a plain line, with Plan the day when there is no list or Close the day when it is all played (Start here lives on Today alone); the card is what an open exchange has to say (what is waiting is behind the bell); the receipt is the last thing applied, with Undo. The menu icon holds what
 // has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, clockNow } from '../app/store';
-import { T, dayDoc, greetingNow, planEst, fixedFirst, lineInputNow } from '../app/model';
+import { T, dayDoc, greetingNow, planEst, lineInputNow } from '../app/model';
 import { shownGreetings, rememberGreeting } from '../app/greetingShown';
-import { openSheet, closeSheet, Title, Est } from '../app/ui';
-import { openPause, openDone, DurationPicker, DropButton } from '../app/sheets';
+import { openSheet, closeSheet } from '../app/ui';
+import { DurationPicker } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
 import { openNewAddress } from '../app/AddressSheets';
 import { addressesOn } from '../app/model';
 import { go, type View } from '../app/nav';
-import { Clock } from '../app/Clock';
 import { MissedNow } from '../app/CarryUi';
 import { isTouch } from '../app/keyboard';
 import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
 import { HomeHelp } from '../app/HomeHelp';
 import { NextStepsCard } from '../app/NextSteps';
 import { aiOn } from '../ai/ask';
-import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
-import { openPlanDay, openMorning } from '../flows/morning';
+import { openPlanDay } from '../flows/morning';
 import { ChatOffer } from '../app/ChatOffer';
 import { openClose } from '../flows/close';
-import { withTime } from '../domain/calendar';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
 
@@ -47,45 +44,6 @@ function HomeMenu() {
 }
 
 // ---------- the greeting ----------
-/** With an AI on and the day not planned yet, a fixed-time item or a step added by hand is already Start here: the planning is still one tap away, in the row it already has. */
-function PlanBtn() {
-  const d = dayDoc(today.value);
-  if (!aiOn.value || d?.checkin || d?.closed) return null;
-  return <button class="btn small ghost" type="button" onClick={openMorning} data-testid="home-plan-ai">{t('planTheDay')}</button>;
-}
-/** The next step, as the Today screen's first card shows it: the starter, then the title, its estimate and Start. */
-function Step({ id }: { id: string }) {
-  const tk = T(id);
-  if (!tk) return null;
-  return (
-    <>
-      <p class="t" data-testid="greeting-step">{tk.starter ? tk.starter + ' → ' : ''}<Title s={tk.title} /></p>
-      <p class="meta"><Est tk={tk} /></p>
-      <div class="go"><button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button></div>
-      <div class="go quiet"><DropButton key={tk.id} tk={tk} /><PlanBtn /></div>
-    </>
-  );
-}
-
-/** A fixed-time item that has taken over: its time and when to leave. A standing item not yet placed on the day has nothing to start. */
-function FixedStep() {
-  const f = fixedFirst(), tk = f && T(f.id);
-  if (!f || !tk) return null;
-  return (
-    <>
-      <p class="t" data-testid="greeting-line"><Title s={withTime(tk.title, f.time)} /> · {t('leaveAtLine', { t: f.leave })}</p>
-      {!tk.template && (
-        <div class="go">
-          <button class="btn primary" type="button" onClick={() => void startTask(tk.id)} data-testid="home-start">{t('start')}</button>
-          <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
-          <PlanBtn />
-        </div>
-      )}
-      {tk.template && <div class="go quiet"><PlanBtn /></div>}
-    </>
-  );
-}
-
 /**
  * The line above the card: one sentence from the templates, filled with what is true today (src/domain/greeting.ts). It is chosen
  * when Home opens and kept while it stays open (unless what it says stops being true), and is not the same as one said earlier today
@@ -104,34 +62,10 @@ function GreetingLine() {
   return line ? <p class="greetline" data-testid="greeting-hello" data-key={line.key}>{t(line.key, line.slots)}</p> : null;
 }
 
+/** Under the line: Plan the day when there is no list yet, Close the day when it is all played, and nothing else. Start here, the running step and tomorrow's first step belong to Today. */
 function GreetingBody() {
   const g = greetingNow.value;
-  if (g.kind === 'running') {
-    const tk = T(g.id);
-    if (!tk) return null;
-    return (
-      <section class="first running" data-testid="greeting-running">
-        <p class="eyebrow">{t('running')}</p>
-        <p class="t"><Title s={tk.title} /></p>
-        <div class="go">
-          <Clock tk={tk} big />
-          <button class="btn" type="button" onClick={() => openPause(tk.id)}>{t('pause')}</button>
-          <button class="btn primary" type="button" onClick={() => openDone(tk.id)}>{t('done')}</button>
-        </div>
-      </section>
-    );
-  }
-  if (g.kind === 'tomorrow') {
-    return (
-      <section class="first" data-testid="greeting-tomorrow">
-        <p class="eyebrow">{t('tomorrowFirst')}</p>
-        {g.step ? <p class="t" data-testid="greeting-step">{T(g.step.id)?.starter ? T(g.step.id)!.starter + ' → ' : ''}<Title s={g.step.title} /></p> : <p class="t">{t('homeTomorrowNone')}</p>}
-      </section>
-    );
-  }
-  if (g.kind === 'next') {
-    return <section class="first focus" data-testid="greeting-next"><p class="eyebrow">{t('startHere')}</p>{g.fixed ? <FixedStep /> : <Step id={g.id} />}</section>;
-  }
+  if (!g) return null;
   if (g.kind === 'plan') {
     return (
       <section class="first" data-testid="greeting-plan">

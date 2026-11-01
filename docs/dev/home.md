@@ -2,7 +2,7 @@
 
 Where the person types. Code: `src/views/Home.tsx` (the screen), `src/app/home.ts` (what happens to a line), `src/domain/parse.ts` (the local parser), `src/domain/greeting.ts` (the greeting), `src/views/History.tsx`. Memory, which Home reads and writes, is `src/views/Memory.tsx`, `src/domain/memory.ts` and `src/domain/memoryMd.ts`. Brief §5.
 
-Home holds a greeting, at most one card, the last receipt and the input. No counts, no list, no streaks. The menu icon at the top holds what has no tab: Settings, Places, Memory, History.
+Home holds a plain greeting line, at most one card, the last receipt and the input. No counts, no list, no streaks. The menu icon at the top holds what has no tab: Settings, Places, Memory, History.
 
 ## A line, from input to receipt
 
@@ -46,17 +46,16 @@ Rules that are easy to get wrong:
 
 ## The greeting
 
-Two pure things in `src/domain/greeting.ts`, both run on the 30-second clock tick, and one order they read, `dayOrder` (`src/domain/dayOrder.ts`, also what Today's Start here, its list and the next-step bar read; `dayOrderOf` in `src/app/model.ts` gathers the data).
+Two pure things in `src/domain/greeting.ts`, both run on the 30-second clock tick, and one order they read, `dayOrder` (`src/domain/dayOrder.ts`, also what Today's Start here and its list read; `dayOrderOf` in `src/app/model.ts` gathers the data).
 
-**The line** is a template from `en.ts`/`fr.ts` (`greet…` keys) with slots filled from real data, chosen when Home opens (`GreetingLine` in `Home.tsx`). Kinds, each eligible only when its data exists: the next fixed item ahead today ({time}, {title}), a project close to its goal (an active project whose bar is at least 60 % full and not full; `nearGoal`, fed by `progressOf`, so a project with no measure is never named), the time of day (morning until noon, afternoon until 18:00, evening after, by `dayStart`), steps done today ({n}, done only) and planned but not started ({n}, nothing done or running). Every template ends by inviting the person to type in the box, never counts what was missed or carried, and never says database, record, entry or field (a unit test scans both languages). `pickGreeting` returns the candidate shown longest ago (never shown first), in an order seeded by the day, so a template is not repeated within a day while another is eligible; the shown keys are in `localStorage` under the day (`reussite.greet.<day>`, `src/app/greetingShown.ts`, try/catch, older days dropped), one more each time Home mounts. It is the same with an AI on: no call is made.
+**The line** is a template from `en.ts`/`fr.ts` (`greet…` keys) with slots filled from real data, chosen when Home opens (`GreetingLine` in `Home.tsx`). Kinds, each eligible only when its data exists: the next fixed item ahead today ({time}, {title}), a project close to its goal (an active project whose bar is at least 60 % full and not full; `nearGoal`, fed by `progressOf`, so a project with no measure is never named), the time of day (morning until noon, afternoon until 18:00, evening after, by `dayStart`), steps done today ({n}, done only) and planned but not started ({n}, nothing done or running). Every template is plain and warm ("Good morning.", "{project} is nearly there.", "{n} down. Nice.") and asks for nothing: no "type", no "add, move or tick off", no question; it never counts what was missed or carried, and never says database, record, entry or field (a unit test scans both languages). `pickGreeting` returns the candidate shown longest ago (never shown first), in an order seeded by the day, so a template is not repeated within a day while another is eligible; the shown keys are in `localStorage` under the day (`reussite.greet.<day>`, `src/app/greetingShown.ts`, try/catch, older days dropped), one more each time Home mounts. It is the same with an AI on: no call is made.
 
-**The card** is `greeting()` over the first item of `dayOrder`. In this order, the first that applies:
+**The card** is `greeting()` (`greetingNow` in `src/app/model.ts`), and it is only ever one of two, or none. **Start here, the running step, the clock with Pause and tomorrow's first step are Today's alone** (`FirstCard` in `Today.tsx`; no other tab and not Home carries a Start here bar or a running bar; "Still on…?" is the one banner that stays on every tab, because it fixes data). In this order, the first that applies:
 
-1. **A fixed-time item has taken over** (the first item of the order is a fixed one): it shows the item, its time and "leave at …", even over a running timer or a closed day. Fixed items are the agenda's (the same that feed push and the calendar feed) for the day, standing items not yet placed included.
-2. **A running timer** that is the first item: the running step. The running bar steps aside only while the greeting is that step; "Still on…?" always shows.
-3. **A closed day**: tomorrow's first step, or "No first step chosen for tomorrow yet."
-4. **The first item of the order** (the first step that fits before the next fixed item), with the person's own estimate and "usually" after it (never the personal estimate first, so it does not anchor).
-5. **Nothing on today's list yet**: Plan the day (with an AI on, it opens the morning proposal, `docs/dev/morning.md`, and Plan it myself opens the ritual). **Everything on it done**: a line saying so, with Close the day.
+1. **A running timer, or a closed day**: no card, only the line.
+2. **Nothing on today's list yet** (a fixed-time item that is first does not count as a list): Plan the day (with an AI on, it opens the morning proposal, `docs/dev/morning.md`, and Plan it myself opens the ritual; with the connector on and no key, a second button opens the AI chat).
+3. **Everything on it done** (the list holds cards and nothing is left to start): a line saying so, with Close the day.
+4. **Otherwise** (the plan is open, something is left to start): no card; the person starts it on Today.
 
 ## The card and the nudge
 

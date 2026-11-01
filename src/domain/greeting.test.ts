@@ -4,30 +4,23 @@ import { fr } from '../i18n/fr';
 import { translate } from '../i18n/core';
 import { GREETING_KEYS, eligibleLines, greeting, greetingLine, nearGoal, partOfDay, pickGreeting, seedOf, type GreetingInput, type LineInput } from './greeting';
 
-const base = (o: Partial<GreetingInput> = {}): GreetingInput => ({ closed: false, planned: 2, first: { id: 's1', kind: 'step', running: false }, tomorrow: null, ...o });
+const base = (o: Partial<GreetingInput> = {}): GreetingInput => ({ closed: false, planned: 2, running: false, hasFirst: true, ...o });
 
 describe('the card under the greeting', () => {
-  it('a running step is shown running', () => {
-    expect(greeting(base({ first: { id: 'r1', kind: 'step', running: true } }))).toEqual({ kind: 'running', id: 'r1' });
-    expect(greeting(base({ first: { id: 'r1', kind: 'step', running: true }, closed: true }))).toEqual({ kind: 'running', id: 'r1' });
+  it('shows nothing while a step runs, or while a plan is open with something left to start', () => {
+    expect(greeting(base({ running: true }))).toBeNull();
+    expect(greeting(base({ running: true, planned: 0, hasFirst: false }))).toBeNull();
+    expect(greeting(base())).toBeNull();
   });
-  it('a fixed-time item that took over is Start here, closed day or not', () => {
-    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: false } }))).toEqual({ kind: 'next', id: 'f', fixed: true });
-    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: false }, closed: true }))).toEqual({ kind: 'next', id: 'f', fixed: true });
+  it('no list shows Plan the day, even when a fixed-time item is first; a list with nothing left shows all done', () => {
+    expect(greeting(base({ planned: 0, hasFirst: false }))).toEqual({ kind: 'plan' });
+    expect(greeting(base({ planned: 0, hasFirst: true }))).toEqual({ kind: 'plan' });
+    expect(greeting(base({ hasFirst: false, planned: 3 }))).toEqual({ kind: 'allDone' });
   });
-  it('a fixed-time item that is being timed is shown running', () => {
-    expect(greeting(base({ first: { id: 'f', kind: 'fixed', running: true } }))).toEqual({ kind: 'running', id: 'f' });
-  });
-  it('otherwise the first step is Start here', () => {
-    expect(greeting(base())).toEqual({ kind: 'next', id: 's1', fixed: false });
-  });
-  it('no list shows Plan the day; a list with nothing left shows all done', () => {
-    expect(greeting(base({ planned: 0, first: null }))).toEqual({ kind: 'plan' });
-    expect(greeting(base({ first: null, planned: 3 }))).toEqual({ kind: 'allDone' });
-  });
-  it('a closed day shows tomorrow’s first step, or says there is none', () => {
-    expect(greeting(base({ closed: true, tomorrow: { id: 'z', title: 'Open the form' } }))).toEqual({ kind: 'tomorrow', step: { id: 'z', title: 'Open the form' } });
-    expect(greeting(base({ closed: true }))).toEqual({ kind: 'tomorrow', step: null });
+  it('a closed day shows nothing: tomorrow and Start here are not Home’s', () => {
+    expect(greeting(base({ closed: true }))).toBeNull();
+    expect(greeting(base({ closed: true, planned: 0, hasFirst: false }))).toBeNull();
+    expect(greeting(base({ closed: true, hasFirst: false }))).toBeNull();
   });
 });
 
@@ -51,7 +44,7 @@ describe('the line: which kinds are eligible', () => {
     const l = eligibleLines(line({ fixed: { time: '14:00', title: 'Dentist' } })).filter(x => x.key.startsWith('greetFixed'));
     expect(l).toHaveLength(3);
     expect(l[0]!.slots).toEqual({ time: '14:00', title: 'Dentist' });
-    expect(translate('en', 'greetFixed1', l[0]!.slots)).toBe('Anything to move before “Dentist” at 14:00? Type it in the box.');
+    expect(translate('en', 'greetFixed1', l[0]!.slots)).toBe('Next on the clock: “Dentist” at 14:00.');
   });
   it('a project close to its goal is named', () => {
     const l = eligibleLines(line({ project: { name: 'Flat move' } })).filter(x => x.key.startsWith('greetProject'));
@@ -61,8 +54,8 @@ describe('the line: which kinds are eligible', () => {
   it('done so far counts done steps only, and needs one', () => {
     expect(kinds(line({ doneToday: 0 }))).not.toContain('done');
     const l = eligibleLines(line({ doneToday: 2 })).find(x => x.key === 'greetDone1')!;
-    expect(translate('en', l.key, l.slots)).toBe('2 down. What’s next to tick off? Type it in the box.');
-    expect(translate('en', 'greetDone1', { n: 1 })).toBe('One down. What’s next to tick off? Type it in the box.');
+    expect(translate('en', l.key, l.slots)).toBe('2 down. Nice.');
+    expect(translate('en', 'greetDone1', { n: 1 })).toBe('One down. Nice.');
   });
   it('planned but not started: steps on the list, nothing done, nothing running', () => {
     expect(unique(kinds(line({ planned: 3 })))).toEqual(['morning', 'planned']);
@@ -139,8 +132,8 @@ describe('every template', () => {
   it('never mentions what was missed or carried', () => {
     for (const s of [...templates(en), ...templates(fr)]) expect(s, s).not.toMatch(/missed|carried|overdue|late|behind|manqu|report|retard/i);
   });
-  it('invites the person to use the box: every sentence names what to add, move or tick off, or says where to type', () => {
-    for (const s of templates(en)) expect(s, s).toMatch(/type|box|below/i);
-    for (const s of templates(fr)) expect(s, s).toMatch(/écri|case|ci-dessous/i);
+  it('is plain: no call to action, no question, nothing to type, add, move or tick off', () => {
+    for (const s of templates(en)) expect(s, s).not.toMatch(/type|box|below|\badd\b|\bmove\b|tick|\?/i);
+    for (const s of templates(fr)) expect(s, s).not.toMatch(/écri|case|ci-dessous|ajout|déplac|coch|\?/i);
   });
 });

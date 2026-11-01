@@ -1,20 +1,19 @@
 # L’accueil et sa boîte unique
 
-L’accueil, c’est là où vous commencez. Il ne montre que votre **étape suivante**. Dessous, il y a une boîte unique.
+L’accueil, c’est là où vous commencez. Il vous salue d’une ligne, et dessous il y a une boîte unique. L’étape à commencer est sur [Aujourd’hui](daily-loop.md), et seulement là.
 
 ![L’accueil : l’étape suivante, et une ligne qui vient d’être écrite](shot:home)
 
 ## Ce que dit l’accueil
 
-En haut, une ligne vous accueille. Elle est choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« Quelque chose à déplacer avant “Dentiste” à 14:00 ? »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient. Toutes finissent pareil : écrivez dans la boîte ci-dessous ce qu’il faut ajouter, déplacer ou cocher.
+En haut, une ligne vous accueille. C’est une phrase courte et chaleureuse, choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« “Dentiste” à 14:00 est au programme du jour. »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne vous demande rien, ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient.
 
-Sous la ligne, dans cet ordre, le premier cas qui s’applique :
+Sous la ligne, il n’y a une carte que dans deux cas :
 
-1. **Une heure fixe a pris le dessus.** Commencez ici suit l’horloge (voir [Démarrer](daily-loop.md)). Quand l’étape en cours, avec une petite marge, empiéterait sur l’heure à laquelle vous devez partir, la prochaine chose à heure fixe prend le dessus. Elle dit son heure et « partir à… ».
-2. **Un chrono tourne.** Vous voyez l’étape, l’horloge, **Pause** et **Fait**.
-3. **La journée est close.** Vous voyez la première étape de demain.
-4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. C’est la même étape que sur Aujourd’hui. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
-5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**. Avec une IA configurée, il ouvre une proposition que vous gardez, échangez ou passez, et **Le faire moi-même** à côté ouvre le rituel. Quand une chose à heure fixe est déjà en tête, un petit **Planifier la journée** parmi ses boutons fait la même chose jusqu’à ce que la journée soit planifiée.
+1. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**. Avec une IA configurée, il ouvre une proposition que vous gardez, échangez ou passez, et **Le faire moi-même** à côté ouvre le rituel.
+2. **Tout ce qui est sur la liste du jour est fait.** Une ligne le dit, avec **Clôturer la journée**.
+
+Sinon l’accueil ne montre aucune carte : pendant qu’un chrono tourne, tant que le plan est ouvert, et une fois la journée close. **Commencez ici**, l’étape en cours avec son horloge et **Pause**, et la première étape de demain sont sur Aujourd’hui seulement, ni sur l’accueil ni sur les autres onglets. (Si une étape tourne depuis des heures, un bandeau « Toujours sur… ? » s’affiche sur tous les onglets pour corriger l’heure.)
 
 Si une chose à heure fixe d’aujourd’hui est passée sans être faite, une petite carte sous le texte le dit, « Appeler la banque » était à 10:00, avec **Déplacer** et **Retirer**. Jamais en rouge, une seule à la fois, sans chiffre.
 

@@ -143,14 +143,6 @@ export function missedOn(k: string = today.value): string[] {
   }).missed.filter(id => T(id)?.status === 'open');
 }
 
-/** Tomorrow's first step: the one chosen when the day was closed, else the first open step on its list. */
-export function tomorrowFirst(k = today.value): { id: string; title: string } | null {
-  const tk = addDays(k, 1);
-  const chosen = T(dayDoc(tk)?.first?.id ?? '');
-  const tt = isOpen(chosen) ? chosen : planOf(tk).map(id => T(id)).find(isOpen);
-  return tt ? { id: tt.id, title: tt.title } : null;
-}
-
 /**
  * The one order of a day (src/domain/dayOrder.ts), for Home's Start here, Today's card and list and the next-step bar: the day's open
  * cards, without the steps that wait for another, within Today's area filter, with its fixed-time items (standing ones not yet placed
@@ -216,24 +208,15 @@ export const dayZone = (k: string): string | undefined => placeOfDay(k, stays.va
 /** The instant of a clock time (HH:MM) on a day, by the day-start rule and the day's zone. */
 export const timeOnDay = (k: string, hhmm: string): number => atOnDay(k, hhmm, settings.value.dayStart, dayZone(k));
 
-/** What Home's greeting card says now (src/domain/greeting.ts): the first item of the day's order, so a fixed-time item takes over on time. */
+/** The card Home shows under its line now, or none (src/domain/greeting.ts): Plan the day, or Close the day. Start here is Today's alone. */
 export const greetingNow = computed(() => {
   const k = today.value, o = dayOrderOf(k), first = o.order[0];
   // A fixed-time item whose time has passed is not a card played, nor one still to play: a day with only those has no list yet.
   const planned = dayCards(k).filter(id => !o.missed.includes(id) && !isWaiting(id) && showsInArea('today', T(id)!)).length;
   return greeting({
-    closed: !!dayDoc(k)?.closed, planned, tomorrow: tomorrowFirst(k),
-    first: first ? { id: first.id, kind: first.kind, running: !!T(first.id)?.started } : null,
+    closed: !!dayDoc(k)?.closed, planned, running: !!running(), hasFirst: !!first,
   });
 });
-
-/** The first item of today's order when it is a fixed-time item: its time, when to leave, and its step. */
-export function fixedFirst(): { id: string; time: string; leave: string } | null {
-  const f = dayOrderOf(today.value).order[0];
-  if (!f || f.kind !== 'fixed' || !T(f.id)) return null;
-  const zone = hereZone.value;
-  return { id: f.id, time: wallOf(f.at!, zone), leave: wallOf(f.start, zone) };
-}
 
 /** A step's title in a sentence: cut at a word within 40 characters. */
 const nameOf = (x: Pick<T, 'title'>): string => {

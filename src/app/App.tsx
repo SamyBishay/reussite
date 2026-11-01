@@ -1,19 +1,17 @@
-// The app frame: masthead and suit piles, running bar, the view, footer, and the tab bar at the bottom.
+// The app frame: masthead and suit piles, "Still on…?" banner, the view, footer, and the tab bar at the bottom.
 import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { ready, readOnly, settings, today, toastMsg, start, here, hereZone, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
-import { cardsOn, minutesOn, allCards, running, T, dayDoc, greetingNow, dayOrderOf } from './model';
-import { wallOf } from '../domain/zone';
+import { cardsOn, minutesOn, allCards, running, T, dayDoc } from './model';
 import { applyTheme } from './theme';
-import { SheetHost, Title, suitName } from './ui';
+import { SheetHost, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openPause, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
-import { startTask, patchTask } from './actions';
+import { openPile, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { patchTask } from './actions';
 import { openPlaces } from './PlacesSheet';
 import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
-import { Clock } from './Clock';
 import { lastSyncAt, startSync, syncNow, syncStale } from './sync';
 import { startFeed } from './feed';
 import { watchBigMoments } from './celebrate';
@@ -121,6 +119,7 @@ function Tabs() {
   );
 }
 
+/** Only the "Still on …?" banner lives here: a forgotten timer is data to fix, so it shows on every tab. Start here, the clock and Pause are Today's alone. */
 function Runbar() {
   const r = running();
   void clockNow.value;
@@ -130,19 +129,6 @@ function Runbar() {
       <div id="runbar"><div class="banner warn" data-testid="still-banner"><p>{t('stillOn', { title: r.title })}</p>
         <div class="go"><button class="btn small" type="button" onClick={() => openStillOn(r.id, 'ask')} data-testid="still-fix">{t('stoppedAt')}</button>
           <button class="btn small ghost" type="button" onClick={() => void patchTask(r.id, { stillAt: new Date().toISOString() })}>{t('stillGoing')}</button></div></div></div>
-    );
-  }
-  // The Matrix is for sorting, so neither bar shows there. Home's greeting is the running step (clock, Pause, Done), so the bar would say it twice; a fixed-time item taking over leaves it.
-  if (view.value === 'matrix') return <div id="runbar" />;
-  if (r && view.value !== 'today' && !(view.value === 'home' && greetingNow.value.kind === 'running')) return (
-    <div id="runbar"><div class="runbar"><Clock tk={r} /><span class="rt"><Title s={r.title} /></span><button class="btn small" type="button" onClick={() => openPause(r.id)}>{t('pause')}</button></div></div>
-  );
-  if (!r && view.value !== 'today' && view.value !== 'settings' && view.value !== 'home') {
-    // Gentle insisting (brief §5): while a plan is open, what comes first stays in sight (the first item of the day's order, src/domain/dayOrder.ts), except on Home, which shows it. No counters.
-    const fo = dayOrderOf(today.value).order[0], first = fo && T(fo.id);
-    if (first) return (
-      <div id="runbar"><div class="insist" data-testid="insist"><span class="rt">{first.starter ? first.starter + ' → ' : ''}<Title s={first.title} />{fo.kind === 'fixed' && ' · ' + wallOf(fo.at!, hereZone.value)}</span>
-        {!first.template && <button class="btn small" type="button" onClick={() => void startTask(first.id)}>{t('start')}</button>}</div></div>
     );
   }
   return <div id="runbar" />;

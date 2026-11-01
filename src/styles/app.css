@@ -191,9 +191,6 @@ details.donefold[open]>summary::after{content:'▾'}
 @media (max-width:540px){.row{grid-template-columns:auto minmax(0,1fr)}.row .ctrls{grid-column:2;justify-content:flex-start}}
 .adders{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s4)}
 .close-day{margin-top:var(--s5);width:100%;justify-content:center;min-height:52px;font-size:16px;font-weight:700}
-.runbar{display:flex;align-items:center;gap:var(--s3);background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:8px 8px 8px 14px}
-.runbar .rt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.runbar .btn{background:var(--accent-ink);color:var(--accent);border-color:transparent}
 
 /* ---------- forms ---------- */
 .field{display:grid;gap:var(--s2);margin-top:var(--s4)}
@@ -535,8 +532,6 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 input[type=range]{width:100%;accent-color:var(--accent)}
 
 /* banners */
-.insist{display:flex;align-items:center;gap:var(--s3);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 14px;font-size:14.5px}
-.insist .rt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 main>.banner{margin-top:var(--s3)}
 .moment{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:35;pointer-events:none;background:var(--panel);border:2px solid var(--accent);border-radius:18px;padding:22px 26px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.35);width:min(360px,calc(100% - 32px));animation:momentIn 2.6s ease both}
 .moment-name{font:700 22px/1.25 var(--sans);margin-top:var(--s2);overflow-wrap:anywhere}

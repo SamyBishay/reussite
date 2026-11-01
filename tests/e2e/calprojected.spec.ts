@@ -3,24 +3,12 @@
 // The fixed clock is a stub of Date and not `page.clock`: the Calendar's library loads the Temporal polyfill, which wraps
 // `Intl.DateTimeFormat`, and wrapping the fake clock's version of it breaks `formatToParts` (the app's day maths) in the browser.
 import { test, expect, type Page } from '@playwright/test';
-import { goTab, addCard, noSideways } from './helpers';
+import { goTab, addCard, noSideways, stubNow } from './helpers';
 
 const input = (page: Page) => page.getByTestId('home-input');
 const say = async (page: Page, text: string) => { await input(page).fill(text); await input(page).press('Enter'); await input(page).blur(); };
 const at = (hh: number, mm: number) => new Date(2026, 9, 26, hh, mm, 0); // Monday 26 October, this computer's clock
-/** From the next load on, `new Date()` and `Date.now()` read `when` (it is kept in localStorage, so a reload can move it). */
-async function setNow(page: Page, when: Date) {
-  await page.addInitScript(() => {
-    const Real = Date, key = 'e2e.now';
-    const now = () => Number(localStorage.getItem(key)) || Real.now();
-    class Fixed extends Real {
-      constructor(...a: unknown[]) { if (a.length) super(...(a as [number])); else super(now()); }
-      static override now() { return now(); }
-    }
-    (globalThis as { Date: unknown }).Date = Fixed;
-  });
-  await page.addInitScript(([k, v]) => { try { localStorage.setItem(k!, v!); } catch { /* none */ } }, ['e2e.now', String(when.getTime())] as const);
-}
+const setNow = stubNow;
 const proj = (page: Page) => page.getByTestId('calendar-grid').locator('.sx__event.k-projected');
 const fixed = (page: Page, text: string) => page.getByTestId('calendar-grid').locator('.sx__event.k-fixed', { hasText: text });
 const boxes = (page: Page) => proj(page).evaluateAll(els => els.map(e => ({ y: e.getBoundingClientRect().top, h: e.getBoundingClientRect().height, run: e.classList.contains('is-running') })).sort((a, b) => a.y - b.y));

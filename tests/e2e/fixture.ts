@@ -1,3 +1,4 @@
+import './clock';
 // A synthetic v1 export, dated relative to today, with nothing personal in it.
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
 // The app's day starts at 05:00; tests don't run between midnight and 05:00 reliably, so shift then.
@@ -44,6 +45,7 @@ export function sampleExport() {
       [d(-1)]: { date: d(-1), plan: ['t8', 't5'], launches: [], first: null, checkin: null, closed: d(-1) + 'T20:00:00Z', summary: null },
     },
     decisions: { d1: { title: 'Stay in the flat or move?', problem: 'Rent goes up', options: [], chosen: 'Stay one more year', why: 'Cheaper overall', falsifier: 'Rent rises again', date: d(-30), reviewOn: d(60), taskIds: [] } },
-    meta: { settings: { here: 'home' } },
+    // The weekly review is offered on its day (Sunday by default); the sample's is always another, so no spec depends on the weekday it runs on.
+    meta: { settings: { here: 'home', reviewDay: ((new Date(d(0) + 'T12:00:00').getDay() || 7) % 7) + 1 } },
   };
 }

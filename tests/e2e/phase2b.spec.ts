@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { newCardSheet, importSample, noSideways, goTab, openMenu, expandSheet, addCard } from './helpers';
+import { morningClock, newCardSheet, importSample, noSideways, goTab, openMenu, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 
@@ -326,6 +326,7 @@ test('History is empty at first, and says what it will hold', async ({ page }) =
 });
 
 test('what is waiting is behind the bell: Home has a dot, the page lists it with its button', async ({ page }) => {
+  await morningClock(page);
   await importSample(page);
   await goTab(page, 'home');
   await expect(page.getByTestId('home-card')).toHaveCount(0);

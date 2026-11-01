@@ -1,10 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { goTab, addCard, openMenu, noSideways } from './helpers';
+import { goTab, addCard, openMenu, noSideways, appDay, followClock } from './helpers';
 
 // Event steps: something the person waits for, built into a chain. Dormant until "It happened".
 const sheet = (page: Page) => page.getByTestId('sheet');
+test.beforeEach(({ page }) => followClock(page)); // only when the suite is run at another moment (E2E_CLOCK), to see the day rule at any hour
 const EVENT = 'The bellman calls back with a tailor';
-const day = (offset: number) => { const d = new Date(Date.now() + offset * 864e5); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const day = appDay; // the app's day, which starts at 05:00: before that it is still yesterday
 
 /** "Phone the bellman", then something waited for, then "Book the tailor", made with Break it down. */
 async function makeChain(page: Page, event = EVENT, nudge?: string, sideways = false) {

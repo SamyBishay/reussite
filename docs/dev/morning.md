@@ -19,7 +19,7 @@ A person who set up the connector (`docs/dev/onboarding.md`, Connect your AI cha
 
 ## The sections (`proposeDay`)
 
-1. **Must happen:** today's fixed-time items (locked: not a choice), then overdue, due-today, urgent (Q1/Q3) and carried steps, at most six, rest in `mustMore`; events whose nudge has come (`check`, locked, never planned). A step that cannot be done at today's place is left out unless it was carried.
+1. **Must happen:** today's fixed-time items (locked: not a choice), then overdue, due-today, urgent (Q1/Q3, the ticks) and carried steps, at most six, rest in `mustMore`; events whose nudge has come (`check`, locked, never planned). A step that cannot be done at today's place is left out unless it was carried.
 2. **Main goals:** at most two active projects (not the Inbox) with an open step that can be done here and is not already in section 1, nearest `due` first, then one with a goal; each with its first open step (the project's own order) and `more` (its other steps). `moreGoals` are the next projects, each with its first step.
 3. **Pillars:** for each of S, D, C, H the best of what is left by quadrant, due date and order; `more` are the next ones; `covered` are the steps of that pillar already in sections 1, 2 and 4. A pillar with nothing has `pick: null`.
 4. **Here:** steps whose own place is today's place or one of its areas (not Anywhere), by priority, at most four. Section 4 is taken before the pillars, so a place-bound step is not also a pillar's pick.

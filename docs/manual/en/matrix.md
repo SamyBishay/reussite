@@ -6,22 +6,22 @@ The matrix sorts your steps in four boxes. Each shows its first two steps and **
 
 ## The four quadrants
 
-- **Now** (urgent and important). A deadline within the urgency window, or something that blocks one. Today's list starts here.
+- **Now** (urgent and important). A deadline within about three weeks, or something that blocks one. Today's list starts here.
 - **Protect** (important, no clock). Nothing forces these. One step gets a slot every day, or they never happen.
 - **Quick** (urgent, less important). Keep them small, batch them, or hand them off.
 - **Later** (neither). Park them, or drop them for good.
 
-## Urgent means a date
+## Urgent is a tick
 
-*Urgent* means a deadline within the **urgency window** (three weeks by default, Settings → Method), or blocking something that has one. The dates handle it on their own. Mark a step urgent by hand only when it blocks a deadline.
+*Urgent* means a deadline within about three weeks, or blocking something that has one, and **you tick it**. Réussite doesn't infer it from dates: a step due tomorrow that you haven't ticked stays in Protect or Later. Its date only orders it inside its box, nearest first.
 
 A far date isn't urgent however important. Neither is anything you can't act on yet: the step is the part you control, such as asking.
 
-If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date. When is it due?"
+Moving a step to another box just sets its two ticks.
 
 **Research says:** untested here. `[E?]`
 
-**Practice says:** most of what feels urgent is only loud. A date is what makes it urgent. `[E?]`
+**Practice says:** most of what feels urgent is only loud. A real deadline is what makes it urgent. `[E?]`
 
 ## Moving, filtering and searching
 

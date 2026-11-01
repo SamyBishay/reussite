@@ -77,7 +77,7 @@ const projName = (id: string) => (id === 'inbox' ? 'Inbox' : projects.value.get(
 
 /** `id | title | Q1 | due | est | project`, as v1 sent them (the rule is in src/domain/lists.ts). */
 export const stepLine = (t: WithId<{ title: string; project: string; due: string | null; est: number | null; status: string }>): string =>
-  pureStepLine(T(t.id)!, { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
+  pureStepLine(T(t.id)!, { projects: projects.value });
 export { STEP_HEADER };
 export const stepLines = (ts: { id: string }[], max = MAX_STEPS) => ts.slice(0, max).map(x => stepLine(T(x.id)!)).join('\n');
 
@@ -98,7 +98,7 @@ export function header(): string {
   const k = today.value;
   const wd = new Date(k + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
   const pl = here.value === 'any' ? '' : `, in ${places.value.get(here.value)?.name ?? here.value}`;
-  return `Today is ${wd} ${k}${pl}. Urgent means due within ${settings.value.urgencyDays} days.`;
+  return `Today is ${wd} ${k}${pl}. Urgent is what the person ticked, not read from dates.`;
 }
 
 /**

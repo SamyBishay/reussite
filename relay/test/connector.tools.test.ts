@@ -97,6 +97,8 @@ describe('reading', () => {
     const q1 = await tool(access, 'query_tasks', { quadrant: 1 });
     expect(q1.text).toContain('t2 | Call the dentist | Q1');
     expect(q1.text).not.toContain('t4');
+    expect(q1.text).not.toContain('t3 |'); // due tomorrow, but not ticked urgent: the ticks decide the box, not the date
+    expect((await tool(access, 'query_tasks', { quadrant: 2 })).text).toContain('t3 | Pay the rent | Q2');
     const proj = await tool(access, 'query_tasks', { project: 'choir' });
     expect(proj.text).toContain('t3 | Pay the rent');
     expect(proj.text).not.toContain('t1 |');

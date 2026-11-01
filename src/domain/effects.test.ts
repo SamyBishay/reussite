@@ -71,7 +71,12 @@ describe('read rules on plain data', () => {
     expect(isOpen(tasks.get('t2'))).toBe(false);
   });
   it('writes a compact line', () => {
-    expect(stepLine({ ...tasks.get('t1')!, title: 'Call | the agency', est: 10, due: '2026-10-20' }, { today: '2026-10-19', urgencyDays: 21, projects: new Map([['p1', { name: 'Move' }]]) as never })).toBe('t1 | Call / the agency | Q1 | 2026-10-20 | 10m | Move');
+    expect(stepLine({ ...tasks.get('t1')!, title: 'Call | the agency', est: 10, due: '2026-10-20', urgent: true }, { projects: new Map([['p1', { name: 'Move' }]]) as never })).toBe('t1 | Call / the agency | Q1 | 2026-10-20 | 10m | Move');
+  });
+  it('a due date does not move the quadrant, only the ticks do', () => {
+    const d = { projects: new Map([['p1', { name: 'Move' }]]) as never };
+    expect(stepLine({ ...tasks.get('t1')!, urgent: false, important: true, due: '2026-10-20' }, d)).toContain(' | Q2 | 2026-10-20 | ');
+    expect(stepLine({ ...tasks.get('t1')!, urgent: true, important: true, due: '2027-06-01' }, d)).toContain(' | Q1 | 2027-06-01 | ');
   });
   it('learns from done steps with time', () => {
     const pts = estPointsOf([base('t2', { status: 'done', est0: 10, doneDay: '2026-10-10' })], [{ taskId: 't2', m: 20, source: 'timer' }, { taskId: 't2', m: 10, source: 'typed' }]);

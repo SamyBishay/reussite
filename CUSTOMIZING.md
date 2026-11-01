@@ -1,6 +1,6 @@
 # Customizing Réussite
 
-**Most things need no code.** Everything in Settings (urgency window, day start, places, notifications, AI, memory, calendar feed, theme, language) is yours to change in the app. Start there. This file is for changing the code, or running your own server.
+**Most things need no code.** Everything in Settings (due-date highlight, day start, places, notifications, AI, memory, calendar feed, theme, language) is yours to change in the app. Start there. This file is for changing the code, or running your own server.
 
 It is written so that a coding agent can follow it step by step. Give it this file and say which part you want.
 

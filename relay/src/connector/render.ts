@@ -66,7 +66,7 @@ const weekday = (k: string) => new Date(k + 'T12:00:00Z').toLocaleDateString('en
 export function header(v: View): string {
   const { today, here } = v.where;
   const where = here === 'any' ? '' : `, in ${v.places.get(here)?.name ?? here}`;
-  return `Today is ${weekday(today)} ${today}${where}. Urgent means due within ${v.settings.urgencyDays} days.`;
+  return `Today is ${weekday(today)} ${today}${where}. Urgent is what the person ticked, not read from dates.`;
 }
 
 /** A step's title in a "waiting on" list: something the person waits for (an event) is named as such. */
@@ -174,7 +174,7 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
     // A step that waits is under its head ("+n after"); naming words finds it anyway. A thing waited for is always listed when asked for.
     if (!words.length && !q.waitingFor && isWaiting(ix, t.id)) { if (status === 'open' || status === 'all') hidden++; return false; }
     if (status !== 'all' && t.status !== status) return false;
-    if (q.quadrant && (isEvent(t) || quadOf(effective(t, ix), d.today, d.urgencyDays) !== q.quadrant)) return false; // a thing waited for has no quadrant
+    if (q.quadrant && (isEvent(t) || quadOf(t) !== q.quadrant)) return false; // a thing waited for has no quadrant
     if (ids.project && t.project !== ids.project) return false;
     if (ids.place) { const w = t.where || v.projects.get(t.project)?.where || 'any'; if (!onPage(v.places, w, ids.place)) return false; }
     if (q.dueFrom && !(t.due && t.due >= q.dueFrom)) return false;
@@ -217,7 +217,7 @@ export function taskText(v: View, t: TaskW): string {
   const L = [
     line(v, t),
     f('status', (event && t.status === 'done' ? 'happened' : t.status) + (t.doneDay ? ' on ' + t.doneDay : '')),
-    event ? f('waiting for', `something outside the person's hands, not a step to do or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t, d.today, d.urgencyDays)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
+    event ? f('waiting for', `something outside the person's hands, not a step to do or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
     f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}` : null),
     f('standing', t.template ? `${standingText(t)}${t.lead != null ? `, leave ${mins(t.lead)} before` : ''}; drop it to end the series` : null),

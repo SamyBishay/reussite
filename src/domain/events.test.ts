@@ -168,7 +168,7 @@ describe('events and the counts', () => {
 });
 
 describe('an event as a line for an AI', () => {
-  const d = { today: TODAY, urgencyDays: 21, projects: new Map([['p1', { name: 'Wedding' }]]) as never };
+  const d = { projects: new Map([['p1', { name: 'Wedding' }]]) as never };
   it('says it is waited for, with its check day, and has no quadrant, due date or estimate', () => {
     expect(stepLine(ev('e', { title: 'The bellman calls back', nudge: '2026-11-05' })[1], d)).toBe('e | The bellman calls back [waiting for, check 2026-11-05] | - | - | - | Wedding');
     expect(stepLine(ev('e', { title: 'A reply' })[1], d, { after: 2, due: '2026-11-02' })).toBe('e | A reply [waiting for] (+2 after, chain due 2026-11-02) | - | - | - | Wedding');

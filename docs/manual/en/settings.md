@@ -24,7 +24,7 @@ English or Français. It changes at once.
 
 The numbers the method runs on, with sensible defaults:
 
-- **Urgency window (days).** Three weeks by default. A due date inside it makes a step urgent.
+- **Highlight due dates within (days).** Three weeks by default. A due date inside it shows in red. It doesn't make a step urgent: you tick that.
 - **Day starts at.** 05:00 by default. A late night still counts as the same day until then.
 - **Most work steps per day.** Three by default.
 - **Planning time (min).** 15 by default.

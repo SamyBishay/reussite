@@ -25,7 +25,7 @@ Show one compact table per option, with its score.
 The highest score wins. Then test it: what would have to be true for this choice to be right, and what would show it is wrong (the falsifier, with a date to check it). If the top scores are within about 10% of each other, say it's a coin-flip on the numbers and ask one question: which of the top two would I regret less? Then decide. Don't reopen the list.
 
 ## 5. Turn the choice into steps
-Break it into steps and sub-steps. Title each with the concrete first action: the app or place, then what to do there ("Open Mail and email…"), with a `starter`, an estimate, and `after` for the order. Judge urgency and importance separately: urgent means a deadline within three weeks, so put real dates in `due` and mark `urgent` by hand only for blockers. If the decision fixes a date that other steps depend on, give those steps a `due`. Give the outcome a SMART goal on its project. Put the first step on today's list, and end the reply with that step alone and its estimate.
+Break it into steps and sub-steps. Title each with the concrete first action: the app or place, then what to do there ("Open Mail and email…"), with a `starter`, an estimate, and `after` for the order. Judge urgency and importance separately: urgent means a deadline within about three weeks, or blocking one: put real dates in `due` and set `urgent` yourself, since the app does not infer it from dates. If the decision fixes a date that other steps depend on, give those steps a `due`. Give the outcome a SMART goal on its project. Put the first step on today's list, and end the reply with that step alone and its estimate.
 
 ## 6. Review
 On the check date: did the falsifier happen? If so, run this again from step 1 with the new fact.

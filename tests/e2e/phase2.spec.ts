@@ -98,8 +98,10 @@ test('command box: what is sent is shown first, then only ticked changes are app
   await page.getByTestId('apply-changes').click();
   await expect(sheet(page)).toBeHidden();
   await page.getByTestId('tab-matrix').click();
-  await expect(page.locator('.matrix')).toContainText('thank the agency');
-  await expect(page.locator('.matrix')).toContainText('scanned receipts');
+  // Each box shows its first two cards; the whole list is folded under the grid.
+  await page.getByTestId('all-cards').locator('summary').click();
+  await expect(page.getByTestId('all-cards-list')).toContainText('thank the agency');
+  await expect(page.getByTestId('all-cards-list')).toContainText('scanned receipts');
   // The second call of the same kind goes straight out.
   await page.getByTestId('cmd-text').fill('again');
   await page.getByTestId('cmd-go').click();

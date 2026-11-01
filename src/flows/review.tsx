@@ -12,11 +12,10 @@ import { outcomeOf, startOf } from '../domain/goal';
 import { reviewDecision } from './decision';
 import { t, fmtDate, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
-import { moveTo, firstCalmDay } from '../domain/moves';
+import { moveTo } from '../domain/moves';
 import { medianRatio } from '../domain/estimates';
 import { settings } from '../app/store';
 import type { Quadrant } from '../domain/tasks';
-import type { Task } from '../data/schema';
 import { ask } from '../ai/ask';
 import { ReviewReply, reviewChangeSet } from '../ai/features';
 import { reviewPrompt } from '../ai/prompts';
@@ -61,28 +60,14 @@ function DaySelect({ value, onPick, label }: { value: string; onPick: (k: string
 /** The first day this week a step is planned on, if any. */
 const plannedDay = (id: string) => week().find(k => rawPlan(k).includes(id)) ?? '';
 
-/** Move between quadrants inline: a date, or "it blocks", only when the move needs one. */
+/** Move between quadrants inline: sets the two ticks. */
 function Resort({ tk }: { tk: Tk }) {
-  const [ask, setAsk] = useState<{ q: Quadrant; kind: 'dueOrBlocker' | 'newDue'; patch: Partial<Task> } | null>(null);
-  const k = today.value, w = settings.value.urgencyDays;
-  const go = (q: Quadrant) => {
-    const m = moveTo(tk, q, k, w);
-    if (m.ask) setAsk({ q, kind: m.ask, patch: m.patch });
-    else void patchTask(tk.id, m.patch);
-  };
   return (
     <li>
       <div><p><Title s={tk.title} /></p>
         <div class="seg small" role="group" aria-label={t('moveTo')}>
-          {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" aria-pressed={quad(tk) === q} onClick={() => go(q)}>{quadName(q)}</button>)}
+          {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" aria-pressed={quad(tk) === q} onClick={() => void patchTask(tk.id, moveTo(q).patch)}>{quadName(q)}</button>)}
         </div>
-        {ask && (
-          <div class="row-inline" style="margin-top:var(--s2)">
-            <input type="date" aria-label={t('dueField')} defaultValue={ask.kind === 'newDue' ? firstCalmDay(k, w) : addDays(k, 7)} onChange={e => { const v = (e.target as HTMLInputElement).value; void patchTask(tk.id, { ...ask.patch, due: v || null, dueRule: null }); setAsk(null); }} />
-            {ask.kind === 'dueOrBlocker' ? <button class="btn small" type="button" onClick={() => { void patchTask(tk.id, { ...ask.patch, urgent: true }); setAsk(null); }}>{t('itBlocks')}</button>
-              : <button class="btn small" type="button" onClick={() => { void patchTask(tk.id, { ...ask.patch, due: null }); setAsk(null); }}>{t('pickClear')}</button>}
-          </div>
-        )}
       </div>
     </li>
   );

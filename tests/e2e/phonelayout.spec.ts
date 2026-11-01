@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test';
 import { importSample } from './helpers';
 
-for (const [width, height] of [[390, 844], [320, 640]]) {
+for (const [width, height] of [[390, 844], [320, 640]] as [number, number][]) {
   test(`on a phone ${width} wide the Day and 3-day grids fit above the tab bar with no piles over them`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await importSample(page);

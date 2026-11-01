@@ -2,7 +2,7 @@
 
 L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Semaine** (ou **3 jours** sur un téléphone), **Mois**, **Agenda** et **Journal**. Celle que vous choisissez est mémorisée.
 
-Sur un téléphone, l’onglet reste compact : les vues sur une ligne, les dates (‹ le jour ›, et **Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Elle défile à l’intérieur, donc la page elle-même ne bouge pas. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
+Sur un téléphone, l’onglet reste compact : les vues sur une ligne, les dates (‹ le jour ›, et **Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Elle défile à l’intérieur, donc la page elle-même ne bouge pas. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
 
 ![La semaine](shot:calendar)
 
@@ -30,7 +30,7 @@ Si vous regardez l’une des zones de votre lieu (la pastille du lieu), le calen
 
 Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos éléments à heure fixe y restent à jour, d’une semaine en arrière à six semaines devant.
 
-Tant que le flux est éteint sur cet appareil, une petite ligne sous la grille, **Les voir dans votre appli de calendrier : Réglages → Calendrier**, vous mène là où l’allumer. Une fois allumé, la ligne disparaît.
+Tant que le flux est éteint sur cet appareil, une petite ligne sous la grille, **Les voir dans votre appli de calendrier : Réglages → Calendrier**, vous mène là où l’allumer. Une fois allumé, la ligne disparaît.
 
 Votre liste a un seul flux, partagé par tous vos appareils : activez-le, désactivez-le ou créez une nouvelle adresse sur l’un, et les autres suivent. Il est mis à jour dès qu’un de vos appareils ouvre Réussite ou change quelque chose, et juste après un changement fait par le connecteur. Un appareil qui ne s’est pas synchronisé ne touche pas au flux : il ne montre jamais une ancienne copie de votre liste. Un flux que rien n’a mis à jour depuis dix jours montre un évènement aujourd’hui, « Réussite : this calendar is out of date », qui dit quoi faire.
 
@@ -46,7 +46,7 @@ Votre liste a un seul flux, partagé par tous vos appareils : activez-le, dés
 
 ## Un fichier ponctuel
 
-Si vous voulez une copie plutôt qu’un flux, **Réglages → Calendrier → Fichier ponctuel** propose **Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier**. Ils produisent un fichier de vos éléments à heure fixe, chacun avec un rappel à son début, avec les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
+Si vous voulez une copie plutôt qu’un flux, **Réglages → Calendrier → Fichier ponctuel** propose **Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier**. Ils produisent un fichier de vos éléments à heure fixe, chacun avec un rappel à son début, avec les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
 
 ## Le Journal
 

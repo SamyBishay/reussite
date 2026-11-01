@@ -15,16 +15,16 @@ p{margin:0}
    fixed at the bottom of a screen, like Home's input, sits at calc(var(--dock) + var(--kb)). */
 :root{--tabbar-h:calc(57px + env(safe-area-inset-bottom,0px));--dock:var(--tabbar-h);--kb:0px;--fabr:max(16px,env(safe-area-inset-right,0px))}
 body.kb{--dock:0px}
-.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
+.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:calc(var(--sat) + 12px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
 @media (min-width:920px){
-  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:calc(env(safe-area-inset-top,0px) + 28px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
+  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:calc(var(--sat) + 28px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
   .app.bare,.app.noside{grid-template-columns:minmax(0,1fr)}
   .mast{grid-column:1;grid-row:1}
   #runbar{grid-column:1;grid-row:2}
   main{grid-column:1;grid-row:3}
   .app.bare #runbar{grid-row:1}
   .app.bare main{grid-row:2}
-  .side{grid-column:2;grid-row:1 / span 3;position:sticky;top:calc(env(safe-area-inset-top,0px) + 28px);align-self:start}
+  .side{grid-column:2;grid-row:1 / span 3;position:sticky;top:calc(var(--sat) + 28px);align-self:start}
 }
 main{min-width:0}
 
@@ -81,19 +81,33 @@ body.kb .tabbar{display:none}
 /* A chat app's empty state: a slim bar (the date, the bell and the menu), then the mark and the greeting side by side, centred in the room
    between the bar and the fixed input. The page is at least one screen tall (the top padding, the tab bar, the input and the receipt taken off), so
    a Home with nothing else on it centres the pair; with a card under it the pair stays on top and the page flows. */
-.home{display:flex;flex-direction:column;gap:var(--s4);min-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}
-@media (min-width:920px){.home{min-height:calc(100dvh - env(safe-area-inset-top,0px) - 28px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
-@media (min-width:1024px){.home{min-height:calc(100dvh - env(safe-area-inset-top,0px) - var(--s7) - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
+.home{display:flex;flex-direction:column;gap:var(--s4);min-height:calc(100dvh - var(--sat) - 12px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}
+@media (min-width:920px){.home{min-height:calc(100dvh - var(--sat) - 28px - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
+@media (min-width:1024px){.home{min-height:calc(100dvh - var(--sat) - var(--s7) - var(--tabbar-h) - var(--inputh,0px) - var(--rcpt,0px) - 24px)}}
 body.kb .home{min-height:0}
-.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
-.homebar .dateline{margin:0;min-width:0;color:var(--ink-3);font-size:13.5px}
+.homehead{min-width:0}
+.homebar .word{font-size:clamp(24px,6.5vw,30px)}
+.homebar .dateline{margin:2px 0 0;min-width:0;font-size:13.5px}
 .homestage{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:var(--s4);min-width:0}
 .greeting{display:grid;gap:var(--s4);min-width:0}
-.hello{display:flex;align-items:flex-start;justify-content:center;gap:var(--s3);width:fit-content;max-width:100%;margin-inline:auto}
-.hello .mark{display:block;flex:none;margin-top:-4px}
+.hello{display:flex;flex-direction:column;align-items:center;gap:var(--s4);width:100%;margin-inline:auto;text-align:center}
+.hello .mark{display:block;flex:none}
+.homeclock{display:flex;justify-content:center;margin-top:var(--s2)}
+.dclock{display:block;flex:none;max-width:100%;height:auto}
+.dclock .clk-l{fill:var(--clk-l)}.dclock .clk-r{fill:var(--clk-r)}
+.dclock .clk-edge{fill:none;stroke:var(--clk-edge);stroke-width:.9}
+.dclock .clk-pale{fill:var(--clk-pale)}.dclock .clk-1{fill:var(--clk-1)}.dclock .clk-2{fill:var(--clk-2)}.dclock .clk-3{fill:var(--clk-3)}
+.dclock .clk-gold{fill:var(--clk-gold)}.dclock .clk-4{fill:var(--clk-4,var(--clk-core))}.dclock .clk-core{fill:var(--clk-core)}
+.dclock .clk-dot{fill:var(--clk-dot)}
+.dclock .clk-hand{stroke:var(--clk-halo);stroke-width:1.7;stroke-linejoin:round;paint-order:stroke}
+.dclock .clk-hour{fill:var(--clk-hour)}.dclock .clk-min{fill:var(--clk-min)}
+.dclock .clk-cap{fill:var(--clk-cap);stroke:var(--clk-halo);stroke-width:1.4}
 .greetline{margin:0;min-width:0;color:var(--ink);font:600 clamp(26px,7.4vw,32px)/1.2 var(--serif);letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
-@media (min-width:720px){.hello{gap:var(--s4)}.hello .mark{margin-top:-2px}.greetline{font-size:34px}}
+@media (min-width:720px){.greetline{font-size:34px}}
+.greetline.long{font-size:clamp(22px,6vw,28px)}
+.greetline.xlong{font-size:clamp(18px,5vw,22px);line-height:1.3;font-weight:600}
+@media (min-width:720px){.greetline.long{font-size:30px}.greetline.xlong{font-size:24px}}
 .homebtns{flex:none}
 .homebtns{display:flex;gap:var(--s2)}
 .icon-btn.bell{position:relative}
@@ -323,7 +337,7 @@ table.sess{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
 /* ---------- cascade ---------- */
 .cascade{position:fixed;inset:0;z-index:30;background:var(--accent-deep)}
 .cascade canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.skip{position:absolute;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:2}
+.skip{position:absolute;right:14px;top:calc(var(--sat) + 12px);z-index:2}
 .summary{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 32px));max-height:calc(100% - 40px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:18px;padding:22px 18px;box-shadow:0 24px 60px rgba(0,0,0,.45);z-index:3}
 .summary .big{font:700 clamp(56px,16vw,80px)/.95 var(--serif);margin-top:var(--s2)}
 .summary .bigsub{font:600 18px/1.3 var(--sans);color:var(--ink-2)}
@@ -569,11 +583,11 @@ main>.banner{margin-top:var(--s3)}
 @keyframes momentIn{0%{opacity:0;transform:translate(-50%,-40%) scale(.9)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}20%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0}}
 
 /* close-of-day show */
-.show{position:fixed;inset:0;z-index:30;background:var(--accent-deep);color:#F4F0F8;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.show{position:fixed;inset:0;z-index:30;background:var(--accent-deep);color:#F4F0F8;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:calc(var(--sat) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
 .show canvas{position:fixed;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 .show-top{position:relative;z-index:1;display:grid;justify-items:center;gap:var(--s1);text-align:center}
 .show-top .eyebrow{color:#C6B3F0}
-.show-top .skip{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:3}
+.show-top .skip{position:fixed;right:14px;top:calc(var(--sat) + 12px);z-index:3}
 .show-count{font:700 48px/1 var(--sans);font-variant-numeric:tabular-nums;display:grid;justify-items:center;transition:transform .4s}
 .show-count small{font:600 15px var(--sans);color:#C6B3F0}
 .show-count.open{transform:scale(1.25)}
@@ -636,7 +650,7 @@ textarea.mono{letter-spacing:.04em}
 .urlbox{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--ground);font-size:14px;overflow-wrap:anywhere;word-break:break-all;user-select:all}
 .steps-list{margin:var(--s3) 0 0;padding-left:22px;display:grid;gap:var(--s1)}
 .privacy-h{margin:var(--s4) 0 var(--s1);font:700 16px/1.3 var(--sans)}
-.drop{position:fixed;inset:0;z-index:50;background:var(--ground);overflow-y:auto;overflow-x:hidden;display:grid;align-content:center;justify-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.drop{position:fixed;inset:0;z-index:50;background:var(--ground);overflow-y:auto;overflow-x:hidden;display:grid;align-content:center;justify-items:center;padding:calc(var(--sat) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
 .drop>div{width:min(460px,100%);display:grid;gap:var(--s3)}
 .drop h1{margin:0;font:700 24px/1.25 var(--serif)}
 
@@ -657,7 +671,7 @@ textarea.mono{letter-spacing:.04em}
 .feeds{color:var(--ink-3)}
 
 /* ---------- first-run onboarding ---------- */
-.app.onboard{max-width:560px;padding-block:calc(env(safe-area-inset-top,0px) + 24px) 40px;min-height:100dvh;align-content:start}
+.app.onboard{max-width:560px;padding-block:calc(var(--sat) + 24px) 40px;min-height:100dvh;align-content:start}
 .ob .bigchoices .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .ob-actions .btn{flex:1 1 auto;justify-content:center}
 .ob-skip{display:block;margin:var(--s4) 0 0;min-height:44px;padding:8px 0;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-align:left}
@@ -759,7 +773,7 @@ body > .row,body > li{list-style:none}
    around them; the Matrix and the Calendar get a wider column; body text is one size up. */
 @media (min-width:1024px){
   body{font-size:calc(var(--base-size,16px) + 2px)}
-  .app,.app.bare,.app.noside{max-width:none;padding-inline:var(--s7);padding-top:calc(env(safe-area-inset-top,0px) + var(--s7));grid-template-columns:minmax(0,1fr) minmax(0,720px) minmax(0,1fr);column-gap:var(--s7);row-gap:var(--s5)}
+  .app,.app.bare,.app.noside{max-width:none;padding-inline:var(--s7);padding-top:calc(var(--sat) + var(--s7));grid-template-columns:minmax(0,1fr) minmax(0,720px) minmax(0,1fr);column-gap:var(--s7);row-gap:var(--s5)}
   .mast,#runbar,main{grid-column:2}
   .side{grid-column:3;grid-row:1 / span 3;justify-self:start;width:min(100%,232px);top:var(--s7);container-type:inline-size}
   .app.wide{max-width:1360px;grid-template-columns:minmax(0,1fr) 200px}

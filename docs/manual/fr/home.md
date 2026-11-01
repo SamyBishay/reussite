@@ -1,12 +1,12 @@
 # L’accueil et sa boîte unique
 
-L’accueil, c’est là où vous commencez. La marque de Réussite et une salutation sont au milieu de l’écran, et en bas il y a une boîte unique. L’étape à commencer est sur [Aujourd’hui](daily-loop.md), et seulement là.
+L’accueil, c’est là où vous commencez. La marque de Réussite, une salutation et une horloge sont au milieu de l’écran, et en bas il y a une boîte unique. L’étape à commencer est sur [Aujourd’hui](daily-loop.md), et seulement là.
 
 ![L’accueil : l’étape suivante, et une ligne qui vient d’être écrite](shot:home)
 
 ## Ce que dit l’accueil
 
-En haut, il n’y a que la date, en petit, avec la **cloche** et le **menu** à côté. Au milieu de l’écran, le cœur de la marque de Réussite se tient à côté d’une ligne qui vous accueille, en grands caractères. La marque suit le thème clair ou sombre. La ligne est une phrase courte et chaleureuse, choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« “Dentiste” à 14:00 est au programme du jour. »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne vous demande rien, ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient.
+En haut, il y a le nom, Réussite, avec la date dessous, et la **cloche** et le **menu** à droite, comme sur les autres onglets. Au milieu de l’écran, le cœur de la marque de Réussite se tient au-dessus d’une ligne qui vous accueille, en grands caractères, centrée. La marque suit le thème clair ou sombre. Sous la ligne, une petite horloge donne l’heure là où vous êtes : son cadran est fait de quelques anneaux aux couleurs du tableau de Hilma af Klint, *La Colombe*, moitié clair et moitié sombre, avec un point par heure, une aiguille rose courte pour les heures et une longue pour les minutes. Elle suit le thème clair ou sombre, avance une fois par minute, et un lecteur d’écran dit l’heure en toutes lettres. La ligne est une phrase courte et chaleureuse, choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« “Dentiste” à 14:00 est au programme du jour. »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne vous demande rien, ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient.
 
 Sous la ligne, il n’y a une carte que dans deux cas :
 

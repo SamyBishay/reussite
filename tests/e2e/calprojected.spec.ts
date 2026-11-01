@@ -1,3 +1,4 @@
+// SHELVED (DECISIONS.md, 2026-11-01): the Calendar no longer draws projected steps; every test here is skipped. The domain function and its unit tests stay.
 // Projected steps in the Calendar (plan 2 Nov, S5): today's planned steps sit on the hour grid as faded blocks between the fixed
 // items, follow the clock, are not dragged and open the step on a tap. The clock is fixed to a Monday so the hour does not matter.
 // The fixed clock is a stub of Date and not `page.clock`: the Calendar's library loads the Temporal polyfill, which wraps
@@ -29,7 +30,7 @@ async function openDay(page: Page) {
   await expect(proj(page).first()).toBeVisible();
 }
 
-test('after planning, the steps sit between the fixed items on today’s grid, faded and not draggable', async ({ page }) => {
+test.skip('after planning, the steps sit between the fixed items on today’s grid, faded and not draggable', async ({ page }) => {
   await aDay(page);
   await openDay(page);
   await expect(proj(page)).toHaveCount(3);
@@ -54,7 +55,7 @@ test('after planning, the steps sit between the fixed items on today’s grid, f
   await expect(page.getByTestId('sheet')).toBeVisible();
 });
 
-test('a step run past its estimate pushes the later blocks on', async ({ page }) => {
+test.skip('a step run past its estimate pushes the later blocks on', async ({ page }) => {
   await aDay(page);
   await goTab(page, 'today');
   await page.getByTestId('first').getByRole('button', { name: /start the timer/i }).click(); // the first step, at 11:00

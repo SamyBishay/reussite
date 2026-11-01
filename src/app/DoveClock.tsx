@@ -1,11 +1,11 @@
-// Home's clock, after Hilma af Klint's The Dove (1915): a face of concentric rings in the painting's colours (the light painting's teals and gold in the
-// light theme, the dark one's blues in the dark), its rim in two halves, one light and one dark, twelve dots for the hours and two tapered hands, the
-// hour hand short and rose, the minute hand long. Drawn in SVG, no picture. The colours are `--clk-*` (src/styles/tokens.css, both themes); nothing moves
-// but the hands, once a minute, when `clockNow` ticks (every 30 s), so there is no animation to hold back. It reads the time where the person is.
+// Home's clock, drawn like the timer (src/app/Rings.tsx): no hands, no dots. Two concentric rings on a faint track, in the painting's colours (The Dove,
+// Hilma af Klint, 1915): the outer fills clockwise from twelve with the hour on a 12-hour dial, the inner with the minutes. The colours are `--clk-*`
+// (src/styles/tokens.css, both themes). Nothing is animated: the rings move once a minute, when `clockNow` ticks (every 30 s), so there is nothing to hold back.
+// It reads the time where the person is.
 import { clockNow, hereZone } from './store';
 import { partsIn } from '../domain/dates';
 import { validZone } from '../domain/zone';
-import { handAngles, phraseOf } from '../domain/clockFace';
+import { ringFractions, phraseOf } from '../domain/clockFace';
 import { t, type Key } from '../i18n';
 
 /** The time in words, in the language of the app ("ten past three", "trois heures et quart"). */
@@ -23,32 +23,23 @@ export function clockWords(hh: number, mm: number): string {
   }
 }
 
-const DOTS = Array.from({ length: 12 }, (_, i) => i);
-const polar = (deg: number, r: number) => {
-  const a = (deg * Math.PI) / 180;
-  return { x: +(50 + r * Math.sin(a)).toFixed(2), y: +(50 - r * Math.cos(a)).toFixed(2) };
+const R_HOUR = 43, R_MIN = 26;
+const ring = (r: number, f: number, cls: string) => {
+  const len = 2 * Math.PI * r;
+  // Nothing at zero: a round cap on an empty dash would still leave a dot.
+  return f > 0 && <circle class={'clk-fill ' + cls} cx="50" cy="50" r={r} stroke-dasharray={`${(len * f).toFixed(2)} ${len.toFixed(2)}`} transform="rotate(-90 50 50)" />;
 };
 
-export function DoveClock({ size = 96, at }: { size?: number; at?: { hh: number; mm: number } }) {
+export function DoveClock({ size = 32, at }: { size?: number; at?: { hh: number; mm: number } }) {
   const now = at ?? partsIn(new Date(clockNow.value), validZone(hereZone.value));
-  const { hour, minute } = handAngles(now.hh, now.mm);
+  const { hour, minute } = ringFractions(now.hh, now.mm);
   return (
     <svg class="dclock" viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={t('clockLabel', { time: clockWords(now.hh, now.mm) })}
-      data-testid="home-clock" data-time={String(now.hh).padStart(2, '0') + ':' + String(now.mm).padStart(2, '0')}>
-      <path class="clk-l" d="M50 2A48 48 0 0 0 50 98Z" />
-      <path class="clk-r" d="M50 2A48 48 0 0 1 50 98Z" />
-      <circle class="clk-edge" cx="50" cy="50" r="47.6" />
-      <circle class="clk-pale" cx="50" cy="50" r="36.5" />
-      <circle class="clk-1" cx="50" cy="50" r="34" />
-      <circle class="clk-2" cx="50" cy="50" r="28" />
-      <circle class="clk-3" cx="50" cy="50" r="22" />
-      <circle class="clk-gold" cx="50" cy="50" r="16.5" />
-      <circle class="clk-4" cx="50" cy="50" r="14.5" />
-      <circle class="clk-core" cx="50" cy="50" r="8" />
-      {DOTS.map(i => { const p = polar(i * 30, 42.4); return <circle class="clk-dot" cx={p.x} cy={p.y} r={i % 3 === 0 ? 2.5 : 1.5} />; })}
-      <path class="clk-hand clk-hour" transform={`rotate(${hour} 50 50)`} d="M50 27 L53 44 L50 54.5 L47 44Z" />
-      <path class="clk-hand clk-min" transform={`rotate(${minute} 50 50)`} d="M50 7 L51.7 43 L50 58 L48.3 43Z" />
-      <circle class="clk-cap" cx="50" cy="50" r="3.3" />
+      data-testid="home-clock" data-time={String(now.hh).padStart(2, '0') + ':' + String(now.mm).padStart(2, '0')} data-hour={hour.toFixed(4)} data-minute={minute.toFixed(4)}>
+      <circle class="clk-track" cx="50" cy="50" r={R_HOUR} />
+      <circle class="clk-track" cx="50" cy="50" r={R_MIN} />
+      {ring(R_HOUR, hour, 'clk-hour')}
+      {ring(R_MIN, minute, 'clk-min')}
     </svg>
   );
 }

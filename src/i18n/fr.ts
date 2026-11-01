@@ -31,7 +31,6 @@ export const fr: Partial<Strings> = {
   todaysCards: 'Les cartes du jour',
   cardsToday: { one: '{n} carte aujourd’hui', other: '{n} cartes aujourd’hui' },
   timed: '{t} chronométrées',
-  allTime: '{n} en tout',
   pileLabel: '{suit} : {n} faites aujourd’hui. Les afficher.',
   cardsPlayedToday: { one: '{n} carte jouée aujourd’hui.', other: '{n} cartes jouées aujourd’hui.' },
   noCardsSuit: 'Pas encore de carte de cette couleur aujourd’hui.',

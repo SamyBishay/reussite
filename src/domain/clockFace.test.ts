@@ -1,17 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { handAngles, phraseOf } from './clockFace';
+import { ringFractions, phraseOf } from './clockFace';
 
-describe('the hands', () => {
-  it('point where a clock puts them', () => {
-    expect(handAngles(3, 0)).toEqual({ hour: 90, minute: 0 });
-    expect(handAngles(12, 0)).toEqual({ hour: 0, minute: 0 });
-    expect(handAngles(0, 0)).toEqual({ hour: 0, minute: 0 });
-    expect(handAngles(6, 30)).toEqual({ hour: 195, minute: 180 });
-    expect(handAngles(15, 45)).toEqual({ hour: 112.5 + 0, minute: 270 });
-    expect(handAngles(23, 59).minute).toBe(354);
+describe('the rings', () => {
+  it('fill with the hour on a 12-hour dial and the minutes round the hour', () => {
+    expect(ringFractions(3, 0)).toEqual({ hour: 0.25, minute: 0 });
+    expect(ringFractions(12, 0)).toEqual({ hour: 0, minute: 0 });
+    expect(ringFractions(0, 0)).toEqual({ hour: 0, minute: 0 });
+    expect(ringFractions(6, 30)).toEqual({ hour: 6.5 / 12, minute: 0.5 });
+    expect(ringFractions(15, 45)).toEqual({ hour: 3.75 / 12, minute: 0.75 });
+    expect(ringFractions(23, 59).minute).toBeCloseTo(59 / 60, 10);
+    expect(ringFractions(23, 59).hour).toBeLessThan(1);
   });
-  it('keep the hour hand on the 12-hour dial', () => {
-    expect(handAngles(13, 0).hour).toBe(handAngles(1, 0).hour);
+  it('keep the hour ring on the 12-hour dial', () => {
+    expect(ringFractions(13, 0).hour).toBe(ringFractions(1, 0).hour);
+    expect(ringFractions(18, 0).hour).toBe(0.5);
   });
 });
 

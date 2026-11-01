@@ -217,7 +217,7 @@ export function Home() {
     <div class="home" data-testid="home">
       <div class="homebar">
         <div class="homehead">
-          <h1 class="word">{t('appName')}</h1>
+          <div class="wordrow"><h1 class="word">{t('appName')}</h1><DoveClock /></div>
           <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
         </div>
         <div class="homebtns">
@@ -232,13 +232,14 @@ export function Home() {
       </div>
       <div class="homestage">
         <section class="greeting" data-testid="greeting">
-          <div class="hello"><Mark size={68} /><GreetingLine /></div>
-          <div class="homeclock"><DoveClock /></div>
+          <div class="hello"><Mark size="var(--markh)" /><GreetingLine /></div>
+        </section>
+        <div class="homecards" data-testid="home-cards">
           <GreetingBody />
           <MissedNow />
-        </section>
-        <Card />
-        <NextStepsCard />
+          <Card />
+          <NextStepsCard />
+        </div>
       </div>
       <Receipt />
       <HomeInput />

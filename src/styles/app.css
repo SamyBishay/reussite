@@ -591,6 +591,19 @@ main>.banner{margin-top:var(--s3)}
 /* calendar */
 .calbar{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center;justify-content:space-between;margin-top:var(--s4)}
 .calnav{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.linkbtn{border:0;background:none;padding:6px 0;font:inherit;font-weight:600;cursor:pointer;text-align:left;white-space:normal}
+.calfeed{margin-top:var(--s2)}
+/* On a phone the bar is two tight rows (the views, then the dates) and the grid takes the rest of the screen (CalendarGrid.tsx sets its height). */
+@media (max-width:767px){
+  .calbar{gap:var(--s2);margin-top:var(--s1)}
+  .calbar .seg{display:flex;width:100%;flex-wrap:nowrap}
+  .calbar .seg button{flex:1 1 auto;min-width:0;padding:6px 4px;min-height:36px;font-size:13.5px}
+  .calnav{flex:1 1 100%;flex-wrap:nowrap;gap:var(--s1)}
+  .calnav b{flex:1 1 auto;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+  .calnav .icon-btn{flex:none;width:40px;height:36px}
+  .calnav .btn.small{flex:none;min-height:36px}
+  .app.noside #runbar:empty{display:none}
+}
 .calib{display:grid;gap:var(--s3)}
 @media (min-width:640px){.calib{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .weekstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1);margin:var(--s3) 0;font-size:12px}

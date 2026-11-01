@@ -78,7 +78,10 @@ test('Add to calendar downloads an .ics with the day’s fixed-time items and no
   await page.goto('/#task/t3'); // on today's list, no due date
   await sheet(page).locator('input[name=at]').fill('11:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
+  // The one-off file lives in Settings → Calendar, folded; the Calendar tab has no such buttons.
   await page.getByTestId('tab-calendar').click();
+  await expect(page.getByTestId('ics-today')).toHaveCount(0);
+  await page.goto('/#settings'); await expandSettings(page);
   const download = page.waitForEvent('download');
   await page.getByTestId('ics-today').click();
   const d = await download;
@@ -93,11 +96,11 @@ test('Add to calendar downloads an .ics with the day’s fixed-time items and no
 });
 
 for (const width of [320, 375, 430]) {
-test(`the Calendar view and Settings do not scroll sideways at ${width}px with Add to calendar`, async ({ page }) => {
+test(`the Calendar view and Settings do not scroll sideways at ${width}px with the feed line and the one-off file`, async ({ page }) => {
   await page.setViewportSize({ width, height: 800 });
   await importSample(page);
   await page.getByTestId('tab-calendar').click();
-  await expect(page.getByTestId('ics-week')).toBeVisible();
+  await expect(page.getByTestId('cal-feed-line')).toBeVisible();
   for (const m of ['day', 'week', 'month', 'agenda']) {
     await page.getByTestId('cal-' + m).click();
     await expect(page.getByTestId('calendar-grid')).toHaveAttribute('data-mode', m);
@@ -105,6 +108,7 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with A
   }
   await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('calendar-settings')).toBeVisible();
+  await expect(page.getByTestId('ics-week')).toBeVisible();
   await noSideways(page, 'settings');
 });
 }
@@ -184,4 +188,24 @@ test('a #task/<id> link, as in a calendar event, opens that step’s sheet and i
   await expect(sheet(page)).toBeVisible();
   await expect(sheet(page).getByTestId('task-actions')).toBeVisible();
   expect(new URL(page.url()).hash).not.toContain('task/');
+});
+
+test('under the Calendar grid a line opens Settings → Calendar while the feed is off, and is gone once it is on', async ({ page }) => {
+  await importSample(page);
+  await page.getByTestId('tab-calendar').click();
+  await expect(page.getByTestId('calendar-grid')).toBeVisible();
+  await page.getByTestId('cal-feed-link').click();
+  await expect(page.getByTestId('settings')).toBeVisible();
+  await expect(page.getByTestId('feed-switch')).toBeVisible();
+  await expect(page.getByTestId('feed-switch')).toBeInViewport();
+});
+
+test('the line under the Calendar grid is gone once this device’s feed is on', async ({ page }) => {
+  await importSample(page);
+  await page.goto('/#settings'); await expandSettings(page);
+  await page.getByTestId('calendar-feed').getByTestId('feed-switch').check();
+  await expect(page.getByTestId('feed-url')).toContainText('/cal/');
+  await page.getByTestId('tab-calendar').click();
+  await expect(page.getByTestId('calendar-grid')).toBeVisible();
+  await expect(page.getByTestId('cal-feed-line')).toHaveCount(0);
 });

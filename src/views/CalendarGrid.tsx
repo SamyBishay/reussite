@@ -147,6 +147,22 @@ export function CalendarGrid({ mode, date }: GridProps) {
     a.sync();
   }, [mode, date]);
 
+  // On a phone the grid fills the screen down to the tab bar and scrolls inside, so the page does not grow; elsewhere the style's height stands.
+  useEffect(() => {
+    const el = host.current;
+    if (!el || !phone) return;
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const room = Math.floor(window.innerHeight - top - (document.querySelector('.tabbar')?.getBoundingClientRect().height ?? 0) - 8);
+      el.style.height = Math.max(260, room) + 'px';
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(document.body);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); el.style.height = ''; };
+  }, [phone, mode]);
+
   return <div ref={host} class="sxhost" data-testid="calendar-grid" data-mode={mode} />;
 }
 

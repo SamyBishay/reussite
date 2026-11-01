@@ -1,12 +1,12 @@
 # Home and its one box
 
-Home is where you start. It greets you in a line, and under it there is one box. The step to start is on [Today](daily-loop.md), and only there.
+Home is where you start. The Réussite mark and a greeting sit in the middle of the screen, and at the bottom there is one box. The step to start is on [Today](daily-loop.md), and only there.
 
 ![Home: a greeting, and a line just typed](shot:home)
 
 ## What Home says
 
-At the top, one line greets you. It is a short, warm sentence picked from a few ready-made ones and filled with what is true today: the next thing at a fixed time ("“Dentist” at 14:00 is on today’s plan."), a project that is nearly there, the time of day, what you have ticked off so far, or what is planned. It asks nothing of you, never counts what you missed or carried over, and is the same with or without an AI. Open Home again and you get another sentence, not the same one twice in a day while another fits.
+At the top there is only the date, small, with the **bell** and the **menu** beside it. In the middle of the screen, the heart of the Réussite mark sits beside one line that greets you, in large type. The mark follows the light or dark theme. The line is a short, warm sentence picked from a few ready-made ones and filled with what is true today: the next thing at a fixed time ("“Dentist” at 14:00 is on today’s plan."), a project that is nearly there, the time of day, what you have ticked off so far, or what is planned. It asks nothing of you, never counts what you missed or carried over, and is the same with or without an AI. Open Home again and you get another sentence, not the same one twice in a day while another fits.
 
 Under the line there is a card in only two cases:
 

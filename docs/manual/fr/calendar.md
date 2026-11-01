@@ -2,17 +2,18 @@
 
 L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Semaine** (ou **3 jours** sur un téléphone), **Mois**, **Agenda** et **Journal**. Celle que vous choisissez est mémorisée.
 
+Sur un téléphone, l’onglet reste compact : les vues sur une ligne, les dates (‹ le jour ›, et **Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Elle défile à l’intérieur, donc la page elle-même ne bouge pas. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
+
 ![La semaine](shot:calendar)
 
 ![Un jour, avec ses heures](shot:calendar-day)
 
 ## Ce que montre un jour
 
-Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) ; les seules étapes d’ici sont celles prévues aujourd’hui, affichées en pâle (plus bas). Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
+Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) . Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine.
 - Les jours passés ne montrent eux aussi que les éléments à heure fixe ; ce qui est fait est barré.
-- **Les étapes prévues aujourd’hui** apparaissent dans les vues Jour et Semaine comme des blocs pâles, hachurés, au bord en pointillés, entre les éléments à heure fixe. Ils sont là où l’ordre du jour dit que chaque étape se fera si vous continuez ainsi : c’est une estimation, pas un rendez-vous. Quand une étape dépasse son estimation, son bloc grandit avec l’horloge et les suivants se décalent. Touchez-en un pour ouvrir l’étape, comme dans Aujourd’hui. On ne peut pas les faire glisser, ils ne concernent qu’aujourd’hui (les autres jours n’ont pas d’horloge à suivre), et ils ne sont ni dans les fichiers ni dans le flux ci-dessous.
 - Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
 - Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu.
 
@@ -25,13 +26,11 @@ Touchez un événement pour ouvrir l’étape. Touchez le numéro d’un jour po
 
 Si vous regardez l’une des zones de votre lieu (la pastille du lieu), le calendrier montre cette zone, plus ce qui s’applique partout.
 
-## Ajouter au calendrier
-
-**Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier** produisent un fichier de vos éléments à heure fixe, chacun avec un rappel à son début. Il contient les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
-
 ## Le flux de calendrier
 
 Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos éléments à heure fixe y restent à jour, d’une semaine en arrière à six semaines devant.
+
+Tant que le flux est éteint sur cet appareil, une petite ligne sous la grille, **Les voir dans votre appli de calendrier : Réglages → Calendrier**, vous mène là où l’allumer. Une fois allumé, la ligne disparaît.
 
 Votre liste a un seul flux, partagé par tous vos appareils : activez-le, désactivez-le ou créez une nouvelle adresse sur l’un, et les autres suivent. Il est mis à jour dès qu’un de vos appareils ouvre Réussite ou change quelque chose, et juste après un changement fait par le connecteur. Un appareil qui ne s’est pas synchronisé ne touche pas au flux : il ne montre jamais une ancienne copie de votre liste. Un flux que rien n’a mis à jour depuis dix jours montre un évènement aujourd’hui, « Réussite : this calendar is out of date », qui dit quoi faire.
 
@@ -44,6 +43,10 @@ Votre liste a un seul flux, partagé par tous vos appareils : activez-le, dés
 - Aux deux derniers niveaux, ce que dit le flux est stocké en clair sur le relais, et celui qui le fait tourner peut le lire. Réussite vous prévient.
 - Toute personne qui a l’adresse peut lire le flux. Gardez-la pour vous. **Créer une nouvelle adresse**, et l’ancienne cesse de marcher, sur tous les appareils.
 - C’est votre appli de calendrier qui décide à quelle fréquence elle se met à jour (Google Agenda peut mettre des heures). Ne comptez pas dessus pour les rappels. Les rappels viennent des notifications. Voir [Les réglages](settings.md).
+
+## Un fichier ponctuel
+
+Si vous voulez une copie plutôt qu’un flux, **Réglages → Calendrier → Fichier ponctuel** propose **Aujourd’hui vers le calendrier** et **Cette semaine vers le calendrier**. Ils produisent un fichier de vos éléments à heure fixe, chacun avec un rappel à son début, avec les noms courts, les lieux et les notes. Ouvrez-le avec Apple Calendrier ou une appli de calendrier de bureau. C’est une copie : les changements ultérieurs dans Réussite ne la suivent pas.
 
 ## Le Journal
 

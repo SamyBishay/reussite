@@ -29,7 +29,7 @@ The numbers the method runs on, with sensible defaults:
 - **Most work steps per day.** Three by default.
 - **Planning time (min).** 15 by default.
 - **Day ends at.** 19:00 by default. The planning ritual counts the room between its start and this time; each morning's "until" replaces it for that day.
-- **Suits:** rename the four kinds of cards and choose their symbols.
+- **Suits:** these are your four pillars, the parts of your days that matter to you. Rename them and choose their symbols.
 - **Places**, their **areas** and **Stays.** See [Places and trips](places-and-trips.md).
 - **Use Addresses & people**, and the **address categories.** See [Addresses and people](addresses-and-people.md).
 - Times for an **obligation**, the **weekly review day and time**, the **morning check-in** and **closing the day**. Notifications use them.

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { openMenu, expandSettings } from '../e2e/helpers';
+import { openMenu, expandSettings, stubNow } from '../e2e/helpers';
 
 // The manual's screenshots (docs/dev/manual.md). One run makes every picture the manual shows, in both languages and both
 // themes, from invented data only: nothing here is read from the real list, and `private/` is never touched. Run with
@@ -57,9 +57,17 @@ function list(lang: Lang): Docs {
     ['t15', task(L('Call with the agency', 'Appel avec l’agence'), { project: 'p1', suit: 'D', due: day(0), at: '11:30', dur: 30, est: 30, order: 15 })],
     ['t16', task(L('Lunch with Noor', 'Déjeuner avec Noor'), { project: 'p2', suit: 'H', due: day(2), at: '12:30', dur: 60, est: 60, order: 16 })],
     ['t11', task(L('Open the buy-a-gift list and pick a gift for Mum', 'Ouvrir la liste de cadeaux et en choisir un pour maman'), { project: 'p2', suit: 'H', where: 'lisbon', est: 20, order: 11, dueRule: { beforeEndOf: 'stay1', daysBefore: 2 } })],
+    // Two steps played today, for the picture of the close of the day: one moves the thesis (2 pages), one is a friend.
+    ['dt0', { ...done(L('Open the thesis draft and write the outline of the method', 'Ouvrir le mémoire et écrire le plan de la méthode'), 'p3', 'S', 20, 22, 0), advances: true, advanceBy: 2 }],
+    ['dt1', done(L('Open Messages and text Noor about lunch', 'Ouvrir Messages et écrire à Noor pour le déjeuner'), 'p2', 'H', 5, 6, 0)],
     ...past.map(([en, fr, p, s, est, real, ago], i) => [`d${i}`, { ...done(L(en, fr), p, s, est, real, ago), ...(MOVES[i] ?? {}) }] as [string, Record<string, unknown>]),
   ];
-  const sessions: [string, Record<string, unknown>][] = past.map(([, , , , , real, ago], i) => [`s${i}`, { taskId: `d${i}`, d: day(-ago), m: real, why: 'done', at: day(-ago) + 'T10:00:00.000Z', source: 'timer' }]);
+  const sessions: [string, Record<string, unknown>][] = [
+    ...past.map(([, , , , , real, ago], i): [string, Record<string, unknown>] => [`s${i}`, { taskId: `d${i}`, d: day(-ago), m: real, why: 'done', at: day(-ago) + 'T10:00:00.000Z', source: 'timer' }]),
+    // The two steps played today.
+    ['st0', { taskId: 'dt0', d: day(0), m: 22, why: 'done', at: day(0) + 'T10:00:00.000Z', source: 'timer' }],
+    ['st1', { taskId: 'dt1', d: day(0), m: 6, why: 'done', at: day(0) + 'T10:30:00.000Z', source: 'timer' }],
+  ];
   const item = (id: string, text: string, w: number) => ({ id, text, w, by: 'me' });
   return {
     meta: [['settings', { language: lang, preset: 'st-george', here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
@@ -155,6 +163,10 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
     test('the app', async ({ page }) => {
       test.setTimeout(120_000);
+      // 13:00 on the app's day whatever hour the pictures are taken: the day's invented fixed times (09:30, 11:30) have passed, so Home offers
+      // to plan the day instead of showing one of them as Start here (it follows the clock).
+      const one = new Date(); if (one.getHours() < 5) one.setDate(one.getDate() - 1); one.setHours(13, 0, 0, 0);
+      await stubNow(page, one);
       await seed(page, list(lang));
 
       // The morning check-in and its plan, then the list it made. The room is counted from the hour the pictures are taken to the end
@@ -253,6 +265,13 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.getByTestId('home-send').click();
       await expect(page.getByTestId('receipt')).toBeVisible();
       await shot(page, 'home');
+
+      // The close of the day (celebrations are off, so it is the summary): the pillars played, the bar that moved, tomorrow's first step.
+      await page.goto('/#today');
+      await page.locator('main').getByRole('button', { name: lang === 'fr' ? 'Clôturer la journée' : 'Close the day' }).click();
+      await expect(page.getByTestId('close-summary')).toBeVisible();
+      await expect(page.getByTestId('close-moved')).toBeVisible();
+      await shot(page, 'close');
     });
   });
 }

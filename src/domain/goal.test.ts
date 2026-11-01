@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMilestone, advancing, amountOf, goalFieldsFor, goalLines, measureOf, measureText, mergeMilestones, offerFor, outcomeOf, progressOf, readMeasure, sameMeasure, startOf, tickMilestone } from './goal';
+import { movedOn, addMilestone, advancing, amountOf, goalFieldsFor, goalLines, measureOf, measureText, mergeMilestones, offerFor, outcomeOf, progressOf, readMeasure, sameMeasure, startOf, tickMilestone } from './goal';
 import type { Measure } from '../data/schema';
 
 const step = (o: Record<string, unknown> = {}) => ({ id: 's', project: 'p', status: 'open', advances: true, ...o }) as never;
@@ -156,5 +156,27 @@ describe('the migration helper', () => {
     expect(goalFieldsFor({ goal: 'Sing', created: '2026-03-04T10:00:00.000Z' })).toEqual({ outcome: 'Sing', measure: { kind: 'none' }, start: '2026-03-04' });
     expect(goalFieldsFor({ goal: '  ' })).toEqual({ outcome: null, measure: { kind: 'none' }, start: null });
     expect(goalFieldsFor({ goal: null, created: 5 })).toEqual({ outcome: null, measure: { kind: 'none' }, start: null });
+  });
+});
+
+describe('the bars that moved on a day', () => {
+  const day = '2026-11-02';
+  const cnt = { id: 'a', name: 'Thesis', order: 2, measure: { kind: 'count', target: 10, unit: 'pages' } };
+  const ms = { id: 'b', name: 'Lease', order: 1, measure: { kind: 'milestones', items: [{ id: 'm1', text: 'Sent', done: day }, { id: 'm2', text: 'Filed', done: '2026-10-30' }, { id: 'm3', text: 'Paid', done: null }] } };
+  it('a count moves by the advancing steps done that day, by their amount', () => {
+    const got = movedOn([cnt], [step({ project: 'a', status: 'done', doneDay: day, advanceBy: 3 }), step({ project: 'a', status: 'done', doneDay: '2026-11-01' }), step({ project: 'a', status: 'done', doneDay: day, advances: false }), step({ project: 'a', status: 'open' })], day);
+    expect(got).toHaveLength(1);
+    expect(got[0]).toMatchObject({ id: 'a', gain: 3 });
+    expect(got[0]!.progress.value).toBe(4);
+  });
+  it('milestones move by the ones ticked that day; the projects come in their order', () => {
+    const got = movedOn([cnt, ms], [step({ project: 'a', status: 'done', doneDay: day })], day);
+    expect(got.map(x => [x.id, x.gain])).toEqual([['b', 1], ['a', 1]]);
+  });
+  it('no bar, nothing done today, open steps or a closed project give nothing', () => {
+    expect(movedOn([{ id: 'n', name: 'N' }], [step({ project: 'n', status: 'done', doneDay: day })], day)).toEqual([]);
+    expect(movedOn([cnt], [step({ project: 'a', status: 'open' })], day)).toEqual([]);
+    expect(movedOn([{ ...cnt, status: 'done' }], [step({ project: 'a', status: 'done', doneDay: day })], day)).toEqual([]);
+    expect(movedOn([ms], [], '2026-11-03')).toEqual([]);
   });
 });

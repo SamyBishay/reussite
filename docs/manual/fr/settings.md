@@ -28,8 +28,8 @@ Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raison
 - **La journée commence à.** 5 h par défaut. Une nuit tardive compte comme le même jour jusque-là.
 - **Étapes de travail par jour, au plus.** Trois par défaut.
 - **Temps de planification (min).** 15 par défaut.
-- **La journée finit à.** 19 h par défaut. Le rituel de planification compte la place entre son début et cette heure ; le « jusqu’à quand » de chaque matin la remplace pour ce jour-là.
-- **Familles :** renommez les quatre sortes de cartes et choisissez leurs symboles.
+- **La journée finit à.** 19 h par défaut. Le rituel de planification compte la place entre son début et cette heure ; le « jusqu’à quand » de chaque matin la remplace pour ce jour-là.
+- **Familles :** ce sont vos quatre piliers, les parts de vos journées qui comptent pour vous. Renommez-les et choisissez leurs symboles.
 - **Lieux**, leurs **zones** et **Séjours.** Voir [Lieux et voyages](places-and-trips.md).
 - **Utiliser Adresses et proches**, et les **catégories d’adresses.** Voir [Adresses et proches](addresses-and-people.md).
 - Les heures d’une **obligation**, le **jour et l’heure de la revue de la semaine**, le **point du matin** et la **clôture de la journée.** Les notifications s’en servent.

@@ -10,6 +10,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 | `npm test` | unit tests (Vitest) |
 | `npm run typecheck` | TypeScript, strict |
 | `npm run e2e` | end-to-end tests, Firefox (the main desktop browser) |
+| `E2E_CLOCK="2026-11-02 13:00" npm run e2e` | the same suite as if it were then (`HH:MM` for today): the tests' Node side reads that moment; specs that must not depend on the hour pin the browser's clock themselves (`tests/e2e/clock.ts`, `morningClock`, `morningDate`) |
 | `npm run e2e:android` | end-to-end tests, Chrome on Android emulation |
 | `npm run e2e:webkit` | end-to-end tests, WebKit and iPhone emulation, in Playwright's container (podman) |
 | `npm run manual:shots` | the manual's screenshots (`public/manual/shots`), not part of `e2e`; see `docs/dev/manual.md` |

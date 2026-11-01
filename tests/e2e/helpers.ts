@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import './clock';
 import { sampleExport } from './fixture';
 
 /**
@@ -10,6 +11,40 @@ export async function morningClock(page: Page) {
   if (x.getHours() < 5) x.setDate(x.getDate() - 1);
   x.setHours(9, 0, 0, 0);
   await page.clock.setFixedTime(x);
+}
+
+/**
+ * The same 09:00 as `morningClock`, as a stub of Date and not `page.clock`, for a spec that opens the Calendar: its library loads the Temporal polyfill,
+ * which wraps `Intl.DateTimeFormat`, and wrapping the fake clock's version of it breaks `formatToParts` (the app's day maths) in the browser.
+ * Kept in localStorage so a reload keeps it; `stubNow` moves it. Call it before the first page load.
+ */
+export async function stubNow(page: Page, when: Date) {
+  await page.addInitScript(() => {
+    const Real = Date, key = 'e2e.now';
+    const now = () => Number(localStorage.getItem(key)) || Real.now();
+    class Fixed extends Real {
+      constructor(...a: unknown[]) { if (a.length) super(...(a as [number])); else super(now()); }
+      static override now() { return now(); }
+    }
+    (globalThis as { Date: unknown }).Date = Fixed;
+  });
+  await page.addInitScript(([k, v]) => { try { localStorage.setItem(k!, v!); } catch { /* none */ } }, ['e2e.now', String(when.getTime())] as const);
+}
+/** With E2E_CLOCK set (see clock.ts) the browser reads the same moment as the tests do; without it, nothing: the real clock. */
+export async function followClock(page: Page) {
+  if (process.env.E2E_CLOCK) await stubNow(page, new Date());
+}
+export async function morningDate(page: Page) {
+  const x = new Date();
+  if (x.getHours() < 5) x.setDate(x.getDate() - 1);
+  x.setHours(9, 0, 0, 0);
+  await stubNow(page, x);
+}
+
+/** The app's day key, `offset` days from today: the day starts at 05:00, so before that it is still yesterday. */
+export function appDay(offset = 0): string {
+  const x = new Date(Date.now() - 5 * 3_600_000 + offset * 86_400_000);
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
 }
 
 /** Settings sections are folded (only the first is open); most tests want them all open. */

@@ -14,7 +14,7 @@ Sous la ligne, dans cet ordre, le premier cas qui s’applique :
 2. **Un chrono tourne.** Vous voyez l’étape, l’horloge, **Pause** et **Fait**.
 3. **La journée est close.** Vous voyez la première étape de demain.
 4. **Il y a une étape suivante.** Vous voyez **Commencez ici**, le démarreur et **Départ**. C’est la même étape que sur Aujourd’hui. **Abandonner** abandonne l’étape si elle ne compte plus : touchez-le deux fois.
-5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**.
+5. **Rien n’est encore planifié.** Vous voyez **Planifier la journée**. Avec une IA configurée, il ouvre une proposition que vous gardez, échangez ou passez, et **Le faire moi-même** à côté ouvre le rituel. Quand une chose à heure fixe est déjà en tête, un petit **Planifier la journée** parmi ses boutons fait la même chose jusqu’à ce que la journée soit planifiée.
 
 Si une chose à heure fixe d’aujourd’hui est passée sans être faite, une petite carte sous le texte le dit, « Appeler la banque » était à 10:00, avec **Déplacer** et **Retirer**. Jamais en rouge, une seule à la fois, sans chiffre.
 
@@ -28,7 +28,29 @@ La page **Notifications** liste tout ce qui attend, et pas seulement le plus pre
 
 ## La boîte unique
 
-Écrivez ou dictez une ligne en bas, en anglais ou en français, comme vous voulez. Par exemple :
+Écrivez ou dictez une ligne en bas. En anglais ou en français, comme vous voulez ; les accents et les majuscules n’ont pas d’importance. Si aucune IA n’est connectée, un bouton rond **?** se trouve à côté de la boîte : il ouvre **Ce que vous pouvez écrire**, la liste ci-dessous, et toucher un exemple le met dans la boîte.
+
+**Ajouter une étape.** Écrivez-la simplement : « appeler la banque demain », « dentiste vendredi 14h ». Un « ajouter », « add » ou « remind me to » au début est ignoré. Une ligne courte sans verbe va dans votre boîte de réception.
+
+**En cocher une comme faite.** « fait le rapport », « fini le rapport », « j’ai fini le rapport », « done the report ». Ajoutez « hier » à la fin pour hier.
+
+**En déplacer une.** « déplacer les photos à lundi », « reporter le dentiste à vendredi », « décaler », « repousser », « move the photos to Monday », « push », « postpone », « reschedule ».
+
+**En abandonner une.** « abandonner les jeux », « supprimer », « drop the games », « scrap ». Un écran s’ouvre d’abord pour que vous confirmiez.
+
+**Un jour.** aujourd’hui, ce soir, demain, après-demain, dans 3 jours, dans 2 semaines, vendredi, vendredi prochain, 26/10 (le jour d’abord), 26 oct, 2026-10-26 ; ou today, tonight, tomorrow, in 3 days, next friday. Un jour de la semaine seul est le prochain, jamais aujourd’hui.
+
+**Une heure.** 19h, 19h30, à 19h, midi, vers 19h ; ou 19:00, 7pm, noon. « 9:00 » sans jour veut dire aujourd’hui, ou demain s’il est déjà passé. Une plage comme 14h-15h30 ou « de 14h à 15h30 » fixe l’heure et la durée.
+
+**Une durée.** 45 min, 2h30, pendant 2 heures, environ 20 minutes. « 5h » et plus, ou « à 19h », est une heure, pas une durée.
+
+**Un lieu.** « chez », « au », « à » suivi d’un lieu que vous avez dans Lieux.
+
+**Une répétition.** « chorale chaque mercredi 19h30 », « tous les jours », « every Wednesday ». Avec une heure, cela fait une étape permanente ; sans heure, ou pour un écart plus long, le formulaire de l’étape s’ouvre avec Répétition rempli.
+
+**Tout le reste** (une question, plusieurs choses à la fois, une longue phrase) ouvre le formulaire de l’étape, rempli autant que possible. Connecter une IA (Réglages → IA) permet d’écrire des phrases libres.
+
+Exemples :
 
 - « appeler la banque demain »
 - « dentiste vendredi 14h »

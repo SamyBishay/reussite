@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { importSample, expandSheet } from './helpers';
+import { importSample, expandSheet, morningDate, appDay } from './helpers';
 
 const sheet = (page: import('@playwright/test').Page) => page.getByTestId('sheet');
 
@@ -66,8 +66,11 @@ test('on a phone the Calendar opens on Day, and the week is three days', async (
 });
 
 test('the calendar names steps by their short name, with no launch points; a timed step is on the hour grid', async ({ page }) => {
+  await morningDate(page);
   await importSample(page);
   await page.goto('/#task/t2');
+  // Due today: the sample's step is due tomorrow, which on a Sunday is next week's Monday, outside the week the grid shows.
+  await sheet(page).locator('input[name=due]').fill(appDay(0));
   await sheet(page).locator('input[name=at]').fill('14:30');
   await expandSheet(page);
   await sheet(page).getByTestId('label').fill('Lease');
@@ -100,9 +103,11 @@ test('a tap on a day number opens that day, and past days show no cards played',
 
 test('the calendar shows a fixed-time item and no planned card, due step or marker', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1100 });
+  await morningDate(page);
   await importSample(page);
   // Today's list in the sample has planned cards (and a due date or two); none is on the calendar.
   await page.goto('/#task/t2');
+  await sheet(page).locator('input[name=due]').fill(appDay(0)); // not tomorrow's: see above
   await sheet(page).locator('input[name=at]').fill('14:30');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
+import { morningDate, appDay, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -58,8 +58,10 @@ test('moving a step into Now asks for a due date, then moves it', async ({ page 
 });
 
 test('the calendar tab opens its views; a fixed-time step there opens its sheet', async ({ page }) => {
+  await morningDate(page);
   await importSample(page);
   await page.goto('/#task/t2');
+  await sheet(page).locator('input[name=due]').fill(appDay(0)); // the sample's step is due tomorrow, which on a Sunday is outside the week on show
   await sheet(page).locator('input[name=at]').fill('11:00');
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByTestId('tab-calendar').click();

@@ -19,6 +19,7 @@ import { ZONES } from '../domain/zones';
 import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
 import { categoryName, addressesOn } from '../app/model';
 import { openTrip } from '../ai/ui';
+const PRESET_NAME: Record<string, 'presetLilacSea' | 'presetInkCoral' | 'presetForestAmber' | 'presetClassic'> = { 'lilac-sea': 'presetLilacSea', 'ink-coral': 'presetInkCoral', 'forest-amber': 'presetForestAmber', classic: 'presetClassic' };
 import { openReview } from '../flows/review';
 import { openGoalReview } from '../flows/reviewai';
 import { aiOn } from '../ai/ask';
@@ -92,7 +93,7 @@ function Appearance() {
       )}
       <label class="field"><span>{t('palette')}</span>
         <select value={s.preset} onChange={e => { const id = (e.target as HTMLSelectElement).value; const p = PRESETS[id]; if (p) set({ preset: id, accent: p.accent, suitColors: { ...p.suitColors } }); }}>
-          {Object.entries(PRESETS).map(([id, p]) => <option value={id}>{p.name}</option>)}
+          {Object.entries(PRESETS).map(([id, p]) => <option value={id}>{PRESET_NAME[id] ? t(PRESET_NAME[id]!) : p.name}</option>)}
           {s.preset === 'custom' && <option value="custom">—</option>}
         </select>
       </label>

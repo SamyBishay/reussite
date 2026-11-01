@@ -10,25 +10,25 @@ Réussite est une appli web. Rien à télécharger dans une boutique.
 
 Elle marche hors connexion. Votre liste vit sur votre appareil.
 
-## Les premières questions
+## La mise en route
 
-La première fois que vous l’ouvrez sur un nouvel appareil, Réussite pose quelques questions, une par écran :
+La première fois que vous l’ouvrez sur un nouvel appareil, Réussite vous demande votre langue, puis une seule chose : comment vous voulez la mettre en route.
 
-1. **Langue.** Anglais ou français. Vous pourrez la changer plus tard.
-2. **Où passez-vous votre temps ?** Ajoutez au moins un lieu, comme Maison ou Travail.
-3. **Quatre sortes de cartes.** Vos étapes sont rangées en quatre familles. Gardez-les ou renommez-les.
-4. **Quel aspect voulez-vous ?** Clair, sombre, ou celui de l’appareil.
-5. **Adresses et proches ?** Facultatif.
-6. **Voulez-vous utiliser une IA ?** Facultatif. Répondre non est très bien.
-7. **Comment une IA doit-elle travailler avec vous ?** Quelques lignes qui accompagnent chaque demande à une IA.
-8. **Utiliser Réussite sur plusieurs appareils ?** Seulement si vous en utilisez plusieurs.
-9. **Des rappels sur cet appareil ?** Facultatif.
+![Le premier écran : la langue et le choix](shot:onboarding)
 
-Chaque écran a Retour et Suivant. **Passer, garder les réglages par défaut** saute le reste. Rien n’est enregistré avant la fin, et tout se change ensuite dans Réglages.
+- **Tout régler moi-même.** Quatre questions courtes sur ce qui compte dans vos journées (ce qui remplit vos heures de travail, ce qui garde vos finances et vos papiers en ordre, de qui et de quoi vous vous occupez à la maison, ce que vous faites pour vous), chacune avec un nom que vous pouvez garder ou changer. Puis les lieux où vous passez du temps, comme Maison et Travail. C’est tout, et cela prend environ une minute.
+- **Me faire aider par une IA.** Vous racontez vos journées à une IA et elle vous propose les quatre choses qui comptent pour vous, vos lieux et la façon dont vous voulez qu’une IA travaille avec vous. Vous pouvez l’utiliser de trois façons, et l’écran montre les étapes de chacune :
+  1. **Une clé, dans l’appli.** Créez un compte chez OpenRouter ou Anthropic, créez une clé, collez-la. La clé reste sur cet appareil. La conversation a lieu dans Réussite.
+  2. **Claude ou ChatGPT.** Réussite vous donne un message à copier dans une nouvelle conversation. Quand la conversation vous donne son résumé, copiez la réponse et collez-la ici.
+  3. **Un autre chatbot.** Pareil, avec n’importe quel chatbot.
 
-![Le premier écran : la langue](shot:onboarding)
+  Dans tous les cas, la proposition de l’IA revient sur l’écran de revue, avec une case à cocher pour chaque ligne. Décochez ce que vous ne voulez pas, ou revenez dire à l’IA quoi changer. Rien n’est écrit avant que vous ne cochiez.
 
-Si vous utilisez déjà Réussite sur un autre appareil, choisissez **J’utilise déjà Réussite sur un autre appareil** sur le premier écran et saisissez votre clé de récupération. Voir [Synchronisation et appareil perdu](sync-and-recovery.md).
+**Passer, garder les réglages par défaut** sur le premier écran saute le reste et garde la mise en route standard. Tout se change dans Réglages, y compris l’aspect : Réussite démarre avec les couleurs af Klint et suit votre appareil pour le clair ou le sombre.
+
+Quand vous avez fini, l’accueil montre une carte **Pour la suite** avec ce que la mise en route ne demande pas : utiliser Réussite sur plus d’un appareil (et garder la clé de récupération), des rappels sur cet appareil, Adresses et proches, et connecter Claude ou ChatGPT si vous en avez choisi un. Chaque ligne ouvre sa section dans Réglages. **Masquer** retire la carte, et une ligne disparaît d’elle-même une fois faite.
+
+Si vous utilisez déjà Réussite sur un autre appareil, choisissez **J’utilise déjà Réussite sur un autre appareil** sur le premier écran et saisissez votre clé de récupération. Vos lieux et vos réglages viennent de l’autre appareil, et rien de celui-ci ne les écrase. Voir [Synchronisation et appareil perdu](sync-and-recovery.md).
 
 ## Votre première journée
 

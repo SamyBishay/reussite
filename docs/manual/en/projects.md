@@ -31,7 +31,7 @@ The weekly review asks about every open step of a project once a week, so the an
 
 **Practice says:** a goal you can't tell is finished isn't a goal, and a bar that fills for any step done isn't telling you about the goal. `[E?]`
 
-Projects you had before this change keep their goal as the sentence and have no bar until you pick a measure. What you wrote in the five SMART lines is kept.
+Older projects keep their goal as the sentence and have no bar until you pick a measure. What you wrote in the five SMART lines is kept.
 
 ## The next step
 

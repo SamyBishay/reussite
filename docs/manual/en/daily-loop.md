@@ -53,6 +53,8 @@ A skipped step is only left off today's list; it stays on your list. To change t
 
 Today shows the first step on a card, **Start here**. It shows the step's starter: the smallest first action. Tap **Start the timer**, or **Already done** if you did it already. Forgot to start? **I started earlier** takes two taps. **Drop it**, tapped twice, drops a step that no longer matters; it waits in the Cemetery. Start here is always there: with nothing open on today's list, it shows the step your list would pick next, with **Start the timer**, **Put it first** and **Choose from your list**.
 
+Today's top is kept short, so that Start here shows whole on a small phone, even on a Sunday with the review box above it. The date is in the top bar, with the time you have timed so far today beside it, small (left out when there is no room). Under it the day changer is one row: **‹ Today ›**. The arrows never move, so you can tap the same spot again and again to go a day at a time. Away from today the label is the day (“Wed 4 Nov”) and a small **↩ Today** chip beside it brings you back; tap the label to pick any date.
+
 Today's list is the day's cards, and that includes the things at a fixed time: the dentist at 15:00 is a card on the list, with its time, and the same step is on the calendar. A change in one is a change in the other. **From your list**, **Leisure & people**, **Plan the day** and **I'm stuck** are above the list.
 
 ![Today: the first step and the rest of the list](shot:today)

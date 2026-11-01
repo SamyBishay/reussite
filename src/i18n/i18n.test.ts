@@ -22,8 +22,8 @@ describe('i18n', () => {
     lang.value = 'en';
   });
   it('plurals follow each language', () => {
-    expect(translate('en', 'cardsToday', { n: 1 })).toBe('1 card today');
-    expect(translate('en', 'cardsToday', { n: 0 })).toBe('0 cards today');
+    expect(translate('en', 'cardsPlayed2', { n: 1 })).toBe('1 card played');
+    expect(translate('en', 'cardsPlayed2', { n: 0 })).toBe('0 cards played');
     expect(translate('fr', 'cardsPlayedToday', { n: 1 })).toBe('1 carte jouée aujourd’hui.');
     expect(translate('fr', 'cardsPlayedToday', { n: 0 })).toBe('0 carte jouée aujourd’hui.');
     expect(translate('fr', 'cardsPlayedToday', { n: 2 })).toBe('2 cartes jouées aujourd’hui.');

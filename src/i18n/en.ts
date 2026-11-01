@@ -43,8 +43,8 @@ export const en = {
   clockH7: 'seven', clockH8: 'eight', clockH9: 'nine', clockH10: 'ten', clockH11: 'eleven', clockH12: 'noon',
   // foundations
   todaysCards: "Today's cards",
-  cardsToday: { one: '{n} card today', other: '{n} cards today' } as P,
   timed: '{t} timed',
+  timedMast: '{t} timed',
   pileLabel: '{suit}: {n} done today. Show them.',
   cardsPlayedToday: { one: '{n} card played today.', other: '{n} cards played today.' } as P,
   noCardsSuit: 'No cards in this suit yet today.',

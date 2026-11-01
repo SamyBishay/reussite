@@ -53,6 +53,8 @@ Une étape passée est seulement laissée hors de la liste d’aujourd’hui ;
 
 Aujourd’hui montre la première étape sur une carte, **Commencez ici**. Elle affiche le démarreur de l’étape : la plus petite première action. Touchez **Lancer le chrono**, ou **Déjà fait** si c’est déjà fait. Vous avez oublié de démarrer ? **J’ai commencé plus tôt** demande deux touches. **Abandonner**, touché deux fois, abandonne une étape qui ne compte plus ; elle attend au cimetière. Commencez ici est toujours là : quand plus rien n’est ouvert sur la liste du jour, la carte montre l’étape que votre liste choisirait ensuite, avec **Lancer le chrono**, **La mettre en premier** et **Choisir dans votre liste**.
 
+Le haut d’Aujourd’hui reste court, pour que Commencez ici tienne en entier sur un petit téléphone, même un dimanche avec l’encadré de la revue au-dessus. La date est dans la barre du haut, avec le temps chronométré aujourd’hui à côté, en petit (omis quand il n’y a pas la place). Dessous, le sélecteur de jour tient sur une ligne : **‹ Aujourd’hui ›**. Les flèches ne bougent jamais, vous pouvez donc toucher le même endroit encore et encore pour avancer d’un jour à la fois. Loin d’aujourd’hui, l’étiquette est le jour (« mer. 4 nov. ») et une petite pastille **↩ Aujourd’hui** à côté vous y ramène ; touchez l’étiquette pour choisir une date.
+
 La liste du jour, ce sont les cartes du jour, y compris ce qui est à heure fixe : le dentiste à 15 h est une carte de la liste, avec son heure, et c’est la même étape que sur le calendrier. Changer l’une, c’est changer l’autre. **Depuis votre liste**, **Loisirs et proches**, **Planifier la journée** et **Je bloque** sont au-dessus de la liste.
 
 ![Aujourd’hui : la première étape et le reste de la liste](shot:today)

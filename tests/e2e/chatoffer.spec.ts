@@ -46,7 +46,9 @@ test('connector on, no key: Plan the day and the review banner offer the chat, a
   await page.getByTestId('sheet').getByRole('button', { name: 'Close' }).click();
 
   await goTab(page, 'today');
-  await expect(page.getByTestId('today-plan-chat')).toBeVisible();
+  // Today has no Plan-in-your-AI-chat button (2026-11-01): Home's card is where it is offered. The review banner keeps its own.
+  await expect(page.getByTestId('today-plan-chat')).toHaveCount(0);
+  await expect(page.getByTestId('today-adder-chat')).toHaveCount(0);
   const review = page.getByTestId('review-chat');
   await expect(review).toHaveText('Review in your AI chat');
   await review.click();

@@ -16,16 +16,19 @@ for (const width of [320, 390]) {
     await page.getByTestId('next-day').click();
     await expect(page.getByTestId('back-today')).toBeVisible();
     same(await box(page, 'prev-day'), prev); same(await box(page, 'next-day'), next);
-    // A far date: a long label ("Wednesday 29 September").
+    // A far date: the label is the day in its short form ("Wed 29 Sept") and the chip is beside it.
     await page.getByTestId('day-label').locator('input').fill('2027-09-29');
     await expect(page.getByTestId('back-today')).toBeVisible();
-    await expect(page.getByTestId('day-label')).toContainText(/September/);
+    await expect(page.getByTestId('day-label')).toContainText(/29 Sept/);
     same(await box(page, 'prev-day'), prev); same(await box(page, 'next-day'), next);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    // The label never covers an arrow, and the chip is under the label, between the arrows.
-    const chip = await box(page, 'back-today');
+    // The label never covers an arrow, and the chip is on the label's row, between the arrows: the navigator is one row, with no line under the label.
+    const chip = await box(page, 'back-today'), label = await box(page, 'day-label');
     expect(chip.x).toBeGreaterThanOrEqual(prev.x + prev.width);
     expect(chip.x + chip.width).toBeLessThanOrEqual(next.x);
+    expect(label.x + label.width).toBeLessThanOrEqual(chip.x + 1);
+    expect(Math.abs((chip.y + chip.height / 2) - (label.y + label.height / 2))).toBeLessThanOrEqual(2);
+    expect((await page.locator('.daynav').boundingBox())!.height).toBeLessThanOrEqual(48);
     await page.getByTestId('back-today').click();
     await expect(page.getByTestId('back-today')).toHaveCount(0);
     same(await box(page, 'prev-day'), prev); same(await box(page, 'next-day'), next);

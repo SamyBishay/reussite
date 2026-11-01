@@ -3,7 +3,7 @@
    is room, where. */
 .sxhost{
   isolation:isolate;position:relative;z-index:0;
-  margin-top:var(--s3);min-width:0;max-width:100%;height:clamp(460px,calc(100dvh - 360px),820px);overscroll-behavior:contain;
+  flex:1 1 0;min-height:200px;min-width:0;max-width:100%;overscroll-behavior:contain;
   --sx-color-primary:var(--accent);--sx-color-on-primary:var(--accent-ink);
   --sx-color-primary-container:var(--accent-soft);--sx-color-on-primary-container:var(--ink);
   --sx-color-secondary:var(--ink-2);--sx-color-secondary-container:var(--accent-soft);--sx-color-on-secondary-container:var(--ink);
@@ -15,14 +15,13 @@
   --sx-internal-color-text:var(--ink);--sx-internal-color-light-gray:var(--card);--sx-internal-color-gray-ripple-background:var(--line-2);
   --sx-color-neutral:var(--ink-3);--sx-color-neutral-variant:var(--line);
 }
-.sxhost .sx__calendar-wrapper{height:100%;max-height:100%;border:1px solid var(--line-2);border-radius:12px;background:var(--card);color:var(--ink);font-family:var(--sans);font-size:14px;overflow:hidden}
+.sxhost .sx__calendar-wrapper{position:absolute;inset:0;height:auto;max-height:none;border:1px solid var(--line-2);border-radius:12px;background:var(--card);color:var(--ink);font-family:var(--sans);font-size:14px;overflow:hidden}
 .sxhost .sx__calendar-header{display:none}
 .sxhost .sx__calendar{border:0;border-radius:0}
 .sxhost .sx__ripple{display:none}
 
 /* On a phone the date row is one line ("SUN 1"), so the hours get the room. */
 @media (max-width:767px){
-  .sxhost{margin-top:var(--s2)}
   .sxhost .sx__week-grid__date{flex-flow:row;justify-content:center;gap:var(--s2);padding:2px 0;min-height:40px}
   .sxhost .sx__week-grid__date-number{font-size:15px;height:30px;width:30px}
 }

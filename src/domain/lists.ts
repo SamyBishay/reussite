@@ -13,7 +13,6 @@ export type TaskW = WithId<Task>;
 /** Everything the rules below look at. A Map of live documents (no tombstones) per collection. */
 export interface Data {
   today: DayKey;
-  urgencyDays: number;
   tasks: ReadonlyMap<string, TaskW>;
   sessions: ReadonlyMap<string, WithId<Session>>;
   projects: ReadonlyMap<string, WithId<Project>>;
@@ -42,15 +41,15 @@ export const isEvent = (t: Pick<Task, 'kind'> | undefined): boolean => t?.kind =
 export const isOpen = <T extends Pick<Task, 'status' | 'template' | 'fixed'> & Partial<Pick<Task, 'kind'>>>(t: T | undefined): t is T => !!t && t.status === 'open' && !t.template && !t.fixed && t.kind !== 'event';
 /** A standing obligation, daily ones above all, or a copy of one placed on a day (choir, a walk, seeing someone): it has a time, not a quadrant. */
 export const isObligation = (t: Pick<Task, 'template' | 'from'>, tasks: ReadonlyMap<string, Pick<Task, 'template'>>): boolean => !!t.template || (!!t.from && !!tasks.get(t.from)?.template);
-export const quadOf = (t: Pick<Task, 'urgent' | 'important' | 'due'>, today: DayKey, urgencyDays: number): Quadrant => quadrant(t, today, urgencyDays);
+export const quadOf = (t: Pick<Task, 'urgent' | 'important'>): Quadrant => quadrant(t);
 
 export const waitingOn = (t: Pick<Task, 'after'>, tasks: ReadonlyMap<string, TaskW>): TaskW[] =>
   listOf(t.after).map(id => tasks.get(id)).filter((x): x is TaskW => !!x && x.status !== 'done' && x.status !== 'dropped');
 export const blocked = (t: Pick<Task, 'after'>, tasks: ReadonlyMap<string, TaskW>) => waitingOn(t, tasks).length > 0;
 
 export const byOrder = (a: { order?: number }, b: { order?: number }) => (a.order || 0) - (b.order || 0);
-export function byPriority(a: TaskW, b: TaskW, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>): number {
-  const qa = quadOf(a, d.today, d.urgencyDays), qb = quadOf(b, d.today, d.urgencyDays);
+export function byPriority(a: TaskW, b: TaskW, d: Pick<Data, 'projects'>): number {
+  const qa = quadOf(a), qb = quadOf(b);
   if (qa !== qb) return qa - qb;
   const da = a.due || '9999', db = b.due || '9999';
   if (da !== db) return da < db ? -1 : 1;
@@ -161,14 +160,13 @@ export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, i
  * `id | title | Q1 | due | est | project`, as v1 sent them. Something the person waits for (an event, schema 6) says so
  * after its title, with its check date, and has no quadrant, due date or estimate: it is not a step to do or to schedule.
  */
-export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'> & Partial<Pick<TaskW, 'kind' | 'nudge'>>, d: Pick<Data, 'today' | 'urgencyDays' | 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
+export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'> & Partial<Pick<TaskW, 'kind' | 'nudge'>>, d: Pick<Data, 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
   const event = t.kind === 'event';
   const done = t.status === 'done' ? (event ? ' (happened)' : ' (done)') : t.status === 'dropped' ? ' (dropped)' : '';
-  // The head of a chain says how many steps wait after it, and its quadrant follows the chain's earliest due date.
+  // The head of a chain says how many steps wait after it and the earliest due date in the chain.
   const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
   const wait = event && t.status === 'open' ? ` [waiting for${t.nudge ? ', check ' + t.nudge : ''}]` : '';
-  const q = chain && chain !== 'waiting' && chain.due && (!t.due || chain.due < t.due) ? { ...t, due: chain.due } : t;
-  return [t.id, one(t.title) + wait + done + note, event ? '-' : 'Q' + quadOf(q, d.today, d.urgencyDays), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
+  return [t.id, one(t.title) + wait + done + note, event ? '-' : 'Q' + quadOf(t), t.due ?? '-', t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
 export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
 

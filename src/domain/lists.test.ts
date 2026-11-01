@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
+import { byPriority, quadOf, dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
 
@@ -95,5 +95,20 @@ describe('splitDone', () => {
     expect(splitDone(['a', 'b', 'c', 'd', 'e'], id => done.has(id))).toEqual({ open: ['a', 'c', 'e'], done: ['b', 'd'] });
     expect(splitDone([], () => false)).toEqual({ open: [], done: [] });
     expect(splitDone(['a'], () => true)).toEqual({ open: [], done: ['a'] });
+  });
+});
+
+describe('quadrants and order', () => {
+  const d = { projects: new Map() as never };
+  const a = tk('a', { urgent: false, important: true, due: '2026-11-02' } as Partial<TaskW>); // due tomorrow, not ticked: Protect
+  const b = tk('b', { urgent: true, important: true, due: '2027-06-01' } as Partial<TaskW>); // ticked, far date: Now
+  const c = tk('c', { urgent: true, important: true, due: '2026-12-01' } as Partial<TaskW>);
+  it('quadOf reads the ticks only', () => {
+    expect(quadOf(a)).toBe(2);
+    expect(quadOf(b)).toBe(1);
+    expect(quadOf(tk('x', { urgent: false, important: false, due: '2026-11-02' } as Partial<TaskW>))).toBe(4);
+  });
+  it('the quadrant comes first, then the due date orders inside it', () => {
+    expect([a, b, c].sort((x, y) => byPriority(x, y, d)).map(t => t.id)).toEqual(['c', 'b', 'a']);
   });
 });

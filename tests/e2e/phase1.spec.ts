@@ -50,14 +50,13 @@ test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page
   expect(onToday + onYesterday).toBe(1);
 });
 
-test('moving a step into Now asks for a due date, then moves it', async ({ page }) => {
+test('moving a step into Now sets its ticks at once, without asking for a date', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-matrix').click();
   const later = page.getByTestId('quad4');
   await later.locator('.item', { hasText: 'scanned receipts' }).getByTestId('move-btn').click();
   await sheet(page).getByTestId('to-q1').click();
-  await expect(page.getByTestId('ask-due')).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Tomorrow' }).click();
+  await expect(page.getByTestId('ask-due')).toHaveCount(0);
   await expect(page.getByTestId('quad1')).toContainText('scanned receipts');
 });
 

@@ -3,7 +3,7 @@
 import { useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, urgent, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
 import { tasks } from './store';
 import {
   patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, droppedLine, reopen, setFirst, startTask, addSession, editSession,
@@ -18,7 +18,7 @@ import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
 import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../domain/duration';
 import { addDays, daysBetween } from '../domain/dates';
 import { isAllowedLink } from '../domain/links';
-import { moveTo, firstCalmDay } from '../domain/moves';
+import { moveTo } from '../domain/moves';
 import { stillOnDue, minutesBetween, shiftTime } from '../domain/calendar';
 import { validZone } from '../domain/zone';
 import { findTime } from '../domain/parse';
@@ -627,7 +627,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>
           <label class="tog"><input type="checkbox" name="important" defaultChecked={!!tk.important} /> {t('importantLabel')}</label>
         </div>
-        {tk.due && !tk.urgent && urgent(tk) && <p class="hint">{t('urgentAnyway')}</p>}
       </div>
       <div class="row2">
         <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
@@ -739,43 +738,19 @@ export const flows = {
 export function openMove(id: string, mode: 'matrix' | 'calendar' = 'matrix') {
   openSheet(<MoveSheet key={'move' + id + mode} id={id} mode={mode} />);
 }
-/** Drop on a quadrant: move at once, or ask the one question the move needs. */
+/** Drop on a quadrant: the move sets the two ticks, at once. */
 export function moveToQuadrant(id: string, q: Quadrant) {
   const tk = T(id);
   if (!tk || (isOpen(tk) && quad(tk) === q)) return;
-  const m = moveTo(tk, q, today.value, settings.value.urgencyDays);
-  if (!m.ask) { void patchTask(id, m.patch); toast(t('movedTo', { q: quadName(q) })); return; }
-  openSheet(<MoveSheet key={'move' + id + q} id={id} mode="matrix" initial={{ q, ask: m.ask, patch: m.patch }} />);
+  void patchTask(id, moveTo(q).patch);
+  toast(t('movedTo', { q: quadName(q) }));
 }
-type Pending = { q: Quadrant; ask: 'dueOrBlocker' | 'newDue'; patch: Partial<Task> };
-function MoveSheet({ id, mode, initial }: { id: string; mode: 'matrix' | 'calendar'; initial?: Pending }) {
+function MoveSheet({ id, mode }: { id: string; mode: 'matrix' | 'calendar' }) {
   const tk = T(id);
-  const [askQ, setAskQ] = useState<Pending | null>(initial ?? null);
   const [cal, setCal] = useState<'plan' | 'due' | 'done' | null>(null);
   if (!tk) return null;
-  const k = today.value, w = settings.value.urgencyDays;
-  const go = (q: Quadrant) => {
-    const m = moveTo(tk, q, k, w);
-    if (!m.ask) { closeSheet(); void patchTask(id, m.patch); toast(t('movedTo', { q: quadName(q) })); return; }
-    setAskQ({ q, ask: m.ask, patch: m.patch });
-  };
-  if (askQ) {
-    const finish = (p: Partial<Task>) => { closeSheet(); void patchTask(id, { ...askQ.patch, ...p, dueRule: null }); toast(t('movedTo', { q: quadName(askQ.q) })); };
-    return askQ.ask === 'dueOrBlocker' ? (
-      <div data-testid="ask-due">
-        <h3>{t('askDueTitle', { q: quadName(askQ.q) })}</h3>
-        <p class="hint">{t('askDueHint', { n: w })}</p>
-        <DayPick value={null} extra={[[t('pickToday'), k], [t('pickTomorrow'), addDays(k, 1)], [t('pickWeek'), addDays(k, 7)]]} onPick={d => d && finish({ due: d })} />
-        <div class="actions"><button class="btn" type="button" onClick={() => finish({ urgent: true })}>{t('itBlocks')}</button></div>
-      </div>
-    ) : (
-      <div data-testid="ask-newdue">
-        <h3>{t('askNewDueTitle')}</h3>
-        <p class="hint">{t('askNewDueHint', { n: w })}</p>
-        <DayPick value={null} clear extra={[[t('pickCalm'), firstCalmDay(k, w)]]} onPick={d => finish({ due: d })} />
-      </div>
-    );
-  }
+  const k = today.value;
+  const go = (q: Quadrant) => { closeSheet(); void patchTask(id, moveTo(q).patch); toast(t('movedTo', { q: quadName(q) })); };
   if (mode === 'calendar' && cal) {
     return (
       <div>

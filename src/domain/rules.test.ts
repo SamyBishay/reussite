@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { score, ranked, tooClose, normItems, type Option } from './decision';
 import { stayOn, currentPlace, dueBeforeEnd } from './places';
-import { moveTo, firstCalmDay } from './moves';
+import { moveTo } from './moves';
 import { monthGrid, weekOf, minutesBetween, stillOnAfter } from './calendar';
 
 const it_ = (id: string, w: number, mirrorOf?: string) => ({ id, text: id, w, mirrorOf });
@@ -47,17 +47,11 @@ describe('stays', () => {
 });
 
 describe('matrix moves', () => {
-  const today = '2026-10-09';
-  it('moving into Now or Quick without a date in the window asks for one, or a blocker', () => {
-    expect(moveTo({ important: false }, 1, today)).toEqual({ patch: { important: true }, ask: 'dueOrBlocker' });
-    expect(moveTo({ due: '2026-12-01' }, 3, today)).toEqual({ patch: { important: false }, ask: 'dueOrBlocker' });
-    expect(moveTo({ due: '2026-10-12' }, 1, today)).toEqual({ patch: { important: true }, ask: null });
-  });
-  it('moving out of urgent with a date in the window asks for a new date', () => {
-    expect(moveTo({ due: '2026-10-12', important: true }, 2, today)).toEqual({ patch: { important: true }, ask: 'newDue' });
-    expect(moveTo({ urgent: true }, 4, today)).toEqual({ patch: { important: false, urgent: false }, ask: null });
-    expect(moveTo({ important: true }, 4, today)).toEqual({ patch: { important: false }, ask: null });
-    expect(firstCalmDay(today)).toBe('2026-10-31');
+  it('a move sets the two ticks and nothing else', () => {
+    expect(moveTo(1)).toEqual({ patch: { important: true, urgent: true } });
+    expect(moveTo(2)).toEqual({ patch: { important: true, urgent: false } });
+    expect(moveTo(3)).toEqual({ patch: { important: false, urgent: true } });
+    expect(moveTo(4)).toEqual({ patch: { important: false, urgent: false } });
   });
 });
 

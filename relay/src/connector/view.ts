@@ -76,7 +76,7 @@ export class View {
   get data(): Data {
     const v = this;
     // `memory` is read only by a change that names a note: building the notes costs nothing for the calls that don't.
-    return this.once('data', () => ({ today: this.today, urgencyDays: this.settings.urgencyDays, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays, get memory() { return v.memory; } }));
+    return this.once('data', () => ({ today: this.today, tasks: this.tasks, sessions: this.sessions, projects: this.projects, days: this.days, decisions: this.decisions, places: this.places, stays: this.stays, get memory() { return v.memory; } }));
   }
 
   /** What the change-set planner checks a change-set against. */

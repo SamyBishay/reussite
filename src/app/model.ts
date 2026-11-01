@@ -3,7 +3,7 @@ import { computed } from '@preact/signals';
 import { tasks, sessions, projects, days, settings, today, pagePlace, viewAll, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
 import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
-import { isUrgent, type Quadrant } from '../domain/tasks';
+import type { Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
 import * as C from '../domain/chains';
 import { minutesByTask, ratio as ratioOf } from '../domain/ratio';
@@ -36,10 +36,10 @@ export const isEvent = (t: Pick<T, 'kind'> | undefined): boolean => L.isEvent(t)
 export const isObligation = (t: T): boolean => L.isObligation(t, tasks.value);
 /** The chains of the open steps (src/domain/chains.ts), rebuilt once whenever the steps change. */
 export const chains = computed(() => C.chainIndex(tasks.value));
-/** A chain's head carries the earliest due date of its chain, so a far deadline turns the chain urgent in time. */
+/** A chain's head carries the earliest due date of its chain, so the chain is ordered by its nearest deadline (the quadrant is the ticks only). */
 const withChainDue = (t: T): T => { const d = C.effectiveDue(chains.value, t.id, t.due); return d === (t.due ?? null) ? t : { ...t, due: d }; };
-export const quad = (t: T): Quadrant => L.quadOf(withChainDue(t), today.value, settings.value.urgencyDays);
-export const urgent = (t: T) => isUrgent(withChainDue(t), today.value, settings.value.urgencyDays);
+/** The box a step is in: its two ticks, nothing else. */
+export const quad = (t: T): Quadrant => L.quadOf(t);
 /** The chain a step heads (with "+n after"), if it has one. */
 export const chainOfHead = (id: string) => chains.value.chains.get(id);
 /** A step that waits for another in a chain: shown inside its head's card, not on its own. */
@@ -81,7 +81,7 @@ const byOrder = L.byOrder;
 export { byOrder };
 /** A project's open steps that can move its goal, in the project's own order: not a standing step, not something the person waits for (the Sunday review's "Moves the goal?"). */
 export const goalSteps = (projectId: string): T[] => [...tasks.value.values()].filter(x => x.project === projectId && x.status === 'open' && !x.template && !L.isEvent(x)).sort(byOrder);
-export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
+export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { projects: projects.value });
 
 export function candidates(k = today.value, place?: string): T[] {
   const plan = new Set(rawPlan(k));

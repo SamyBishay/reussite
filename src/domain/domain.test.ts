@@ -19,20 +19,25 @@ describe('dates', () => {
 });
 
 describe('urgency and quadrants', () => {
-  const today = '2026-10-09';
-  it('urgent = blocker, or due within the window, or overdue', () => {
-    expect(isUrgent({ due: '2026-10-30' }, today)).toBe(true);
-    expect(isUrgent({ due: '2026-10-31' }, today)).toBe(false);
-    expect(isUrgent({ due: '2026-10-01' }, today)).toBe(true);
-    expect(isUrgent({ urgent: true }, today)).toBe(true);
-    expect(isUrgent({}, today)).toBe(false);
-    expect(isUrgent({ due: '2026-10-16' }, today, 5)).toBe(false);
+  it('urgent is the tick, whatever the due date', () => {
+    expect(isUrgent({ urgent: true })).toBe(true);
+    expect(isUrgent({ urgent: true, due: '2027-06-01' } as never)).toBe(true);
+    expect(isUrgent({ due: '2026-10-10' } as never)).toBe(false); // due tomorrow, not ticked
+    expect(isUrgent({ due: '2026-10-01' } as never)).toBe(false); // overdue, not ticked
+    expect(isUrgent({})).toBe(false);
   });
-  it('places each combination in its quadrant', () => {
-    expect(quadrant({ urgent: true, important: true }, today)).toBe(1);
-    expect(quadrant({ important: true }, today)).toBe(2);
-    expect(quadrant({ due: today }, today)).toBe(3);
-    expect(quadrant({}, today)).toBe(4);
+  it('places each combination of the two ticks in its quadrant', () => {
+    expect(quadrant({ urgent: true, important: true })).toBe(1);
+    expect(quadrant({ important: true })).toBe(2);
+    expect(quadrant({ urgent: true })).toBe(3);
+    expect(quadrant({})).toBe(4);
+  });
+  it('a step due tomorrow but not ticked urgent is in Protect or Later; a ticked one is Now or Quick, dated or not', () => {
+    expect(quadrant({ important: true, due: '2026-10-10' } as never)).toBe(2);
+    expect(quadrant({ important: false, due: '2026-10-10' } as never)).toBe(4);
+    expect(quadrant({ urgent: true, important: true, due: '2027-06-01' } as never)).toBe(1);
+    expect(quadrant({ urgent: true, important: false, due: null } as never)).toBe(3);
+    expect(quadrant({ urgent: true, important: true })).toBe(1);
   });
 });
 

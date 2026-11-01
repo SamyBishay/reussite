@@ -3,11 +3,11 @@ name: decide
 description: "The Réussite decision method: define the problem, list every option, weigh doing and not doing each one, choose, and turn the choice into steps. Use for any decision or problem, and for decision steps in Réussite."
 ---
 
-> This skill works best with the Réussite connector (see `docs/dev/connector.md`): read with `get_decision` and `query_tasks`, write with `apply_changes`. Without the connector, ask the person to paste their Ask any AI context pack, and answer with a change-set. Below, "I" and "me" are the person speaking to you.
+> This skill works best with the Réussite connector (see `docs/dev/connector.md`): read with `get_decision` and `query_tasks`, write with `apply_changes`. Without the connector, ask the person to paste their steps, and answer with a change-set. Below, "I" and "me" are the person speaking to you.
 
 You help me make a decision or solve a problem with a written method, used in Réussite, a planning app built on a CBT method for adults with ADHD. The output is a written decision and scheduled steps, not a discussion. Ask me one question at a time, and wait for the answer. You don't replace therapy or care from a professional.
 
-If I have pasted a context pack from Réussite's "Ask any AI", use its ids. If you have Réussite's connector tools, use them (`get_decision`, `apply_changes`). Otherwise work from what I tell you. When there is something to record, end your reply with one change-set (the short contract is at the end).
+If I have pasted a context pack from Réussite, use its ids. If you have Réussite's connector tools, use them (`get_decision`, `apply_changes`). Otherwise work from what I tell you. When there is something to record, end your reply with one change-set (the short contract is at the end).
 
 ## 1. Define the problem precisely
 One line each: what is happening; what should be happening; the gap between them; the constraints (money, dates, people, rules); the deadline; what is in my control. Ask only for what's missing. If it is really two problems, split them. Write a decision as a choice ("Which gives way: the length, the season, or the cost?").

@@ -85,9 +85,11 @@ async function start(page: Page, o: { ai?: boolean; world?: object } = {}) {
   }
   await goTab(page, 'home');
 }
-/** Home's "Plan the day", the AI's request let through, and the proposal on screen. */
+/** Plan the day with an AI on a day that already has steps: Home shows no card then (Start here is Today's), so this is the morning notification's link. */
+async function planLink(page: Page) { await page.goto('/#plan'); }
+/** Home's "Plan the day" (or the notification's link when a plan is open), the AI's request let through, and the proposal on screen. */
 async function openMorning(page: Page, button = 'home-plan-ai') {
-  await page.getByTestId(button).click();
+  if (button === 'home-plan-ai') await planLink(page); else await page.getByTestId(button).click();
   await page.getByTestId('ai-send').click();
   await expect(page.getByTestId('morning-note')).toBeVisible();
 }
@@ -96,9 +98,9 @@ const item = (page: Page, key: string) => page.locator(`[data-testid=morning-ite
 test('the five sections show; skip a pillar item, swap a goal’s first step, accept the change-set, and Today shows the plan in the day’s order', async ({ page }) => {
   const seen = await stub(page, reply1);
   await start(page);
-  // The dentist is already Start here, and the plan is one tap away.
+  // The plan is open, so Home shows no card; the morning's link opens the proposal.
   await expect(page.getByTestId('home-plan-ritual')).toHaveCount(0);
-  await page.getByTestId('home-plan-ai').click();
+  await planLink(page);
   // "Show me what's sent": the five sections go out as candidates, with the person's own names for the pillars.
   await expect(page.getByTestId('ai-preview')).toBeVisible();
   await expect(page.getByTestId('ai-user')).toContainText('1. Must happen');
@@ -195,7 +197,7 @@ test('a short exchange adjusts it: what was skipped does not come back, and the 
 test('a reply that is not usable still leaves the five sections, with a way to the ritual', async ({ page }) => {
   await stub(page, 500);
   await start(page);
-  await page.getByTestId('home-plan-ai').click();
+  await planLink(page);
   await page.getByTestId('ai-send').click();
   await expect(page.getByTestId('ai-error')).toBeVisible();
   for (const s of ['must', 'goals', 'pillars', 'here']) await expect(page.getByTestId('morning-' + s)).toBeVisible();
@@ -252,7 +254,7 @@ for (const width of [320, 375, 430]) {
     await stub(page, reply1);
     await page.setViewportSize({ width, height: 800 });
     await start(page);
-    await page.getByTestId('home-plan-ai').click();
+    await planLink(page);
     await expect(page.getByTestId('ai-preview')).toBeVisible();
     await noSideways(page, `request at ${width}`);
     await page.getByTestId('ai-send').click();

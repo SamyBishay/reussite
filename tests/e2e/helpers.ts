@@ -153,3 +153,25 @@ export async function addCard(page: Page, title: string) {
   await page.getByTestId('sheet').getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByTestId('sheet')).toBeHidden();
 }
+
+/**
+ * The Paste the reply sheet is reached from Plan this trip (and from set-up), no longer from a button on Today. This restores one place and
+ * one upcoming stay on top of what the app holds (a backup merges), then opens the trip sheet from Settings. Tests tap `pack-paste` in it.
+ */
+export async function openTripSheet(page: Page) {
+  const HLC = '0000000000001:0000:seed';
+  const stamp = (id: string, f: Record<string, unknown>) => ({ id, _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, HLC])), ...f });
+  const data: Record<string, [string, Record<string, unknown>][]> = {
+    places: [['tripa', { name: 'Lyon', timeZone: 'Europe/Paris', order: 8 }], ['tripb', { name: 'Paris', timeZone: 'Europe/Paris', order: 9 }]],
+    stays: [['trips', { placeId: 'tripa', from: appDay(1), to: appDay(3), note: 'A long weekend' }]],
+  };
+  const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: Object.fromEntries(Object.entries(data).map(([c, ds]) => [c, ds.map(([id, f]) => stamp(id, f))])) };
+  await page.goto('/#settings'); await expandSettings(page);
+  page.once('dialog', d => void d.accept());
+  await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'trip.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  await expect(page.locator('.toast')).toContainText('Backup restored');
+  await page.reload();
+  await expandSettings(page);
+  await page.getByTestId('stays').getByTestId('plan-trip').click();
+  await expect(page.getByTestId('sheet').getByTestId('trip-sheet')).toBeVisible();
+}

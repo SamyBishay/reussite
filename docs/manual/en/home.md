@@ -1,20 +1,19 @@
 # Home and its one box
 
-Home is where you start. It shows only your **next step**. Under it there is one box.
+Home is where you start. It greets you in a line, and under it there is one box. The step to start is on [Today](daily-loop.md), and only there.
 
-![Home: the next step, and a line just typed](shot:home)
+![Home: a greeting, and a line just typed](shot:home)
 
 ## What Home says
 
-At the top, one line greets you. It is picked from a few ready-made sentences and filled with what is true today: the next thing at a fixed time ("Anything to move before “Dentist” at 14:00?"), a project that is nearly there, the time of day, what you have ticked off so far, or what is planned. It never counts what you missed or carried over, and it is the same with or without an AI. Open Home again and you get another sentence, not the same one twice in a day while another fits. They all end the same way: type in the box below what to add, move or tick off.
+At the top, one line greets you. It is a short, warm sentence picked from a few ready-made ones and filled with what is true today: the next thing at a fixed time ("“Dentist” at 14:00 is on today’s plan."), a project that is nearly there, the time of day, what you have ticked off so far, or what is planned. It asks nothing of you, never counts what you missed or carried over, and is the same with or without an AI. Open Home again and you get another sentence, not the same one twice in a day while another fits.
 
-Under the line, in this order, the first that applies:
+Under the line there is a card in only two cases:
 
-1. **A fixed time has taken over.** Start here follows the clock (see [Start](daily-loop.md)). When the step you are on, with a small margin, would run into the time you need to leave, the next thing at a fixed time takes over. It says its time and "leave at…".
-2. **A timer is running.** You see the step, the clock, **Pause** and **Done**.
-3. **The day is closed.** You see tomorrow's first step.
-4. **There is a next step.** You see **Start here**, the starter and **Start**. It is the same step Today shows. **Drop it** drops the step if it no longer matters: tap it twice.
-5. **Nothing is planned yet.** You see **Plan the day**. With an AI set up it opens a proposal you keep, swap or skip, and **Plan it myself** beside it opens the ritual. When something at a fixed time is already first, a small **Plan the day** among its buttons does the same until the day is planned.
+1. **Nothing is planned yet.** You see **Plan the day**. With an AI set up it opens a proposal you keep, swap or skip, and **Plan it myself** beside it opens the ritual.
+2. **Everything on today's list is done.** You see a line saying so, with **Close the day**.
+
+Otherwise Home shows no card: while a timer runs, while the plan is open, and once the day is closed. **Start here**, the running step with its clock and **Pause**, and tomorrow's first step are on Today alone, not on Home and not on the other tabs. (If a step has been running for hours, a "Still on…?" banner shows on every tab so you can fix the time.)
 
 If something at a fixed time today has passed and is not done, one small card under the greeting says so, "“Call the bank” was at 10:00", with **Move** and **Remove**. It is never red, there is one at a time, and it has no number.
 

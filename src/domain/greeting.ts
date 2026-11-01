@@ -1,44 +1,39 @@
-// What Home says (plan 2 Nov, "The greeting"). Two things, both pure; the app (src/app/model.ts) gathers the data.
+// What Home says (plan 2 Nov, "The greeting"; plain since the owner's 1 Nov feedback). Two things, both pure; the app (src/app/model.ts) gathers the data.
 //
-// 1. The card under the line (`greeting`): the running step, or Start here (the first item of `dayOrder`, which may be a
-//    fixed-time item that has taken over), or tomorrow's first step once the day is closed, or Plan the day, or "all done".
-// 2. The line above it (`eligibleLines`, `pickGreeting`): one sentence chosen from templates (src/i18n) and filled with real
-//    data. A kind is eligible only when its data exists. A template is not repeated within a day while another is eligible.
-//    No counts of what was missed or carried, no streaks, and it works without an AI: the template stays with an AI on.
+// 1. The card under the line (`greeting`): Plan the day when there is no list yet, or Close the day when every card on the list is played.
+//    Nothing else: Start here, the running step and tomorrow's first step live on Today alone (DECISIONS.md), and Home shows no card
+//    while a step runs, a plan is open or the day is closed.
+// 2. The line above it (`eligibleLines`, `pickGreeting`): one plain, warm sentence chosen from templates (src/i18n) and filled with real
+//    data. It never asks for anything: no "type", no "add, move or tick off". A kind is eligible only when its data exists. A template
+//    is not repeated within a day while another is eligible. No counts of what was missed or carried, no streaks, and it works
+//    without an AI: the template stays with an AI on.
 
 export interface GreetingInput {
   /** Today's list was closed. */
   closed: boolean;
   /** How many steps today's list holds. */
   planned: number;
-  /** The first item of `dayOrder`: a step (`running` when its timer runs) or a fixed-time item that has taken over. */
-  first: { id: string; kind: 'step' | 'fixed'; running: boolean } | null;
-  /** Tomorrow's first step; `id` is null when tomorrow has none yet. */
-  tomorrow: { id: string; title: string } | null;
+  /** A timer is running (a step, or a fixed-time item being timed). */
+  running: boolean;
+  /** The day's order has something to start (a step, or a fixed-time item that has taken over). */
+  hasFirst: boolean;
 }
 
 export type Greeting =
-  | { kind: 'running'; id: string }
-  /** The day is closed: tomorrow's first step, or none chosen yet. */
-  | { kind: 'tomorrow'; step: { id: string; title: string } | null }
-  /** Start here: a step, or a fixed-time item (its time and when to leave are shown with it). */
-  | { kind: 'next'; id: string; fixed: boolean }
   /** No list for today yet. */
   | { kind: 'plan' }
   /** There is a list and nothing on it is left to start. */
   | { kind: 'allDone' };
 
-export function greeting(i: GreetingInput): Greeting {
-  const f = i.first;
-  if (f?.running) return { kind: 'running', id: f.id };
-  if (f?.kind === 'fixed') return { kind: 'next', id: f.id, fixed: true };
-  if (i.closed) return { kind: 'tomorrow', step: i.tomorrow };
-  if (f) return { kind: 'next', id: f.id, fixed: false };
-  return i.planned ? { kind: 'allDone' } : { kind: 'plan' };
+/** The card under the line, or none: nothing shows while a step runs, a plan is open (something is left to start) or the day is closed. */
+export function greeting(i: GreetingInput): Greeting | null {
+  if (i.closed || i.running) return null;
+  if (!i.planned) return { kind: 'plan' };
+  return i.hasFirst ? null : { kind: 'allDone' };
 }
 
 // ---------- the line ----------
-/** The templates, by kind: i18n keys, each a sentence that ends by inviting the person to type in the box. */
+/** The templates, by kind: i18n keys, each a short warm sentence that asks for nothing. */
 export const GREETING_KEYS = {
   fixed: ['greetFixed1', 'greetFixed2', 'greetFixed3'],
   project: ['greetProject1', 'greetProject2', 'greetProject3'],

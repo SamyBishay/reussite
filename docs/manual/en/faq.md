@@ -10,7 +10,7 @@ No. There are no accounts. Your list is on your device.
 
 ## Do I need an AI?
 
-No. It is optional. Without one, you can still use **Ask any AI** to copy a question into any chatbot, and bring its answer back with **Paste the reply**. See [AI](ai.md).
+No. It is optional. Without one, no screen asks for an AI. You can still copy a message into any chatbot at set-up and for **Plan this trip**, and bring its answer back with **Paste the reply**, or connect your AI chat app. See [AI](ai.md).
 
 ## Does it work offline?
 

@@ -15,9 +15,9 @@ p{margin:0}
    fixed at the bottom of a screen, like Home's input, sits at calc(var(--dock) + var(--kb)). */
 :root{--tabbar-h:calc(57px + env(safe-area-inset-bottom,0px));--dock:var(--tabbar-h);--kb:0px;--fabr:max(16px,env(safe-area-inset-right,0px))}
 body.kb{--dock:0px}
-.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:12px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
+.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:max(12px,env(safe-area-inset-top,0px)) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
 @media (min-width:920px){
-  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:28px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
+  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:max(28px,env(safe-area-inset-top,0px)) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
   .app.bare{grid-template-columns:minmax(0,1fr)}
   .mast{grid-column:1;grid-row:1}
   #runbar{grid-column:1;grid-row:2}
@@ -191,9 +191,6 @@ details.donefold[open]>summary::after{content:'▾'}
 @media (max-width:540px){.row{grid-template-columns:auto minmax(0,1fr)}.row .ctrls{grid-column:2;justify-content:flex-start}}
 .adders{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s4)}
 .close-day{margin-top:var(--s5);width:100%;justify-content:center;min-height:52px;font-size:16px;font-weight:700}
-.runbar{display:flex;align-items:center;gap:var(--s3);background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:8px 8px 8px 14px}
-.runbar .rt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.runbar .btn{background:var(--accent-ink);color:var(--accent);border-color:transparent}
 
 /* ---------- forms ---------- */
 .field{display:grid;gap:var(--s2);margin-top:var(--s4)}
@@ -551,8 +548,6 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 input[type=range]{width:100%;accent-color:var(--accent)}
 
 /* banners */
-.insist{display:flex;align-items:center;gap:var(--s3);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 6px 6px 14px;font-size:14.5px}
-.insist .rt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 main>.banner{margin-top:var(--s3)}
 .moment{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:35;pointer-events:none;background:var(--panel);border:2px solid var(--accent);border-radius:18px;padding:22px 26px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.35);width:min(360px,calc(100% - 32px));animation:momentIn 2.6s ease both}
 .moment-name{font:700 22px/1.25 var(--sans);margin-top:var(--s2);overflow-wrap:anywhere}
@@ -637,7 +632,7 @@ textarea.mono{letter-spacing:.04em}
 .feeds{color:var(--ink-3)}
 
 /* ---------- first-run onboarding ---------- */
-.app.onboard{max-width:560px;padding-block:24px 40px;min-height:100dvh;align-content:start}
+.app.onboard{max-width:560px;padding-block:max(24px,env(safe-area-inset-top,0px)) 40px;min-height:100dvh;align-content:start}
 .ob .bigchoices .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .ob-actions .btn{flex:1 1 auto;justify-content:center}
 .ob-skip{display:block;margin:var(--s4) 0 0;min-height:44px;padding:8px 0;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-align:left}
@@ -739,7 +734,7 @@ body > .row,body > li{list-style:none}
    around them; the Matrix and the Calendar get a wider column; body text is one size up. */
 @media (min-width:1024px){
   body{font-size:calc(var(--base-size,16px) + 2px)}
-  .app,.app.bare{max-width:none;padding-inline:var(--s7);padding-top:var(--s7);grid-template-columns:minmax(0,1fr) minmax(0,720px) minmax(0,1fr);column-gap:var(--s7);row-gap:var(--s5)}
+  .app,.app.bare{max-width:none;padding-inline:var(--s7);padding-top:max(var(--s7),env(safe-area-inset-top,0px));grid-template-columns:minmax(0,1fr) minmax(0,720px) minmax(0,1fr);column-gap:var(--s7);row-gap:var(--s5)}
   .mast,#runbar,main{grid-column:2}
   .side{grid-column:3;grid-row:1 / span 3;justify-self:start;width:min(100%,232px);top:var(--s7);container-type:inline-size}
   .app.wide{max-width:1360px;grid-template-columns:minmax(0,1fr) 200px}

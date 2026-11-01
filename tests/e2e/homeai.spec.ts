@@ -131,7 +131,7 @@ test('one added step is applied at once with Undo; three changes open the review
   await expect(page.getByTestId('card-review')).toContainText('3 changes');
 });
 
-test('a weather question gets the one line and a button to Ask any AI with the question ready', async ({ page }) => {
+test('a weather question gets the one line alone, with no button', async ({ page }) => {
   await importSample(page);
   await stub(page, { v: 1, changes: [], outside: true, note: 'I only help with your list, your memory and the method; your usual AI can help with the weather.' });
   await setUpIn(page);
@@ -139,8 +139,8 @@ test('a weather question gets the one line and a button to Ask any AI with the q
   await page.getByTestId('ai-send').click();
   const card = page.getByTestId('card-answer');
   await expect(card).toContainText('your usual AI can help with the weather');
-  await card.getByRole('button', { name: 'Ask any AI' }).click();
-  await expect(page.getByTestId('ask-question')).toHaveValue('what is the weather in Lyon tomorrow?');
+  await expect(card.getByRole('button', { name: /Ask any AI/ })).toHaveCount(0);
+  await expect(card.getByRole('button')).toHaveCount(1); // OK only
 });
 
 test('the month’s spend shows in Settings, and at the limit Home goes back to the sheet without calling the AI', async ({ page }) => {

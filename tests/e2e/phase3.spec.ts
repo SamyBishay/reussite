@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { deflateRawSync } from 'node:zlib';
-import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings, openTripSheet } from './helpers';
 import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
@@ -344,11 +344,10 @@ async function inboxSize(recovery: string): Promise<number> {
   return ((await res.json()) as { items: unknown[] }).items.length;
 }
 
-test('one-tap link: Settings → AI shows the drop address and the sentence to paste; Ask any AI then asks for the link', async ({ page }) => {
+test('one-tap link: Settings → AI shows the drop address and the sentence to paste; the trip pack then asks for the link', async ({ page }) => {
   await page.goto('/#settings'); await expandSettings(page);
   await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
-  await page.getByTestId('tab-today').click();
-  await page.getByTestId('ask-any').click();
+  await openTripSheet(page);
   await page.locator('summary', { hasText: 'See the text' }).click();
   await expect(page.getByTestId('pack')).toContainText('fenced code block labelled reussite');
   await expect(page.getByTestId('pack')).not.toContainText('/drop#');
@@ -360,13 +359,12 @@ test('one-tap link: Settings → AI shows the drop address and the sentence to p
   expect(addr).toMatch(new RegExp('^' + ORIGIN + '/drop#[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}\\.$'));
   await expect(page.getByTestId('drop-sentence')).toContainText(addr + 'z.DATA');
   await expect(page.getByTestId('drop-sentence')).toContainText('8,000');
-  await page.getByTestId('tab-today').click();
-  await page.getByTestId('ask-any').click();
+  await openTripSheet(page);
   await page.locator('summary', { hasText: 'See the text' }).click();
   await expect(page.getByTestId('pack')).toContainText(addr + 'z.DATA');
   await expect(page.getByTestId('pack')).not.toContainText('end your reply with one fenced code block labelled reussite that holds');
   // a link pasted where a block is expected is read the same way
-  await page.getByTestId('ask-any-sheet').getByRole('button', { name: 'Paste the reply' }).click();
+  await page.getByTestId('trip-sheet').getByTestId('pack-paste').click();
   await page.getByTestId('paste-text').fill('Here you go: ' + linkFor(addr, cs('Open Mail and answer the pasted one')) + ' — hope it helps.');
   await page.getByTestId('paste-go').click();
   await expect(page.getByTestId('review')).toContainText('answer the pasted one');

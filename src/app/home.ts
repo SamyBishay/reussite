@@ -20,7 +20,6 @@ import { appWriter, snapshot, gen } from '../ai/writer';
 import { openChangeReview } from '../ai/Review';
 import { aiOn, askChanges } from '../ai/ask';
 import { homePrompt } from '../ai/context';
-import { openAskAny } from '../ai/ui';
 import type { ChangeSet } from '../ai/changeset';
 import { t, fmtMin } from '../i18n';
 
@@ -233,7 +232,7 @@ export async function routeUnknown(text: string, p: Extract<HomeParse, { kind: '
 /**
  * Ask the AI about a line, with the earlier turns of the open exchange (the last ten minutes). Its reply is a
  * change-set: changes go through `run` (one low-risk change at once, else the review), no change means an
- * answer for the card, and "outside" sends the person to their usual AI with the question ready. A failure is
+ * answer for the card (an "outside" reply is just that answer: the AI said it only helps with the list). A failure is
  * one plain sentence and a button to the sheet; nothing is written.
  */
 async function askHome(text: string, prefill: Partial<Task>): Promise<boolean> {
@@ -249,7 +248,7 @@ async function askHome(text: string, prefill: Partial<Task>): Promise<boolean> {
     showAnswer(r.message, { label: t('homeAddAsStep'), run: () => { dismissCard(); openNewTask(prefill); } });
     return true;
   }
-  showAnswer(r.message, r.outside ? { label: t('askAnyAi'), run: () => { dismissCard(); openAskAny({ kind: 'today' }, text); } } : undefined);
+  showAnswer(r.message);
   await addTurn({ at: new Date().toISOString(), text, kind: 'answer', reply: r.message });
   return true;
 }

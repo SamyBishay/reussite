@@ -363,10 +363,11 @@ describe('a line the parser can’t read, with an AI set up', () => {
     expect(homeCard.value).toMatchObject({ kind: 'review' });
     expect(titles()).toEqual([]);
   });
-  it('outside the list: the line, and a button to Ask any AI', async () => {
+  it('outside the list: the AI’s line alone, with no button', async () => {
     vi.stubGlobal('fetch', reply({ v: 1, changes: [], outside: true, note: 'I only help with your list; your usual AI can help with the weather.' }));
     expect(await submitHome('what is the weather in Lyon tomorrow?')).toBe(true);
-    expect(homeCard.value).toMatchObject({ kind: 'answer', action: { label: 'Ask any AI' } });
+    expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('only help with your list') });
+    expect((homeCard.value as { action?: unknown }).action).toBeUndefined();
   });
   it('one plain sentence and the sheet when the AI fails or the cap is reached; nothing is written', async () => {
     const f = vi.fn(async () => new Response('nope', { status: 500 }));

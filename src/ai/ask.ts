@@ -20,7 +20,7 @@ export interface AskOptions { signal?: AbortSignal; maxTokens?: number; /** The 
 
 /** Which providers have a key on this device; filled the first time a provider is chosen, and by setKey. */
 const keyed = signal<Partial<Record<Exclude<AiProvider, 'none'>, boolean>>>({});
-/** A provider is chosen and this device has its key: the features that call it show. "Ask any AI" and Paste the reply work without either. */
+/** A provider is chosen and this device has its key: the features that call it show. Set-up's copy-and-paste route and Plan this trip work without either. */
 export const aiOn = computed(() => { const p = settings.value.aiProvider; return p !== 'none' && !!keyed.value[p]; });
 
 const ERR: Record<ErrorKind, Key> = {

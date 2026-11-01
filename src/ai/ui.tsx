@@ -1,12 +1,13 @@
-// AI on screen: "Show me what's sent", the command box, "Ask any AI" and "Paste the reply".
+// AI on screen: "Show me what's sent", the command box (named for the AI the person set up), the trip pack's copy and share, and the pasted reply.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
-import { projects, decisions, stays, people, places, toast } from '../app/store';
+import { settings, stays, people, places, toast } from '../app/store';
 import { onPage } from '../domain/places';
 import { placeName } from '../app/sheets';
-import { t, lang, fmtDate } from '../i18n';
+import { t, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
-import { commandPrompt, contextPack, type Scope } from './context';
+import { commandPrompt, type Scope } from './context';
+import { aiName } from './aiName';
 import { tripPack } from './trip';
 import { parseChangeSet, readChangeSet, type ParseResult } from './changeset';
 import { DiagnosticsButton } from '../app/Diagnostics';
@@ -62,8 +63,12 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
   );
 }
 
-/** Command box (feature 1): plain language → change-set → review. Hidden without a provider. */
-export function CommandBox({ scope }: { scope: Scope }) {
+/**
+ * Command box (feature 1): plain language → change-set → review. Only with an AI set up and its key on this device, and then it
+ * names that AI ("Ask Claude to change the list"). Without one there is nothing here: no button, no copy-and-paste route on the
+ * screen (that route lives in set-up and in Plan this trip). `scope` is kept for the callers; the box no longer uses it.
+ */
+export function CommandBox(_: { scope?: Scope }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ error: ErrorKind | 'empty'; message: string } | null>(null);
@@ -80,26 +85,23 @@ export function CommandBox({ scope }: { scope: Scope }) {
     if (!r.ok) { if (r.error !== 'cancelled') setErr(r); return; }
     if (openChangeReview(r.cs, { request: q, onApplied: n => { if (n) setText(''); } })) setErr(null);
   };
+  if (!aiOn.value) return null;
+  const provider = settings.value.aiProvider;
+  const ai = provider === 'none' ? t('aiYours') : aiName(provider, settings.value.aiModels[provider].quick);
   return (
     <div class="aibar">
-      {aiOn.value && (
-        <form class="cmd" onSubmit={go} data-testid="cmd">
-          <label class="field" style="margin:0"><span>{t('cmdLabel')}</span>
-            <textarea rows={2} value={text} placeholder={t('cmdPh')} disabled={busy} data-testid="cmd-text"
-              onInput={e => setText((e.target as HTMLTextAreaElement).value)}
-              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void go(e); }} />
-          </label>
-          <div class="go">
-            {busy ? <><span class="hint">{t('cmdBusy')}</span><button class="btn small" type="button" onClick={() => ctl.current?.abort()}>{t('stop')}</button></>
-              : <><button class="btn primary" type="submit" data-testid="cmd-go">{t('cmdGo')}</button><span class="hint">{t('cmdHint')}</span></>}
-          </div>
-          {err && <AiError {...err} manual={() => openAskAny(scope, text)} manualLabel={t('askAnyAi')} />}
-        </form>
-      )}
-      <div class="actions ai-links">
-        <button class="btn small" type="button" onClick={() => openAskAny(scope)} data-testid="ask-any">{t('askAnyAi')}</button>
-        <button class="btn small" type="button" onClick={() => openPaste()} data-testid="paste-reply">{t('pasteReply')}</button>
-      </div>
+      <form class="cmd" onSubmit={go} data-testid="cmd">
+        <label class="field" style="margin:0"><span data-testid="cmd-label">{t('cmdLabel', { ai })}</span>
+          <textarea rows={2} value={text} placeholder={t('cmdPh', { ai })} disabled={busy} data-testid="cmd-text"
+            onInput={e => setText((e.target as HTMLTextAreaElement).value)}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void go(e); }} />
+        </label>
+        <div class="go">
+          {busy ? <><span class="hint">{t('cmdBusy')}</span><button class="btn small" type="button" onClick={() => ctl.current?.abort()}>{t('stop')}</button></>
+            : <><button class="btn primary" type="submit" data-testid="cmd-go">{t('cmdGo')}</button><span class="hint">{t('cmdHint')}</span></>}
+        </div>
+        {err && <AiError {...err} />}
+      </form>
     </div>
   );
 }
@@ -125,36 +127,6 @@ function PackBlock({ pack }: { pack: string }) {
     </>
   );
 }
-
-function AskAny({ scope: s0, question: q0 }: { scope: Scope; question: string }) {
-  const [scope, setScope] = useState<Scope>(s0);
-  const [q, setQ] = useState(q0);
-  const ps = [...projects.value.values()].filter(p => p.status === 'active' || p.status === 'paused');
-  const ds = [...decisions.value.values()].filter(d => d.status !== 'closed');
-  const pack = contextPack(scope, q || t('askAnyDefaultQ'), lang.value, dropBase.value);
-  const val = scope.kind === 'project' || scope.kind === 'decision' ? scope.kind + ':' + scope.id : scope.kind;
-  const pick = (v: string) => { const [k, id] = v.split(':'); setScope(id ? ({ kind: k, id } as Scope) : ({ kind: k } as Scope)); };
-  return (
-    <div data-testid="ask-any-sheet">
-      <h3>{t('askAnyAi')}</h3>
-      <p class="hint">{t('askAnyHint')}</p>
-      <label class="field"><span>{t('askScope')}</span>
-        <select value={val} onChange={e => pick((e.target as HTMLSelectElement).value)} data-testid="ask-scope">
-          <option value="today">{t('scopeToday')}</option>
-          <option value="matrix">{t('scopeMatrix')}</option>
-          {ps.map(p => <option value={'project:' + p.id}>{t('project')}: {p.name}</option>)}
-          {ds.map(d => <option value={'decision:' + d.id}>{t('chgDecision')}: {d.title}</option>)}
-        </select>
-      </label>
-      <label class="field"><span>{t('askQuestion')}</span>
-        <textarea rows={3} value={q} placeholder={t('askAnyDefaultQ')} onInput={e => setQ((e.target as HTMLTextAreaElement).value)} data-testid="ask-question" />
-      </label>
-      <PackBlock pack={pack} />
-    </div>
-  );
-}
-/** "Ask any AI": a context pack for any chatbot, to the clipboard or the share sheet. Works without a provider. */
-export const openAskAny = (scope: Scope = { kind: 'today' }, question = '') => openSheet(<AskAny key={'ask' + Date.now()} scope={scope} question={question} />, true);
 
 /** "Plan this trip": the pack for a stay, with the people there only if ticked for this request (default: not). */
 function TripAsk({ stayId }: { stayId: string }) {

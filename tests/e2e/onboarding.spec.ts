@@ -196,6 +196,7 @@ test.describe('on a new device', () => {
     await page.getByTestId('ob-ai-anthropic').click();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', /anthropic\.com/);
     await page.getByTestId('ob-ai-openai').click();
+    await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', 'https://openrouter.ai/keys'); // the switch has rendered
     await page.getByTestId('ai-key').fill('sk-or-test');
     await page.getByTestId('ai-key-save').click();
     await expect(page.getByTestId('ob-next')).toBeEnabled();

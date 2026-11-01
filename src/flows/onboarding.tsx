@@ -165,7 +165,7 @@ export function Onboarding() {
   const notTherapy = <p class="hint ob-notherapy" data-testid="ob-not-therapy">{t('notTherapy')}</p>;
 
   if (id === 'language') return (
-    <Frame {...frame} mark title={t('obWelcome')} hint={t('obLanguageHint')} skip={skip}
+    <Frame {...frame} n={undefined} of={undefined} mark title={t('obWelcome')} hint={t('obLanguageHint')} skip={skip}
       extra={<>
         <button class="btn wide ob-pair-link" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obHaveDevice')}</button>
         {notTherapy}
@@ -287,7 +287,7 @@ function KeyStep({ provider, setProvider, has, setHas, next, back, usePaste, ...
         <li>{t(link.steps[2])}</li>
         <li>{t('obKeyStepPaste')}</li>
       </ol>
-      <KeyField p={provider} onHas={setHas} />
+      <KeyField key={provider} p={provider} onHas={setHas} />
       {has && (
         <div class="actions">
           <button class="btn" type="button" disabled={test?.busy} onClick={run} data-testid="ob-key-test">{test?.busy ? t('aiTesting') : t('aiTest')}</button>

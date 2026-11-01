@@ -119,12 +119,12 @@ const platform = typeof window !== 'undefined' ? detectPlatform() : { ios: false
 
 /**
  * A link to the step's app or website. Opens from the tap itself (nothing awaited first,
- * or iOS ignores it); copies the prompt for Claude steps and starts the timer.
+ * or iOS ignores it); copies the prompt for a step that carries one and starts the timer.
  */
 export function GoLink({ tk, variant }: { tk: T; variant: 'big' | 'small' | 'inline' }) {
   const target = resolveLink(tk, platform, settings.value.linksInApp);
   if (!target || tk.status !== 'open') return null;
-  const label = tk.prompt ? t('openClaude') : t('openApp', { app: tk.app || t('openIt') });
+  const label = t(tk.prompt ? 'openClaude' : 'openApp', { app: tk.app || t('openIt') });
   const isWeb = target.href.startsWith('https:');
   const onClick = () => {
     if (tk.prompt) {

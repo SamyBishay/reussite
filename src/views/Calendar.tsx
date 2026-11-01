@@ -8,6 +8,7 @@ import type { ComponentType } from 'preact';
 import { settings, today } from '../app/store';
 import { calMode as mode, setCalMode as setMode, isPhone, PHONE_DAYS, go, type CalMode } from '../app/nav';
 import { openFold } from '../app/More';
+import { PeriodNav } from '../app/PeriodNav';
 import { Log } from './Log';
 import { t, fmtDate, lang } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -72,12 +73,9 @@ export function Calendar() {
     <div data-testid="calendar">
       <div class="calbar">
         {seg}
-        <div class="calnav">
-          <button class="icon-btn" type="button" onClick={() => step(-1)} aria-label={t('calPrev')} data-testid="cal-prev">‹</button>
-          <b data-testid="cal-title">{title}</b>
-          <button class="icon-btn" type="button" onClick={() => step(1)} aria-label={t('calNext')} data-testid="cal-next">›</button>
-          {a !== td && <button class="btn small ghost" type="button" onClick={() => (anchor.value = null)}>{t('pickToday')}</button>}
-        </div>
+        <PeriodNav class="calnav" name={t('calView')} label={title} away={a !== td} onToday={() => (anchor.value = null)}
+          onPrev={() => step(-1)} onNext={() => step(1)} prevLabel={t('calPrev')} nextLabel={t('calNext')}
+          testids={{ prev: 'cal-prev', next: 'cal-next', label: 'cal-title' }} />
       </div>
       {Grid ? <Grid mode={m as Exclude<CalMode, 'log'>} date={shown} /> : <p class="hint" data-testid="calendar-loading">{t('loading')}</p>}
       {!phone && <p class="hint calhint">{t('calHint')}</p>}

@@ -1,35 +1,50 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, addCard, goTab, noSideways } from './helpers';
+import { importSample, addCard, goTab, noSideways, expandSettings } from './helpers';
 
-// The matrix as four boxes: two cards each and "View all", the sheet with the whole quadrant, and every card folded at the bottom.
+// The matrix as four boxes in a 2x2 grid at every width: three compact cards each and "View all", the sheet with the whole quadrant, and every card folded at the bottom.
 const sheet = (page: Page) => page.getByTestId('sheet');
 const count = async (page: Page, k: number) => Number(await page.getByTestId('quad-count' + k).textContent());
 
-/** The sample list and three cards more, then the Matrix; returns the quadrant that holds more than two. */
+/** The sample list and three cards more, then the Matrix; returns the quadrant that holds more than three. */
 async function crowded(page: Page): Promise<number> {
   await importSample(page);
   for (const title of ['Open Mail and pay the electricity bill', 'Open Files and scan the passport', 'Open Notes and write the trip list']) await addCard(page, title);
   await goTab(page, 'matrix');
   await expect(page.getByTestId('quad1')).toBeVisible();
-  for (const k of [1, 2, 3, 4]) if ((await count(page, k)) > 2) return k;
-  throw new Error('no quadrant holds more than two cards');
+  for (const k of [1, 2, 3, 4]) if ((await count(page, k)) > 3) return k;
+  throw new Error('no quadrant holds more than three cards');
 }
 
-test('each box shows its first two cards and a View all button only when there are more', async ({ page }) => {
+test('each box shows its first three cards and a View all button only when there are more', async ({ page }) => {
   const k = await crowded(page);
   const n = await count(page, k);
   const box = page.getByTestId('quad' + k);
-  await expect(box.locator('.item')).toHaveCount(2);
+  await expect(box.locator('.item')).toHaveCount(3);
   await expect(page.getByTestId('quad-all' + k)).toHaveText('View all ' + n);
-  // A box with two cards or fewer has no button, and nothing hides in it.
+  // A box with three cards or fewer has no button, and nothing hides in it.
   for (const j of [1, 2, 3, 4]) {
     const m = await count(page, j);
-    await expect(page.getByTestId('quad' + j).locator('.item')).toHaveCount(Math.min(m, 2));
-    await expect(page.getByTestId('quad-all' + j)).toHaveCount(m > 2 ? 1 : 0);
+    await expect(page.getByTestId('quad' + j).locator('.item')).toHaveCount(Math.min(m, 3));
+    await expect(page.getByTestId('quad-all' + j)).toHaveCount(m > 3 ? 1 : 0);
   }
-  // Each box says what it is and how many it holds.
+  // Each box says what it is and how many it holds on one line; what it means is its tooltip. A card is compact: no buttons in it.
   await expect(box.locator('h3')).toBeVisible();
-  await expect(box.locator('small')).toBeVisible();
+  await expect(box.locator('header')).toHaveAttribute('title', /.+/);
+  await expect(box.locator('small')).toHaveCount(0);
+  await expect(box.getByTestId('move-btn')).toHaveCount(0);
+  const h = await box.locator('header').boundingBox(), c = await page.getByTestId('quad-count' + k).boundingBox();
+  expect(Math.abs(c!.y + c!.height / 2 - (h!.y + h!.height / 2))).toBeLessThan(h!.height / 2);
+});
+
+test('a card in a box opens its task on tap and Move to… is in that sheet; the title is clamped to two lines', async ({ page }) => {
+  const k = await crowded(page);
+  const card = page.getByTestId('quad' + k).locator('.item').first();
+  const lines = await card.locator('.clamp').evaluate(el => { const c = getComputedStyle(el); return { clamp: c.webkitLineClamp, overflow: c.overflow }; });
+  expect(lines).toEqual({ clamp: '2', overflow: 'hidden' });
+  await card.locator('.t').click();
+  await expect(sheet(page)).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Move to…' }).click();
+  await expect(sheet(page).getByTestId('to-q1')).toBeVisible();
 });
 
 test('View all opens the quadrant in a sheet, whole, with the same move button', async ({ page }) => {
@@ -58,20 +73,43 @@ test('an empty quadrant says what it is for in one line', async ({ page }) => {
   }
 });
 
-test('the boxes are two by two from 600 px and stacked below', async ({ page }) => {
+test('the four boxes are two by two at every width, 320 px included', async ({ page }) => {
   await page.goto('/#matrix');
   await expect(page.getByTestId('quad1')).toBeVisible();
   const rect = (k: number) => page.getByTestId('quad' + k).evaluate(el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width }; });
-  await page.setViewportSize({ width: 900, height: 900 });
-  const [a, b, c] = [await rect(1), await rect(2), await rect(3)];
-  expect(b.y).toBeCloseTo(a.y, 0); // Now and Protect side by side
-  expect(b.x).toBeGreaterThan(a.x + a.w - 1);
-  expect(c.y).toBeGreaterThan(a.y); // Quick below Now
-  expect(c.x).toBeCloseTo(a.x, 0);
-  await page.setViewportSize({ width: 375, height: 800 });
-  const [d, e] = [await rect(1), await rect(2)];
-  expect(e.y).toBeGreaterThan(d.y);
-  expect(e.x).toBeCloseTo(d.x, 0);
+  for (const width of [320, 390, 600, 900]) {
+    await page.setViewportSize({ width, height: 900 });
+    const [a, b, c, d] = [await rect(1), await rect(2), await rect(3), await rect(4)];
+    expect(b.y).toBeCloseTo(a.y, 0); // Now and Protect side by side
+    expect(b.x).toBeGreaterThan(a.x + a.w - 1);
+    expect(c.y).toBeGreaterThan(a.y); // Quick below Now, Later below Protect
+    expect(c.x).toBeCloseTo(a.x, 0);
+    expect(d.y).toBeCloseTo(c.y, 0);
+    expect(d.x).toBeCloseTo(b.x, 0);
+  }
+});
+
+// The owner's iPhone is 390x844 with a ~59px status bar above and ~34px of home indicator in the tab bar; Chromium has no
+// safe-area insets, so they are added here. The masthead and the command box (an AI is set up) are above the grid.
+test('on a 390x844 phone the whole grid is on screen above the tab bar, with the command box', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await crowded(page);
+  await page.goto('/#settings'); await expandSettings(page);
+  await page.getByTestId('ai-anthropic').click();
+  await page.getByTestId('ai-key').fill('sk-ant-test');
+  await page.getByTestId('ai-key-save').click();
+  await expect(page.getByTestId('ai-settings')).toContainText('A key is saved.');
+  await page.addStyleTag({ content: '.tabbar{padding-bottom:34px !important} body{padding-top:59px}' });
+  await goTab(page, 'matrix');
+  await expect(page.getByTestId('cmd')).toBeVisible();
+  await expect(page.getByTestId('quad4')).toBeVisible();
+  const m = await page.evaluate(() => {
+    const bottom = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().bottom;
+    return { grid: bottom('[data-testid=matrix]'), tab: document.querySelector('.tabbar')!.getBoundingClientRect().top, cmd: bottom('[data-testid=cmd]') };
+  });
+  expect(m.cmd).toBeLessThan(m.grid);
+  expect(m.grid).toBeLessThanOrEqual(m.tab - 8);
+  await noSideways(page, 'matrix 390');
 });
 
 test('every card is in one list, folded at the bottom, each with its quadrant named', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importSample, noSideways, newCardSheet } from './helpers';
+import { importSample, noSideways, newCardSheet, openAllProjects } from './helpers';
 
 // Optional fields sit under one folded "More", after the essentials; Settings sections are folded disclosures.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -48,6 +48,7 @@ test('More says how many hidden fields have a value', async ({ page }) => {
 test('the add sheet and the project sheet fold their optional fields too', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('tab-projects').click();
+  await openAllProjects(page);
   await page.getByTestId('edit-project').first().click();
   const p = sheet(page).getByTestId('project-sheet');
   await expect(p.locator('input[type=text]').first()).toBeVisible();

@@ -38,7 +38,10 @@ test('a chain is one card: +2 after on Today and the Matrix, unfolding, and the 
 
   await goTab(page, 'matrix');
   await expect(page.locator('.matrix .item')).toHaveCount(1);
-  const item = page.locator('.matrix .item');
+  // In its box the card is small: a "+2" badge. The chain unfolds in the list of every card.
+  await expect(page.locator('.matrix .item').getByTestId('chain-count')).toHaveText('+2');
+  await page.getByTestId('all-cards').locator('summary').click();
+  const item = page.getByTestId('all-cards-list').locator('.item');
   await expect(item.getByTestId('chain-toggle')).toHaveText(/\+2 after/);
   await item.getByTestId('chain-toggle').click();
   await expect(item.locator('.chain-list li')).toHaveCount(2);

@@ -1,6 +1,6 @@
 # Les projets
 
-Un projet regroupe des étapes vers un objectif. Les projets sont listés sous les quatre familles. La carte d’un projet montre son objectif, sa barre s’il en a une, et son étape suivante.
+Un projet regroupe des étapes vers un objectif. Les projets sont listés sous les quatre familles, deux par famille. Chacun s’affiche en petite carte : son nom, le nombre d’étapes ouvertes, son étape suivante sur une ligne et sa barre s’il en a une. Touchez une carte pour ouvrir le projet entier à cet endroit, avec son objectif, ses étapes et le formulaire pour en ajouter (**Replier** le referme). Quand une famille a plus de deux projets, **Voir les 4** ouvre toute sa liste, projet par projet, dans une feuille. La boîte de réception, les décisions et les projets terminés restent en dessous.
 
 ![Les projets, avec les décisions en dessous](shot:projects)
 

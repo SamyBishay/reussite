@@ -1,16 +1,17 @@
-// The Eisenhower matrix (brief §5): four boxes, each showing its first two cards and a button for the rest, and the whole
-// list folded at the bottom. Moves: drag on desktop and tablet; on phones, long-press or the "Move to…" menu. What is
+// The Eisenhower matrix (brief §5): four boxes in a 2x2 grid at every width, each showing its first cards, compact (the suit, a
+// two-line title, a dot when late or soon), and a small button for the rest, and the whole list folded at the bottom. Moves: drag on desktop and tablet; on phones, long-press or the "Move to…" menu. What is
 // shown follows the place menu's View (the page's place, one of its areas, or everywhere).
 import { Cemetery } from './Cemetery';
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { tasks, today, settings, projects } from '../app/store';
-import { isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
+import { chainOfHead, isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
 import { ChainFold } from '../app/ChainFold';
 import { openTask, openMove, moveToQuadrant } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, suitName, openSheet } from '../app/ui';
+import { daysBetween } from '../domain/dates';
 import { Fold } from '../app/More';
-import { t, type Key } from '../i18n';
+import { t, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
 import { CommandBox } from '../ai/ui';
@@ -22,7 +23,7 @@ import { areaOfStep, showsInArea } from '../app/areas';
 const META: Record<number, [Key, Key]> = { 1: ['qNowSub', 'qNowHint'], 2: ['qProtectSub', 'qProtectHint'], 3: ['qQuickSub', 'qQuickHint'], 4: ['qLaterSub', 'qLaterHint'] };
 const QUADS: Quadrant[] = [1, 2, 3, 4];
 /** How many cards a box shows before "View all". */
-const PEEK = 2;
+const PEEK = 3;
 /** The search and the project and suit filters of the folded list of every card. */
 const filters = signal({ q: '', project: '', suit: '' });
 
@@ -75,6 +76,26 @@ function Item({ tk, planned, quadTag }: { tk: T; planned: boolean; quadTag?: Qua
   );
 }
 
+/** A card in a box: the suit and the title (two lines at most), a dot when its date is late or near. Tap opens it; long-press and drag move it. */
+function Mini({ tk, planned }: { tk: T; planned: boolean }) {
+  const lp = useLongPress(() => openMove(tk.id));
+  const { wasLong, ...handlers } = lp;
+  const chain = chainOfHead(tk.id);
+  const n = tk.due ? daysBetween(today.value, tk.due) : null;
+  const near = n !== null && n <= settings.value.urgencyDays;
+  const dueText = n === null ? '' : n === 0 ? t('dueToday') : n === 1 ? t('dueTomorrow') : n < 0 ? t('dueLate', { n: Math.abs(n) }) : t('dueOn', { date: fmtDate(tk.due!) });
+  return (
+    <div class={'item mini' + (planned ? ' planned' : '')} draggable data-task={tk.id} onDragStart={e => { e.dataTransfer?.setData('text/plain', tk.id); (e.currentTarget as HTMLElement).classList.add('dragging'); }}
+      onDragEnd={e => (e.currentTarget as HTMLElement).classList.remove('dragging')}>
+      <Suit s={tk.suit} />
+      <button type="button" class="linklike t" {...handlers} title={dueText || undefined} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
+        <span class="clamp">{tk.kind === 'decision' && '⚖ '}<Title s={tk.title} />{chain && <> <span class="chainbadge" data-testid="chain-count" title={t('chainAfter', { n: chain.after })}>+{chain.after}</span></>}</span>
+      </button>
+      {near && <span class="dot" role="img" aria-label={dueText} data-testid="mini-dot" />}
+    </div>
+  );
+}
+
 /** The whole of one quadrant, in a sheet. */
 function QuadSheet({ k }: { k: Quadrant }) {
   const items = pageCards().qs[k]!;
@@ -87,21 +108,20 @@ function QuadSheet({ k }: { k: Quadrant }) {
   );
 }
 
-/** One quadrant: its name, what it means, how many, the first two cards and a button for the rest. A card dropped on it moves there. */
+/** One quadrant: its name and how many (what it means is its tooltip), the first three cards and a button for the rest. A card dropped on it moves there. */
 function Box({ k, items, planSet, over, setOver }: { k: Quadrant; items: T[]; planSet: Set<string>; over: number | null; setOver: (k: number | null) => void }) {
   return (
     <section class={'quad q' + k + (over === k ? ' over' : '')} data-testid={'quad' + k} aria-label={quadName(k)}
       onDragOver={e => { e.preventDefault(); setOver(k); }} onDragLeave={() => setOver(null)}
       onDrop={e => { e.preventDefault(); setOver(null); const id = e.dataTransfer?.getData('text/plain'); if (id) moveToQuadrant(id, k); }}>
-      <header class="quad-h">
+      <header class="quad-h" title={t(META[k]![0])}>
         <h3>{quadName(k)}</h3>
         <span class="count" data-testid={'quad-count' + k}>{items.length}</span>
-        <small>{t(META[k]![0])}</small>
       </header>
       {items.length === 0
         ? <p class="hint quad-empty">{t(META[k]![1])}</p>
-        : <ul class="items">{items.slice(0, PEEK).map(x => <li key={x.id}><Item tk={x} planned={planSet.has(x.id)} /></li>)}</ul>}
-      {items.length > PEEK && <button class="btn ghost small quad-more" type="button" data-testid={'quad-all' + k} onClick={() => openSheet(<QuadSheet k={k} />)}>{t('viewAllN', { n: items.length })}</button>}
+        : <ul class="items">{items.slice(0, PEEK).map(x => <li key={x.id}><Mini tk={x} planned={planSet.has(x.id)} /></li>)}</ul>}
+      {items.length > PEEK && <button class="linklike quad-more" type="button" data-testid={'quad-all' + k} onClick={() => openSheet(<QuadSheet k={k} />)}>{t('viewAllN', { n: items.length })}</button>}
     </section>
   );
 }
@@ -138,7 +158,7 @@ export function Matrix() {
   const planSet = new Set(rawPlan(today.value));
   return (
     <div>
-      <CommandBox scope={{ kind: 'matrix' }} />
+      <CommandBox scope={{ kind: 'matrix' }} compact />
       <ReviewBanner day={today.value} testid="matrix-review-card" chatTestid="matrix-review-chat" />
       <div class="matrix" data-testid="matrix">
         {QUADS.map(k => <Box key={k} k={k} items={qs[k]!} planSet={planSet} over={over} setOver={setOver} />)}

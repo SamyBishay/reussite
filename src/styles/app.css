@@ -885,3 +885,9 @@ body > .row,body > li{list-style:none}
 .pm-tick{display:grid;place-items:center;min-height:48px;cursor:pointer}
 .pm-tick input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 .placemenu .actions{margin-top:var(--s4)}
+/* Decisions on the Matrix: compact rows under the four boxes. */
+.decisions{margin-top:var(--s5)}
+.decisions .sec{margin-top:0}
+.decisions .subsec{font:600 12px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:var(--s3) 0 var(--s2)}
+.decisions .decs li{padding:var(--s2) var(--s3);border-radius:10px;gap:0}
+.decisions .decs .meta{font-size:12.5px;line-height:1.35}

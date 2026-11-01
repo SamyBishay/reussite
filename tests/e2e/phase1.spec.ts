@@ -128,7 +128,7 @@ test('a repeating step comes back once when done', async ({ page }) => {
 });
 
 test('a whole decision by hand: problem, options, balances, scores, choice, steps', async ({ page }) => {
-  await page.goto('/#projects');
+  await page.goto('/#matrix');
   await page.getByTestId('new-decision').click();
   await page.getByTestId('dw-title').fill('Train or plane?');
   await page.getByTestId('dw-title').blur();
@@ -307,7 +307,7 @@ for (const width of [320, 375, 430]) {
     await check('tomorrow');
     await page.getByRole('button', { name: 'Back to today' }).click();
     // Decisions: the wizard's balance screen and a decision page.
-    await goTab(page, 'projects');
+    await goTab(page, 'matrix');
     await page.getByTestId('new-decision').click();
     await check('decision problem');
     await page.getByTestId('dw-next').click();

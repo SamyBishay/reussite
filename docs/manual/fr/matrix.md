@@ -11,6 +11,10 @@ La matrice range vos étapes en quatre cases. Chacune montre ses deux premières
 - **Vite fait** (urgent, moins important). Gardez-les petites, groupez-les, ou confiez-les à quelqu’un.
 - **Plus tard** (ni l’un ni l’autre). Mettez-les de côté, ou abandonnez-les pour de bon.
 
+## Les décisions
+
+Sous les quatre cases (et au-dessus des listes repliées) se trouvent vos décisions, en lignes compactes groupées en **À vérifier**, **En cours** et **Décidées** ; les closes sont repliées sous **Closes (n)**. **+ Nouvelle décision** est à côté du titre. Voir [Les décisions](decisions.md).
+
 ## Urgent, c’est une case à cocher
 
 *Urgent* veut dire une échéance d’ici environ trois semaines, ou qui bloque quelque chose qui en a une, et **c’est vous qui le cochez**. Réussite ne le déduit pas des dates : une étape due demain que vous n’avez pas cochée reste dans À protéger ou Plus tard. Sa date la classe seulement à l’intérieur de sa case, la plus proche en premier.

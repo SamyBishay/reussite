@@ -24,7 +24,7 @@ test('closed decisions are folded under “Closed (n)”, in the list and inside
     ['dc2', decision('Another closed one', 'closed', 'p1')],
     ['dd1', decision('Still drafting', 'draft', null)],
   ]);
-  await goTab(page, 'projects');
+  await goTab(page, 'matrix');
   const decisions = page.getByTestId('decisions');
   // Not folded: the open one is in plain sight.
   await expect(decisions.getByRole('button', { name: 'Still drafting' })).toBeVisible();

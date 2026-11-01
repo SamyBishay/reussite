@@ -11,6 +11,10 @@ The matrix sorts your steps in four boxes, always two by two, small enough to be
 - **Quick** (urgent, less important). Keep them small, batch them, or hand them off.
 - **Later** (neither). Park them, or drop them for good.
 
+## Decisions
+
+Under the four boxes (and above the folded lists) are your decisions, in compact rows grouped as **To check**, **Open** and **Decided**; the closed ones are folded under **Closed (n)**. **+ New decision** is beside the heading. See [Decisions](decisions.md).
+
 ## Urgent is a tick
 
 *Urgent* means a deadline within about three weeks, or blocking something that has one, and **you tick it**. Réussite doesn't infer it from dates: a step due tomorrow that you haven't ticked stays in Protect or Later. Its date only orders it inside its box, nearest first.

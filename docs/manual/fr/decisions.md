@@ -6,7 +6,7 @@ Une décision, c’est un problème que vous ne cessez de retourner. Réussite l
 
 ## En commencer une
 
-Dans **Projets**, touchez **+ Nouvelle décision**. Ou transformez une étape en décision depuis ses détails (« Une décision », puis **Travailler la décision**). Un écran à la fois :
+Dans **Matrice**, sous les quatre cases, touchez **+ Nouvelle décision**. Ou transformez une étape en décision depuis ses détails (« Une décision », puis **Travailler la décision**). Un écran à la fois :
 
 1. **Le problème.** Ce qui se passe, ce qui devrait se passer, l’écart, les contraintes, l’échéance, et ce qui dépend de vous. Si ce sont en fait deux problèmes, cochez « Ce sont en fait deux problèmes » : le second devient un brouillon.
 2. **Options.** Toutes les options auxquelles vous pensez, les vôtres d’abord. La quantité d’abord, sans juger. Sous « Souvent oubliées », vous trouverez : ne rien faire, repousser, une version plus petite, une combinaison, demander à quelqu’un, déléguer, changer l’ordre. Marquez une option **Impossible** seulement si elle l’est clairement, et dites pourquoi. Puis **Clore la liste**. Ne la rouvrez que pour un fait vraiment nouveau.

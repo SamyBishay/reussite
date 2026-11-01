@@ -116,11 +116,11 @@ export const en = {
   qProtectSub: 'important · no clock',
   qQuickSub: 'urgent · less important',
   qLaterSub: 'neither',
-  qNowHint: 'A deadline within the urgency window, or blocking one. Today’s list starts here.',
+  qNowHint: 'A deadline within about three weeks, or blocking one. Today’s list starts here.',
   qProtectHint: 'Nothing forces these. One step gets a slot every day, or they never happen.',
   qQuickHint: 'Keep them small, batch them, or hand them off.',
   qLaterHint: 'Park them, or drop them for good.',
-  axisNote: 'Urgency and importance are set separately. Urgent means a deadline within the urgency window, which the dates handle on their own; flag something by hand only when it blocks one.',
+  axisNote: 'Urgency and importance are set separately. Urgent means a deadline within about three weeks, or blocking something that has one: you tick it, the app doesn’t guess from dates. A date orders a step inside its box.',
   // projects
   noGoal: 'No goal yet. Make it SMART.',
   proposed: 'proposed',

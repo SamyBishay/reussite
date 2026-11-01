@@ -6,22 +6,22 @@ La matrice range vos étapes en quatre cases. Chacune montre ses deux premières
 
 ## Les quatre quadrants
 
-- **Maintenant** (urgent et important). Une échéance dans la fenêtre d’urgence, ou quelque chose qui en bloque une. La liste d’Aujourd’hui commence ici.
+- **Maintenant** (urgent et important). Une échéance d’ici environ trois semaines, ou quelque chose qui en bloque une. La liste d’Aujourd’hui commence ici.
 - **À protéger** (important, sans horloge). Rien ne les force. Une étape reçoit un créneau chaque jour, sinon elles n’arrivent jamais.
 - **Vite fait** (urgent, moins important). Gardez-les petites, groupez-les, ou confiez-les à quelqu’un.
 - **Plus tard** (ni l’un ni l’autre). Mettez-les de côté, ou abandonnez-les pour de bon.
 
-## Urgent veut dire une date
+## Urgent, c’est une case à cocher
 
-*Urgent* veut dire une échéance dans la **fenêtre d’urgence** (trois semaines par défaut, Réglages → Méthode), ou qui bloque quelque chose qui en a une. Les dates s’en chargent toutes seules. Ne marquez une étape urgente à la main que si elle bloque une échéance.
+*Urgent* veut dire une échéance d’ici environ trois semaines, ou qui bloque quelque chose qui en a une, et **c’est vous qui le cochez**. Réussite ne le déduit pas des dates : une étape due demain que vous n’avez pas cochée reste dans À protéger ou Plus tard. Sa date la classe seulement à l’intérieur de sa case, la plus proche en premier.
 
 Une date lointaine n’est pas urgente, même importante. Pas plus que ce sur quoi vous ne pouvez pas encore agir : l’étape, c’est la part que vous maîtrisez, comme demander.
 
-Si vous déplacez une étape dans un quadrant urgent, Réussite demande : « Urgent veut dire une date. Pour quand ? »
+Déplacer une étape dans une autre case règle simplement ses deux cases à cocher.
 
 **La recherche dit :** non testé ici. `[E?]`
 
-**La pratique dit :** la plupart de ce qui paraît urgent est seulement bruyant. C’est une date qui rend une chose urgente. `[E?]`
+**La pratique dit :** la plupart de ce qui paraît urgent est seulement bruyant. C’est une vraie échéance qui rend une chose urgente. `[E?]`
 
 ## Déplacer, filtrer et chercher
 

@@ -29,7 +29,7 @@ To see only one area, tick **View** on it in the place menu: Today and the calen
 
 A **stay** is a place with a first and a last day. Add one in Settings → Method, under Stays. On the first day Réussite switches to that place by itself, in its time zone. Outside a stay, you're wherever you said you were.
 
-**Before I leave.** A step can be set as "Before I leave", a number of days before the last day of a stay. It turns urgent on its own as the day nears.
+**Before I leave.** A step can be set as "Before I leave", a number of days before the last day of a stay. Its date moves with the stay, and it sorts nearest first in its box; tick it urgent when it is.
 
 **Research says:** untested here. `[E?]`
 

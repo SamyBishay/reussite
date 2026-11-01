@@ -24,7 +24,7 @@ English ou Français. Le changement est immédiat.
 
 Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raisonnables :
 
-- **Fenêtre d’urgence (jours).** Trois semaines par défaut. Une échéance dans cette fenêtre rend une étape urgente.
+- **Mettre en évidence les échéances à moins de (jours).** Trois semaines par défaut. Une échéance dans cette fenêtre s’affiche en rouge. Elle ne rend pas une étape urgente : c’est vous qui le cochez.
 - **La journée commence à.** 5 h par défaut. Une nuit tardive compte comme le même jour jusque-là.
 - **Étapes de travail par jour, au plus.** Trois par défaut.
 - **Temps de planification (min).** 15 par défaut.

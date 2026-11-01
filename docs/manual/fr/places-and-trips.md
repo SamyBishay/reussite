@@ -31,7 +31,7 @@ Pour ne voir qu’une zone, cochez **Voir** sur elle dans le menu des lieux : 
 
 Un **séjour** est un lieu avec un premier et un dernier jour. Ajoutez-en un dans Réglages → Méthode, sous Séjours. Le premier jour, Réussite passe tout seul à ce lieu, dans son fuseau horaire. Hors séjour, vous êtes là où vous avez dit être.
 
-**Avant de partir.** Une étape peut être réglée sur « Avant de partir », un certain nombre de jours avant le dernier jour d’un séjour. Elle devient urgente toute seule à mesure que le jour approche.
+**Avant de partir.** Une étape peut être réglée sur « Avant de partir », un certain nombre de jours avant le dernier jour d’un séjour. Sa date suit le séjour et elle passe en tête de sa case à mesure que le jour approche ; cochez-la urgente quand elle l’est.
 
 **La recherche dit :** non testé ici. `[E?]`
 

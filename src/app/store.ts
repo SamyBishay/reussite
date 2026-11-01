@@ -1,6 +1,6 @@
 // App state: IndexedDB is the source of truth; signals mirror it for the views.
 // Every write goes through here, so it gets field clocks and respects read-only mode.
-import { signal, computed, batch } from '@preact/signals';
+import { signal, computed, batch, effect } from '@preact/signals';
 import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
 import { create, patch, remove, fieldsOf, type Stored } from '../data/doc';
@@ -8,6 +8,7 @@ import { createClock, tick, type Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type UndoDoc, type Collection, type Day, type Project, type Session, type Task, type Place, type Decision, type Stay, type MemoryNote, type Exchange, type Address, type Person } from '../data/schema';
 import { normAddress, normDecision, normExchange, normNote, normPerson } from '../data/normalize';
 import { whereNow, zoneOfPlace } from '../domain/places';
+import { parseSavedView, regionOf, resolveView, savedViewFor, type SavedView } from '../domain/view';
 import { withDefaults, firstWritten, type Settings } from '../data/settings';
 import { runMigrations } from '../data/migrations';
 import { writeMerged, type Write } from '../data/syncstore';
@@ -57,11 +58,32 @@ export const here = computed(() => where.value.here);
 export const currentStay = computed(() => where.value.stay);
 export const hereZone = computed(() => zoneOfPlace(places.value, here.value));
 
-/** The place page being looked at (brief §5): Today, Matrix, Projects and Calendar follow it. Device-local. */
-const viewed = signal<string | null>(null);
-export const pagePlace = computed(() => (viewed.value && (viewed.value === 'any' || places.value.has(viewed.value)) ? viewed.value : here.value));
-export const viewingElsewhere = computed(() => pagePlace.value !== here.value);
-export function viewPlace(id: string | null) { viewed.value = id && id !== here.value ? id : null; }
+// What the lists look at (the place menu's View, src/domain/view.ts): a region, one of its areas, or everywhere. Kept on
+// this device (not synced), so the app reopens on the same area; it is tied to the region of "here" it was chosen in.
+const VIEW_KEY = 'reussite.placeview'; // not 'reussite.view': that is the tab last open (nav.ts)
+function readSavedView(): SavedView | null { try { return parseSavedView(localStorage.getItem(VIEW_KEY)); } catch { return null; } }
+function keepView(v: SavedView | null) {
+  savedView.value = v;
+  try { if (v) localStorage.setItem(VIEW_KEY, JSON.stringify(v)); else localStorage.removeItem(VIEW_KEY); } catch { /* no storage: the view lasts for the session */ }
+}
+const savedView = signal<SavedView | null>(readSavedView());
+/** The view in force: the saved one while it holds, else the region of "here". */
+export const pageView = computed(() => resolveView(places.value, here.value, savedView.value));
+/** The place page being looked at (brief §5): Today, Matrix, Projects and Calendar follow it. */
+export const pagePlace = computed(() => pageView.value.page);
+/** The area inside that page the lists are narrowed to, if the view is an area. */
+export const viewArea = computed(() => pageView.value.area);
+/** Every place at once: the lists ignore where a step is. */
+export const viewAll = computed(() => pageView.value.all);
+/** The page being looked at is another region's than the one the person is in. */
+export const viewingElsewhere = computed(() => pagePlace.value !== regionOf(places.value, here.value));
+/** Choose the view: a place or area id, 'all', or null for the region of "here". */
+export function setView(id: string | null) { keepView(savedViewFor(places.value, here.value, id)); }
+// Moving to another region, by a stay or by "I'm here", sends the view back to that region, and what was saved for the old one is forgotten.
+effect(() => {
+  const s = savedView.value;
+  if (ready.value && s && s.region !== regionOf(places.value, here.value)) keepView(null);
+});
 
 let toastTimer = 0;
 export function toast(m: string) {

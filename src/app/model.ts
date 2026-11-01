@@ -1,6 +1,6 @@
 // Read-side helpers, ported from v1. They read the signals, so views that call them re-render.
 import { computed } from '@preact/signals';
-import { tasks, sessions, projects, days, settings, today, pagePlace, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
+import { tasks, sessions, projects, days, settings, today, pagePlace, viewAll, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
 import type { Task, Day, Session, Address, Person } from '../data/schema';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import { isUrgent, type Quadrant } from '../domain/tasks';
@@ -26,8 +26,8 @@ export type T = WithId<Task>;
 export const T = (id: string): T | undefined => tasks.value.get(id);
 // The rules themselves live in src/domain/lists.ts (the connector uses them too); these read the signals.
 export const whereOf = (t: T): string => L.whereOf(t, projects.value);
-/** On the page being viewed (or `place`): its own steps plus everything marked Anywhere. */
-export const inPlace = (t: T, place = pagePlace.value) => L.inPlace(t, place, projects.value, places.value);
+/** On the page being viewed (or `place`): its own steps plus everything marked Anywhere. With the view on Everywhere and no `place`, every step is. */
+export const inPlace = (t: T, place?: string) => (place === undefined ? viewAll.value || L.inPlace(t, pagePlace.value, projects.value, places.value) : L.inPlace(t, place, projects.value, places.value));
 /** An open work step: not a standing obligation, not a fixed commitment, not an event the person waits for. */
 export const isOpen = (t: T | undefined): t is T => L.isOpen(t);
 /** Something the person waits for (schema 6, src/domain/events.ts): dormant, and out of every list of work. */
@@ -83,7 +83,7 @@ export { byOrder };
 export const goalSteps = (projectId: string): T[] => [...tasks.value.values()].filter(x => x.project === projectId && x.status === 'open' && !x.template && !L.isEvent(x)).sort(byOrder);
 export const byPriority = (a: T, b: T): number => L.byPriority(withChainDue(a), withChainDue(b), { today: today.value, urgencyDays: settings.value.urgencyDays, projects: projects.value });
 
-export function candidates(k = today.value, place = pagePlace.value): T[] {
+export function candidates(k = today.value, place?: string): T[] {
   const plan = new Set(rawPlan(k));
   return [...tasks.value.values()].filter(t => isOpen(t) && !isObligation(t) && inPlace(t, place) && !blocked(t) && !plan.has(t.id)).sort(byPriority);
 }
@@ -277,11 +277,11 @@ export const addressById = (id: string | null | undefined): A | undefined => (id
 export const personById = (id: string | null | undefined): P | undefined => (id ? people.value.get(id) : undefined);
 export const lastVisitOf = lastVisit;
 
-/** Addresses on a place's page (its own plus Anywhere), by name. */
-export const addressesIn = (place = pagePlace.value): A[] =>
-  [...addresses.value.values()].filter(a => onPage(places.value, a.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
-export const peopleIn = (place = pagePlace.value): P[] =>
-  [...people.value.values()].filter(p => onPage(places.value, p.placeId, place)).sort((a, b) => a.name.localeCompare(b.name));
+/** Addresses on a place's page (its own plus Anywhere), by name; with the view on Everywhere and no `place`, all of them. */
+export const addressesIn = (place?: string): A[] =>
+  [...addresses.value.values()].filter(a => (place === undefined ? viewAll.value || onPage(places.value, a.placeId, pagePlace.value) : onPage(places.value, a.placeId, place))).sort((a, b) => a.name.localeCompare(b.name));
+export const peopleIn = (place?: string): P[] =>
+  [...people.value.values()].filter(p => (place === undefined ? viewAll.value || onPage(places.value, p.placeId, pagePlace.value) : onPage(places.value, p.placeId, place))).sort((a, b) => a.name.localeCompare(b.name));
 
 /** What the planner offers for a leisure obligation: up to three addresses in the current place (`place`), `category` narrowing them. */
 export const offerAddressesNow = (category: string | null = null, place = here.value): A[] => (addressesOn() ? offerAddresses(addresses.value.values(), { place, category, places: places.value }) : []);

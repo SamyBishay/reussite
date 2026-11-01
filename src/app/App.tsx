@@ -2,15 +2,16 @@
 import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { ready, readOnly, settings, today, toastMsg, start, here, hereZone, pagePlace, viewPlace, viewingElsewhere, clockNow } from './store';
+import { ready, readOnly, settings, today, toastMsg, start, here, hereZone, pagePlace, pageView, places, setView, viewingElsewhere, clockNow } from './store';
 import { cardsOn, minutesOn, allCards, running, T, dayDoc, greetingNow, dayOrderOf } from './model';
 import { wallOf } from '../domain/zone';
+import { regionOf, viewsElsewhere } from '../domain/view';
 import { applyTheme } from './theme';
 import { SheetHost, Title, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openPause, openTask, placeName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { openPile, openPause, openTask, placeName, areaName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { startTask, patchTask } from './actions';
-import { openPlaces } from './PlacesSheet';
+import { openPlaceMenu } from './PlacesSheet';
 import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { Clock } from './Clock';
@@ -56,6 +57,16 @@ effect(() => { applyTheme(settings.value); });
 // "By time of day" re-checks every minute.
 setInterval(() => { if (settings.value.theme === 'time') applyTheme(settings.value); }, 60_000);
 
+/** The pill: where the person is, or, when the lists show something else, what they show. */
+function PlacePill() {
+  const v = pageView.value, elsewhere = viewsElsewhere(places.value, here.value, v);
+  const shown = v.all ? t('viewEverywhere') : v.id === 'any' ? placeName('any') : areaName(v.id);
+  const label = elsewhere ? (v.all ? '<b>' + escapeHtml(shown) + '</b>' : t('viewingPill', { place: '<b>' + escapeHtml(shown) + '</b>' })) : t('inPlace', { place: '<b>' + escapeHtml(placeName(here.value)) + '</b>' });
+  return (
+    <button class="here" type="button" onClick={openPlaceMenu} aria-label={t('placePillLabel', { here: placeName(here.value), view: shown })} aria-haspopup="dialog" data-testid="place-pill" data-viewing={elsewhere ? '' : undefined}
+      dangerouslySetInnerHTML={{ __html: label }} />
+  );
+}
 function Mast() {
   const d = dayDoc(today.value);
   return (
@@ -64,8 +75,7 @@ function Mast() {
         <h1 class="word">{t('appName')}</h1>
         <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
       </div>
-      <button class="here" type="button" onClick={openPlaces} aria-label={t('inPlaceLabel', { place: placeName(here.value) })} data-testid="place-pill"
-        dangerouslySetInnerHTML={{ __html: t('inPlace', { place: '<b>' + escapeHtml(placeName(here.value)) + '</b>' }) }} />
+      <PlacePill />
     </header>
   );
 }
@@ -167,7 +177,7 @@ function PlaceBanner() {
   if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || view.value === 'waiting' || (view.value === 'calendar' && calMode.value === 'log')) return null;
   return (
     <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
-      <button class="btn small" type="button" onClick={() => viewPlace(null)}>{t('backTo', { place: placeName(here.value) })}</button></div>
+      <button class="btn small" type="button" onClick={() => setView(null)}>{t('backTo', { place: placeName(regionOf(places.value, here.value)) })}</button></div>
   );
 }
 function Moment() {

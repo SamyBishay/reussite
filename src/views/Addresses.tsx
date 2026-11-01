@@ -2,7 +2,7 @@
 // advance so that "go out" becomes "Open the front door, then the bakery on the corner". They feed the plan;
 // they are not a travel journal or a maps app. The screen follows the page being viewed and can show everything.
 import { useState } from 'preact/hooks';
-import { pagePlace, people, addresses, readOnly } from '../app/store';
+import { pagePlace, viewAll, people, addresses, readOnly } from '../app/store';
 import { addressesIn, peopleIn, addressesOn, lastVisitOf, type A, type P } from '../app/model';
 import { ExtLink } from '../app/ui';
 import { placeName, placeOptions } from '../app/sheets';
@@ -55,7 +55,7 @@ function PersonRow({ p, showPlace }: { p: P; showPlace: boolean }) {
 }
 
 export function Addresses() {
-  const [scope, setScope] = useState<string>(pagePlace.value);
+  const [scope, setScope] = useState<string>(viewAll.value ? ALL : pagePlace.value);
   if (!addressesOn()) {
     return (
       <div data-testid="addresses-off">

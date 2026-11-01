@@ -1,6 +1,6 @@
 // Areas in use (schema 5): a place can hold areas (Cairo → Heliopolis), and the person can spend a morning or an
 // afternoon in one. What an area is (`parentId`, one level) is in places.ts; this is what the views do with it: the
-// order of the places in a select, the chips that filter a page to one area, the headings a list is grouped under,
+// order of the places in a select, the area a page is narrowed to (the place menu's View, see view.ts), the headings a list is grouped under,
 // and the half days. Pure: ids in, ids out.
 import { isArea, parentOf, placeAndAreas, type PlaceMap } from './places';
 
@@ -43,10 +43,6 @@ export const areaOf = (places: PlaceMap, where: string): string | null => (isAre
 /** Whether something set to `where` shows when the page is narrowed to `area`: that area's own, and Anywhere (the base layer). */
 /** With `exclusive` (the Matrix), only the area's own steps: Anywhere's are left out. */
 export const inArea = (where: string, area: string | null, exclusive = false): boolean => !area || (!exclusive && where === 'any') || where === area;
-
-/** The filter to use on a page: the chosen area if the page still has it, else none. */
-export const activeArea = (places: PlaceMap, page: string, chosen: string | null | undefined): string | null =>
-  chosen && areasOnPage(places, page).includes(chosen) ? chosen : null;
 
 export interface AreaGroup<T> { area: string | null; items: T[] }
 

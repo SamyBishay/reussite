@@ -19,9 +19,9 @@ export function More({ n = 0, children, testid = 'more', open }: { n?: number; c
 }
 
 /** A Settings section: its heading is the summary. Only the first is open to begin with. */
-export function Fold({ title, testid, open, children }: { title: string; testid?: string; open?: boolean; children: ComponentChildren }) {
+export function Fold({ title, testid, open, onToggle, children }: { title: string; testid?: string; open?: boolean; onToggle?: (open: boolean) => void; children: ComponentChildren }) {
   return (
-    <details class="set fold" data-testid={testid} open={open}>
+    <details class="set fold" data-testid={testid} open={open} onToggle={onToggle ? e => onToggle((e.currentTarget as HTMLDetailsElement).open) : undefined}>
       <summary><h2>{title}</h2></summary>
       <div class="foldbody">{children}</div>
     </details>

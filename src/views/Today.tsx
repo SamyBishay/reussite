@@ -23,7 +23,6 @@ import { splitDone } from '../domain/lists';
 import { withTime } from '../domain/calendar';
 import { wallOf } from '../domain/zone';
 import { areaFilter, areaOfStep } from '../app/areas';
-import { AreaChips } from '../app/AreaUi';
 import { areaName } from '../app/sheets';
 import { addDays, daysBetween } from '../domain/dates';
 import { isoDow } from '../domain/repeat';
@@ -257,8 +256,8 @@ export function Today() {
   if (k !== td) return <div><Navigator k={k} /><OtherDay k={k} /></div>;
   const d = dayDoc(k);
   const every = shownPlan(k);
-  // Narrowed to an area (a chip): that area's steps and Anywhere's.
-  const af = areaFilter('today');
+  // Narrowed to an area (the place menu's View): that area's steps and Anywhere's.
+  const af = areaFilter();
   const plan = af ? every.filter(id => inArea(whereOf(T(id)!), af)) : every;
   const open = plan.filter(id => isOpen(T(id)));
   // The day's one order (src/domain/dayOrder.ts): its first item is Start here (a fixed-time item once it takes over), the list follows it,
@@ -287,7 +286,6 @@ export function Today() {
   return (
     <div>
       <Navigator k={k} />
-      <AreaChips view="today" />
       <StayNotice />
       <SyncCards />
       {checks.map(dc => (

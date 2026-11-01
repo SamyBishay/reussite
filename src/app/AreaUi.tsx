@@ -1,25 +1,12 @@
-// What the areas look like in the views (phase 4b): the chips that narrow a page to one area, a small tag, and the
-// editor for the areas of a place (Settings → Method and the Places sheet).
+// What the areas look like in the views (phase 4b): a small tag, and the editor for the areas of a place (Settings → Method
+// and the Places sheet). Narrowing a page to one area is the place menu's View (src/app/PlacesSheet.tsx).
 import { useState } from 'preact/hooks';
 import { places, toast, update } from './store';
 import { addArea, removeArea } from './actions';
 import { areaName, placeName } from './sheets';
-import { areaFilter, pageAreas, toggleArea, type AreaView } from './areas';
 import { areasOnPage } from '../domain/areas';
 import { t } from '../i18n';
 import type { Place } from '../data/schema';
-
-/** One chip per area of the page's place; tapping narrows the view to it (and Anywhere), tapping again clears. Nothing when the place has none. */
-export function AreaChips({ view }: { view: AreaView }) {
-  const areas = pageAreas.value;
-  if (!areas.length) return null;
-  const on = areaFilter(view);
-  return (
-    <div class="chips-pick small areachips" role="group" aria-label={t('areaChips')} data-testid="area-chips">
-      {areas.map(id => <button type="button" aria-pressed={on === id} data-area={id} onClick={() => toggleArea(view, id)}>{areaName(id)}</button>)}
-    </div>
-  );
-}
 
 /** A small tag with an area's name, for a step in a list. */
 export const AreaTag = ({ id }: { id: string }) => <span class="tag area" title={t('areaTag', { area: areaName(id) })}>{areaName(id)}</span>;

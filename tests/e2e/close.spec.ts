@@ -83,4 +83,17 @@ for (const width of [320, 375, 430]) {
     await expect(page.getByTestId('close-moved')).toBeVisible();
     await noSideways(page, 'close with a moved bar');
   });
+  test(`the close in French does not scroll sideways at ${width} px, and says what moved`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await morningClock(page);
+    await aBarMoves(page);
+    await goTab(page, 'settings');
+    await page.getByRole('button', { name: 'Français' }).click();
+    await goTab(page, 'today');
+    await page.locator('main').getByRole('button', { name: 'Clôturer la journée' }).click();
+    await page.getByTestId('skip').click();
+    await expect(page.getByTestId('close-moved-row')).toContainText('1 sur 10 pages');
+    await expect(page.getByTestId('close-moved-row')).toContainText('+1 aujourd’hui');
+    await noSideways(page, 'close in French');
+  });
 }

@@ -16,6 +16,8 @@ export interface PeriodNavProps {
   /** Away from today: shows the return-to-today chip in the reserved line. */
   away: boolean;
   onToday: () => void;
+  /** A quiet line in the reserved slot while at today (Today says the date); the return chip takes its place when away. */
+  sub?: ComponentChildren;
   /** The label also opens the native date picker. */
   pick?: { value: string; label: string; onPick: (day: string) => void };
   testids: { prev: string; next: string; label?: string };
@@ -33,7 +35,7 @@ export function PeriodNav(p: PeriodNavProps) {
             <input type="date" value={p.pick.value} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) p.pick!.onPick(v); }} aria-label={p.pick.label} />
           </label>
         ) : <b class="pnav-label" data-testid={p.testids.label}>{p.label}</b>}
-        <div class="pnav-slot">{p.away && <button class="pnav-today" type="button" onClick={p.onToday} data-testid="back-today">{t('backToToday')}</button>}</div>
+        <div class="pnav-slot">{p.away ? <button class="pnav-today" type="button" onClick={p.onToday} data-testid="back-today">{t('backToToday')}</button> : p.sub ? <span class="pnav-sub">{p.sub}</span> : null}</div>
       </div>
       <button class="icon-btn pnav-arrow pnav-next" type="button" onClick={p.onNext} aria-label={p.nextLabel} data-testid={p.testids.next}>›</button>
     </nav>

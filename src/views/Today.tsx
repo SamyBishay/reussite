@@ -184,7 +184,7 @@ function Navigator({ k }: { k: string }) {
   const n = daysBetween(td, k);
   const label = n === 0 ? t('pickToday') : n === -1 ? t('pickYesterday') : n === 1 ? t('pickTomorrow') : fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' });
   return (
-    <PeriodNav class="daynav" name={t('dayNav')} label={label} away={n !== 0} onToday={() => go(null)}
+    <PeriodNav class="daynav" name={t('dayNav')} label={label} sub={fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })} away={n !== 0} onToday={() => go(null)}
       onPrev={() => go(addDays(k, -1))} onNext={() => go(addDays(k, 1))} prevLabel={t('prevDay')} nextLabel={t('nextDay')}
       pick={{ value: k, label: t('pickADay'), onPick: go }} testids={{ prev: 'prev-day', next: 'next-day', label: 'day-label' }} />
   );
@@ -280,7 +280,7 @@ export function Today() {
   const s = !fid && !(af && every.length && !plan.length) ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
   return (
-    <div>
+    <div class="todayview">
       <Navigator k={k} />
       <StayNotice />
       <SyncCards />

@@ -13,7 +13,7 @@ La matrice range vos étapes en quatre cases. Chacune montre ses deux premières
 
 ## Les décisions
 
-Sous les quatre cases (et au-dessus des listes repliées) se trouvent vos décisions, en lignes compactes groupées en **À vérifier**, **En cours** et **Décidées** ; les closes sont repliées sous **Closes (n)**. **+ Nouvelle décision** est à côté du titre. Voir [Les décisions](decisions.md).
+Sous les quatre cases (et au-dessus des listes repliées) se trouvent vos décisions, en lignes compactes groupées en **À vérifier**, **En cours** et **Décidées**, et les closes sont repliées sous **Closes (n)**. **+ Nouvelle décision** est à côté du titre. Voir [Les décisions](decisions.md).
 
 ## Urgent, c’est une case à cocher
 

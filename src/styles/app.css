@@ -483,12 +483,12 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .pnav{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;column-gap:var(--s2);width:100%}
 .pnav-arrow{width:44px;height:44px;justify-self:stretch;font-size:20px}
 .pnav-mid{display:grid;grid-template-rows:24px 24px;justify-items:center;align-items:center;min-width:0;text-align:center}
-.pnav-label{position:relative;display:block;max-width:100%;min-width:0;font:700 16px/24px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-label.pickable{cursor:pointer}
+.pnav-label{position:relative;display:block;max-width:100%;min-width:0;font:700 16px/24px var(--sans);overflow:clip;text-overflow:ellipsis;white-space:nowrap}
+.pnav-label.pickable{cursor:pointer;overflow:visible}
 .pnav-label.pickable span{display:block;overflow:hidden;text-overflow:ellipsis;text-decoration:underline dotted var(--ink-3);text-underline-offset:4px}
-.pnav-label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
-.pnav-slot{height:24px;display:flex;align-items:center;justify-content:center;max-width:100%}
-.pnav-today{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 var(--s3);height:24px;font:600 12.5px/1 var(--sans);color:var(--ink-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.pnav-label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;min-height:0;padding:0;cursor:pointer}
+.pnav-slot{height:24px;padding-top:2px;display:flex;align-items:center;justify-content:center;max-width:100%}
+.pnav-today{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:0 var(--s3);height:22px;font:600 12.5px/1 var(--sans);color:var(--ink-2);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .daynav{margin-top:var(--s4)}
 .flow h3{font-size:22px}
 .flow .eyebrow{margin-bottom:var(--s2)}
@@ -885,6 +885,26 @@ body > .row,body > li{list-style:none}
 .pm-tick{display:grid;place-items:center;min-height:48px;cursor:pointer}
 .pm-tick input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 .placemenu .actions{margin-top:var(--s4)}
+/* Today's rhythm: the day navigator, the banners, Start here, the carry card and the list's block are one column with 12px between them (--s3);
+   Start here stands a little apart from the banners above it, and nothing sets its own margin. Rows breathe: the meta line's dots are dropped
+   (the gap says it, so a dot never starts a wrapped line), the buttons of Start here have room between them and above the quiet row. */
+.todayview{display:flex;flex-direction:column;gap:var(--s3)}
+.todayview>*{margin-top:0;margin-bottom:0}
+.todayview>.daynav{margin-top:var(--s4);margin-bottom:var(--s1)}
+.todayview>.first{margin-top:var(--s3)}
+.todayview>.banner~.first,.todayview>.nudge~.first{margin-top:var(--s5)}
+.todayview .first{gap:var(--s4)}
+.todayview .first .go{gap:var(--s3)}
+.todayview .first .go.quiet{gap:var(--s2);margin-top:var(--s1)}
+.todayview .first .hint{margin:0}
+.first .meta>span[aria-hidden="true"],.row .meta>span[aria-hidden="true"]{display:none}
+.first .meta,.row .meta{gap:var(--s1) var(--s3)}
+.row .body{gap:var(--s2)}
+.row .ctrls{margin-top:var(--s1)}
+.todayview .adders{margin-top:var(--s3)}
+.todayview .sec{margin-top:var(--s6)}
+.pnav-sub{font:400 13px/24px var(--sans);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
 /* Decisions on the Matrix: compact rows under the four boxes. */
 .decisions{margin-top:var(--s5)}
 .decisions .sec{margin-top:0}

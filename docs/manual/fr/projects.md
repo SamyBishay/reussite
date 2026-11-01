@@ -55,7 +55,7 @@ Les étapes ajoutées à la volée atterrissent dans la **boîte de réception**
 
 ## Les décisions
 
-Les décisions ne sont plus listées ici : elles sont dans l’onglet **Matrice**, sous les quatre cases. Une décision liée à un projet s’affiche toujours dans la carte de ce projet. Voir [Les décisions](decisions.md).
+Les décisions ne sont plus listées ici : elles sont dans l’onglet **Matrice**, sous les quatre cases. Une décision liée à un projet s’affiche toujours dans la carte de ce projet. Voir [Les décisions](decisions.md).
 
 ## Les lieux
 

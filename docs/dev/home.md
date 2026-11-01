@@ -2,7 +2,7 @@
 
 Where the person types. Code: `src/views/Home.tsx` (the screen), `src/app/home.ts` (what happens to a line), `src/domain/parse.ts` (the local parser), `src/domain/greeting.ts` (the greeting), `src/views/History.tsx`. Memory, which Home reads and writes, is `src/views/Memory.tsx`, `src/domain/memory.ts` and `src/domain/memoryMd.ts`. Brief §5.
 
-Home holds a plain greeting line, at most one card, the last receipt and the input. No counts, no list, no streaks. The menu icon at the top holds what has no tab: Settings, Places, Memory, History.
+Home holds a slim top bar (the date, small and muted, on the left; the bell and the menu on the right), the Réussite mark (`Mark`, `src/app/Mark.tsx`: both theme versions are in the page, CSS picks one from the system theme or `data-theme`, and neither is lazy) beside a plain greeting line in the display font, at most one card, the last receipt and the input. There is no wordmark on Home; its `h1` (the app's name) is visually hidden (`.vh`). Layout (`.home` and `.homestage` in `app.css`): `.home` is a flex column at least one screen tall (100dvh less the top padding, the tab bar, `--inputh` and `--rcpt`), and `.homestage` centres its group vertically, so the mark and the greeting sit in the middle of the free room when nothing else is on Home, and stay on top, centred horizontally, when a card follows (the page then simply flows). No counts, no list, no streaks. The menu icon at the top holds what has no tab: Settings, Places, Memory, History.
 
 ## A line, from input to receipt
 

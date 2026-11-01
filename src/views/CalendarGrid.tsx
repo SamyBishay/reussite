@@ -16,13 +16,11 @@ import { addresses, clockNow, days, hereZone, places, projects, settings, stays,
 import { moveFixed } from '../app/actions';
 import { openTask } from '../app/sheets';
 import { dayView } from './Today';
-import { dayOrderOf, dayZone } from '../app/model';
-import { wallOf } from '../domain/zone';
 import { deviceZone } from '../domain/zones';
 import { isPhone, PHONE_DAYS, type CalMode } from '../app/nav';
 import { t, lang } from '../i18n';
 import { addDays } from '../domain/dates';
-import { appSlot, calViewEvents, projectedEvents, type CalViewEvent } from '../domain/calView';
+import { appSlot, calViewEvents, type CalViewEvent } from '../domain/calView';
 import { isoDow } from '../domain/repeat';
 import { areaFilter } from '../app/areas';
 
@@ -129,13 +127,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
         { dayStart: settings.value.dayStart, area: areaFilter() },
         from, to,
       );
-      // Today's planned steps, faded between the fixed items, on the hour grid only (Day and Week): they follow the clock.
-      const td = today.value, grid = latest.current.mode === 'day' || latest.current.mode === 'week';
-      if (grid && td >= from && td <= to) {
-        const steps = dayOrderOf(td).order.filter(x => x.kind === 'step').map(x => ({ taskId: x.id, start: x.start, end: x.end, running: !!tasks.value.get(x.id)?.started }));
-        const zoneOfDay = dayZone(td);
-        evs.push(...projectedEvents({ tasks: tasks.value }, { dayStart: settings.value.dayStart }, td, steps, ms => wallOf(ms, zoneOfDay)));
-      }
+      // Today's planned steps are not drawn here: projectedEvents (src/domain/calView.ts) is kept but shelved (DECISIONS.md, 2026-11-01).
       byId.clear();
       for (const e of evs) byId.set(e.id, e);
       calendar.events.set(evs.map(e => toLibrary(e, zone, phone)));
@@ -154,6 +146,22 @@ export function CalendarGrid({ mode, date }: GridProps) {
     move(a.controls, mode, date, phone);
     a.sync();
   }, [mode, date]);
+
+  // On a phone the grid fills the screen down to the tab bar and scrolls inside, so the page does not grow; elsewhere the style's height stands.
+  useEffect(() => {
+    const el = host.current;
+    if (!el || !phone) return;
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      const room = Math.floor(window.innerHeight - top - (document.querySelector('.tabbar')?.getBoundingClientRect().height ?? 0) - 8);
+      el.style.height = Math.max(260, room) + 'px';
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(document.body);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); el.style.height = ''; };
+  }, [phone, mode]);
 
   return <div ref={host} class="sxhost" data-testid="calendar-grid" data-mode={mode} />;
 }

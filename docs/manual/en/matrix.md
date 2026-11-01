@@ -1,6 +1,6 @@
 # The matrix
 
-The matrix sorts your steps in four boxes. Each shows its first two steps and **View all** for the rest; every step is also in one list, folded at the bottom. Urgency and importance are judged **separately**.
+The matrix sorts your steps in four boxes. Each shows its first two steps and **View all** for the rest; every step is also in one list, folded at the bottom. Urgency and importance are judged **separately**. On the review day the **Start the review** box is at the top, above the four boxes.
 
 ![The matrix](shot:matrix)
 

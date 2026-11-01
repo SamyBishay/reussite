@@ -2,7 +2,7 @@
 
 A web address a calendar app can subscribe to (Settings → Calendar). The list has one feed: a device builds the calendar text and uploads it, and so does the connector after its own changes; the relay stores it and serves it. Nothing here is a second copy of the list: the text is derived from it and the relay's copy is disposable.
 
-Files: `src/domain/feedText.ts` (the text, pure), `src/app/feed.ts` (hash, upload, switch, follow the list's feed), `relay/src/connector/feed.ts` (the connector's write), `src/app/CalendarSettings.tsx` (the block), `src/feed/protocol.ts` (ids and limits shared with the relay), `relay/src/feed.ts` (endpoints), migrations `relay/migrations/0006_feed.sql` and `0007_feed_alias.sql`. The text comes from `agenda` and `icsFor` (see `src/domain/ics.ts`), the same code as Add to calendar.
+Files: `src/domain/feedText.ts` (the text, pure), `src/app/feed.ts` (hash, upload, switch, follow the list's feed), `relay/src/connector/feed.ts` (the connector's write), `src/app/CalendarSettings.tsx` (the block), `src/feed/protocol.ts` (ids and limits shared with the relay), `relay/src/feed.ts` (endpoints), migrations `relay/migrations/0006_feed.sql` and `0007_feed_alias.sql`. The text comes from `agenda` and `icsFor` (see `src/domain/ics.ts`), the same code as the one-off file (`addToCalendar.ts`; two buttons, today and this week, under a folded **One-off file** in Settings → Calendar, `OneOff` in `CalendarSettings.tsx`; the Calendar tab has no such buttons). While `feedId` is null, the Calendar tab shows one muted line under the grid, "Show these in your calendar app: Settings → Calendar" (`calFeedLine`, `data-testid="cal-feed-line"`), that opens Settings at that fold; with the feed on it shows nothing.
 
 ## Content
 

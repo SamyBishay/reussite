@@ -193,7 +193,7 @@ function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
 
-/** Home, Settings and the screens behind Home's bell and menu have no masthead, suit piles or footer; the others keep them. */
+/** Home, Settings and the screens behind Home's bell and menu have no masthead or footer; the others keep them. The suit piles are Today's alone. */
 const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses', 'waiting'];
 /** Views that get a wider column above 1024 px (brief §16). */
 const WIDE: View[] = ['matrix', 'calendar'];
@@ -231,6 +231,8 @@ export function App() {
   void lang.value;
   const V = SCREENS[view.value];
   const bare = BARE.includes(view.value);
+  // The suit piles belong to Today alone; the other tabs use the whole width (no second column).
+  const withSide = !bare && view.value === 'today', noSide = !bare && !withSide;
   // A new device starts here, with no tabs and no masthead, until the person finishes or skips.
   if (ready.value && onboarding.value === 'show') return (
     <>
@@ -243,9 +245,9 @@ export function App() {
   );
   return (
     <>
-      <div class={'app' + (bare ? ' bare' : '') + (WIDE.includes(view.value) ? ' wide' : '')} data-view={view.value}>
+      <div class={'app' + (bare ? ' bare' : '') + (noSide ? ' noside' : '') + (WIDE.includes(view.value) ? ' wide' : '')} data-view={view.value}>
         {!bare && <Mast />}
-        {!bare && <Side />}
+        {withSide && <Side />}
         <Runbar />
         <main>
           <UpdateBanner />

@@ -14,6 +14,7 @@ import { t, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
 import { CommandBox } from '../ai/ui';
+import { ReviewBanner } from '../app/ReviewBanner';
 import { openDecision } from '../flows/decision';
 import { AreaTag } from '../app/AreaUi';
 import { areaOfStep, showsInArea } from '../app/areas';
@@ -138,6 +139,7 @@ export function Matrix() {
   return (
     <div>
       <CommandBox scope={{ kind: 'matrix' }} />
+      <ReviewBanner day={today.value} testid="matrix-review-card" chatTestid="matrix-review-chat" />
       <div class="matrix" data-testid="matrix">
         {QUADS.map(k => <Box key={k} k={k} items={qs[k]!} planSet={planSet} over={over} setOver={setOver} />)}
       </div>

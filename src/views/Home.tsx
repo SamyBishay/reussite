@@ -1,4 +1,4 @@
-// Home (brief §5): where the person types. It holds a greeting, one card (an exchange's), the last receipt and the input,
+// Home (brief §5): where the person types. It holds a slim top bar (the date, the bell and the menu), the mark with a greeting, centred in the room above the input, one card (an exchange's), the last receipt and the input,
 // and never more. The greeting is a plain line, with Plan the day when there is no list or Close the day when it is all played (Start here lives on Today alone); the card is what an open exchange has to say (what is waiting is behind the bell); the receipt is the last thing applied, with Undo. The menu icon holds what
 // has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -21,6 +21,7 @@ import { notifications } from './Notifications';
 import { openCheckin } from '../flows/checkin';
 import { openPlanDay } from '../flows/morning';
 import { ChatOffer } from '../app/ChatOffer';
+import { Mark } from '../app/Mark';
 import { openClose } from '../flows/close';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
@@ -210,13 +211,10 @@ export function Home() {
   const d = dayDoc(today.value);
   return (
     <div class="home" data-testid="home">
-      <section class="greeting" data-testid="greeting">
-        <div class="homebar">
-          <div class="hometitle">
-            <h1 class="word homeword">{t('appName')}</h1>
-            <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
-          </div>
-          <div class="homebtns">
+      <h1 class="word vh">{t('appName')}</h1>
+      <div class="homebar">
+        <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+        <div class="homebtns">
           <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
             {notifications().length > 0 && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
@@ -224,14 +222,17 @@ export function Home() {
           <button type="button" class="icon-btn" onClick={() => openSheet(<HomeMenu />)} aria-label={t('menu')} data-testid="home-menu">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
-          </div>
         </div>
-        <GreetingLine />
-        <GreetingBody />
-        <MissedNow />
-      </section>
-      <Card />
-      <NextStepsCard />
+      </div>
+      <div class="homestage">
+        <section class="greeting" data-testid="greeting">
+          <div class="hello"><Mark size={44} /><GreetingLine /></div>
+          <GreetingBody />
+          <MissedNow />
+        </section>
+        <Card />
+        <NextStepsCard />
+      </div>
       <Receipt />
       <HomeInput />
     </div>

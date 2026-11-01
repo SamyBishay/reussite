@@ -368,3 +368,15 @@ for (const width of [320, 375, 430]) {
     await noSideways(page, `done at ${width}`);
   });
 }
+
+test('the Matrix shows the review box on the review day too, and its button starts the review', async ({ page }) => {
+  await start(page, { ai: false });
+  await goTab(page, 'matrix');
+  await expect(page.getByTestId('matrix-review-card')).toBeVisible();
+  await expect(page.getByTestId('review-card')).toHaveCount(0);
+  await page.getByTestId('matrix-review-card').getByRole('button', { name: 'Start the review' }).click();
+  await expect(page.getByTestId('rv-0')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await goTab(page, 'projects');
+  await expect(page.getByTestId('matrix-review-card')).toHaveCount(0);
+});

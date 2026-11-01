@@ -1,12 +1,12 @@
 # L’accueil et sa boîte unique
 
-L’accueil, c’est là où vous commencez. Il vous salue d’une ligne, et dessous il y a une boîte unique. L’étape à commencer est sur [Aujourd’hui](daily-loop.md), et seulement là.
+L’accueil, c’est là où vous commencez. La marque de Réussite et une salutation sont au milieu de l’écran, et en bas il y a une boîte unique. L’étape à commencer est sur [Aujourd’hui](daily-loop.md), et seulement là.
 
 ![L’accueil : l’étape suivante, et une ligne qui vient d’être écrite](shot:home)
 
 ## Ce que dit l’accueil
 
-En haut, une ligne vous accueille. C’est une phrase courte et chaleureuse, choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« “Dentiste” à 14:00 est au programme du jour. »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne vous demande rien, ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient.
+En haut, il n’y a que la date, en petit, avec la **cloche** et le **menu** à côté. Au milieu de l’écran, le cœur de la marque de Réussite se tient à côté d’une ligne qui vous accueille, en grands caractères. La marque suit le thème clair ou sombre. La ligne est une phrase courte et chaleureuse, choisie parmi quelques phrases toutes prêtes et remplie avec ce qui est vrai aujourd’hui : la prochaine chose à heure fixe (« “Dentiste” à 14:00 est au programme du jour. »), un projet presque au but, le moment de la journée, ce que vous avez déjà coché, ou ce qui est prévu. Elle ne vous demande rien, ne compte jamais ce qui a été manqué ou reporté, et elle est la même avec ou sans IA. Rouvrez l’accueil et vous avez une autre phrase, pas deux fois la même dans une journée tant qu’une autre convient.
 
 Sous la ligne, il n’y a une carte que dans deux cas :
 

@@ -1,6 +1,6 @@
 # La matrice
 
-La matrice range vos étapes en quatre cases. Chacune montre ses deux premières étapes et un bouton **Voir les 5** pour le reste ; toutes les étapes sont aussi dans une seule liste, repliée en bas. L’urgence et l’importance sont jugées **séparément**.
+La matrice range vos étapes en quatre cases. Chacune montre ses deux premières étapes et un bouton **Voir les 5** pour le reste ; toutes les étapes sont aussi dans une seule liste, repliée en bas. L’urgence et l’importance sont jugées **séparément**. Le jour de la revue, la boîte **Commencer la revue** est en haut, au-dessus des quatre cases.
 
 ![La matrice](shot:matrix)
 

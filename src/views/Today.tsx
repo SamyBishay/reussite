@@ -14,7 +14,7 @@ import { NudgeRow } from '../app/EventUi';
 import { Rings, TimerRings } from '../app/Rings';
 import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
-import { startReview } from '../flows/reviewai';
+import { ReviewBanner } from '../app/ReviewBanner';
 import { ChatOffer } from '../app/ChatOffer';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
@@ -25,7 +25,6 @@ import { wallOf } from '../domain/zone';
 import { areaFilter, areaOfStep } from '../app/areas';
 import { areaName } from '../app/sheets';
 import { addDays, daysBetween } from '../domain/dates';
-import { isoDow } from '../domain/repeat';
 import { SUIT_ORDER } from '../data/settings';
 import { suitName } from '../app/ui';
 import type { Task } from '../data/schema';
@@ -282,7 +281,6 @@ export function Today() {
   // Nothing open on the list: Start here still shows, with the step the list would pick next.
   const s = !fid && !(af && every.length && !plan.length) ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
-  const reviewDay = isoDow(k) === settings.value.reviewDay && !d?.review;
   return (
     <div>
       <Navigator k={k} />
@@ -292,7 +290,7 @@ export function Today() {
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
       ))}
       {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
-      {reviewDay && <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button><ChatOffer what="review" small testid="review-chat" /></div>}
+      <ReviewBanner day={k} />
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (

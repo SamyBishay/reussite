@@ -2,17 +2,18 @@
 
 The **Calendar** tab is a real calendar. It has the views **Day**, **Week** (or **3 days** on a phone), **Month**, **Agenda** and **Log**. The one you pick is remembered.
 
+On a phone the tab is kept tight: the views in one row, the dates (‹ the day ›, and **Today** when you have moved away) in the next, and the grid right under them, filling the screen down to the tab bar. It scrolls inside, so the page itself does not move. The suit piles are on Today only, not here.
+
 ![The week](shot:calendar)
 
 ![A day, with its hours](shot:calendar-day)
 
 ## What a day shows
 
-The calendar is for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md); the only steps here are today’s planned ones, shown faded (below). Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
+The calendar is for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md). Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
 
 - **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays.
 - Past days show only the fixed-time items too; a done one is struck through.
-- **Today's planned steps** show on the Day and Week views as faded, hatched blocks with a dashed edge, between the fixed-time items. They are where the day's order says each step will happen if you go on as you are, so they are a guess, not an appointment. When a step runs past its estimate its block grows with the clock and the later ones move on. Tap one to open the step, as in Today. You cannot drag them, they are only today's (other days have no clock to follow), and they are not in the files or the feed below.
 - A **stay** is a coloured band over its days. A **half day** you chose in the morning check-in shows as a small label: "Afternoon · Heliopolis".
 - Each event shows the step's **short name** and, when there is room, the address or place.
 
@@ -25,13 +26,11 @@ Tap an event to open the step. Tap a day's number to open that day.
 
 If you view one of your place's areas (the place pill), the calendar shows that area, plus what applies anywhere.
 
-## Add to calendar
-
-**Today to calendar** and **This week to calendar** make a file with your fixed-time items, each with a reminder at its start. It includes short names, places and notes. Open it with Apple Calendar or a desktop calendar app. It is a copy: later changes in Réussite do not follow.
-
 ## The calendar feed
 
 Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your fixed-time items stay up to date there, from a week back to six weeks ahead.
+
+While this device’s feed is off, a small line under the grid, **Show these in your calendar app: Settings → Calendar**, takes you to where you switch it on. Once it is on, the line goes away.
 
 Your list has one feed, shared by all your devices: switch it on, off or make a new address on one, and the others follow. It is updated whenever one of your devices opens Réussite or changes something, and right after a change made through the connector. A device that has not synced leaves the feed alone, so it never shows an old copy of your list. A feed that nothing has updated for ten days shows one event today, "Réussite: this calendar is out of date", which says what to do.
 
@@ -44,6 +43,10 @@ Your list has one feed, shared by all your devices: switch it on, off or make a 
 - On the last two levels what the feed says is stored in plain text on the relay, and whoever runs it can read it. Réussite warns you.
 - Anyone who has the address can read the feed. Keep it to yourself. **Make a new address** and the old one stops working, on every device.
 - Your calendar app decides how often it refreshes (Google Calendar can take hours). Don't rely on it for reminders. Reminders come from notifications. See [Settings](settings.md).
+
+## A one-off file
+
+If you want a copy instead of a feed, **Settings → Calendar → One-off file** has **Today to calendar** and **This week to calendar**. They make a file with your fixed-time items, each with a reminder at its start, with short names, places and notes. Open it with Apple Calendar or a desktop calendar app. It is a copy: later changes in Réussite do not follow.
 
 ## The Log
 

@@ -1,7 +1,9 @@
-// Settings → Calendar (brief §8): what Add to calendar does, and the subscribable feed.
+// Settings → Calendar (brief §8): the subscribable feed, and under it, folded, the one-off .ics file (today's or this week's fixed-time items).
 import { useState } from 'preact/hooks';
 import { t } from '../i18n';
-import { saveSettings, settings, toast, readOnly } from './store';
+import { saveSettings, settings, toast, readOnly, today } from './store';
+import { weekOf } from '../domain/calendar';
+import { addToCalendar } from './addToCalendar';
 import { relayBase } from './sync';
 import { More, Fold } from './More';
 import { FEED_DETAILS, type FeedDetail } from '../domain/calItems';
@@ -70,11 +72,26 @@ function Feed() {
   );
 }
 
+/** The one-off .ics file: the fixed-time items for today or this week, handed to the share sheet or downloaded. A copy; the feed is the sync. */
+function OneOff() {
+  const td = today.value, week = weekOf(td);
+  return (
+    <Fold title={t('calOneOff')} testid="calendar-oneoff">
+      <p class="hint">{t('calOneOffHint')}</p>
+      <div class="actions" data-testid="add-to-calendar" role="group" aria-label={t('addToCalendar')}>
+        <button class="btn small" type="button" data-testid="ics-today" onClick={() => void addToCalendar(td, td)}>{t('addToCalendarToday')}</button>
+        <button class="btn small" type="button" data-testid="ics-week" onClick={() => void addToCalendar(week[0]!, week[6]!)}>{t('addToCalendarWeek')}</button>
+      </div>
+    </Fold>
+  );
+}
+
 export function CalendarSettings() {
   return (
     <Fold title={t('calendarSection')} testid="calendar-settings">
       <p class="hint">{t('calendarExportHint')}</p>
       <Feed />
+      <OneOff />
     </Fold>
   );
 }

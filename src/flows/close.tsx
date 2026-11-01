@@ -3,7 +3,7 @@
 // behind each. Cards are DOM elements moved with transform only (crisp at any pixel density);
 // only the fireworks canvas underneath gets the trail effect. Timed by the clock, not frames.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { today, settings } from '../app/store';
+import { today, settings, projects, tasks } from '../app/store';
 import { T, planOf, dayDoc, candidates, cardsOn, minutesOn, minutesOnFor, ratio, isOpen, type T as Tk } from '../app/model';
 import { closeDay } from '../app/actions';
 import { overlay, openSheet, closeSheet } from '../app/sheet';
@@ -12,6 +12,8 @@ import { Title, Suit } from '../app/ui';
 import { soundCard, soundChord, bigMoment, bigMomentNear } from '../app/celebrate';
 import { t, fmtMin, fmtDate } from '../i18n';
 import { addDays } from '../domain/dates';
+import { fmtAmount, movedOn, type MovedBar } from '../domain/goal';
+import { progressLine } from '../app/smart';
 import { SUIT_ORDER } from '../data/settings';
 
 const motionOff = () => settings.value.reduceMotion || (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -193,11 +195,14 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
   const deck = cardsOn(k);
   const by: Record<string, number> = { S: 0, D: 0, C: 0, H: 0 };
   deck.forEach(c => (by[c.suit] = (by[c.suit] ?? 0) + 1));
+  const played = SUIT_ORDER.filter(s => by[s]);
+  const moved = movedOn(projects.value.values(), tasks.value.values(), k);
   const r = ratio.value;
   const td = dayDoc(addDays(k, 1));
   const sugg: Tk[] = planOf(k).map(id => T(id)!).filter(isOpen);
   candidates().forEach(c => { if (sugg.length < 8 && !sugg.includes(c)) sugg.push(c); });
   const [sel, setSel] = useState(td?.first?.id ?? '');
+  const tomorrow = sel && sel !== '__new' ? T(sel)?.title ?? '' : '';
   const submit = (e: Event) => {
     e.preventDefault();
     const f = e.currentTarget as HTMLFormElement;
@@ -210,9 +215,11 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
       {!inShow && <p class="eyebrow">{fmtDate(k, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
       {!inShow && <h3 style="font-size:56px;line-height:1;margin-top:var(--s2)">{deck.length}</h3>}
       {!inShow && <p class="bigsub">{t('cardsPlayed', { n: deck.length })}</p>}
-      <div class="minifound">{SUIT_ORDER.map(s => <span><Suit s={s} /> {by[s]}</span>)}</div>
+      {played.length > 0 && <p class="minifound" data-testid="close-pillars">{played.map((s, i) => <span>{i > 0 && <i aria-hidden="true">·</i>}<Suit s={s} /> {by[s]}</span>)}</p>}
       <p class="meta" style="margin-top:var(--s2)">{t('timed', { t: fmtMin(minutesOn(k)) })}{r.v ? ' · ' + t('estimatesRun', { r: r.v.toFixed(1) }) : ''}</p>
+      {moved.length > 0 && <MovedBars bars={moved} />}
       {!inShow && deck.length > 0 && <ul class="pilelist">{deck.map((c, i) => <li><span class={'rk suit-' + c.suit}>{rankOf(deck.slice(0, i + 1).filter(x => x.suit === c.suit).length)}</span><span><Title s={c.title} /></span><span class="tm" /></li>)}</ul>}
+      {tomorrow && <p class="meta" data-testid="close-tomorrow">{t('closeTomorrowIs', { title: tomorrow })}</p>}
       <label class="field"><span>{t('tomorrowFirst')}</span>
         <select value={sel} onChange={e => setSel((e.target as HTMLSelectElement).value)}>
           <option value="">{t('chooseOne')}</option>
@@ -223,5 +230,23 @@ function Summary({ inShow = false }: { inShow?: boolean }) {
       {sel === '__new' && <label class="field"><span>{t('newVerbFirst')}</span><input type="text" name="newTitle" autocomplete="off" /></label>}
       <div class="actions"><button class="btn primary" type="submit" data-testid="close-confirm">{t('closeTitle')}</button><button class="btn ghost" type="button" onClick={inShow ? endShow : closeSheet}>{t('notYet')}</button></div>
     </form>
+  );
+}
+
+/** The bars that moved today: the project, its bar as the Projects tab draws it, and what today added. */
+function MovedBars({ bars }: { bars: MovedBar[] }) {
+  return (
+    <div class="moved" data-testid="close-moved">
+      <p class="eyebrow">{t('closeMoved')}</p>
+      <ul>
+        {bars.map(b => (
+          <li data-testid="close-moved-row">
+            <b>{b.name}</b>
+            <div class="bar cont goalbar" role="img" aria-label={progressLine(b.progress)}><i style={{ width: Math.round(b.progress.frac * 100) + '%' }} /></div>
+            <small>{progressLine(b.progress)} · {t('closeGain', { n: fmtAmount(b.gain) })}</small>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

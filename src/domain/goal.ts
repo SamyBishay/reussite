@@ -95,6 +95,29 @@ export function progressOf(p: { id: string; measure?: unknown }, steps: Iterable
   return null;
 }
 
+export interface MovedBar { id: string; name: string; progress: Progress; /** What the day added: a count's amount, or the milestones ticked. */ gain: number }
+
+/**
+ * The bars that moved on a day (the close of the day shows them): projects that have a bar and gained on `day`, a count by the amount of the
+ * advancing steps done that day, milestones by the ones ticked that day. Open steps and card counts move nothing. In the projects' order.
+ */
+export function movedOn(
+  projects: Iterable<{ id: string; name: string; order?: number; status?: string; measure?: unknown }>,
+  steps: Iterable<StepLike & { doneDay?: DayKey | null }>, day: DayKey,
+): MovedBar[] {
+  const list = [...steps], out: (MovedBar & { order: number })[] = [];
+  for (const p of projects) {
+    if (p.status && p.status !== 'active') continue;
+    const pr = progressOf(p, list), m = measureOf(p);
+    if (!pr) continue;
+    const gain = m.kind === 'count'
+      ? round(list.reduce((n, x) => (x.project === p.id && x.status === 'done' && x.doneDay === day && advancing(x) ? n + amountOf(x) : n), 0))
+      : m.kind === 'milestones' ? m.items.filter(i => i.done === day).length : 0;
+    if (gain > 0) out.push({ id: p.id, name: p.name, progress: pr, gain, order: p.order ?? 0 });
+  }
+  return out.sort((a, b) => a.order - b.order).map(({ order: _o, ...x }) => x);
+}
+
 /** Does finishing this step offer anything: it advances, and its project has a bar. Returns the project's measure kind. */
 export function offerFor(tk: StepLike, p: { measure?: unknown } | undefined): 'count' | 'milestones' | null {
   if (!p || !advancing(tk)) return null;

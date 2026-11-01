@@ -17,7 +17,7 @@ import { openDecision, openDecisionPage, decisionGroups } from '../flows/decisio
 import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
-import type { Project, Task } from '../data/schema';
+import type { Decision, Project, Task } from '../data/schema';
 import { useSortable, GRIP } from '../app/sortable';
 import { groupByArea } from '../domain/areas';
 import { AreaTag } from '../app/AreaUi';
@@ -59,6 +59,14 @@ function Step({ tk, first, last, sortable }: { tk: T; first?: boolean; last?: bo
   );
 }
 
+/** A decision linked to a project: its title, what was chosen or its state, and the day it is to be checked. */
+function LinkedDecision({ d }: { d: Decision & { id: string } }) {
+  return (
+    <li><button type="button" class="linklike" onClick={() => openDecisionPage(d.id)}>⚖ {d.title || t('untitledDecision')}</button>
+      <small class="muted">{d.chosen ? ' · ' + t('chosen', { what: d.chosen }) : ' · ' + t(('dst_' + d.status) as Key)}{d.reviewOn && d.status === 'decided' ? ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) }) : ''}</small></li>
+  );
+}
+
 function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   const mine = ts.filter(x => !x.template && x.status !== 'dropped');
   // Something waited for is not a step: it is in the list below, but not in the bar, the count, "next" or "left".
@@ -74,6 +82,7 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
   const doneSorted = mine.filter(x => x.status === 'done').sort((a, b) => String(a.doneAt ?? '').localeCompare(String(b.doneAt ?? '')));
   const label = t('stepsDone', { d: done.length, n: total });
   const linked = [...decisions.value.values()].filter(d => d.projectId === p.id);
+  const linkedOpen = linked.filter(d => d.status !== 'closed'), linkedClosed = linked.filter(d => d.status === 'closed');
   const left = openSteps.length;
   const listRef = useSortable<HTMLOListElement>(ids => void setStepOrder(ids));
   const add = async (e: Event) => {
@@ -98,10 +107,8 @@ function ProjectCard({ p, ts }: { p: P; ts: T[] }) {
         : p.id !== 'inbox' && <p class="goal muted">{t('noGoal')}</p>}
       {p.due && <p class="next"><Due k={p.due} /></p>}
       {next && <p class="next">{t('next', { what: '' })}<Title s={next.title} /></p>}
-      {linked.length > 0 && <ul class="linked">{linked.map(d => (
-        <li><button type="button" class="linklike" onClick={() => openDecisionPage(d.id)}>⚖ {d.title || t('untitledDecision')}</button>
-          <small class="muted">{d.chosen ? ' · ' + t('chosen', { what: d.chosen }) : ' · ' + t(('dst_' + d.status) as Key)}{d.reviewOn && d.status === 'decided' ? ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) }) : ''}</small></li>
-      ))}</ul>}
+      {linkedOpen.length > 0 && <ul class="linked">{linkedOpen.map(d => <LinkedDecision d={d} />)}</ul>}
+      <DoneFold n={linkedClosed.length} label={t('decClosedFold', { n: linkedClosed.length })} testid="linked-closed"><ul class="linked">{linkedClosed.map(d => <LinkedDecision d={d} />)}</ul></DoneFold>
       <details open={openProj.has(p.id)} onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) openProj.add(p.id); else openProj.delete(p.id); }}>
         <summary>{tmpl.length && !total ? t('standingItems') : tmpl.length ? t('stepsAndStanding') : t('steps')}</summary>
         <ol class="steps" ref={listRef}>{open.map((x, i) => <Step key={x.id} tk={x} first={i === 0} last={i === open.length - 1} sortable />)}{tmpl.map(x => <Step key={x.id} tk={x} />)}</ol>
@@ -190,23 +197,28 @@ function NewProject() {
 
 const GROUP_KEY = { check: 'decToCheck', open: 'decOpen', decided: 'decDecided', closed: 'decClosed' } as const;
 
-/** Every decision, grouped: to check, open, decided, closed. Steps that are decisions open theirs from the Matrix. */
+/** Every decision, grouped: to check, open, decided, closed (the closed ones folded away under "Closed (n)"). Steps that are decisions open theirs from the Matrix. */
 function Decisions() {
   const groups = decisionGroups();
+  const decList = (g: keyof typeof groups) => (
+    <ul class="decs">{groups[g].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).map(d => (
+      <li>
+        <button type="button" class="linklike" onClick={() => openDecisionPage(d.id, g === 'check')}><b>{d.title || t('untitledDecision')}</b></button>
+        <p class="meta">{d.date && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{d.chosen ? t('chosen', { what: d.chosen }) : t('dst_' + d.status as Key)}</p>
+        {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{d.reviewOn && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
+      </li>
+    ))}</ul>
+  );
   return (
     <section data-testid="decisions">
       <h2 class="sec">{t('decisions')} <button type="button" class="btn small" onClick={() => void openDecision(null)} data-testid="new-decision">{t('newDecision')}</button></h2>
       {(['check', 'open', 'decided', 'closed'] as const).map(g => groups[g].length > 0 && (
-        <>
-          <h3 class="subsec">{t(GROUP_KEY[g])}</h3>
-          <ul class="decs">{groups[g].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).map(d => (
-            <li>
-              <button type="button" class="linklike" onClick={() => openDecisionPage(d.id, g === 'check')}><b>{d.title || t('untitledDecision')}</b></button>
-              <p class="meta">{d.date && fmtDate(d.date, { day: 'numeric', month: 'short', year: 'numeric' }) + ' · '}{d.chosen ? t('chosen', { what: d.chosen }) : t('dst_' + d.status as Key)}</p>
-              {d.falsifier && <p class="meta">{t('revisitIf', { what: d.falsifier })}{d.reviewOn && ' · ' + t('checkOn', { date: fmtDate(d.reviewOn) })}</p>}
-            </li>
-          ))}</ul>
-        </>
+        g === 'closed'
+          ? <DoneFold n={groups.closed.length} label={t('decClosedFold', { n: groups.closed.length })} testid="decisions-closed">{decList(g)}</DoneFold>
+          : <>
+            <h3 class="subsec">{t(GROUP_KEY[g])}</h3>
+            {decList(g)}
+          </>
       ))}
       {!Object.values(groups).some(g => g.length) && <p class="hint">{t('noDecisions')}</p>}
     </section>

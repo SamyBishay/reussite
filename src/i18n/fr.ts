@@ -679,6 +679,7 @@ export const fr: Partial<Strings> = {
   decOpen: 'En cours',
   decDecided: 'Décidées',
   decClosed: 'Closes',
+  decClosedFold: 'Closes ({n})',
   // phase 1: projects
   stepsLeft: { one: 'Plus que {n} étape', other: 'Plus que {n} étapes' },
   smartN: 'SMART {n}/5',

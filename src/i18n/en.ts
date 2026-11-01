@@ -821,6 +821,7 @@ export const en = {
   decOpen: 'Open',
   decDecided: 'Decided',
   decClosed: 'Closed',
+  decClosedFold: 'Closed ({n})',
   // phase 1: projects
   stepsLeft: { one: '{n} step left', other: '{n} steps left' } as P,
   smartN: 'SMART {n}/5',

@@ -92,7 +92,7 @@ One pure module, `src/ai/undo.ts`; the relay's connector uses it too. In the app
 
 - Changes go through `run`, like a typed line: one low-risk change at once, else the review.
 - No changes: the answer is the change-set's `note`, shown on the card and kept as an `answer` turn, so History lists it and a follow-up within ten minutes has the context.
-- **`outside: true`** is an optional field of the envelope that only Home's prompt asks for: the request is not about the list, the memory or the method, and the reply is one line pointing to their usual AI. The card then offers **Ask any AI**. It is read when there are no changes, and it is **not** in `docs/CHANGESET.md`: an outside AI is never told about it, and the contract stays version 1.
+- **`outside: true`** is an optional field of the envelope that only Home's prompt asks for: the request is not about the list, the memory or the method, and the reply is one line pointing to their usual AI. The card then shows that line alone, with no button (the screens no longer offer Ask any AI). It is read when there are no changes, and it is **not** in `docs/CHANGESET.md`: an outside AI is never told about it, and the contract stays version 1.
 - If the AI fails, or the monthly limit is reached, the card says one plain sentence with **Add as a step**, which opens the task sheet prefilled. Cancel in the preview leaves the text in the input. Nothing is written.
 
 "Show me what's sent" applies as everywhere, and lists the memory notes sent (private notes are never among them).
@@ -107,7 +107,7 @@ Per device and month, in `local` (`aiUsage.YYYY-MM`; never synced): calls, token
 
 ## Memory in a request
 
-Every feature's prompt does this (Home, command box, plan, break it down, decisions, stuck, review, Ask any AI). The system prompt is two parts: a stable one (intro, method, the profile note, the language line; no date) and the feature's own. The profile (all non-private profile notes) is in the stable part, so its bytes are the same in every feature. In the user message, `pickNotes` adds the notes the message, the steps sent or their projects name, within `memoryBudget` (3,000 tokens, a setting; the profile counts first): whole words of a name or alias, most recently updated first; a note that does not fit is skipped and a smaller one after it may still go. **A private note is never picked.** The note format (`noteHead`, `noteBlock`) is one function in `src/domain/memory.ts`, shared with the connector's `read_memory`.
+Every feature's prompt does this (Home, command box, plan, break it down, decisions, stuck, review). The system prompt is two parts: a stable one (intro, method, the profile note, the language line; no date) and the feature's own. The profile (all non-private profile notes) is in the stable part, so its bytes are the same in every feature. In the user message, `pickNotes` adds the notes the message, the steps sent or their projects name, within `memoryBudget` (3,000 tokens, a setting; the profile counts first): whole words of a name or alias, most recently updated first; a note that does not fit is skipped and a smaller one after it may still go. **A private note is never picked.** The note format (`noteHead`, `noteBlock`) is one function in `src/domain/memory.ts`, shared with the connector's `read_memory`.
 
 ## The morning ritual (plan 2 Nov, S2)
 

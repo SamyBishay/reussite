@@ -152,7 +152,7 @@ export function scopeLines(s: Scope): string {
   return d ? decisionLines(d) : '';
 }
 
-/** "Ask any AI": everything a chatbot needs, ready to paste. */
+/** A context pack: everything a chatbot needs, ready to paste. No screen opens it now (the "Ask any AI" sheet is gone); the unit tests and the skills in docs/ai still describe it. */
 export function contextPack(s: Scope, question: string, l = lang.value, drop?: string | null): string {
   const apps = s.kind === 'project' ? [...tasks.value.values()].filter(x => x.project === s.id).map(x => x.app) : [];
   const scope = scopeLines(s);

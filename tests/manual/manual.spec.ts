@@ -205,13 +205,6 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await shot(page, 'decision');
       await closeSheet(page);
 
-      // Today's AI links (Ask any AI), with no key set up.
-      await page.goto('/#today');
-      await page.getByTestId('ask-any').click();
-      await expect(page.getByTestId('ask-any-sheet')).toBeVisible();
-      await shot(page, 'askany');
-      await closeSheet(page);
-
       await page.goto('/#calendar');
       await expect(page.getByTestId('calendar')).toBeVisible();
       await page.getByTestId('cal-week').click();

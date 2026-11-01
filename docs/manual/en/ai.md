@@ -2,19 +2,17 @@
 
 An AI is **optional**. Réussite works fully without one. If you want one, you choose it, and you can use any provider.
 
-![Ask any AI](shot:askany)
-
 ## Three ways to use an AI
 
 1. **Your own key, inside the app.** In Settings → AI, choose OpenRouter (or any OpenAI-compatible service), or Anthropic, and paste your key. The key stays on this device. It is never synced or put in backups. Tap **Test the connection**.
-2. **Ask any AI, with no key.** Copy a summary of the method and the part of your list you choose, with your question, into any chatbot you already use. This needs no setup and no account with Réussite.
+2. **Any chatbot, by copy and paste.** First-run set-up (and Plan this trip, for a trip) gives you one message to copy into a chatbot you already use, and you bring its reply back. This needs no key and no account with Réussite.
 3. **The connector.** An AI chat app you already use reads and edits your list while you chat, if it accepts connectors of the MCP kind (Claude does, and so do other apps). First-run set-up can connect it for you, step by step. See below.
 
 ## What an AI can do
 
-With a key, Réussite can (without a key saved on this device, none of these show; Ask any AI and Paste the reply always do):
+With a key, Réussite can (without a key saved on this device, none of these show, and nothing on the screen asks for an AI):
 
-- turn plain words into changes ("drop the games; the photos are due Friday"): the **Change the list** box on Today, the Matrix and Projects, and the one box on Home;
+- turn plain words into changes ("drop the games; the photos are due Friday"): the box on Today, the Matrix and Projects, which says which AI it asks ("Ask Claude to change the list", "Ask ChatGPT to change the list", or "Ask your AI…" when the model's name is not one it knows), and the one box on Home;
 - **Improve with AI**: reorder the day's plan, pick between steps, write starters and split big steps. If its plan breaks the method's rules, Réussite says why and keeps the plan made by the rules;
 - **Plan the day with an AI**: Home's **Plan the day** and the morning notification open a proposal in five parts (what has to happen, your main goals, one step for each pillar, what fits where you are, the total against your free time) that you keep, swap or skip, then confirm on the review screen. The daily loop page has the details;
 - **Break it down with AI**: propose small steps with starters and estimates;
@@ -24,11 +22,9 @@ With a key, Réussite can (without a key saved on this device, none of these sho
 
 **You see every change before it is written.** Tick what you want, untick what you don't. Nothing is applied without your ticks, and what you apply can be undone.
 
-## Ask any AI and Paste the reply
+## Copy and paste with any chatbot
 
-1. Tap **Ask any AI** (on Today, the Matrix or Projects). Choose what to include (Today or the matrix) and write your question.
-2. **Copy**, or **Share**, and paste it into any chatbot. **See the text** shows exactly what you're copying.
-3. When it answers, copy its whole reply and tap **Paste the reply**. Réussite finds the block labelled reussite and shows each change before writing anything.
+Two places use it: first-run set-up, and **Plan this trip** in Settings. Each gives you a message to **Copy** (or **Share**) into any chatbot; **See the text** shows exactly what you are copying. When it answers, copy its whole reply and tap **Paste the reply** there. Réussite finds the block labelled reussite and shows each change before writing anything.
 
 The reply can be one tap: in Settings → AI, **One-tap link** gives you one sentence to paste into your AI's custom instructions. The AI then answers with a link. Opening it where your list is shows the changes to tick.
 

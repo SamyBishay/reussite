@@ -10,7 +10,7 @@ Non. Il n’y a pas de compte. Votre liste est sur votre appareil.
 
 ## Faut-il une IA ?
 
-Non. C’est facultatif. Sans IA, vous pouvez quand même utiliser **Demander à une IA** pour copier une question dans n’importe quel chatbot, et rapporter sa réponse avec **Coller la réponse**. Voir [L’IA](ai.md).
+Non. C’est facultatif. Sans IA, aucun écran n’en demande une. Vous pouvez quand même copier un message dans n’importe quel chatbot à la mise en route et pour **Préparer ce voyage**, et rapporter sa réponse avec **Coller la réponse**, ou connecter votre appli de chat IA. Voir [L’IA](ai.md).
 
 ## Est-ce que ça marche hors connexion ?
 

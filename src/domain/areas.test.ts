@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeArea, areaFor, areaOf, areasOnPage, groupByArea, groupPlan, inArea, placePath, placeRows } from './areas';
+import { areaFor, areaOf, areasOnPage, groupByArea, groupPlan, inArea, placePath, placeRows } from './areas';
 
 const places = new Map<string, { name: string; order: number; parentId?: string | null }>([
   ['paris', { name: 'Paris', order: 0 }],
@@ -37,13 +37,6 @@ describe('areas in use', () => {
     expect(inArea('heli', 'heli', true)).toBe(true);
     expect(inArea('cairo', 'heli', true)).toBe(false);
     expect(inArea('any', null, true)).toBe(true);
-  });
-
-  it('a filter on an area the page no longer has is no filter', () => {
-    expect(activeArea(places, 'cairo', 'heli')).toBe('heli');
-    expect(activeArea(places, 'paris', 'heli')).toBeNull();
-    expect(activeArea(places, 'cairo', 'gone')).toBeNull();
-    expect(activeArea(places, 'cairo', null)).toBeNull();
   });
 
   it('groups items under area headings: no area first, then the areas in order, empty ones left out', () => {

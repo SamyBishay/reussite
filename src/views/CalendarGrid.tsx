@@ -126,7 +126,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
       const [from, to] = windowAround(latest.current.date);
       const evs = calViewEvents(
         { tasks: tasks.value, days: days.value, projects: projects.value, places: places.value, stays: stays.value, addresses: addresses.value },
-        { dayStart: settings.value.dayStart, area: areaFilter('calendar') },
+        { dayStart: settings.value.dayStart, area: areaFilter() },
         from, to,
       );
       // Today's planned steps, faded between the fixed items, on the hour grid only (Day and Week): they follow the clock.

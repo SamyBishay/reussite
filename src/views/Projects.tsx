@@ -1,7 +1,7 @@
 // Projects by suit (brief §5, Projects): the project editor with its SMART goal, steps in
 // order with what waits for what, linked decisions, progress bars, and the Completed shelf.
 import { useState } from 'preact/hooks';
-import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace, today } from '../app/store';
+import { tasks, projects, settings, decisions, places, createDoc, toast, pagePlace, viewAll, today } from '../app/store';
 import { onPage } from '../domain/places';
 import { isOpen, isEvent, inPlace, blocked, byOrder, waitingOn, chains, type T } from '../app/model';
 import { createTask, newTaskDoc, patchProject, moveStep, moveProject, setStepOrder } from '../app/actions';
@@ -14,7 +14,6 @@ import { outcomeOf } from '../domain/goal';
 import { More, Fold, countSet } from '../app/More';
 import { DoneFold } from '../app/DoneFold';
 import { openDecision, openDecisionPage, decisionGroups } from '../flows/decision';
-import { Scope, scope } from './Matrix';
 import { t, fmtMin, fmtDate, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Project, Task } from '../data/schema';
@@ -235,16 +234,11 @@ export function Projects() {
   for (const x of tasks.value.values()) { if (!by.has(x.project)) by.set(x.project, []); by.get(x.project)!.push(x); }
   const projs = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped');
   const page = pagePlace.value;
-  let hidden = 0;
-  const vis = projs.filter(p => {
-    const ok = scope.value === 'all' || !p.where || onPage(places.value, p.where, page) || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x));
-    if (!ok) hidden++;
-    return ok;
-  });
+  // Everywhere (the place menu's View) shows every project; otherwise the page's own, Anywhere's, and those with a step on the page.
+  const vis = projs.filter(p => viewAll.value || !p.where || onPage(places.value, p.where, page) || (by.get(p.id) ?? []).some(x => isOpen(x) && inPlace(x)));
   const inbox = by.get('inbox') ?? [];
   return (
     <div>
-      <Scope hidden={hidden} />
       <CommandBox scope={{ kind: 'matrix' }} />
       {SUIT_ORDER.map(s => {
         const ps = vis.filter(p => p.suit === s && p.id !== 'inbox').sort(byOrder);
@@ -267,7 +261,7 @@ export function Projects() {
       )}
       <Decisions />
       <Shelf done={[...projects.value.values()].filter(p => p.status === 'done')} by={by} />
-      <p class="hint" style="margin-top:var(--s3)">{t('placePageNote', { place: placeName(page) })}</p>
+      <p class="hint" style="margin-top:var(--s3)">{viewAll.value ? t('placePageNoteAll') : t('placePageNote', { place: placeName(page) })}</p>
     </div>
   );
 }

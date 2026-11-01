@@ -14,11 +14,15 @@ test('the tab bar never scrolls vertically', async ({ page }) => {
 test('a place can be added from the place switcher on a fresh start', async ({ page }) => {
   await page.goto('/#today');
   await page.getByTestId('place-pill').click();
+  await sheet(page).getByTestId('pm-manage').click();
   await sheet(page).getByPlaceholder('Name of the new place').fill('Lyon');
   await sheet(page).getByTestId('add-place').click();
   await expect(sheet(page)).toContainText('Lyon');
-  await sheet(page).locator('li', { hasText: 'Lyon' }).getByRole('button', { name: 'I’m here' }).click();
+  await page.keyboard.press('Escape');
+  await page.getByTestId('place-pill').click();
+  await sheet(page).getByRole('checkbox', { name: 'I’m here: Lyon', exact: true }).check();
   await expect(page.getByTestId('place-pill')).toContainText('Lyon');
+  await expect(sheet(page).getByRole('checkbox', { name: 'View: Lyon', exact: true })).toBeChecked();
 });
 
 test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page }) => {

@@ -23,7 +23,7 @@ Tap an event to open the step. Tap a day's number to open that day.
 - **Change a time or a day:** drag a timed step on the grid. It moves in steps of 15 minutes.
 - On a phone, tap a step to open it and change its time or day there.
 
-If your place has areas, the **area chips** narrow the calendar to one area, plus what applies anywhere.
+If you view one of your place's areas (the place pill), the calendar shows that area, plus what applies anywhere.
 
 ## Add to calendar
 

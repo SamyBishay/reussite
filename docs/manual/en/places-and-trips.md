@@ -6,13 +6,14 @@ A **place** is somewhere you live, work or stay for a while. Each place gets its
 
 ## Switching place
 
-The pill at the top of Today, the Matrix and the other tabs says where you are ("In Home"). Tap it, or open **Places** in Home's menu.
+The pill at the top of Today, the Matrix and the other tabs says where you are ("In Home"). Tap it to open the place menu: each place, its areas under it, and **Everywhere**. Each row has two boxes.
 
-- **I'm here** moves you there.
-- **View its page** lets you look at another place's steps and projects, to prepare it, without moving there. A banner reminds you what you're looking at, with a button to go back.
-- **+ Add a place** adds one. Give it a name and a time zone.
+- **I'm here** says where you are. Planning and reminders follow it. During a stay, the stay's place takes over and the boxes wait.
+- **View** says which place Today, the Matrix, Projects and the Calendar show. It starts as the whole place you are in. Tick another place to prepare it without moving there (a banner reminds you what you're looking at, with a button to go back), one of its areas to see only that area, or **Everywhere** to see every place at once. The pill then reads "Viewing Heliopolis" or "Everywhere".
 
-You can also add places in Settings → Method.
+Your choice is kept on this device, so the app reopens on the area you were viewing. When you move to another place (a stay starts, or you tick I'm here on a place somewhere else), the view goes back to that place. Réussite never reads your location: it does not know where you are until you say so or a stay starts.
+
+**Places and areas…** at the bottom of the menu is where you add a place (and its areas). You can also add places in Settings → Method.
 
 ## Areas
 
@@ -20,7 +21,7 @@ An **area** is somewhere inside a place: Heliopolis in Cairo. Add one under the 
 
 Where you choose a place, the list shows each place followed by its areas. A step in an area is on its place's page too.
 
-When a place has areas, a row of **chips** appears on Today, the matrix and the calendar. Tap one to see only that area's steps, plus those set to Anywhere. Tap it again to clear. The choice lasts until you close the app. Lists are grouped under the area's name.
+To see only one area, tick **View** on it in the place menu: Today and the calendar then show that area's steps plus those set to Anywhere, and the matrix the area's alone. Tick the place again to see it all. Lists are grouped under the area's name.
 
 **Half days.** In the morning check-in, **Where will you be?** lets you pick a place or one of its areas for the morning and for the afternoon. The plan then draws on that area first and keeps its steps together. Today and the calendar show "Afternoon · Heliopolis".
 

@@ -17,7 +17,9 @@ test('a dropped card leaves every list, waits in the Cemetery, and Restore bring
   await expect(page.getByTestId('cemetery-row')).toContainText('Buried errand');
   await page.getByTestId('cemetery-restore').first().click();
   await expect(page.getByTestId('cemetery-row').filter({ hasText: 'Buried errand' })).toHaveCount(0);
-  await expect(page.locator('[data-task]', { hasText: 'Buried errand' }).first()).toBeVisible();
+  // Back among the cards: a box shows only its first two, so look in the list of every card.
+  await page.getByTestId('all-cards').locator('summary').click();
+  await expect(page.getByTestId('all-cards-list').locator('[data-task]', { hasText: 'Buried errand' })).toBeVisible();
 });
 
 test('Start here drops its card on a second tap, on Today and on Home', async ({ page }) => {

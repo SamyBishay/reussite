@@ -6,11 +6,14 @@ Un **lieu** est un endroit où vous vivez, travaillez ou séjournez un moment. C
 
 ## Changer de lieu
 
-La pastille en haut d’Aujourd’hui, de la Matrice et des autres onglets dit où vous êtes (« À Maison »). Touchez-la, ou ouvrez **Lieux** dans le menu de l’accueil.
+La pastille en haut d’Aujourd’hui, de la Matrice et des autres onglets dit où vous êtes (« À Maison »). Touchez-la pour ouvrir le menu des lieux : chaque lieu, ses zones dessous, et **Tous les lieux**. Chaque ligne a deux cases.
 
-- **J’y suis** vous y place.
-- **Voir sa page** vous laisse regarder les étapes et les projets d’un autre lieu, pour le préparer, sans y aller. Un bandeau vous rappelle ce que vous regardez, avec un bouton pour revenir.
-- **+ Ajouter un lieu** en ajoute un. Donnez-lui un nom et un fuseau horaire.
+- **J’y suis** dit où vous êtes. Le plan et les rappels la suivent. Pendant un séjour, le lieu du séjour prend le relais et les cases attendent.
+- **Voir** dit quel lieu montrent Aujourd’hui, la Matrice, les Projets et le Calendrier. Au début, c’est tout le lieu où vous êtes. Cochez un autre lieu pour le préparer sans y aller (un bandeau vous rappelle ce que vous regardez, avec un bouton pour revenir), l’une de ses zones pour ne voir qu’elle, ou **Tous les lieux** pour voir tous les lieux à la fois. La pastille dit alors « Vue : Héliopolis » ou « Tous les lieux ».
+
+Votre choix est gardé sur cet appareil : l’appli se rouvre sur la zone que vous regardiez. Quand vous changez de lieu (un séjour commence, ou vous cochez J’y suis sur un lieu ailleurs), la vue revient à ce lieu. Réussite ne lit jamais votre position : il ne sait où vous êtes que si vous le dites ou si un séjour commence.
+
+**Lieux et zones…**, en bas du menu, sert à ajouter un lieu (et ses zones).
 
 Vous pouvez aussi ajouter des lieux dans Réglages → Méthode.
 
@@ -20,7 +23,7 @@ Une **zone** est un endroit à l’intérieur d’un lieu : Héliopolis au Cai
 
 Partout où vous choisissez un lieu, la liste montre chaque lieu suivi de ses zones. Une étape d’une zone est aussi sur la page de son lieu.
 
-Quand un lieu a des zones, une rangée de **pastilles** apparaît dans Aujourd’hui, la matrice et le calendrier. Touchez-en une pour ne voir que les étapes de cette zone, plus celles marquées Partout. Touchez-la de nouveau pour l’enlever. Le choix dure jusqu’à la fermeture de l’appli. Les listes sont groupées sous le nom de la zone.
+Pour ne voir qu’une zone, cochez **Voir** sur elle dans le menu des lieux : Aujourd’hui et le calendrier montrent alors les étapes de cette zone plus celles marquées Partout, et la matrice celles de la zone seule. Cochez de nouveau le lieu pour tout voir. Les listes sont groupées sous le nom de la zone.
 
 **Demi-journées.** Au point du matin, **Où serez-vous ?** vous laisse choisir un lieu ou l’une de ses zones pour le matin et pour l’après-midi. Le plan puise alors d’abord dans cette zone et garde ses étapes ensemble. Aujourd’hui et le calendrier montrent « Après-midi · Héliopolis ».
 

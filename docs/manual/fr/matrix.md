@@ -1,6 +1,6 @@
 # La matrice
 
-La matrice range vos étapes en quatre quadrants. L’urgence et l’importance sont jugées **séparément**.
+La matrice range vos étapes en quatre cases. Chacune montre ses deux premières étapes et un bouton **Voir les 5** pour le reste ; toutes les étapes sont aussi dans une seule liste, repliée en bas. L’urgence et l’importance sont jugées **séparément**.
 
 ![La matrice](shot:matrix)
 
@@ -25,11 +25,12 @@ Si vous déplacez une étape dans un quadrant urgent, Réussite demande : «�
 
 ## Déplacer, filtrer et chercher
 
-- Faites glisser une étape vers un autre quadrant, ou appuyez longuement dessus sur un téléphone. Ou ouvrez l’étape et utilisez **Déplacer vers…**.
-- Filtrez par projet ou par famille, ou cherchez dans vos étapes.
-- Si votre lieu a des **zones**, une rangée de pastilles réduit la matrice à une zone (et à Partout). Touchez la pastille de nouveau pour l’enlever. **Grouper par zone** trie chaque quadrant par zone. Le choix dure jusqu’à la fermeture de l’appli.
+- Faites glisser une étape vers une autre case, ou appuyez longuement dessus sur un téléphone. Ou touchez son bouton **⇄**, ou ouvrez l’étape et utilisez **Déplacer vers…**.
+- **Voir les 5** sous une case ouvre les étapes de ce quadrant dans une feuille.
+- **Toutes les cartes**, en bas, ouvre une seule liste de toutes les étapes, chacune avec son quadrant. Cherchez et filtrez par projet ou par famille là.
+- Si vous regardez l’une des **zones** du lieu, la matrice montre les étapes de cette zone seule (ni celles du lieu, ni celles de Partout).
 - Une étape qui en attend une autre n’apparaît qu’une fois, en une seule carte : la première étape, avec « +2 après » sous son titre. Touchez-la pour déplier le reste, en grisé. Quand la première est faite, la suivante prend sa place.
-- **À Maison** (ou le nom de votre lieu) montre les étapes de ce lieu et celles marquées Partout. **Tout** montre tout.
+- La matrice montre ce que vous avez choisi de voir dans la pastille du lieu (voir [Lieux et voyages](places-and-trips.md)) : les étapes de ce lieu et celles marquées Partout, ou toutes les étapes avec **Tous les lieux**.
 - Changez une échéance partout où une étape apparaît.
 
 ![Une chaîne, dépliée sous sa première étape](shot:chain)

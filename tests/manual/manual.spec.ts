@@ -189,13 +189,18 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#matrix');
       await expect(page.getByTestId('quad1')).toBeVisible();
       await shot(page, 'matrix');
-      await page.getByTestId('chain-toggle').first().click();
-      await expect(page.getByTestId('chain').first()).toBeVisible();
-      await page.getByTestId('chain').first().scrollIntoViewIfNeeded();
+      // A box shows its first two steps; the chain is in the folded list of every card.
+      await page.getByTestId('all-cards').locator('summary').click();
+      const every = page.getByTestId('all-cards-list');
+      await every.getByTestId('chain-toggle').first().click();
+      await expect(every.getByTestId('chain').first()).toBeVisible();
+      await every.getByTestId('chain').first().scrollIntoViewIfNeeded();
       await shot(page, 'chain', true);
       await page.goto('/#matrix');
-      await page.getByTestId('area-chips').scrollIntoViewIfNeeded();
-      await shot(page, 'areas', true);
+      await page.getByTestId('place-pill').click();
+      await expect(page.getByTestId('place-menu')).toBeVisible();
+      await shot(page, 'areas');
+      await closeSheet(page);
 
       await page.goto('/#projects');
       await expect(page.getByTestId('decisions')).toBeVisible();

@@ -1,6 +1,6 @@
 # The matrix
 
-The matrix sorts your steps in four quadrants. Urgency and importance are judged **separately**.
+The matrix sorts your steps in four boxes. Each shows its first two steps and **View all** for the rest; every step is also in one list, folded at the bottom. Urgency and importance are judged **separately**.
 
 ![The matrix](shot:matrix)
 
@@ -25,16 +25,17 @@ If you move a step into an urgent quadrant, Réussite asks: "Urgent means a date
 
 ## Moving, filtering and searching
 
-- Drag a step to another quadrant, or long-press it on a phone. Or open the step and use **Move to…**.
-- Filter by project or suit, or search your steps.
-- **In Home** shows this place's steps and the ones marked Anywhere. **Everything** shows all.
+- Drag a step to another box, or long-press it on a phone. Or tap its **⇄** button, or open the step and use **Move to…**.
+- **View all 5** under a box opens that quadrant's steps in a sheet.
+- **All cards** at the bottom opens one list of every step, each with its quadrant named. Search, and filter by project or suit, there.
+- The matrix shows the place you chose to view in the place pill (see [Places and trips](places-and-trips.md)): that place's steps and the ones marked Anywhere, or every step with **Everywhere**.
 - Change a due date wherever a step appears.
-- If your place has **areas**, a row of chips narrows the matrix to the steps set to that area alone (not the place's own, not Anywhere's). Tap the chip again to clear it. **Group by area** sorts each quadrant by area. The choice lasts until you close the app.
+- If you view one of the place's **areas**, the matrix shows the steps set to that area alone (not the place's own, not Anywhere's).
 - A step that waits for another shows once, as one card: the first step, with "+2 after" under its title. Tap it to unfold the rest, greyed. When the first is done, the next takes its place.
 
 ![A chain, unfolded under its first step](shot:chain)
 
-![The matrix narrowed to one area](shot:areas)
+![The place menu, with an area to view](shot:areas)
 
 ## Steps
 

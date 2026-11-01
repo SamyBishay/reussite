@@ -11,10 +11,11 @@ test('Home shows the wordmark as its h1, the date under it, and the greeting cen
   await expect(h1).toBeVisible();
   await expect(page.locator('h1')).toHaveCount(1);
   const b = await h1.boundingBox(), g = await page.getByTestId('greeting-hello').boundingBox(), m = await page.locator('.hello .mark').boundingBox();
-  expect(b!.x).toBeLessThan(40);
-  const vw = page.viewportSize()!.width;
-  expect(Math.abs(g!.x + g!.width / 2 - vw / 2)).toBeLessThan(2);
-  expect(Math.abs(m!.x + m!.width / 2 - vw / 2)).toBeLessThan(2);
+  const home = await page.getByTestId('home').boundingBox();
+  expect(b!.x - home!.x).toBeLessThan(4);
+  const mid = home!.x + home!.width / 2;
+  expect(Math.abs(g!.x + g!.width / 2 - mid)).toBeLessThan(2);
+  expect(Math.abs(m!.x + m!.width / 2 - mid)).toBeLessThan(2);
   expect(m!.y + m!.height).toBeLessThanOrEqual(g!.y + 1);
   await noSideways(page, 'home');
 });

@@ -61,7 +61,10 @@ function GreetingLine() {
     chosen.current = line?.key ?? null;
     if (line) rememberGreeting(day, line.key);
   }
-  return line ? <p class="greetline" data-testid="greeting-hello" data-key={line.key}>{t(line.key, line.slots)}</p> : null;
+  if (!line) return null;
+  // Short lines are set big, long ones smaller so they stay a few lines and never overflow (the list of hellos holds a word and whole sentences).
+  const text = t(line.key, line.slots), size = text.length > 60 ? ' xlong' : text.length > 28 ? ' long' : '';
+  return <p class={'greetline' + size} data-testid="greeting-hello" data-key={line.key}>{text}</p>;
 }
 
 /** Under the line: Plan the day when there is no list yet, Close the day when it is all played, and nothing else. Start here, the running step and tomorrow's first step belong to Today. */

@@ -16,10 +16,11 @@ Avec une clé, Réussite peut (sans clé enregistrée sur cet appareil, rien de 
 
 - transformer des mots simples en changements (« abandonner les jeux ; les photos sont dues vendredi ») : la boîte **Modifier la liste** dans Aujourd’hui, la Matrice et Projets, et la boîte unique de l’accueil ;
 - **Améliorer avec l’IA** : réordonner le plan du jour, choisir entre des étapes, écrire des démarreurs et découper les grosses étapes. Si son plan enfreint les règles de la méthode, Réussite dit pourquoi et garde le plan fait selon les règles ;
+- **Planifier la journée avec une IA** : **Planifier la journée** sur l’accueil et la notification du matin ouvrent une proposition en cinq parties (ce qui doit arriver, vos objectifs principaux, une étape pour chaque pilier, ce qui convient là où vous êtes, le total face à votre temps libre) que vous gardez, échangez ou passez, puis confirmez sur l’écran de revue. La page de la boucle du jour donne le détail ;
 - **Découper avec l’IA** : proposer de petites étapes avec démarreurs et estimations ;
 - aider pour les décisions : rédiger le problème, suggérer des options oubliées, suggérer des avantages et des inconvénients (marqués « suggéré », poids 3 tant que vous ne l’avez pas fixé), rédiger les étapes et un objectif SMART. Elle ne fixe jamais les poids ;
 - suggérer un démarreur plus petit quand vous êtes bloqué ;
-- proposer un objectif SMART et des étapes suivantes pendant la revue de la semaine. Un objectif reste « proposé » jusqu’à ce que vous le confirmiez.
+- passer vos objectifs en revue pendant la revue de la semaine, un projet à la fois : vérifier chacun face à SMART, dire quelles étapes ouvertes le font avancer, et proposer une phrase plus claire, une mesure, des dates, et des étapes à abandonner ou à ajouter. Vous gardez, passez ou inversez chacune. La page de la boucle du jour donne le détail. Sur la page d’un projet dans la revue, **Proposer un objectif et les étapes suivantes** propose toujours un objectif et des étapes suivantes pour ce projet, et un objectif reste « proposé » jusqu’à ce que vous le confirmiez.
 
 **Vous voyez chaque changement avant qu’il soit écrit.** Cochez ce que vous voulez, décochez ce que vous ne voulez pas. Rien n’est appliqué sans vos coches, et ce que vous appliquez peut être annulé.
 

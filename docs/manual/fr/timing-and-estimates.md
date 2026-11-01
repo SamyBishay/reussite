@@ -32,7 +32,7 @@ D’ici là, vous voyez « J’apprends votre rythme : 3 sur 5 chronométré
 
 ## Votre ratio
 
-Le Journal montre votre ratio : le temps réel sur l’estimation. « ×1,2 » veut dire que les choses vous prennent 20 % de plus que ce que vous devinez. Le plan s’en sert : « environ 3 h avec votre ×1,2 habituel ». Plus on est proche de ×1,0, mieux c’est, mais c’est un fait, pas une note.
+Le Journal montre votre ratio : le temps réel sur l’estimation. « ×1,2 » veut dire que les choses vous prennent 20 % de plus que ce que vous devinez. Le plan s’en sert : « environ 3 h avec votre ×1,2 habituel ». Plus on est proche de ×1,0, mieux c’est, mais c’est un fait, pas une note.
 
 À la fin de la revue de la semaine, vous voyez comment les estimations de la semaine se comparent à la réalité, et où le chrono s’est arrêté tôt (concentration perdue, bloqué, interrompu, fatigué, changement de tâche). Le schéma des raisons montre où va votre attention.
 

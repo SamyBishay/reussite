@@ -1,16 +1,37 @@
 # Les projets
 
-Un projet regroupe des étapes vers un objectif. Les projets sont listés sous les quatre familles. La carte d’un projet montre son objectif, le nombre d’étapes faites et son étape suivante.
+Un projet regroupe des étapes vers un objectif. Les projets sont listés sous les quatre familles. La carte d’un projet montre son objectif, sa barre s’il en a une, et son étape suivante.
 
 ![Les projets, avec les décisions en dessous](shot:projects)
 
 ## L’objectif
 
-Donnez à chaque projet actif un objectif **SMART** : spécifique, mesurable, atteignable, réaliste et défini dans le temps. Ouvrez le projet et remplissez les cinq lignes. La carte affiche « SMART 3/5 » tant qu’elles ne sont pas toutes là. Si une IA a proposé un objectif, il reste « proposé » jusqu’à ce que vous le confirmiez ou le réécriviez.
+Un objectif a quatre parties. Ouvrez le projet pour les régler :
+
+- **L’objectif, en une phrase** : le résultat que vous voulez (« Brouillon du mémoire remis »).
+- **Comment vous verrez l’avancée** : **Un décompte**, **Des jalons** ou **Pas de barre**.
+  - *Un décompte* est un nombre à atteindre, avec une unité : 10 pages, 12 séances.
+  - *Des jalons* sont quelques étapes de passage que vous cochez vous-même : « Brouillon envoyé », « Retours reçus », « Version finale classée ».
+  - *Pas de barre* veut dire que la carte montre l’objectif et aucune barre. Tout projet commence ainsi.
+- **Début** et **Échéance** : les deux dates.
+- **Les cinq questions SMART** (spécifique, mesurable, atteignable, réaliste, défini dans le temps) sont toujours là, repliées sous l’objectif. Remplissez-les si cela vous aide ; rien n’en dépend.
+
+Si une IA a proposé un objectif, il reste « proposé » jusqu’à ce que vous le confirmiez ou le réécriviez.
+
+### Ce qui fait avancer la barre
+
+La barre est remplie par des étapes, pas par le nombre de cartes faites. Ouvrez une étape d’un projet qui a une barre et répondez à **Fait avancer l’objectif ?** par **Oui** ou **Non**. Seules comptent les étapes auxquelles vous répondez **Oui**, et seulement une fois faites :
+
+- Avec un décompte, chacune de ces étapes ajoute 1 quand vous la marquez faite. Une petite fenêtre demande alors si elle a ajouté davantage (« +5 pages »), ou vous gardez +1. Une étape peut aussi porter sa propre quantité dans sa fiche (**Ajoute**).
+- Avec des jalons, marquer une telle étape comme faite demande **Cocher un jalon ?** et liste ceux qui restent ouverts. Choisissez-en un, ou **Pas maintenant** : la barre n’avance que lorsque vous cochez un jalon, ici ou dans le projet.
+
+La revue de la semaine pose la question pour chaque étape ouverte d’un projet une fois par semaine, donc les réponses ne dépendent pas de votre mémoire. Une étape à laquelle vous n’avez jamais répondu compte comme Non, et la barre ne compte jamais des étapes juste parce qu’elles sont faites. Si vous annulez une étape, un décompte redescend. Les étapes que vous ajoutez dans le projet, dans Aujourd’hui ou en parlant à une IA peuvent toutes dire si elles font avancer l’objectif.
 
 **La recherche dit :** non testé ici. `[E?]`
 
-**La pratique dit :** un objectif dont on ne peut pas dire s’il est atteint n’est pas un objectif. `[E?]`
+**La pratique dit :** un objectif dont on ne peut pas dire s’il est atteint n’est pas un objectif, et une barre qui se remplit pour n’importe quelle étape faite ne vous dit rien de l’objectif. `[E?]`
+
+Les anciens projets gardent leur objectif comme phrase et n’ont pas de barre tant que vous ne choisissez pas une mesure. Ce que vous aviez écrit dans les cinq lignes SMART est conservé.
 
 ## L’étape suivante
 
@@ -39,3 +60,5 @@ Vos décisions sont listées sous les projets, groupées en **À vérifier**, **
 ## Les lieux
 
 Un projet peut appartenir à un lieu, ou à Partout. Voir [Lieux et voyages](places-and-trips.md).
+
+Pour commencer un projet, touchez le bouton rond **+** dans Projets : donnez-lui un nom et une famille (le lieu est sous **Plus**). Les projets terminés sont repliés sous **Clos** ; touchez-le pour ouvrir la liste.

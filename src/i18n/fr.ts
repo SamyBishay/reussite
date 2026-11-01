@@ -1560,6 +1560,10 @@ export const fr: Partial<Strings> = {
   // S8: the French batch (goals v2, Home help, set-up, the morning proposal, the Sunday review, the close)
   closeTomorrowIs: 'Demain commence par : {title}',
   closeMoved: 'Ce qui a avancé aujourd’hui',
+  presetLilacSea: 'Lilas et mer',
+  presetInkCoral: 'Encre et corail',
+  presetForestAmber: 'Forêt et ambre',
+  presetClassic: 'Cartes classiques',
   closeGain: '+{n} aujourd’hui',
   smartFive: 'Les cinq questions SMART',
   goalStart: 'Début',

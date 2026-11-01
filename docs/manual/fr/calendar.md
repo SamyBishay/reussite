@@ -8,10 +8,11 @@ L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Sema
 
 ## Ce que montre un jour
 
-Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md), pas ici. Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
+Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) ; les seules étapes d’ici sont celles prévues aujourd’hui, affichées en pâle (plus bas). Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine.
 - Les jours passés ne montrent eux aussi que les éléments à heure fixe ; ce qui est fait est barré.
+- **Les étapes prévues aujourd’hui** apparaissent dans les vues Jour et Semaine comme des blocs pâles, hachurés, au bord en pointillés, entre les éléments à heure fixe. Ils sont là où l’ordre du jour dit que chaque étape se fera si vous continuez ainsi : c’est une estimation, pas un rendez-vous. Quand une étape dépasse son estimation, son bloc grandit avec l’horloge et les suivants se décalent. Touchez-en un pour ouvrir l’étape, comme dans Aujourd’hui. On ne peut pas les faire glisser, ils ne concernent qu’aujourd’hui (les autres jours n’ont pas d’horloge à suivre), et ils ne sont ni dans les fichiers ni dans le flux ci-dessous.
 - Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
 - Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu.
 
@@ -36,7 +37,7 @@ Votre liste a un seul flux, partagé par tous vos appareils : activez-le, dés
 
 **Ce que dit le flux** a trois niveaux :
 
-- **Les heures seulement.** Il dit seulement « Heure fixe » et « Étape prévue », et quand. C’est le choix par défaut.
+- **Les heures seulement.** Il dit seulement « Heure fixe », et quand. C’est le choix par défaut.
 - **Noms courts.** Le nom court de chaque étape.
 - **Noms courts, lieux et notes.** Aussi le lieu ou l’adresse, le titre, la note et le lien, et un lien qui ouvre l’étape dans Réussite.
 

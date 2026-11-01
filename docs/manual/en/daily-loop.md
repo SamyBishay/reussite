@@ -93,7 +93,16 @@ A step over 30 minutes is too big. Tap **Break it down**: it asks for the first 
 
 ## Close the day
 
-Tap **Close the day**. You see the cards you played and the time you logged. Pick tomorrow's first step, and, if you like, when to start it. Your cards are dealt out one by one. Under Settings → Appearance you can switch the celebration off, calm or lively.
+Tap **Close the day**. Your cards are dealt out one by one, then you see the day's summary. Under Settings → Appearance you can switch the celebration off, calm or lively; with it off you go straight to the summary.
+
+![The close of the day: the pillars played, the bar that moved, tomorrow's first step](shot:close)
+
+The summary has:
+
+- The cards you played and the time you logged.
+- **One line for your pillars**, such as "♠ 2 · ♦ 1 · ♥ 1": the symbol of each pillar you played in, with how many cards. A pillar you didn't play in is left out.
+- **The bars that moved today.** A project's bar moves when a step that moves its goal was done today, or a milestone was ticked today. Each shows its bar and what today added ("4 of 12 pages · +2 today"). Cards alone never move a bar, and steps still open count for nothing and are not mentioned.
+- **Tomorrow's first step.** Pick one from your list, or write a new one; the summary says "Tomorrow starts with: …", and, if you like, when to start it.
 
 Réussite states facts ("4 cards, 2 h 10"). It never praises your character, and it has no streaks.
 

@@ -37,7 +37,7 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 ### Morning check-in
 1. **Yesterday.** What got done, in one line. Then each step left open is decided on its own, one at a time: **Today**, **Another day**, **Drop it** or **Make it a decision** (or, if it was done and not ticked, "Already done"). Nothing moves until the person chooses; never carry them all at once. A step carried three times or more is too big or hides a decision: shrink it, or turn it into a decision. A fixed-time item from yesterday whose time passed is asked on its own too: **Move** or **Remove**. No comment on what didn't happen, no counts of it.
 2. **Today's shape.** From when and until when (the day ends at 19:00 unless the person says otherwise), and what's fixed today.
-3. **The four pillars.** One step for each of work (♠), papers (♦), family (♣) and life (♥), as far as the list has one. An empty pillar gets one line ("No family step today. Fine, or add one?"); the person keeps, swaps or skips each.
+3. **The four pillars.** One step for each of the person's four pillars, as far as the list has one. They are the parts of the days that matter to them, named in their own words; by default work (♠), papers (♦), family (♣) and life (♥). Use their names, not the defaults. An empty pillar gets one line ("No family step today. Fine, or add one?"); the person keeps, swaps or skips each.
 4. **The plan.** Unblocked *Now* steps first, for the place you're in; then exactly one *Protect* step; then any *Quick* steps, batched. At most three work steps. One leisure or people obligation, with a time. Every item is a first step of 30 minutes or less; break bigger ones down now. Lay it out against the clock: fixed times where they are, the steps in the gaps. Total the estimates, apply your ratio, and say it against the room: "3 h 10 of 4 h 30 free". When it is more than the room, say by how much ("About 50 min more than the time you have. Cut one?") and let the person cut. There are no launch points and no restart nudges; steps float between fixed times.
 5. **Rest day**: the obligation only, unless something is due within two days.
 6. Then the first step alone: its starter, and Start.
@@ -51,6 +51,9 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 
 Then a short exchange to adjust, and one change-set: `day.update` with the plan and the first step, plus any new or broken-down steps. The questionnaire above stays the way without an AI.
 
+### Through the day
+Start here follows the clock: it is the first step that fits before the next fixed item, in the planned order. A step that doesn't fit the gap waits for the next one and a shorter one moves up; a step is never split. When a fixed item gets close it takes over: the step in hand (what is left of it if it is timed, its estimate if not), plus a margin of a fifth of its length and at least 5 minutes, would run into the time to leave. A fixed item whose time has passed is asked about on its own, **Move** or **Remove**, never in red. The Calendar draws the day's planned steps as faded blocks between the fixed items; they are a projection that moves with the clock, not a commitment.
+
 ### Insisting
 Come back to the first step. Swapping it for one of the same weight is fine; skipping it isn't. If you resist, ask one question: what's in the way? A real blocker (missing information, someone else's move, a hidden decision) changes the plan: turn it into a message to send, a smaller step, or a decision. Anything else gets the starter, or a smaller one.
 
@@ -63,7 +66,10 @@ Don't re-plan the day. Which step? Which friction: **can't start**, **stopped an
 When you stop, leave yourself the next verb ("write the second paragraph"), so starting again takes no thought, and note why you stopped. The pattern of reasons shows where attention goes.
 
 ### Closing the day
-See the cards you played and the time you logged. Choose tomorrow's first step, and optionally when to start it.
+See the cards you played and the time you logged, with one line for the pillars played ("♠ 2 · ♦ 1 · ♥ 1", in the person's own symbols; a pillar with nothing played is left out). Show the project bars that moved today: a bar moves only by steps that move its goal, done today, or by a milestone ticked today, never by how many cards were played. Open steps count for nothing; no word on what wasn't done. Then choose tomorrow's first step, and optionally when to start it.
+
+## Setting up
+First run is short: the language, then one choice, by oneself or with an AI. The four pillars are put to the person as "what matters in your days" and named in their own words; never say *card*, *suit* or *matrix* at set-up. With an AI the person tells it about their days in a few lines, and it proposes the four pillars, the places and how they want to work with it, as one change-set (`settings.update` and `place.create`) that the person confirms on the review screen. Sync, reminders, Addresses & people, the recovery key and the connector are not asked at first: they wait on Home under *Next steps*, and the person can hide that card.
 
 ## The weekly review
 Once a week, about 45 minutes, one question at a time:

@@ -26,11 +26,11 @@ The same pages are also plain static HTML, readable without installing the app: 
 
 ## The screenshots
 
-`npm run manual:shots` (`scripts/manual-shots.sh`, `playwright.manual.config.ts`, `tests/manual/manual.spec.ts`) builds the app, runs it on port 4175 and takes the pictures with Firefox at 375 px wide, twice the pixels, in English and French, light and dark: 18 pictures each, so 72 files in `public/manual/shots/<lang>-<theme>/<name>.png`. It is not part of `npm run e2e`, and it does not need the relay.
+`npm run manual:shots` (`scripts/manual-shots.sh`, `playwright.manual.config.ts`, `tests/manual/manual.spec.ts`) builds the app, runs it on port 4175 and takes the pictures with Firefox at 375 px wide, twice the pixels, in English and French, light and dark: 22 pictures each, so 88 files in `public/manual/shots/<lang>-<theme>/<name>.png`. It is not part of `npm run e2e`, and it does not need the relay.
 
 - **Invented data only.** The spec builds one list in code (`list(lang)`, in the app's language), restores it as a backup file, and drives the app. Nothing is read from `private/`, and the footer's credit is blanked.
 - **Dates move with the day**, so the pictures are never stale: run it again before a release, and commit what changes.
-- **Size.** After the run, ImageMagick squeezes each picture to 64 colours (the screens are flat, so nothing is lost): 72 files, under 3 MB in all. Without ImageMagick the script says so and keeps the originals, which are about three times larger. Commit only squeezed files.
+- **Size.** After the run, ImageMagick squeezes each picture to 64 colours (the screens are flat, so nothing is lost): 88 files, under 4 MB in all. Without ImageMagick the script says so and keeps the originals, which are about three times larger. Commit only squeezed files.
 - **In the app**, a picture is `manual/shots/<page's language>-<theme>/<name>.png`, with the theme the app shows now (the chosen one, else the device's). The pictures are not in the precache (`globIgnores` in `vite.config.ts`); the service worker keeps each one the first time it is shown (`src/sw.ts`, shown from the cache and refreshed in the background).
 
 To add a picture: take it in the spec with `shot(page, 'name')`, run the script, and use `![…](shot:name)` in the page. The test fails if a page names a picture the spec doesn't take. `MANUAL_SHOTS_DIR` changes where they go.

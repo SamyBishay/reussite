@@ -217,13 +217,13 @@ test('done on a step applies at once, asks how long in the card, and Undo takes 
   const card = page.getByTestId('card-duration');
   await expect(card).toContainText('How long did “' + RECEIPTS + '” take?');
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'done' });
-  // Home shows its greeting, the card, the receipt and the input: four parts, no more.
-  await expect(page.locator('[data-testid=home] > *')).toHaveCount(4);
+  // Home shows its greeting and the card, then the receipt and the input: no more.
+  await expect(page.locator('[data-testid=home] .homestage > *')).toHaveCount(2); // the greeting and the card (the bar, the receipt and the input are around it)
   await card.getByTestId('dur').nth(2).click(); // 30 minutes (no estimate: 5, 15, 30, …)
   await expect(card).toHaveCount(0);
   const sessions = (await live(page, 'sessions')).filter(s => s.source === 'typed' && s.m === 30);
   expect(sessions).toHaveLength(1);
-  await expect(page.locator('[data-testid=home] > *')).not.toHaveCount(5);
+  await expect(page.locator('[data-testid=home] .homestage > *')).toHaveCount(1);
 
   await page.getByTestId('undo').click();
   await expect(page.getByTestId('receipt')).toHaveCount(0);
@@ -338,7 +338,7 @@ test('what is waiting is behind the bell: Home has a dot, the page lists it with
   await importSample(page);
   await goTab(page, 'home');
   await expect(page.getByTestId('home-card')).toHaveCount(0);
-  await expect(page.locator('[data-testid=home] > *')).toHaveCount(2); // greeting, input
+  await expect(page.locator('[data-testid=home] .homestage > *')).toHaveCount(1); // the greeting alone
   await expect(page.getByTestId('bell-dot')).toBeVisible();
   await page.getByTestId('home-bell').click();
   await expect(page).toHaveURL(/#notifications$/);

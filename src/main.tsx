@@ -10,6 +10,8 @@ import './styles/app.css';
 import { App } from './app/App';
 import { ErrorBoundary } from './app/Diagnostics';
 import { startErrorLog } from './app/errorlog';
+import { markIosApp } from './app/ios';
 
 startErrorLog();
+markIosApp();
 render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('root')!);

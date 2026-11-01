@@ -45,7 +45,10 @@
   --serif:var(--sans);
   --mono:"Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   color-scheme:light;
+  --sat:env(safe-area-inset-top,0px);  /* the room the top of a screen leaves for the status bar and the island */
 }
+/* An iPhone's home-screen app (src/app/ios.ts): the inset has been seen to read 0 under a Dynamic Island, so leave at least its height. */
+@media (orientation:portrait){:root.ios-app{--sat:max(env(safe-area-inset-top,0px),54px)}}
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --ground:#0B0C10;--panel:#111118;--card:#16161F;--card-2:#211D2D;--ink:#ECE8F0;--ink-2:#A8A0B4;--ink-3:#958DA2;

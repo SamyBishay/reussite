@@ -146,6 +146,16 @@ const addressSet = z.object({
 });
 export type AddressSet = z.infer<typeof addressSet>;
 
+// The app's own settings, set up with an AI (S9): the four pillars (what matters in the person's days, named in their words, in
+// the order of the app's four piles) and how an AI should work with them. Only in the app: the connector refuses it.
+const pillarSet = z.object({ name: text(60).pipe(z.string().min(1)), short: text(20).optional() });
+export const detailSet = z.enum(['very short', 'short', 'full']);
+const settingsSet = z.object({
+  pillars: z.array(pillarSet).min(1).max(4).optional(),
+  preferences: z.object({ detail: detailSet.optional(), know: text(300).optional(), never: text(300).optional() }).optional(),
+});
+export type SettingsSet = z.infer<typeof settingsSet>;
+
 const ref = text(40).optional();
 export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('task.create'), ref, set: newTaskSet }),
@@ -162,6 +172,7 @@ export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('stay.create'), set: z.object({ place: id, from: day, to: day, note: text(300).optional() }) }),
   z.object({ op: z.literal('stay.update'), id, set: z.object({ place: id.optional(), from: day.optional(), to: day.optional(), note: text(300).optional() }) }),
   z.object({ op: z.literal('address.create'), set: addressSet }),
+  z.object({ op: z.literal('settings.update'), set: settingsSet }),
   z.object({ op: z.literal('decision.create'), ref, set: decisionSet.extend({ title: text(200).pipe(z.string().min(1)) }) }),
   z.object({ op: z.literal('decision.update'), id, set: decisionSet }),
   z.object({ op: z.literal('memory.add'), note, kind: noteSet.shape.kind, text: text(600).pipe(z.string().min(1)) }),

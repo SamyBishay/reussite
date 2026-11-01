@@ -46,12 +46,19 @@ export async function aiReady(): Promise<boolean> {
   return p !== 'none' && !!(await getKey(p).catch(() => ''));
 }
 
+/**
+ * The provider chosen during first-run setup, before anything is saved (a device that pairs must push no defaults, so the
+ * setting waits for the end): the setup conversation uses it. Null everywhere else.
+ */
+export const draftProvider = signal<Exclude<AiProvider, 'none'> | null>(null);
+
 export async function config(): Promise<AiConfig | ErrorKind> {
   const s = settings.value;
-  if (s.aiProvider === 'none') return 'off';
-  const key = await getKey(s.aiProvider);
+  const p = draftProvider.value ?? s.aiProvider;
+  if (p === 'none') return 'off';
+  const key = await getKey(p);
   if (!key) return 'noKey';
-  return { provider: s.aiProvider, baseUrl: s.aiBaseUrl, models: s.aiModels[s.aiProvider], key };
+  return { provider: p, baseUrl: s.aiBaseUrl, models: s.aiModels[p], key };
 }
 
 // ---------- spend: per device, per month ----------

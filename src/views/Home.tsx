@@ -16,6 +16,7 @@ import { MissedNow } from '../app/CarryUi';
 import { isTouch } from '../app/keyboard';
 import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
 import { HomeHelp } from '../app/HomeHelp';
+import { NextStepsCard } from '../app/NextSteps';
 import { aiOn } from '../ai/ask';
 import { startTask } from '../app/actions';
 import { notifications } from './Notifications';
@@ -294,6 +295,7 @@ export function Home() {
         <MissedNow />
       </section>
       <Card />
+      <NextStepsCard />
       <Receipt />
       <HomeInput />
     </div>

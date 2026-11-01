@@ -8,7 +8,7 @@ import { t, lang, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, contextPack, type Scope } from './context';
 import { tripPack } from './trip';
-import { parseChangeSet, readChangeSet } from './changeset';
+import { parseChangeSet, readChangeSet, type ParseResult } from './changeset';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { openChangeReview } from './Review';
 import { dropBase } from '../app/sync';
@@ -181,15 +181,18 @@ function TripAsk({ stayId }: { stayId: string }) {
 /** "Plan this trip", from a stay: a context pack for an AI with web search. Works without a provider. */
 export const openTrip = (stayId: string) => openSheet(<TripAsk key={'trip' + stayId} stayId={stayId} />, true);
 
-const PASTE_ERR = { noJson: 'pasteNoBlock', invalid: 'pasteInvalid', version: 'pasteVersion', empty: 'chgNoneLeft' } as const;
+export const PASTE_ERR = { noJson: 'pasteNoBlock', invalid: 'pasteInvalid', version: 'pasteVersion', empty: 'chgNoneLeft' } as const;
+/** A pasted reply read: the one-tap link pasted instead of a block is read the same way the drop page does. */
+export async function readReply(text: string): Promise<ParseResult> {
+  const link = /\/drop#([^\s<>"')\]]+)/.exec(text)?.[1];
+  return link ? parseDropFragment(link).then(d => readChangeSet(d.json), () => ({ ok: false as const, error: 'invalid' as const })) : parseChangeSet(text);
+}
 function Paste() {
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const go = async (e: Event) => {
     e.preventDefault();
-    // A one-tap link pasted instead of a block: read it the same way the drop page does.
-    const link = /\/drop#([^\s<>"')\]]+)/.exec(text)?.[1];
-    const r = link ? await parseDropFragment(link).then(d => readChangeSet(d.json), () => ({ ok: false as const, error: 'invalid' as const })) : parseChangeSet(text);
+    const r = await readReply(text);
     if (!r.ok) { setErr(t(PASTE_ERR[r.error])); return; }
     setErr('');
     // Kept in History with its Undo, like a one-tap link (a trip plan's days and addresses come back this way).

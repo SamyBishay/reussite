@@ -53,6 +53,11 @@ function validate(input: Input): { changes: Change[] } | { errors: string[] } {
       errors.push(`Change ${i + 1} (${String((c as { op: unknown }).op)}): the connector does not handle addresses; the person adds them in the app (a trip plan's reply is pasted there).`);
       return;
     }
+    // The person's own settings (setup with an AI) are written in the app, from a reply they paste there.
+    if (c && typeof c === 'object' && String((c as { op?: unknown }).op).startsWith('settings.')) {
+      errors.push(`Change ${i + 1} (${String((c as { op: unknown }).op)}): the connector does not change the app's settings; the person sets those up in the app (a setup reply is pasted there).`);
+      return;
+    }
     const r = ChangeSchema.safeParse(c);
     if (r.success) { changes.push(r.data); return; }
     const op = c && typeof c === 'object' && 'op' in c ? String((c as { op: unknown }).op) : '?';

@@ -10,25 +10,25 @@ Réussite is a web app. Nothing to download from a store.
 
 It works offline. Your list lives on your device.
 
-## The first questions
+## Setting it up
 
-The first time you open it on a new device, Réussite asks a few questions, one per screen:
+The first time you open it on a new device, Réussite asks for your language, then one thing: how you want to set it up.
 
-1. **Language.** English or French. You can change it later.
-2. **Where do you spend your time?** Add at least one place, such as Home or Work.
-3. **Four kinds of cards.** Your steps are sorted into four suits. Keep them or rename them.
-4. **How should it look?** Light, dark or the system's.
-5. **Addresses & people?** Optional.
-6. **Do you want to use an AI?** Optional. No is fine.
-7. **How should an AI work with you?** A few lines that go with every AI request.
-8. **Sync?** Only if you use more than one device.
-9. **Reminders on this device?** Optional.
+![The first screen: language and the choice](shot:onboarding)
 
-Every screen has Back and Next. **Skip, use defaults** skips the rest. Nothing is saved until the end, and everything can be changed in Settings.
+- **Set up by myself.** Four short questions about what matters in your days (what fills your working hours, what keeps your money and papers in order, who and what you look after at home, what you do for yourself), each with a name you can keep or change. Then the places you spend time in, such as Home and Work. That is all, and it takes about a minute.
+- **Set up with an AI.** You tell an AI about your days and it suggests the four things that matter to you, your places and how you want an AI to work with you. You can use it three ways, and the screen shows the steps for each:
+  1. **A key, inside the app.** Make an account with OpenRouter or Anthropic, create a key, paste it. The key stays on this device. The conversation happens in Réussite.
+  2. **Claude or ChatGPT.** Réussite gives you a message to copy into a new chat. When the chat gives you its summary, copy the reply and paste it back.
+  3. **Another chatbot.** The same, with any chatbot.
 
-![The first screen: language](shot:onboarding)
+  Either way, the AI's suggestion comes back on the review screen, with a tick for each line. Untick what you don't want, or go back and tell the AI what to change. Nothing is written before you tick.
 
-If you already use Réussite on another device, choose **I already use Réussite on another device** on the first screen and enter your recovery key. See [Sync and recovering a lost device](sync-and-recovery.md).
+**Skip, use defaults** on the first screen skips the rest and keeps the standard setup. Everything can be changed in Settings, including the look: Réussite starts with the af Klint colours and follows your device for light or dark.
+
+When you finish, Home shows a **Next steps** card with the things set-up doesn't ask: using Réussite on more than one device (and saving the recovery key), reminders on this device, Addresses & people, and connecting Claude or ChatGPT if you chose one. Each line opens its section in Settings. **Hide this** removes the card, and a line goes by itself once it is done.
+
+If you already use Réussite on another device, choose **I already use Réussite on another device** on the first screen and enter your recovery key. Your places and settings come from the other device, and nothing from this one overwrites them. See [Sync and recovering a lost device](sync-and-recovery.md).
 
 ## Your first day
 

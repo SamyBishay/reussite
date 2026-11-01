@@ -13,6 +13,8 @@ import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
 import { toEventFields } from '../domain/events';
 import { mergeMilestones, measureOf, outcomeOf, sameMeasure } from '../domain/goal';
 import type { Measure } from '../data/schema';
+import { buildPreferences, DEFAULT_FORM, DETAILS, type Detail, type PreferenceForm } from '../domain/preferences';
+import { SUIT_ORDER, type Settings } from '../data/settings';
 
 type W<T> = T & { id: string };
 export interface Snapshot {
@@ -31,6 +33,11 @@ export interface Snapshot {
    */
   addresses?: Map<string, W<Address>>;
   categories?: string[];
+  /**
+   * The settings a `settings.update` reads (the pillars' names, the language, the AI preferences). Left out by a caller that
+   * does not write settings (the connector): `settings.update` then comes to nothing.
+   */
+  settings?: Pick<Settings, 'suits' | 'language' | 'aiPreferences'>;
 }
 /** Ids, time and zone come from outside so tests are deterministic. */
 export interface Gen { id: (prefix: string) => string; now: () => string; zone: string }
@@ -48,7 +55,9 @@ export type Op =
   | { t: 'finish'; id: string; day: string }
   | { t: 'drop'; id: string }
   | { t: 'day'; k: string; patch: Partial<Day> }
-  | { t: 'stay'; id: string | null; ref?: string; fields: Stay };
+  | { t: 'stay'; id: string | null; ref?: string; fields: Stay }
+  /** A write to the settings document (the app's own, S9). */
+  | { t: 'settings'; patch: Partial<Settings> };
 
 /** What a decision or memory update adds, so two ticked updates of the same document both land (see mergeDelta). */
 export interface Delta { problem?: Record<string, string>; options?: Option[]; lines?: LinesDelta }
@@ -58,7 +67,7 @@ export interface LinesDelta { add?: MemoryLine; edit?: MemoryLine; remove?: stri
 export interface Diff { field: string; before: unknown; after: unknown }
 export interface Planned {
   /** What it acts on and how; the review screen shows these. */
-  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory' | 'address';
+  target: 'task' | 'project' | 'day' | 'place' | 'stay' | 'decision' | 'memory' | 'address' | 'settings';
   /** `remember`: a change to a memory note (a line added, edited or forgotten, or the note's own fields). */
   kind: 'create' | 'update' | 'done' | 'drop' | 'reorder' | 'remember';
   title: string;
@@ -78,6 +87,8 @@ export interface Plan {
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 /** Whether a memory change makes a new note (the review marks it as new). */
 export const createsNote = (it: Planned): boolean => it.target === 'memory' && it.ops[0]?.t === 'create';
+/** A pillar's short name when none was given: the whole name if it is short, else its first word. */
+export const shortName = (name: string): string => (name.length <= 14 ? name : name.split(/[\s,:&]+/)[0]!.slice(0, 14));
 const validZone = (z: string | undefined) => { if (!z) return false; try { new Intl.DateTimeFormat('en', { timeZone: z }); return true; } catch { return false; } };
 
 /** The notes a change-set may name: never a private one (an AI is never told one exists, so planning acts as if it didn't). */
@@ -422,6 +433,11 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (it) items.push(it);
         break;
       }
+      case 'settings.update': {
+        const it = settingsChange(c.set);
+        if (it) items.push(it);
+        break;
+      }
       case 'decision.create': {
         const { f, ops } = decisionFields(c.set, null, null);
         const fields = { ...normDecision({ status: 'draft', ...f, title: c.set.title } as Record<string, unknown>), by: 'ai' };
@@ -449,6 +465,41 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     if (items.length === before) { skipped++; skippedAt.push(ci); }
   }
   return { items, skipped, skippedAt, refTitles, ...(refused.length ? { notes: refused } : {}) };
+
+  /**
+   * The pillars and the AI preferences (S9, setup with an AI): the pillars are named in order, in the app's language, onto the
+   * four piles (a name given is also the short name unless one is); the preferences rebuild the template with the level of detail
+   * and the two free lines. Nothing when the settings were not given or nothing would change.
+   */
+  function settingsChange(set: Extract<Change, { op: 'settings.update' }>['set']): Planned | undefined {
+    const cur = s.settings;
+    if (!cur) return undefined;
+    const patch: Partial<Settings> = {};
+    const diffs: Diff[] = [];
+    if (set.pillars?.length) {
+      const l = cur.language;
+      const suits = { ...cur.suits };
+      set.pillars.slice(0, SUIT_ORDER.length).forEach((p, i) => {
+        const id = SUIT_ORDER[i]!, old = cur.suits[id];
+        // The same name with no short name of its own is left as it is (its short name stays the person's).
+        if (old.name[l] === p.name && (!p.short || old.short[l] === p.short)) return;
+        const short = p.short || shortName(p.name);
+        suits[id] = { ...old, name: { ...old.name, [l]: p.name }, short: { ...old.short, [l]: short } };
+        diffs.push({ field: 'pillar ' + (i + 1), before: old.name[l], after: p.name });
+      });
+      if (diffs.length) patch.suits = suits;
+    }
+    if (set.preferences) {
+      const form: PreferenceForm = { ...DEFAULT_FORM, ...(set.preferences.detail && DETAILS.includes(set.preferences.detail as Detail) ? { detail: set.preferences.detail as Detail } : {}), know: set.preferences.know ?? '', never: set.preferences.never ?? '' };
+      const text = buildPreferences(form);
+      if (text !== cur.aiPreferences) {
+        patch.aiPreferences = text;
+        diffs.push({ field: 'preferences', before: undefined, after: [form.detail, form.know && 'Know: ' + form.know, form.never && 'Never: ' + form.never].filter(Boolean).join(' · ') });
+      }
+    }
+    if (!diffs.length) return undefined;
+    return { target: 'settings', kind: 'update', title: '', diffs, ops: [{ t: 'settings', patch }] };
+  }
 
   /**
    * An address an AI suggests (brief §5, Planning a trip): saved as *want to go*, `by: 'ai'`, its reason in the note. Not
@@ -615,6 +666,8 @@ export interface Writer {
   drop(id: string): Promise<void>;
   day(k: string, patch: Partial<Day>): Promise<void>;
   stay(id: string | null, s: Stay): Promise<string>;
+  /** Settings the app writes (a `settings.update`); a Writer without it (the connector's) never gets one. */
+  settings?(patch: Partial<Settings>): Promise<void>;
   /** The document as stored now (undefined for none or a tombstone): a note's line changes apply to its lines at the time of writing. */
   read?(c: Collection, id: string): Promise<Record<string, unknown> | undefined>;
 }
@@ -670,6 +723,7 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
           wrote.set(key, { ...prev, ...p });
           break;
         }
+        case 'settings': await w.settings?.(op.patch); break;
         case 'finish': await w.finish(op.id, op.day); break;
         case 'drop': await w.drop(op.id); break;
         case 'day': {

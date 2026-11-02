@@ -75,6 +75,15 @@ The input is the contract in `docs/CHANGESET.md` (version 1, same operations). S
 5. **Anything else** is not written. The answer is the diff (`before → after`) and a **confirmation id** (`c…`), stored encrypted for one hour. Calling `apply_changes` again with only `{"confirm": "c…"}` applies it, once ("Applying a confirmation once"). If the list changed meanwhile so the plan is no longer the same size, the confirmation is dropped and a fresh one is asked for.
 6. "R: choir Monday 19:00, Hill House 602" is one call: `{"op": "task.create", "set": {"title": "Choir, Hill House 602", "project": "Choir", "due": "2026-10-26", "at": "19:00", "dur": 90}}`.
 
+**Warnings.** What a write answers must say what an AI would otherwise miss, in the diff (before `Nothing has been written yet`) and in the `Done` answer (before the undo id), the same lines in both (`writeWarnings`, `relay/src/connector/warn.ts`, read from the plan before anything is written; a day is "today", "tomorrow" or `Wed 2026-11-04`; at most six steps are named, then "and n more"):
+
+- `Warning: already on <day>'s list before this: A; B. Keep them, or send \`plan\` with the whole list to replace it.` A `day.update` with `add` and no `plan` over open steps on that day's list (as the app shows it) that the change-set does not name in `add`, `remove` or `first`. An AI laying out a day wrote `add` over an earlier plan and left its steps there.
+- `Warning: off <day>'s list but still due <day>: A. Clear \`due\` if they should leave the day.` A step taken off a day's list (`remove`, or left out of a new `plan`) whose due date, as it will be after the change-set, is that day.
+- `Warning: due <day> but on no list: A; B. The person may want them on that day's list.` One line a day, for a step made or changed by the change-set that is due tomorrow or earlier, has no time and ends on no day's list. A timed step due that day is not named (it shows among the day's fixed times), nor a far date, nor a step with no date. A step with a time and no day: `Warning: a time but no day, and on no list: A (20:00).`
+- `Warning: on <day>'s list but fixed for a later day: A (tomorrow 10:11). It will show on both days. Change its due date if it belongs here, or leave it off this list.` A timed step put on a list earlier than its due date. The app reads the time and the due date as the later day's (calendar, reminders, that day's fixed times: `fixedOn`, `agenda`), and the list as where the person put it, so the step shows on both days. `today` and `get_day` mark such a line on a list `[10:11, fixed for 2026-11-03]`. This is not changed in the app (2026-11-02): a step planned on a day with a time typed in its sheet looks the same, and moving it to its due date would be silent.
+
+The tool texts (server instructions, `apply_changes`, `get_day`), `get_method` and the `today` skills tell an AI to lay a day out with `plan`, read the day back, and read and show the diff and warnings before a yes.
+
 AI-originated fields carry `by: "ai"` / `src: "ai"` as in the app. Weights are never taken from an AI.
 
 ### `undo`

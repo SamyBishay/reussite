@@ -127,7 +127,7 @@ export function dayText(v: View, k: string): string {
     const lo = work.reduce((a, t) => a + (personal(v, t)?.lo ?? t.est ?? 0), 0);
     const hi = work.reduce((a, t) => a + (personal(v, t)?.hi ?? t.est ?? 0), 0);
     const total = est > 0 ? ` · estimated ${lo !== hi ? `${mins(est)} (range ${mins(lo)} to ${mins(hi)})` : mins(est)}` : '';
-    L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? ` [${t.at}]` : ''}${t.started ? ' [running]' : ''}`).join('\n'));
+    L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? (t.due && t.due > k && isOpen(t) ? ` [${t.at}, fixed for ${t.due}]` : ` [${t.at}]`) : ''}${t.started ? ' [running]' : ''}`).join('\n'));
   } else L.push('List: empty.');
 
   // The morning's shape (the app's check-in): from when, until when. Launch points no longer exist; a stored one is not shown.

@@ -18,7 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createMcpHandler } from 'agents/mcp/server';
-import { applyPlanned, isLowRisk, planChanges } from '../../src/ai/apply';
+import { applyPlanned, isLowRisk, pinLines, planChanges } from '../../src/ai/apply';
 import { ChangeSchema, type ChangeSet } from '../../src/ai/changeset';
 import { b64uDecode, b64uEncode } from '../../src/sync/bytes';
 import { decryptJson, sealToText } from '../../src/sync/crypto';
@@ -31,7 +31,9 @@ import { buildParts } from '../../src/sync/parts';
 import { collectOutgoing } from '../../src/sync/engine';
 import { decodeSnapshot, encodeBatch, encodeSnapshot } from '../../src/sync/wire';
 import { resolveChanges } from '../src/connector/resolve';
-import { dayText, memoryText, projectText, queryText, taskText } from '../src/connector/render';
+import { dayText, describe, memoryText, projectText, queryText, taskText } from '../src/connector/render';
+import { feedOf } from '../src/connector/feed';
+import { DEFAULT_SETTINGS } from '../../src/data/settings';
 import { buildSpace, Edits, loadCold, loadSpace, sealHot, type Loaded } from '../src/connector/space';
 import { buildServer } from '../src/connector/tools';
 import { cacheGet, remember, setCacheEnabled } from '../src/connector/cache';
@@ -132,7 +134,65 @@ const editFor = (keys: Awaited<ReturnType<typeof deriveKeys>>, openId: string, l
   const e = new Edits(s);
   await applyPlanned(plan, () => true, docWriter(e, v));
   const batch: ChangeBatch = { v: SCHEMA_VERSION, device: 'connector', docs: e.outgoing() };
-  return sealToText(keys, encodeBatch(batch), { lean: true });
+  return [await sealToText(keys, encodeBatch(batch), { lean: true }), await sealToText(keys, { docs: e.undo })]; // the batch, and the undo record that goes in the same transaction
+};
+
+const GEN = { id: newId, now: () => new Date().toISOString(), zone: 'UTC' };
+/** The sizes of change-set the cap allows: 1, 10 and MAX_CHANGES (25). */
+const SET_SIZES = [1, 10, 25];
+
+/**
+ * A change-set of n changes the way an AI sends one, with names in place of ids: new steps in a project named by its title,
+ * updates to steps named by title, and memory.add to a note named by its name (one in three each). Titles are unique, so
+ * every name resolves.
+ */
+function changesFor(s: Loaded, n: number): unknown[] {
+  const uniq = <T,>(list: T[], key: (x: T) => string) => { const c = new Map<string, number>(); for (const x of list) c.set(key(x), (c.get(key(x)) ?? 0) + 1); return list.filter(x => c.get(key(x)) === 1); };
+  const open = uniq([...s.maps.tasks.values()].filter(t => t.status === 'open' && !t._del && !t.template), t => String(t.title).toLowerCase());
+  const projects = uniq([...s.maps.projects.values()].filter(p => !p._del), p => String(p.name).toLowerCase());
+  const notes = uniq([...s.maps.memory.values()].filter(m => !m._del && !m.private && m.kind !== 'profile'), m => String(m.name).toLowerCase());
+  return Array.from({ length: n }, (_, i) => {
+    if (i % 3 === 0) return { op: 'task.create', set: { title: `Open Mail and ask about the date, item ${i}`, project: String(projects[i % projects.length]!.name), est: 15, due: '2026-10-25' } };
+    if (i % 3 === 1) return { op: 'task.update', id: String(open[(i * 7) % open.length]!.title), set: { note: 'moved', due: '2026-10-27' } };
+    return { op: 'memory.add', note: String(notes[i % notes.length]!.name), text: `A new fact ${i}` };
+  });
+}
+
+/** The call that shows the diff: validate, titles to ids, plan, describe, pin and seal the confirmation (D1 round trips left out). */
+const proposeFor = (keys: Awaited<ReturnType<typeof deriveKeys>>, raw: unknown[], load: () => Promise<Loaded>) => async (s0?: Loaded) => {
+  const s = s0 ?? await load();
+  s.own = new Set();
+  const v = viewOf(s);
+  const found = resolveChanges(raw.map(c => ChangeSchema.parse(c)), v.data);
+  if (found.problems.length || found.ambiguous.length) throw new Error('bench change-set does not resolve: ' + JSON.stringify([...found.problems, ...found.ambiguous]).slice(0, 300));
+  const cs: ChangeSet = { v: 1, note: '', changes: found.changes, bad: 0 };
+  const plan = planChanges(cs, v.snapshot(), GEN);
+  const lines = plan.items.map(it => describe(it, v));
+  return [lines.length, await sealToText(keys, { cs: pinLines(cs, v.snapshot()), items: plan.items.length })] as const;
+};
+
+/** The call that applies it: decrypt the confirmation, plan again, write, seal the batch and the undo record. */
+const confirmFor = (keys: Awaited<ReturnType<typeof deriveKeys>>, pending: string, load: () => Promise<Loaded>) => async (s0?: Loaded) => {
+  const s = s0 ?? await load();
+  s.own = new Set();
+  const v = viewOf(s);
+  const { cs, items } = await decryptJson<{ cs: ChangeSet; items: number }>(keys, b64uDecode(pending));
+  const plan = planChanges(cs, v.snapshot(), GEN);
+  if (plan.items.length !== items) throw new Error('plan changed');
+  const e = new Edits(s);
+  const w = docWriter(e, v);
+  await applyPlanned(plan, () => true, w);
+  const lines = plan.items.map(it => describe(it, v));
+  const batch: ChangeBatch = { v: SCHEMA_VERSION, device: 'connector', docs: e.outgoing() };
+  return [lines.length, await sealToText(keys, encodeBatch(batch), { lean: true }), await sealToText(keys, { docs: e.undo })] as const;
+};
+
+/** The feed on, so that the maintenance run has a calendar to write. */
+const withFeed = (s: Loaded): Loaded => {
+  const clock = createClock('bench000');
+  clock.wall = NOW;
+  const settings = create('settings', { ...DEFAULT_SETTINGS, feedShared: { fid: 'F'.repeat(32), secret: 'K'.repeat(43), app: 'https://app.example/', zone: 'UTC' } }, SCHEMA_VERSION, tick(clock)) as never;
+  return { ...s, maps: { ...s.maps, meta: new Map([['settings', settings]]) } };
 };
 
 /**
@@ -140,7 +200,7 @@ const editFor = (keys: Awaited<ReturnType<typeof deriveKeys>>, openId: string, l
  * The parent prepares the blobs once and starts this a few times per call.
  */
 async function child(name: string) {
-  const f = JSON.parse(readFileSync(process.env.BENCH_FILE!, 'utf8')) as { key: string; hotBlob: string; rows: { seq: number; blob: string }[]; openId: string };
+  const f = JSON.parse(readFileSync(process.env.BENCH_FILE!, 'utf8')) as { key: string; hotBlob: string; rows: { seq: number; blob: string }[]; openId: string; raw: Record<string, unknown[]>; pending: Record<string, string> };
   const keys = await deriveKeys(b64uDecode(f.key));
   // Node loads its streams, crypto and Intl lazily on first use, which workerd has ready; touch them once so
   // what is timed is our code running cold, not the platform starting up.
@@ -153,6 +213,10 @@ async function child(name: string) {
   const load = () => buildSpace('s', keys, f.hotBlob, f.rows, { wall: 0, counter: 0 });
   const t0 = performance.now();
   if (name === 'edit') await editFor(keys, f.openId, load)();
+  else if (name.startsWith('propose')) await proposeFor(keys, f.raw[name.slice(7)]!, load)();
+  else if (name.startsWith('confirm')) await confirmFor(keys, f.pending[name.slice(7)]!, load)();
+  else if (name === 'maintain-compact') await sealHot(await load(), 100 + TAIL);
+  else if (name === 'maintain-feed') feedOf(withFeed(await load()), AT.getTime());
   else { const s = await load(); if (name !== 'read') toolsFor(f.openId)[name]!(s, viewOf(s)); }
   console.log(JSON.stringify({ ms: performance.now() - t0 }));
 }
@@ -178,6 +242,7 @@ export async function main() {
       const s = await hot();
       if (process.env.BENCH_PROFILE === 'today') dayText(viewOf(s), viewOf(s).today);
       if (process.env.BENCH_PROFILE === 'query') queryText(viewOf(s), { quadrant: 1 }, {});
+      if (process.env.BENCH_PROFILE === 'feed') feedOf(withFeed(s), AT.getTime());
     }
     return;
   }
@@ -221,14 +286,27 @@ export async function main() {
     results[name] = r;
   }
   results.edit = await time(() => quickEdit());
-  row('apply_changes (tick one done): read + plan + write', results.edit as never, true);
+  row('apply_changes (tick one done): read + plan + write + undo seal', results.edit as never, true);
+
+  // The cap on a change-set (MAX_CHANGES = 25): the budget is checked at the cap. Two calls: the diff (propose) and the yes (confirm).
+  console.log(`\nA change-set of ${SET_SIZES.join(', ')} changes (a third each: task.create into a project named by title, task.update named by title, memory.add), cold isolate:`);
+  const sets: Record<string, unknown[]> = {}, pending: Record<string, string> = {}, big: Record<string, { first: number; median: number; p95: number }> = {};
+  for (const n of SET_SIZES) {
+    sets[n] = changesFor(loaded, n);
+    const prop = proposeFor(keys, sets[n]!, hot);
+    pending[n] = (await prop())[1];
+    big['propose' + n] = await time(() => prop());
+    row(`${n} changes, the diff: read + validate + resolve + plan + pin + seal`, big['propose' + n]!, true);
+    big['confirm' + n] = await time(() => confirmFor(keys, pending[n]!, hot)());
+    row(`${n} changes, the yes: read + decrypt + plan + write + seal batch and undo`, big['confirm' + n]!, true);
+  }
 
   const fresh1: Record<string, number> = {};
   {
     const file = fileURLToPath(new URL('./cold.json', import.meta.url)); // next to the bundle (bench/.out)
-    writeFileSync(file, JSON.stringify({ key: p.key, hotBlob: p.hotBlob, rows, openId: open.id }));
+    writeFileSync(file, JSON.stringify({ key: p.key, hotBlob: p.hotBlob, rows, openId: open.id, raw: sets, pending }));
     console.log('\nA fresh process, first call only (nothing warmed up; 7 runs, min / median / max):');
-    for (const name of ['read', ...Object.keys(tools), 'edit']) {
+    for (const name of ['read', ...Object.keys(tools), 'edit', ...SET_SIZES.flatMap(n => ['propose' + n, 'confirm' + n]), 'maintain-compact', 'maintain-feed']) {
       const a = fresh(file, name);
       console.log(`  ${name.padEnd(54)} ${a[0]!.toFixed(1).padStart(6)} / ${a[a.length >> 1]!.toFixed(1).padStart(6)} / ${a.at(-1)!.toFixed(1).padStart(6)} ms`);
       fresh1[name] = a[a.length >> 1]!;
@@ -258,9 +336,12 @@ export async function main() {
   const full = await time(async () => { const s = await hot(); await loadCold({ DB: coldDb } as never, s); return taskText(viewOf(s), s.maps.tasks.get(oldTask.id)! as never); });
   row('get_task on a step finished months ago', full);
 
-  console.log('\nCompacting the hot part after a write (best effort, once the tail passes COMPACT_TAIL):');
+  console.log('\nThe maintenance cron (its own invocation, one space a run; the hot part is read, then ONE job):');
   const sealed = await time(() => sealHot(loaded, 100 + TAIL));
-  row('rewrite the hot part: encode + gzip + encrypt', { ...sealed, p95: sealed.median });
+  row('rewrite the hot part alone: encode + gzip + encrypt', { ...sealed, p95: sealed.median });
+  row('compaction run: read hot + tail, then rewrite the hot part', await time(async () => sealHot(await hot(), 100 + TAIL)), true);
+  row('build the calendar text alone (feedOf)', await time(() => feedOf(withFeed(loaded), AT.getTime())));
+  row('feed run: read hot + tail, then build the calendar text', await time(async () => feedOf(withFeed(await hot()), AT.getTime())), true);
 
   console.log('\nThe MCP layer (a stateless server is built for every request):');
   const mcp = createMcpHandler(() => buildServer({} as never, 'space', { wrapped: '', wall: 0, counter: 0 }), { route: '/mcp', corsOptions: false, responseMode: 'json', allowedHostnames: ['relay.test'] });
@@ -276,6 +357,8 @@ export async function main() {
   console.log('  call                 cold isolate: first call / steady     warm isolate (cache hit)');
   for (const name of ['today', 'query_tasks', 'get_project', 'get_task', 'read_memory', 'read_memory_name', 'read_memory_query']) console.log(`  ${name.padEnd(18)}   ${fresh1[name]!.toFixed(1).padStart(8)} / ${results[name]!.median.toFixed(1).padStart(5)}                  ${wr[name]!.median.toFixed(1).padStart(5)}`);
   console.log(`  ${'one-step edit'.padEnd(18)}   ${fresh1.edit!.toFixed(1).padStart(8)} / ${results.edit!.median.toFixed(1).padStart(5)}                  ${wedit.median.toFixed(1).padStart(5)}`);
+  for (const n of SET_SIZES) console.log(`  ${(n + ' changes: diff / yes').padEnd(18)}   ${fresh1['propose' + n]!.toFixed(1).padStart(4)} / ${fresh1['confirm' + n]!.toFixed(1).padStart(4)} first call, ${big['propose' + n]!.median.toFixed(1).padStart(4)} / ${big['confirm' + n]!.median.toFixed(1).padStart(4)} steady`);
+  console.log(`  ${'maintenance'.padEnd(18)}   compaction ${fresh1['maintain-compact']!.toFixed(1)} / feed ${fresh1['maintain-feed']!.toFixed(1)} first call, in a cron invocation of its own`);
   console.log(`\nVerdict: a hot read of the ${sizes.tasks}-task space takes about ${read.median.toFixed(0)} ms of CPU before any tool work; the free plan allows 10 ms and the target was ${BUDGET_MS} ms.`);
 }
 

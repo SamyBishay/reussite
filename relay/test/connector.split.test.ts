@@ -17,7 +17,7 @@ import { dayText, memoryText, projectText, queryText, taskText } from '../src/co
 import { View } from '../src/connector/view';
 import { decodeSnapshot } from '../../src/sync/wire';
 import { BASE, call, url } from './helpers';
-import { newApp, signIn, switchOn, tool, viaWorker, type App } from './connector';
+import { maintain, newApp, signIn, switchOn, tool, viaWorker, type App } from './connector';
 
 const TODAY = dayOf(Date.now());
 const day = (n: number) => dayOf(Date.now() + n * 86_400_000);
@@ -197,7 +197,7 @@ describe('the connector reads hot only for the common calls', () => {
     const done = await tool(access, 'apply_changes', { confirm: id });
     expect(done.isError).toBe(false);
     expect(done.text).toContain('Undo id');
-    expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(true); // once
+    expect((await tool(access, 'apply_changes', { confirm: id })).text).toContain('Already applied'); // once
     await syncOnce(app.device, app.client);
     expect(app.device.get('tasks', old.id)!.note).toBe('asked first');
   });
@@ -224,6 +224,8 @@ describe('compaction and racing writers', () => {
     for (let i = 0; i < COMPACT_TAIL + 1; i++) { app.device.edit('tasks', open[i]!.id, { note: 'edit ' + i }); await syncOnce(app.device, app.client, { snapshotEvery: 1000 }); }
     expect(await tailLength()).toBeGreaterThan(COMPACT_TAIL);
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'The one that compacts' } }] });
+    expect(await tailLength()).toBeGreaterThan(COMPACT_TAIL); // the write itself cuts nothing: that is the cron's
+    expect(await maintain(space())).toEqual([expect.objectContaining({ job: 'compact', done: true })]);
     expect(r.isError).toBe(false);
     const p = await parts();
     expect(p.find(x => x.kind === 'hot')!.upto).toBeGreaterThan(hotBefore);
@@ -268,7 +270,11 @@ describe('compaction and racing writers', () => {
     // the step is open again, so it belongs on the list: only a read of the cold part has the rest of it
     const q = await tool(access, 'query_tasks', { text: old.title.split(' ').slice(0, 3).join(' ') });
     expect(q.text).toContain(old.id + ' | ' + old.title);
+    expect((await parts()).find(r => r.kind === 'hot')!.upto).toBe(hotBefore); // the read cuts nothing: it leaves a note for the cron
+    expect((await rows('SELECT compact_due FROM connector WHERE space = ?1', space()))[0].compact_due).toBe(1);
+    expect(await maintain(space(), Date.now() + 3_600_000)).toEqual([expect.objectContaining({ job: 'compact', done: true })]);
     expect((await parts()).find(r => r.kind === 'hot')!.upto).toBeGreaterThan(hotBefore); // cut again
+    expect((await rows('SELECT compact_due FROM connector WHERE space = ?1', space()))[0].compact_due).toBe(0);
     expect(await tailLength()).toBe(0);
     await withoutCold(async () => {
       expect((await tool(access, 'get_task', { id: old.id })).text).toContain('status: open');
@@ -367,6 +373,28 @@ describe("the isolate's cache", () => {
     setCacheEnabled(false);
     expect((await tool(access, 'query_tasks', { text: 'through the cache' })).text).toBe(withCache);
     expect((await tool(access, 'today')).text).toBe(first.text.includes('cache1') ? first.text : (await tool(access, 'today')).text);
+  });
+
+  it('a compaction made by the cron, in another invocation, that folds newer batches away cannot make a cached copy stale', async () => {
+    setCacheEnabled(true);
+    const wrapped = (await rows('SELECT wrapped FROM connector WHERE space = ?1', space()))[0].wrapped;
+    await tool(access, 'today'); // the cache now holds everything up to the head it was read at
+    const warmHead = cacheGet(space(), wrapped)!.head;
+    const open = [...app.device.docs.get('tasks')!.values()].find(t => t.status === 'open' && !t._del)!;
+    app.device.edit('tasks', open.id, { title: 'Edited out of band' });
+    await syncOnce(app.device, app.client, { snapshotEvery: 1000 });
+    expect((await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND seq > ?2', space(), warmHead))[0].n).toBeGreaterThan(0);
+    // The cron (it neither reads nor feeds the cache) folds that batch into a new hot part, and the batch is pruned.
+    await env.DB.prepare('UPDATE connector SET compact_due = 1 WHERE space = ?1').bind(space()).run();
+    expect(await maintain(space(), Date.now() + 10 * 3_600_000)).toEqual([expect.objectContaining({ job: 'compact', done: true })]);
+    expect(cacheGet(space(), wrapped)!.head).toBe(warmHead); // still what it was
+    expect((await parts()).find(r => r.kind === 'hot')!.upto).toBeGreaterThan(warmHead);
+    expect((await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND seq > ?2', space(), warmHead))[0].n).toBe(0); // the batch the cache lacks is gone
+    // So the cached copy is no longer enough, and the call reads the new snapshot instead of answering from the old one.
+    const withCache = (await tool(access, 'query_tasks', { text: 'edited out of band' })).text;
+    expect(withCache).toContain(open.id + ' | Edited out of band');
+    setCacheEnabled(false);
+    expect((await tool(access, 'query_tasks', { text: 'edited out of band' })).text).toBe(withCache);
   });
 
   it('a hit really comes from memory: it still answers with the snapshot taken away', async () => {

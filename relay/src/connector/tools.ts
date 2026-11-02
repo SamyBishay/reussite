@@ -14,7 +14,7 @@ import { applyChanges, undo, type Ctx, type Out } from './changes';
 import { cacheGet, remember } from './cache';
 import { dayText, lines, memoryText, projectText, queryText, taskText } from './render';
 import { findByName } from '../../../src/domain/names';
-import { compact, loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
+import { loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
 import { View } from './view';
 import { unwrap } from './wrap';
 
@@ -26,7 +26,7 @@ Call read_memory when the person names someone, a place or a matter ("what does 
 
 Never change the list without the person's yes, except one low-risk change they asked for (add one step, tick one done, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
 
-A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. Never give weights to decision items; the person weighs them.
+A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. A change-set holds at most 25 changes: split bigger work into several, one call each. Never give weights to decision items; the person weighs them.
 
 A step marked [waiting for] is something outside the person's hands (a call back, a reply): never plan, estimate or schedule it. Make one with kind "event" in a chain (and an optional check date, "nudge"); when it has happened, task.done with the day it did frees what waits for it.`;
 
@@ -53,7 +53,9 @@ function opener(env: Env, space: string, row: Row) {
     s.wrapped = row.wrapped;
     if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.');
     const c: Ctx = { env, s, v: viewOf(s), full: async () => { if (needsCold(s)) { await loadCold(env, s); if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.'); } c.v = viewOf(s); } };
-    if (s.split?.pending) { await c.full(); await compact(env, s).catch(() => undefined); } // a stub of an old step: read the cold part, and cut the hot one again so the next call needn't
+    // A stub of an old step: read the cold part now, and ask the maintenance cron to cut the hot part again so that the next
+    // call (on any isolate) needn't. The cut is not made here: it costs more than a read has left (docs/dev/connector.md, "Maintenance").
+    if (s.split?.pending) { await c.full(); await env.DB.prepare('UPDATE connector SET compact_due = 1 WHERE space = ?1 AND compact_due = 0').bind(space).run().catch(() => undefined); }
     remember(s);
     return c;
   })());
@@ -168,7 +170,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     annotations: read,
   }, async ({ language }) => text({ text: `${cleanMethod(language === 'fr' ? methodFr : methodEn)}\n\n---\n\n${shortChangeset(changesetDoc)}` }));
 
-  tool('apply_changes', 'Edit the list with a change-set (format in get_method). One low-risk change (add a step, tick one done, move one date) applies at once and returns an undo id. Anything else returns a diff and a confirmation id; call again with {"confirm": id} only after the person says yes. Titles work in place of ids. An invalid change-set writes nothing.', z.object({
+  tool('apply_changes', 'Edit the list with a change-set (format in get_method). One low-risk change (add a step, tick one done, move one date) applies at once and returns an undo id. Anything else returns a diff and a confirmation id; call again with {"confirm": id} only after the person says yes. Titles work in place of ids. At most 25 changes per call: split bigger work into several change-sets, one call each. An invalid change-set writes nothing.', z.object({
     changes: z.array(z.looseObject({ op: z.string().describe('e.g. task.create, task.update, task.done, task.drop, day.update') })).optional(),
     note: z.string().optional(),
     v: z.union([z.number(), z.string()]).optional().describe('Change-set version, 1'),

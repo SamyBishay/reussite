@@ -3,7 +3,8 @@
 // /v1/spaces/* to the sync and connector-switch handlers, with CORS, and serves /authorize.
 // Push (/v1/push/*) and the feed's writes (/v1/feed/*) are routed the same way; the feed is read
 // at /cal/<fid>.ics by calendar apps, which send no Origin and get no CORS (src/feed.ts). The
-// cron (`scheduled`) sends the push notifications that are due (src/tick.ts).
+// cron (`scheduled`) sends the push notifications that are due (src/tick.ts) and, every five minutes,
+// does the connector's maintenance (src/connector/maintain.ts).
 import { handleAuthorize } from './connector/authorize';
 import { handleConnector } from './connector/admin';
 import { mcpHandler } from './connector/mcp';
@@ -15,6 +16,7 @@ import { handleFeed, serveFeed } from './feed';
 import { handleInbox } from './inbox';
 import { handlePush, type Deps } from './push';
 import { handleSync } from './sync';
+import { MAINTAIN_CRON, runMaintenance } from './connector/maintain';
 import { runTick } from './tick';
 
 const SYNC_ROUTE = /^\/v1\/spaces\/([^/]+)(?:\/(batches|changes|snapshot|devices|inbox)(?:\/([^/]+))?)?$/;
@@ -58,6 +60,9 @@ const handlers = { apiHandler: mcpHandler, defaultHandler: { fetch: (req: Reques
 
 export default {
   fetch: (req: Request, env: Env, ctx: ExecutionContext) => oauthProvider(env, handlers).fetch(req, env, ctx),
-  // Cron: every minute (wrangler.jsonc, triggers.crons).
-  scheduled: (controller: ScheduledController, env: Env, ctx: ExecutionContext) => { ctx.waitUntil(runTick(env, controller.scheduledTime)); },
+  // Two crons (wrangler.jsonc, triggers.crons), told apart by the expression: every five minutes the connector's maintenance
+  // (src/connector/maintain.ts), which never shares an invocation with the push tick; every minute the push tick.
+  scheduled: (controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(controller.cron === MAINTAIN_CRON ? runMaintenance(env, controller.scheduledTime) : runTick(env, controller.scheduledTime));
+  },
 } satisfies ExportedHandler<Env>;

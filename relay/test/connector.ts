@@ -9,6 +9,7 @@ import { FakeDevice } from '../../src/sync/testing';
 import type { ConnectorOnResponse } from '../../src/sync/protocol';
 import type { Env } from '../src/env';
 import { handle } from '../src/index';
+import { runMaintenance, type MaintainResult } from '../src/connector/maintain';
 import { BASE, call, url } from './helpers';
 
 export const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';
@@ -114,4 +115,18 @@ export async function tool(token: string, name: string, args: unknown = {}): Pro
   const r = await rpc(token, 'tools/call', { name, arguments: args });
   const result = r.body?.result;
   return { text: result?.content?.map((c: { text: string }) => c.text).join('\n') ?? JSON.stringify(r.body), isError: !!result?.isError || !!r.body?.error, status: r.status, raw: r.body };
+}
+
+/**
+ * Run the maintenance cron until it has looked at `space` (it picks one space per run, oldest first, so others' work may come
+ * first), and return what it did there; `[]` when nothing was due for the space. `now` moves the clock for the compaction cool-off.
+ */
+export async function maintain(space: string, now = Date.now()): Promise<MaintainResult[]> {
+  const out: MaintainResult[] = [];
+  for (let i = 0; i < 30; i++) {
+    const r = await runMaintenance(env as unknown as Env, now);
+    if (r.space === null) break;
+    if (r.space === space) { out.push(r); break; }
+  }
+  return out;
 }

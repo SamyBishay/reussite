@@ -14,7 +14,7 @@ import { COLLECTIONS, SCHEMA_VERSION, type Collection, type UndoDoc } from '../.
 import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES, type ChangeBatch, type ChangeDoc, type ColdDigest, type Cut, type Snapshot, type StoredDoc } from '../../../src/sync/protocol';
 import { buildParts, hotFrom, inCold } from '../../../src/sync/parts';
 import type { Env } from '../env';
-import { appendBatch, spaceSlot, storeSnapshot, type SnapshotWrite } from '../sync';
+import { appendBatchWith, spaceSlot, storeSnapshot, type AppendWith, type SnapshotWrite } from '../sync';
 import { CONNECTOR_DEVICE } from './admin';
 import { cacheGet, remember, type Entry } from './cache';
 import { UndoLog } from '../../../src/ai/undo';
@@ -23,11 +23,11 @@ export type { UndoDoc };
 export type Maps = Record<Collection, Map<string, StoredDoc>>;
 export const emptyMaps = (): Maps => Object.fromEntries(COLLECTIONS.map(c => [c, new Map()])) as unknown as Maps;
 
-/** After its own write, the connector rewrites the hot snapshot once this many batches have piled up on it. */
+/** The maintenance cron (maintain.ts) rewrites the hot snapshot once this many batches have piled up on it. */
 export const COMPACT_TAIL = 10;
 /**
  * Rewriting the hot part costs CPU in proportion to its size (gzip is most of it: about 17 ms for 1,100
- * documents, 2.6 ms for 250), and the write that triggers it has to answer within the same 10 ms. Above
+ * documents, 7 ms for 280 steps with 150 notes), and a cron invocation has the same 10 ms as a request. Above
  * this many documents the connector leaves it to the apps.
  */
 export const COMPACT_MAX_DOCS = 600;
@@ -301,31 +301,44 @@ export class Edits {
     return collectOutgoing(set as DocSet, this.s.clock.node, this.watermark).docs;
   }
 
-  /** Encrypt and append the batch; remember the clock. Returns the seq, or null when over the rate limit. */
-  async flush(env: Env): Promise<number | null> {
+  /**
+   * Encrypt and append the batch. The connector's clock, the flags the maintenance cron looks at (the calendar feed
+   * is behind; the hot part should be cut again if this request had to read the cold part) and whatever `o` adds
+   * (the undo record, the confirmation marked applied) are in the same transaction as the batch, so a request killed
+   * at any point has written all of it or none. Nothing heavy is done here: compaction and the feed are the cron's
+   * (maintain.ts). Returns the seq, `'limited'` over the rate limit, `'skipped'` when `o.when` no longer holds, and
+   * `'empty'` when there was nothing to send.
+   */
+  async flush(env: Env, o: AppendWith = {}): Promise<number | 'limited' | 'skipped' | 'empty'> {
     const docs = this.outgoing();
-    if (!docs.length) return this.s.head;
+    if (!docs.length) return 'empty';
     const blob = await sealToText(this.s.keys, encodeBatch({ v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs }), { lean: true });
     if (blob.length > b64uLength(MAX_BATCH_BYTES)) throw new Error('This change is too big for one batch. Split it into smaller change-sets.');
-    const seq = await appendBatch(env, this.s.space, CONNECTOR_DEVICE, blob);
-    if (seq === null) return null;
+    const { space, clock, coldRead } = this.s;
+    const seq = await appendBatchWith(env, space, CONNECTOR_DEVICE, blob, {
+      when: o.when,
+      then: n => [
+        // The clock only ever moves forwards, so two overlapping calls can't wind it back.
+        env.DB.prepare(
+          'UPDATE connector SET hlc_wall = MAX(hlc_wall, ?1), hlc_counter = CASE WHEN ?1 > hlc_wall THEN ?2 WHEN ?1 = hlc_wall THEN MAX(hlc_counter, ?2) ELSE hlc_counter END, feed_dirty = ?4, compact_due = CASE WHEN ?5 THEN 1 ELSE compact_due END WHERE space = ?3 AND EXISTS (SELECT 1 FROM batches WHERE space = ?3 AND seq = ?6)',
+        ).bind(clock.wall, clock.counter, space, Date.now(), coldRead ? 1 : 0, n),
+        ...(o.then?.(n) ?? []),
+      ],
+    });
+    if (seq === null) return 'limited';
+    if (seq === 'skipped') return 'skipped';
     // Our batch follows what we read with nothing in between only if the numbers are consecutive.
     const contiguous = seq === this.s.readHead + 1;
     this.s.head = seq;
-    // Only ever forwards, so two overlapping calls can't wind the clock back.
-    await env.DB.prepare(
-      'UPDATE connector SET hlc_wall = MAX(hlc_wall, ?1), hlc_counter = CASE WHEN ?1 > hlc_wall THEN ?2 WHEN ?1 = hlc_wall THEN MAX(hlc_counter, ?2) ELSE hlc_counter END WHERE space = ?3',
-    ).bind(this.s.clock.wall, this.s.clock.counter, this.s.space).run();
     // The state we hold includes our batch; it is complete up to what we read, and up to our batch only if it followed that directly.
     this.s.readHead = contiguous ? seq : this.s.readHead;
-    await compact(env, this.s).catch(() => undefined); // best effort: the apps snapshot too
     remember(this.s);
     return seq;
   }
 }
 
 /**
- * The tail since the snapshot is what every later call folds. After a write, once it is longer
+ * The tail since the snapshot is what every later call folds. In the maintenance cron (not in a write call), once it is longer
  * than COMPACT_TAIL, the connector writes the hot part again (docs/dev/sync.md). With only the hot
  * part loaded, what it holds is the old hot part plus the tail, which is exactly a new hot part, and
  * the cold part stays as it is. That doesn't work if a document the cold part also holds was touched

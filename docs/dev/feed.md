@@ -38,7 +38,7 @@ The first write for a `fid` stores `SHA-256(secret)` (trust on first use). The `
 
 ## The connector
 
-After `apply_changes` or `undo` writes, the connector builds the feed from the list as it now is (`refreshFeed`: `feedText`, the person's `language` and `feedDetail`, `feedShared.app` and `.zone`) and writes it (`writeFeed` in `relay/src/feed.ts`: the secret's hash must match, an alias is never written). A failure is ignored: the next device that opens writes it. So a step an AI drops or moves leaves the calendar at once, not when a device next opens. Privacy: the relay builds the text only while the connector is on, when it already reads the list; the text is what a device would upload.
+After `apply_changes` or `undo` writes, the connector marks the feed behind (`connector.feed_dirty`, in the write's own transaction) and the maintenance cron (`relay/src/connector/maintain.ts`, every five minutes, one space a run; docs/dev/connector.md, "Maintenance") builds the feed from the list as it then is (`refreshFeed`: `feedText`, the person's `language` and `feedDetail`, `feedShared.app` and `.zone`) and writes it (`writeFeed` in `relay/src/feed.ts`: the secret's hash must match, an alias is never written). It is no longer done inside the write call, which has no CPU to spare on the free plan (10 ms). A failure is ignored: the next cron run or the next device that opens writes it. So a step an AI drops or moves leaves the calendar within about five minutes, not when a device next opens. Privacy: the relay builds the text only while the connector is on, when it already reads the list; the text is what a device would upload.
 
 ## When the app uploads
 

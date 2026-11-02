@@ -3,7 +3,7 @@
 // finds them by title, and drops them (ending the series) after the person's yes.
 import { env } from 'cloudflare:workers';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { newApp, signIn, switchOn, tool, type App } from './connector';
+import { maintain, newApp, signIn, switchOn, tool, type App } from './connector';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 const WA = 'Open WhatsApp and answer your messages';
@@ -93,7 +93,9 @@ describe('apply_changes and standing steps', () => {
     expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(false);
     await app.sync();
     expect(app.device.get('tasks', 'wa')).toMatchObject({ at: '21:00', weekdays: [1, 2, 3, 4, 5], template: true });
-    // The list's calendar follows the connector's change at once.
+    // The list's calendar follows the connector's change at the next maintenance run (not in the write call).
+    expect(await feedText()).not.toMatch(/T210000/);
+    expect((await maintain(app.keys.spaceId))[0]).toMatchObject({ job: 'feed', done: true });
     const cal = (await feedText()).replace(/\r\n /g, '');
     expect(cal).toContain('DESCRIPTION:' + WA);
     expect(cal).toMatch(/DTSTART;TZID=Africa\/Cairo:\d{8}T210000/);
@@ -111,6 +113,7 @@ describe('apply_changes and standing steps', () => {
     expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(false);
     await app.sync();
     expect(app.device.get('tasks', 'wa')!.status).toBe('dropped');
+    await maintain(app.keys.spaceId);
     expect(await feedText()).toContain('BEGIN:VCALENDAR');
     expect(await feedText()).not.toContain('WhatsApp');
     expect(await seen('query_tasks', { standing: true })).not.toContain('WhatsApp');

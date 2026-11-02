@@ -5,9 +5,16 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 // Building a formatter is the slow part; schedules ask for hundreds of readings in a few zones.
 const formatters = new Map<string, Intl.DateTimeFormat>();
+let device: { f: Intl.DateTimeFormat; at: number } | undefined;
 function formatterFor(timeZone?: string): Intl.DateTimeFormat {
   const make = () => new Intl.DateTimeFormat('en-GB', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  if (!timeZone) return make(); // the device's zone can change while the app is open
+  if (!timeZone) {
+    // The device's zone can change while the app is open, so this one is not kept for long: a second is enough to
+    // serve the hundreds of readings of one schedule or one calendar (the relay's feed asked for four per step, 10 ms of CPU).
+    const now = Date.now();
+    if (!device || now - device.at >= 1000 || now < device.at) device = { f: make(), at: now };
+    return device.f;
+  }
   let f = formatters.get(timeZone);
   if (!f) formatters.set(timeZone, (f = make()));
   return f;

@@ -101,13 +101,45 @@ async function pushBatch(req: Request, env: Env, space: string): Promise<Respons
   return json({ seq } satisfies PushResponse, 201);
 }
 
-/** Append an encrypted batch to a space (counts against the space's minute); its seq, or null when over the limit. The connector writes through here too. */
+/** Append an encrypted batch to a space (counts against the space's minute); its seq, or null when over the limit. */
 export async function appendBatch(env: Env, space: string, device: string, blob: string): Promise<number | null> {
   const now = Date.now();
   const seq = await spaceSlot(env, space, now, 1);
   if (seq === null) return null;
   await env.DB.prepare('INSERT INTO batches (space, seq, device, blob, size, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(space, seq, device, blob, sizeOf(blob), now).run();
   return seq;
+}
+
+/** What the connector adds to an append, so that the batch and what must not exist without it are one D1 batch (one transaction). */
+export interface AppendWith {
+  /**
+   * A condition, SQL with its `args` bound from ?7: the batch is appended only if it holds (the confirmation is not
+   * applied yet, the undo id is still there). When it does not, nothing is written and `'skipped'` comes back.
+   */
+  when?: { sql: string; args: unknown[] };
+  /**
+   * More statements for the same transaction, after the insert, given the new seq. They run whether or not the insert
+   * did (a D1 batch has no "if"), so one that must run only when the batch was inserted says so itself, with
+   * `WHERE EXISTS (SELECT 1 FROM batches WHERE space = ? AND seq = ?)` (a seq belongs to one request, so the row is ours).
+   */
+  then?: (seq: number) => D1PreparedStatement[];
+}
+
+/**
+ * `appendBatch` with extras in one transaction (D1 runs a `batch()` as one). What stays outside it is the seq
+ * allocation, the rate-limit statement `spaceSlot`: a request killed between the two leaves a number unused, a gap
+ * that readers ignore (they read `seq > after`), and nothing else. The connector writes through here.
+ */
+export async function appendBatchWith(env: Env, space: string, device: string, blob: string, o: AppendWith): Promise<number | null | 'skipped'> {
+  const now = Date.now();
+  const seq = await spaceSlot(env, space, now, 1);
+  if (seq === null) return null;
+  const res = await env.DB.batch([
+    env.DB.prepare(`INSERT INTO batches (space, seq, device, blob, size, at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE ${o.when?.sql ?? '1'}`)
+      .bind(space, seq, device, blob, sizeOf(blob), now, ...(o.when?.args ?? [])),
+    ...(o.then?.(seq) ?? []),
+  ]);
+  return res[0]!.meta.changes ? seq : 'skipped';
 }
 
 async function changes(req: Request, env: Env, space: string): Promise<Response> {

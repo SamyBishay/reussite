@@ -323,8 +323,9 @@ describe('anything bigger waits for a yes', () => {
     expect(app.device.get('tasks', 't2')!.status).toBe('dropped');
     expect(app.device.get('tasks', 't1')).toMatchObject({ due: day(9), est: 40 });
     const again = await tool(access, 'apply_changes', { confirm: id });
-    expect(again.isError).toBe(true);
-    expect(again.text).toContain('unknown or has expired');
+    expect(again.isError).toBe(false);
+    expect(again.text).toContain('Already applied');
+    expect(again.text).toContain('Undo id: u');
     expect(await batches()).toBe(before + 1);
   });
 
@@ -431,8 +432,14 @@ describe('invalid change-sets', () => {
     expect((await tool(access, 'apply_changes', { v: 2, changes: [{ op: 'task.drop', id: 't1' }] })).text).toContain('version 1');
     expect((await tool(access, 'apply_changes', { changes: [] })).isError).toBe(true);
     expect((await tool(access, 'apply_changes', {})).isError).toBe(true);
-    const many = Array.from({ length: 81 }, () => ({ op: 'task.drop', id: 't1' }));
-    expect((await tool(access, 'apply_changes', { changes: many })).text).toContain('At most 80');
+    const many = Array.from({ length: 26 }, () => ({ op: 'task.drop', id: 't1' }));
+    const r = await tool(access, 'apply_changes', { changes: many });
+    expect(r.isError).toBe(true);
+    expect(r.text).toContain('Nothing was written');
+    expect(r.text).toContain('At most 25 changes');
+    expect(r.text).toContain('Split it into several change-sets');
+    // 25 are accepted (they come back as a diff to confirm).
+    expect((await tool(access, 'apply_changes', { changes: many.slice(0, 25) })).text).toContain("needs the person's yes");
   });
 
   it('an unknown id writes nothing, even beside a valid change', async () => {

@@ -49,7 +49,7 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 4. **Where they are:** given today's place or area, the steps that belong there.
 5. **The total against the room:** the same "3 h 10 of 4 h 30 free", and when it is more than the room, the cut proposed (Protect steps last, never a fixed item), then the first step.
 
-Then a short exchange to adjust, and one change-set: `day.update` with the plan and the first step, plus any new or broken-down steps. The questionnaire above stays the way without an AI.
+Then a short exchange to adjust, and one change-set: `day.update` with the plan and the first step, plus any new or broken-down steps. When the person lays out their day, write the whole list with `plan`, not `add` (the day may already hold steps from an earlier plan), then read the day back. Read what a write answers, the warnings too, before asking for a yes. The questionnaire above stays the way without an AI.
 
 ### Through the day
 Start here follows the clock: it is the first step that fits before the next fixed item, in the planned order. A step that doesn't fit the gap waits for the next one and a shorter one moves up; a step is never split. When a fixed item gets close it takes over: the step in hand (what is left of it if it is timed, its estimate if not), plus a margin of a fifth of its length and at least 5 minutes, would run into the time to leave. A fixed item whose time has passed is asked about on its own, **Move** or **Remove**, never in red. The Calendar draws the day's planned steps as faded blocks between the fixed items; they are a projection that moves with the clock, not a commitment.

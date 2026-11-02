@@ -16,6 +16,7 @@ import type { Env } from '../env';
 import { Edits, NeedCold, needsCold, type Loaded, type UndoDoc } from './space';
 import { describe } from './render';
 import { resolveChanges } from './resolve';
+import { writeWarnings } from './warn';
 import type { View } from './view';
 import { docWriter, newId } from './writer';
 
@@ -89,7 +90,7 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   const skipped = plan.skippedAt.map(i => `Change ${i + 1} (${cs.changes[i]!.op}): nothing to change (already so, or it does not apply).`);
   if (!plan.items.length) return { text: `${noWrite} Nothing to change.\n${skipped.join('\n')}` };
 
-  if (isLowRisk(cs, plan)) return commit(c, plan, 'one low-risk change, applied at once', skipped);
+  if (isLowRisk(cs, plan)) return commit(c, cs, plan, 'one low-risk change, applied at once', skipped);
 
   const id = rid('c');
   const now = Date.now();
@@ -103,7 +104,8 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
       `This needs the person's yes before anything is written. ${plan.items.length} change${plan.items.length === 1 ? '' : 's'}:`,
       ...plan.items.map((it, i) => `${i + 1}. ${describe(it, c.v)}`),
       ...skipped,
-      `Nothing has been written yet. Show this to the person. If they say yes, call apply_changes again with only {"confirm": "${id}"} (valid for one hour).`,
+      ...writeWarnings(cs, plan, c.v),
+      `Nothing has been written yet. Read it, and show it to the person (the warnings too). If they say yes, call apply_changes again with only {"confirm": "${id}"} (valid for one hour).`,
     ].join('\n'),
   };
 }
@@ -150,7 +152,7 @@ async function confirmed(c: Ctx, id: string): Promise<Out> {
     return err(`${noWrite} That confirmation is being applied right now by another call. Wait a moment and call apply_changes with the same id again; it is applied once.`);
   }
   try {
-    return await commit(c, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, [], id);
+    return await commit(c, cs, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, [], id);
   } finally {
     // Not applied (NeedCold, rate limit, an error): let go, so the same id works at once. Applied: this matches nothing.
     await c.env.DB.prepare('UPDATE connector_pending SET claimed_until = NULL WHERE id = ?1 AND applied_at IS NULL').bind(id).run().catch(() => undefined);
@@ -165,7 +167,8 @@ async function confirmed(c: Ctx, id: string): Promise<Out> {
  * after a kill is a new call and writes again: that path has no id to make it idempotent, and the AI is told what it did only
  * by this answer.
  */
-async function commit(c: Ctx, plan: Plan, how: string, notes: string[], pendingId?: string): Promise<Out> {
+async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: string[], pendingId?: string): Promise<Out> {
+  const warnings = writeWarnings(cs, plan, c.v); // read before anything is written
   const edits = new Edits(c.s);
   const writer = docWriter(edits, c.v);
   await applyPlanned(plan, () => true, writer);
@@ -208,6 +211,7 @@ async function commit(c: Ctx, plan: Plan, how: string, notes: string[], pendingI
       ...lines.map(l => '- ' + l),
       ...(made.length ? [`Created: ${made.map(m => m.id).join(', ')}`] : []),
       ...notes,
+      ...warnings,
       `Undo id: ${undoId} (call undo with it to put things back). It reaches the person's devices at their next sync.`,
     ].join('\n'),
   };

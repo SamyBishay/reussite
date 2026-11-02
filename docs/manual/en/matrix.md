@@ -45,7 +45,7 @@ Moving a step to another box just sets its two ticks.
 
 A step has a title, written as the **first action**: the app or place, then what to do there ("Open Mail and reply to…"). It also has an estimate and an optional due date, and you say whether it is urgent and important. A starter, a project and a suit, a place, a note and the rest are under **More**. A step can also have a **short name** (five or six words, like "Choir · Hill House"). That is what calendars show. Leave it empty and Réussite makes one from the title.
 
-Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Drop and the others) in a row under the title, always in reach. Under the title are **Time** and **Until**: pick a fixed time and when it ends on your phone's own clock (the length is worked out for you, "Lasts 3 h 30"; moving the start keeps it). Under **More** you will find the short name, the starter, the suit, the place, the project, the note, the kind (a step or a decision), "Waits for", the app and link, repeats, and what a standing item needs (its weekdays). When something under More is set, it says so ("More · 3 set"). "Leave early" appears once there is a time.
+Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Drop and the others) in a row under the title, always in reach. Under the title are **Time** and **Until**: pick a fixed time and when it ends on your phone's own clock (the length is worked out for you, "Lasts 3 h 30"; moving the start keeps it). Under **More** you will find the short name, the starter, the suit, the place, the project, the note, the kind (a step or a decision), "Waits for", the app and link, repeats, and what a standing item needs (its weekdays and, if it ends, its last day). When something under More is set, it says so ("More · 3 set"). "Leave early" appears once there is a time.
 
 **Research says:** untested here. `[E?]`
 
@@ -53,6 +53,6 @@ Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Dr
 
 ## Repeating steps and standing items
 
-A step can repeat every day, week, month or every few days, weeks or months. A **standing item** is leisure, people or care: an obligation, not a reward. With a time and weekdays (for example, choir on Wednesdays at 19:30), it appears in your plan on those days by itself, and you're told when to leave.
+A step can repeat every day, week, month or every few days, weeks or months. A **standing item** is leisure, people or care: an obligation, not a reward. With a time and weekdays (for example, choir on Wednesdays at 19:30), it appears in your plan on those days by itself, and you're told when to leave. Make it in the morning for the evening and tonight's one is on your list as soon as you save it, once. To end a series, set **Until** in its More section ("until 31 December"): that is its last day, and after it nothing is placed, shown on the calendar or notified. A repeating step has the same end date in its Repeats field. Leave it empty and the series goes on until you drop it.
 
 Standing items are not in the quadrants, because a time places them and not urgency. The matrix lists them under the grid, in a folded line called **Obligations**.

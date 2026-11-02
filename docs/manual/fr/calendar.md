@@ -12,7 +12,7 @@ L’onglet tient sur un écran, comme l’accueil : la page elle-même ne déf
 
 Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) . Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
 
-- **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine.
+- **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine, jusqu’à son dernier jour s’il en a un.
 - Les jours passés ne montrent eux aussi que les éléments à heure fixe ; ce qui est fait est barré.
 - Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
 - Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu.

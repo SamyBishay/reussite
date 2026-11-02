@@ -44,6 +44,8 @@ A device remembers `{ seq, watermark, snapshotSeq }` (in `local`): the last rela
 
 **Schema 6** (event steps) makes `tasks.kind` also `'event'` and adds the optional `tasks.nudge`; the migration changes no stored data, and the rollout is the same as schema 5's (the app first, then the relay, which must be redeployed: its connector reads `SCHEMA_VERSION` from the app's source).
 
+**Schema 8** (an end date for standing items) adds the optional `tasks.until`, the last day a standing step comes (a day, or none for no end); the migration changes no stored data, and the rollout is schema 6's: the app first, then the relay, redeployed (the connector reads `SCHEMA_VERSION` from the app's source).
+
 Someone marks an event "happened" on one device and drops it on another: both write `status`, so the per-field last writer by HLC (`merge` in `src/data/doc.ts`) decides, as for any field, and the loser leaves no trace.
 
 A document with `_v` above the app's `SCHEMA_VERSION` (or a batch/snapshot with a higher `v`) stops the round: nothing from that page is applied or saved, the result says `newer`, and the app goes read-only and asks to reload. The data stays on the relay.

@@ -17,6 +17,7 @@ import { t, lang, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
 import { rootOf } from '../domain/places';
 import { fixedOnDay } from '../domain/agenda';
+import { ended } from '../domain/standing';
 import { withTime, minutesBetween, shiftTime } from '../domain/calendar';
 import { dayOrder, dayLoad, type FixedItem } from '../domain/dayOrder';
 import { wallOf } from '../domain/zone';
@@ -60,7 +61,7 @@ export function planInput(k: string, shape: { start: string; preset: Preset; fix
   const later = [...tasks.value.values()].filter(x => isOpen(x) && !blocked(x) && inPlace(x, place) && quad(x) === 4 && !skip.has(x.id) && !rawPlan(k).includes(x.id))
     .sort((a, b) => String(a.created).localeCompare(String(b.created)));
   // A standing item with weekdays belongs to those days only; one already on today's list isn't offered twice.
-  const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place) && !skip.has(x.id) && !x.weekdays?.length && !timedRoots.has(x.id))
+  const obligations = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && !ended(x, k) && inPlace(x, place) && !skip.has(x.id) && !x.weekdays?.length && !timedRoots.has(x.id))
     .map(x => ({ id: x.id, lastDone: lastDoneOf(x.id), at: x.at ?? null, est: planEst(x) }));
   const loads = [...days.value.values()].filter(d => d.date < k && d.date >= addDays(k, -14) && typeof d.load === 'number').map(d => d.load as number).sort((a, b) => a - b);
   return {
@@ -256,7 +257,7 @@ function Checkin() {
     const it = items.find(i => i.id === id)!;
     const cur = T(id)!;
     const sameRole = it.role === 'obligation'
-      ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && x.id !== id && inPlace(x, here.value))
+      ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && !ended(x, k) && x.id !== id && inPlace(x, here.value))
       : candidates(k, here.value).filter(x => x.id !== id && !items.some(i => i.id === x.id) && !x.at && (it.role === 'carried' || quad(x) === quad(cur)));
     return sameRole.slice(0, 8);
   };

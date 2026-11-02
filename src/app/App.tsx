@@ -15,6 +15,7 @@ import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, ca
 import { startKeyboard } from './keyboard';
 import { lastSyncAt, startSync, syncNow, syncStale } from './sync';
 import { startFeed } from './feed';
+import { watchStanding } from './standing';
 import { watchBigMoments } from './celebrate';
 import { startPush } from './push';
 import { UpdateBanner } from './UpdateBanner';
@@ -205,7 +206,7 @@ async function openLinkedPlan() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   // Home and the Calendar never scroll (the page is one screen tall, what is inside scrolls), and the phone's rubber band is off while they are shown (html.home-lock, src/styles/app.css).
   useEffect(() => { const on = view.value === 'home' || view.value === 'calendar'; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value]);

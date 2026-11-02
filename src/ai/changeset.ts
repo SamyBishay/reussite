@@ -43,6 +43,8 @@ const taskSet = z.object({
   /** A standing obligation (needs `at` and `weekdays`), and minutes of notice before it; null = the person's default. */
   template: z.boolean().optional(),
   weekdays: z.array(z.number().int().min(1).max(7)).max(7).nullable().optional(),
+  /** A standing obligation's last day ("every Monday until 31 December"): after it nothing is placed or notified. null clears it. Standing steps only. */
+  until: day.nullable().optional(),
   lead: minutes0.nullable().optional(),
   /** Does finishing this step move its project's bar? Only `true` does; null clears the answer. Not for events or standing steps. */
   advances: z.boolean().nullable().optional(),
@@ -52,11 +54,12 @@ const taskSet = z.object({
 export type TaskSet = z.infer<typeof taskSet>;
 
 /** What an event cannot carry (it is not done, estimated or scheduled). Nothing, false and empty are fine: "no estimate" is not a clash. */
-const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'at', 'dur', 'lead', 'weekdays', 'template', 'advances', 'advanceBy'] as const;
+const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'at', 'dur', 'lead', 'weekdays', 'until', 'template', 'advances', 'advanceBy'] as const;
 const has = (v: unknown) => v != null && v !== false && v !== '' && !(Array.isArray(v) && !v.length);
 /** The fields of `set` an event may not have, set to something. */
 export const eventClashes = (set: Partial<TaskSet>): string[] => EVENT_NO.filter(k => has(set[k]));
 export const eventClash = (fields: string[]) => `an event (kind "event", something the person waits for) has no ${fields.join(', ')}; leave ${fields.length === 1 ? 'it' : 'them'} out, or make it a step (kind "task")`;
+export const UNTIL_STANDING = 'until is the last day of a standing step (template, weekdays and at); this step is not standing, so no end date was set';
 export const NUDGE_ONLY = 'nudge is the check date of an event (kind "event"); a step has none';
 /** `creating`: with no `kind` a new step is a task, so a nudge on it is a mistake; an update with no kind leaves that to the step it names. */
 const eventRules = (creating: boolean) => (set: TaskSet, ctx: z.RefinementCtx) => {

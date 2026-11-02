@@ -1106,6 +1106,8 @@ export const fr: Partial<Strings> = {
   leadField: 'Partir en avance de (min)',
   leadHint: 'Vous êtes prévenu si longtemps avant l’heure. Vide : {n} min.',
   weekdaysField: 'Ces jours-là',
+  untilField: 'Jusqu’au (dernier jour)',
+  untilHint: 'Après ce jour, l’élément n’est plus placé dans votre plan, ni affiché dans le calendrier, ni notifié. Laissez vide pour qu’il continue jusqu’à ce que vous l’abandonniez.',
   weekdaysHint: 'Avec une heure fixe, l’élément se place tout seul dans votre plan ces jours-là, et vous êtes prévenu avant qu’il commence même si la journée n’est pas planifiée.',
   roleFixed: 'Fixe',
   leaveAt: 'Partir à {t}',

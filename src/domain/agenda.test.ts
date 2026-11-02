@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { agenda, clockOf, fixedOnDay } from './agenda';
+import { agenda, clockOf, fixedOnDay, standingToPlace } from './agenda';
+import { copyId, ended, standingDay, thingKey } from './standing';
 import { choir, day, decision, place, settings, state, stay, task, iso } from './agenda.fixture';
 
 const S = settings();
@@ -152,5 +153,75 @@ describe('day start and places', () => {
   });
   it('a place with an unknown zone does not break the agenda', () => {
     expect(() => week({ places: [place('paris', 'Nowhere/Land')], tasks: [choir()] })).not.toThrow();
+  });
+});
+
+describe('a standing series ends on its last day (until)', () => {
+  it('comes up to and on the last day, and not after', () => {
+    const ev = fixed({ tasks: [choir({ weekdays: [1, 4], until: '2026-10-22' })] }, '2026-10-19', '2026-11-05');
+    expect(ev.map(e => e.day)).toEqual(['2026-10-19', '2026-10-22']);
+    expect(fixed({ tasks: [choir({ weekdays: [1], until: '2026-10-18' })] })).toEqual([]);
+    expect(fixed({ tasks: [choir({ weekdays: [1], until: null })] }, '2026-10-19', '2026-11-30')).toHaveLength(7);
+  });
+  it('standingDay and ended read the same end date', () => {
+    expect(standingDay({ weekdays: [1], until: '2026-10-19' }, '2026-10-19')).toBe(true);
+    expect(standingDay({ weekdays: [1], until: '2026-10-19' }, '2026-10-26')).toBe(false);
+    expect(standingDay({ weekdays: [1], until: undefined }, '2026-10-26')).toBe(true);
+    expect(standingDay({ weekdays: [2], until: null }, '2026-10-26')).toBe(false);
+    expect(ended({ until: '2026-10-19' }, '2026-10-19')).toBe(false);
+    expect(ended({ until: '2026-10-19' }, '2026-10-20')).toBe(true);
+    expect(ended({ until: null }, '2026-10-20')).toBe(false);
+  });
+  it('is no notification, feed line or calendar event after it either: they all read the agenda', () => {
+    expect(fixedOnDay(state({ tasks: [choir({ until: '2026-10-12' })] }), S, '2026-10-19')).toEqual([]);
+  });
+});
+
+describe('a one-off with the same words and time stands in for a series that day', () => {
+  const twin = (o = {}) => task('t1', { title: 'choir,  Hill House 602', at: '19:00', due: '2026-10-19', ...o });
+  it('is the one event; the series comes back the next week', () => {
+    const ev = fixed({ tasks: [choir(), twin()] }, '2026-10-19', '2026-10-27');
+    expect(ev.map(e => e.id)).toEqual(['fixed:t1:2026-10-19', 'fixed:choir:2026-10-26']);
+  });
+  it('also when it is only on the day’s list, and also when it was dropped or done', () => {
+    expect(fixed({ tasks: [choir(), twin({ due: null })], days: [day('2026-10-19', { plan: ['t1'] })] }).map(e => e.id)).toEqual(['fixed:t1:2026-10-19']);
+    expect(fixed({ tasks: [choir(), twin({ status: 'dropped' })] })).toEqual([]);
+    expect(fixed({ tasks: [choir(), twin({ status: 'done' })] })).toEqual([]);
+  });
+  it('another time or other words is another thing', () => {
+    expect(fixed({ tasks: [choir(), twin({ at: '20:00' })] }).map(e => e.id).sort()).toEqual(['fixed:choir:2026-10-19', 'fixed:t1:2026-10-19']);
+    expect(fixed({ tasks: [choir(), twin({ title: 'Dentist' })] })).toHaveLength(2);
+    expect(thingKey('Choir, Hill House 602', '19:00')).toBe(thingKey('choir  hill house 602', '19:00'));
+  });
+  it('a copy made for the day (its deterministic id) covers the series even when the person moved it away', () => {
+    const moved = task(copyId('choir', '2026-10-19'), { title: 'Choir, Hill House 602', from: 'choir', at: '19:00', due: '2026-10-21' });
+    expect(fixed({ tasks: [choir(), moved] }).map(e => e.id)).toEqual(['fixed:choir:2026-10-21']);
+    const shelved = task(copyId('choir', '2026-10-19'), { title: 'Choir, Hill House 602', from: 'choir', at: '19:00', due: null });
+    expect(fixed({ tasks: [choir(), shelved] })).toEqual([]);
+  });
+});
+
+describe('standingToPlace: what the app puts on today’s list', () => {
+  const NOON = Date.parse('2026-10-19T10:00:00Z'); // 12:00 in Paris on Monday the 19th
+  const put = (w: Parameters<typeof state>[0], now = NOON, k = '2026-10-19') => standingToPlace(state(w), S, k, now).map(t => t.id);
+  it('a series made this morning for tonight is placed once: its weekday is today and its time has not passed', () => {
+    expect(put({ tasks: [choir()] })).toEqual(['choir']);
+    // Not on another weekday.
+    expect(put({ tasks: [choir({ weekdays: [2] })] })).toEqual([]);
+  });
+  it('is not placed once the copy exists, with the day’s deterministic id or any other copy of it', () => {
+    expect(put({ tasks: [choir(), task(copyId('choir', '2026-10-19'), { from: 'choir', at: '19:00', due: '2026-10-19' })] })).toEqual([]);
+    expect(put({ tasks: [choir(), task('x', { from: 'choir', at: '19:00', due: '2026-10-19' })] })).toEqual([]);
+  });
+  it('is not placed for a same-title one-off at the same time: a copy and the one-off never both come from the series', () => {
+    expect(put({ tasks: [choir(), task('one', { title: 'Choir, Hill House 602', at: '19:00', due: '2026-10-19' })] })).toEqual([]);
+  });
+  it('is not placed after its end date, once its time is over, or when it offers an address or a person', () => {
+    expect(put({ tasks: [choir({ until: '2026-10-18' })] })).toEqual([]);
+    expect(put({ tasks: [choir({ until: '2026-10-19' })] })).toEqual(['choir']);
+    expect(put({ tasks: [choir()] }, Date.parse('2026-10-19T19:00:00Z'))).toEqual([]); // 21:00 in Paris: 19:00 + 90 min is gone at 20:30
+    expect(put({ tasks: [choir()] }, Date.parse('2026-10-19T17:50:00Z'))).toEqual(['choir']); // 19:50 in Paris: still going on
+    expect(put({ tasks: [choir({ offer: 'person' })] })).toEqual([]);
+    expect(put({ tasks: [choir({ status: 'dropped' })] })).toEqual([]);
   });
 });

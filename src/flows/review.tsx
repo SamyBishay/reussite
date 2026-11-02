@@ -8,6 +8,7 @@ import { openSheet, closeSheet } from '../app/sheet';
 import { toast } from '../app/store';
 import { Title, quadName } from '../app/ui';
 import { SmartEditor, projectProgress, progressLine } from '../app/smart';
+import { ended } from '../domain/standing';
 import { outcomeOf, startOf } from '../domain/goal';
 import { reviewDecision } from './decision';
 import { t, fmtDate, type Key } from '../i18n';
@@ -134,7 +135,7 @@ function Review({ goals }: { goals?: boolean }) {
       break;
     }
     case 'rv6': {
-      const obl = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x, place)).sort(byOrder);
+      const obl = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && !ended(x, today.value) && inPlace(x, place)).sort(byOrder);
       body = <><p class="hint">{t('rv6Hint')}</p><WeekStrip /><ul class="picklist">{obl.map(x => (
         <li><div><p><Title s={x.title} /></p><OfferChips offer={x.offer} value={offers[x.id]} onChange={c => setOffers({ ...offers, [x.id]: c })} place={place} /></div>
           <DaySelect label={t('planItOn')} value="" onPick={k => void cloneTemplate(x.id, k, x.at ?? settings.value.obligationAt, offerFieldsFor(offers[x.id]))} /></li>

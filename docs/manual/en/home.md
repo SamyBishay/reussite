@@ -45,7 +45,7 @@ Type or dictate a line at the bottom. English or French, whichever you like, and
 
 **A place.** "at" or "chez", "au", "à" followed by a place you have in Places.
 
-**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in.
+**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in. Add "until 31 Dec" ("jusqu'au 31 décembre") after it and the repeat ends on that day: "choir every Tuesday 18:00 until 31 Dec".
 
 **Anything else** (a question, several things at once, a long sentence) opens the step form, filled in as far as it could read. Connecting an AI (Settings → AI) lets you write free sentences.
 

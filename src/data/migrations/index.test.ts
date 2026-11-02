@@ -66,7 +66,7 @@ describe('migration 1 → 2', () => {
   });
 });
 
-describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6 and 6 → 7', () => {
+describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7 and 7 → 8', () => {
   // A schema-1, 2, 3, 4, 5 or 6 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
   // exchanges tables), 2 (schema 3: no addresses or people tables) or 3 (schemas 4 and 5).
   async function oldDb(name: string, schema: number): Promise<void> {
@@ -180,6 +180,27 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6 and 6 → 7', () => {
   it('6 → 7: a partial document from an older device is not given the new fields', () => {
     const [part] = upgradeEntries([{ c: 'projects', d: { id: 'p', _v: 6, _hlc: { goal: 'h1' }, goal: 'Typed on the old phone' } }]);
     expect(part!.d).toEqual({ id: 'p', _v: SCHEMA_VERSION, _hlc: { goal: 'h1' }, goal: 'Typed on the old phone' });
+  });
+
+  it('7 → 8 changes no data: a standing step without an end date has none, one with an end date keeps it, and a second run changes nothing', () => {
+    const data = {
+      tasks: [
+        { id: 'a', _v: 7, _hlc: { title: 'h', template: 'h' }, title: 'Choir', template: true, weekdays: [2], at: '18:00', advances: null, odd: 1 },
+        { id: 'b', _v: 8, _hlc: { title: 'h', until: 'h9' }, title: 'Rehearsal', template: true, weekdays: [1], at: '19:00', until: '2026-12-31' },
+        { id: 'c', _v: 7, _hlc: { title: 'h' }, _del: 'h2', title: 'Gone', template: true },
+      ],
+      projects: [{ id: 'p', _v: 7, _hlc: { name: 'h' }, name: 'Flat', outcome: null, measure: { kind: 'none' }, start: null }],
+    };
+    const out = migrateData(structuredClone(data), 7, 8);
+    expect(out).toEqual(data);
+    expect(out.tasks![0]).not.toHaveProperty('until');
+    expect(out.tasks![1]).toMatchObject({ until: '2026-12-31', _hlc: { until: 'h9' } });
+    expect(migrateData(structuredClone(out), 8, 8)).toEqual(out);
+  });
+
+  it('7 → 8: a partial document from a device on schema 7 is brought up as it is, with no end date added', () => {
+    const [part] = upgradeEntries([{ c: 'tasks', d: { id: 't', _v: 7, _hlc: { at: 'h1' }, at: '20:00' } }]);
+    expect(part!.d).toEqual({ id: 't', _v: SCHEMA_VERSION, _hlc: { at: 'h1' }, at: '20:00' });
   });
 
   it('changes no data: migrations 2 → 3, 3 → 4 and 5 → 6 are the identity', () => {

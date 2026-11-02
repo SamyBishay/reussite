@@ -24,6 +24,8 @@ Call get_method before planning a day or running a decision, and follow it. Read
 
 Call read_memory when the person names someone, a place or a matter ("what does Ibrahim have on", "the flat"): it gives what they told Réussite about it and the open steps that name it. With no arguments it gives their profile and the index of notes. A new fact goes through apply_changes as a memory.add change, in the person's own words, and a memory change always waits for their yes, however small.
 
+When the person lays out their day, write the whole list with day.update and \`plan\`, not \`add\` (the day may already hold steps from an earlier plan), then read it back with today or get_day. Read what apply_changes answers, the warnings too, before asking for a yes, and show it to the person.
+
 Never change the list without the person's yes, except one low-risk change they asked for (add one step, tick one done, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
 
 A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. A change-set holds at most 25 changes: split bigger work into several, one call each. Never give weights to decision items; the person weighs them.
@@ -108,7 +110,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
 
   tool('today', "Today: the current place, today's list in order with the day's shape and fixed times, the next step, steps carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
 
-  tool('get_day', 'Any date (YYYY-MM-DD): its list in order, the shape of the day, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
+  tool('get_day', 'Any date (YYYY-MM-DD): its list in order (read it back after writing a day), the shape of the day, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
     if (needsCold(c.s) && date < c.s.split!.from) throw new NeedCold(); // before the hot window
     return { text: dayText(c.v, date) };
   });
@@ -170,7 +172,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     annotations: read,
   }, async ({ language }) => text({ text: `${cleanMethod(language === 'fr' ? methodFr : methodEn)}\n\n---\n\n${shortChangeset(changesetDoc)}` }));
 
-  tool('apply_changes', 'Edit the list with a change-set (format in get_method). One low-risk change (add a step, tick one done, move one date) applies at once and returns an undo id. Anything else returns a diff and a confirmation id; call again with {"confirm": id} only after the person says yes. Titles work in place of ids. At most 25 changes per call: split bigger work into several change-sets, one call each. An invalid change-set writes nothing.', z.object({
+  tool('apply_changes', 'Edit the list with a change-set (format in get_method). One low-risk change (add a step, tick one done, move one date) applies at once and returns an undo id. Anything else returns a diff with its warnings and a confirmation id: read both, show them to the person, and call again with {"confirm": id} only after they say yes. To lay out a day, send day.update with `plan` (the whole list), not `add`, and read the day back. Titles work in place of ids. At most 25 changes per call: split bigger work into several change-sets, one call each. An invalid change-set writes nothing.', z.object({
     changes: z.array(z.looseObject({ op: z.string().describe('e.g. task.create, task.update, task.done, task.drop, day.update') })).optional(),
     note: z.string().optional(),
     v: z.union([z.number(), z.string()]).optional().describe('Change-set version, 1'),

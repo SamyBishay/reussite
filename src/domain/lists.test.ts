@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { byPriority, quadOf, dayCards, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
+import { byPriority, quadOf, dayCards, fixedOn, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
 
@@ -110,5 +110,18 @@ describe('quadrants and order', () => {
   });
   it('the quadrant comes first, then the due date orders inside it', () => {
     expect([a, b, c].sort((x, y) => byPriority(x, y, d)).map(t => t.id)).toEqual(['c', 'b', 'a']);
+  });
+});
+
+describe('a timed step due on a later day than the list that holds it', () => {
+  const k = '2026-10-24', n = '2026-10-25';
+  const step = (id: string, o: Partial<TaskW> = {}) => tk(id, { status: 'open', ...o } as Partial<TaskW>);
+  const d = { days: new Map([[k, { plan: ['priest'] } as never]]), tasks: new Map([['priest', step('priest', { at: '10:11', due: n })]]) };
+  // The list is where the person put it; the time and the due date are the later day's. It shows on both (the connector warns when an AI makes this).
+  it('stays on its list, and is a fixed time of its due day only', () => {
+    expect(planOf(d, k)).toEqual(['priest']);
+    expect(fixedOn(d, k)).toEqual([]);
+    expect(fixedOn(d, n).map(t => t.id)).toEqual(['priest']);
+    expect(dayCards(d, n)).toEqual(['priest']);
   });
 });

@@ -44,7 +44,7 @@ export interface Gen { id: (prefix: string) => string; now: () => string; zone: 
 
 /** A string standing for the id of something created earlier in the same change-set. */
 const REF = '\u0000ref:';
-const asRef = (r: string) => REF + r;
+export const asRef = (r: string) => REF + r;
 export const isRef = (v: unknown): v is string => typeof v === 'string' && v.startsWith(REF);
 
 export type Op =

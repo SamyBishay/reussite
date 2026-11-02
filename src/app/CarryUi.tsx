@@ -1,11 +1,11 @@
-// Carried and missed, one at a time (plan 2 Nov, S3). A step left open yesterday is decided on its own card: Today / Another day /
+// Carried and missed, one at a time (plan 2 Nov, S3). A step left open yesterday is decided on its own card: Today / Another day (a day, or No date: shelved, still open) /
 // Drop it / Make it a decision (and "Already done", for what was done and not ticked). A fixed-time item whose time has passed gets
 // one small card: Move / Remove. Nothing moves until the person answers; there is no bulk carry, no count, nothing red.
 // The ritual (src/flows/checkin.tsx) and the stand-alone sheet ("Decide them one at a time", from Today and the bell) share these.
 import { useEffect, useState } from 'preact/hooks';
 import { today, clockNow, toast } from './store';
 import { T, isOpen, carriedOn, missedOn, dayZone, timeOnDay, type T as Tk } from './model';
-import { carry, planOn, dropTask, droppedLine, skipThisTime, finishTask, moveFixed, patchTask } from './actions';
+import { carry, planOn, shelve, dropTask, droppedLine, skipThisTime, finishTask, moveFixed, patchTask } from './actions';
 import { openSheet, closeSheet } from './sheet';
 import { Title, Meta } from './ui';
 import { flows } from './sheets';
@@ -51,6 +51,7 @@ export function CarriedCard({ tk, k, release, onNext }: { tk: Tk; k: string; rel
             {Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(k, i + 1)).map((d, i) => (
               <button type="button" data-day={d} onClick={() => void answer(async () => { await planOn(tk.id, d); toast(t('plannedOn', { date: fmtDate(d) })); })}>{i === 0 ? t('pickTomorrow') : dayLabel(d)}</button>
             ))}
+            <button type="button" data-testid="carried-nodate" onClick={() => void answer(async () => { await shelve(tk.id, addDays(k, -1)); toast(t('carryShelved')); })}>{t('pickClear')}</button>
           </div>
           <div class="go quiet"><button class="btn ghost small" type="button" onClick={() => setMode('ask')}>{t('cancel')}</button></div>
         </>

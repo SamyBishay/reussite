@@ -12,12 +12,13 @@ const step = (title: string, o: Record<string, unknown> = {}) => ({
   starter: 'Open the file', ...o,
 });
 const day = (date: string, plan: string[]) => ({ date, plan, launches: [], first: null, checkin: null, closed: null, summary: null });
-const world = () => ({
+const world = (extra: Record<string, Record<string, unknown>> = {}) => ({
   exported: '2026-10-25T00:00:00Z', source: 'reussite-v1',
   tasks: {
     a: step('Answer the landlord'), b: step('Tidy the desk', { order: 2 }), c: step('Sort the receipts', { order: 3 }),
     call: step('Call the dentist', { at: '14:00', dur: 30, due: YESTERDAY, order: 4 }),
     bank: step('Call the bank', { at: '10:00', dur: 30, due: TODAY, order: 5 }),
+    ...extra,
   },
   projects: { inbox: { name: 'Inbox', suit: 'S', where: 'any', goal: null, goalBy: null, due: null, order: 99, status: 'active' } },
   days: { [YESTERDAY]: day(YESTERDAY, ['a', 'b', 'c', 'call']), [TODAY]: day(TODAY, ['bank']) }, decisions: {}, meta: { settings: { here: 'home' } },
@@ -29,12 +30,12 @@ const store = (page: Page, name: string) => page.evaluate(n => new Promise<Recor
 }), name);
 const doc = async (page: Page, name: string, id: string) => (await store(page, name)).find(d => d.id === id) as Record<string, any>;
 
-async function start(page: Page, tab = 'today') {
+async function start(page: Page, tab = 'today', extra: Record<string, Record<string, unknown>> = {}) {
   await page.clock.setFixedTime(NOW);
   await page.goto('/#settings');
   await expandSettings(page);
   await page.getByTestId('open-import').click();
-  await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(world())) });
+  await page.getByTestId('import-file').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(world(extra))) });
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.getByTestId('tab-' + tab).click();
@@ -43,6 +44,22 @@ async function ritual(page: Page) {
   await page.locator('main').getByRole('button', { name: 'Plan the day' }).first().click();
   await expect(page.getByTestId('ci-yesterday')).toBeVisible();
 }
+
+test('Another day, No date: the step is shelved, still open, off yesterday and with no due date', async ({ page }) => {
+  await start(page, 'today', { a: step('Answer the landlord', { due: YESTERDAY }) });
+  await ritual(page);
+  const card = page.getByTestId('carried-card');
+  await expect(card).toContainText('Answer the landlord');
+  await page.getByTestId('carried-other').click();
+  await page.getByTestId('carried-nodate').click();
+  await expect(page.locator('.toast')).toContainText('no date');
+  await expect(card).toContainText('Tidy the desk');
+  const a = await doc(page, 'tasks', 'a');
+  expect(a.status).toBe('open');
+  expect(a.due).toBeNull();
+  expect((await doc(page, 'days', YESTERDAY)).plan).not.toContain('a');
+  expect((await doc(page, 'days', TODAY)).plan ?? []).not.toContain('a');
+});
 
 test('the ritual asks about each left-open step on its own, and nothing moves before the answer', async ({ page }) => {
   await start(page);

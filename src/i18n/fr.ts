@@ -487,6 +487,7 @@ export const fr: Partial<Strings> = {
   carryAnotherDay: 'Un autre jour',
   carryDecision: 'En faire une décision',
   carryWhichDay: 'Quel jour ?',
+  carryShelved: 'Gardée, sans date. Elle reste sur votre liste.',
   carryDoneHint: 'C’était fait. Combien de temps, à peu près ?',
   missedLine: '« {title} » était à {time}.',
   missedMove: 'Déplacer',

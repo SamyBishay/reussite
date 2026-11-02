@@ -627,6 +627,7 @@ export const en = {
   carryAnotherDay: 'Another day',
   carryDecision: 'Make it a decision',
   carryWhichDay: 'Which day?',
+  carryShelved: 'Kept, with no date. It’s still on your list.',
   carryDoneHint: 'It was done. Roughly how long did it take?',
   missedLine: '“{title}” was at {time}.',
   missedMove: 'Move',

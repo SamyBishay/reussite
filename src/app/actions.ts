@@ -232,6 +232,14 @@ export async function movePlan(id: string, dir: -1 | 1, k = today.value, shown?:
 export const planOn = (id: string, k: string) => addToday(id, true, k);
 export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, dueRule: null });
 /**
+ * A step left open on day `k`, shelved: off that day's list and with no due date, and still open (it stays in the Matrix and its
+ * project, and comes back when a day is planned). "Another day" with no day: putting it aside is not dropping it.
+ */
+export async function shelve(id: string, k: string) {
+  await removeToday(id, k);
+  await patchTask(id, { due: null, dueRule: null });
+}
+/**
  * A fixed-time step moved on the calendar's hour grid: to a day and a time. One with a due date is due that day;
  * one that is only on a day's list is planned on the new day.
  */

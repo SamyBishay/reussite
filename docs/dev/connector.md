@@ -116,6 +116,10 @@ Each run picks **at most one space** and does **one job** for it:
 
 The calendar feed therefore follows a connector write within about five minutes (up to ten if the same space was due for a compaction first), not at once; a device that opens the app still writes it at once.
 
+## Standing series
+
+A standing step (a series: a fixed time that comes back on weekdays) may carry `until`, its last day (inclusive), on `task.create` and `task.update`; `null` clears it, and on a step that is not standing, or on an event, the change-set is refused with the reason. The standing title reads `(standing, Mon at 19:00 until 2026-12-31)`. `today` and `get_day` list a series that comes on the day and whose copy the app has not yet put on the list under Fixed times, marked `[no card on the day yet: …]` (today only those not yet over, a past day none). The connector never writes the copy itself: the app places it when it opens (`placeStandingToday`, a deterministic id per series and day), so a copy can't be made twice, and the server instructions tell the AI not to add a one-off for it.
+
 ## Rolling out
 
 The relay is deployed a few minutes **after** the app (docs/dev/sync.md, "Rolling out schema 3", 4 and 5, all the same). A relay that is newer than the app's data writes the new schema at once and puts every device still on the old one into read-only mode. An older relay reads the app's new batches as newer, and every tool says to update the relay and writes nothing. The relay takes its schema number, the change-set validation (`ChangeSchema`) and the planner from the app's source, so any change to those needs the relay deployed too: schema 5 (a step's `label`, a place's `parent`) is one.

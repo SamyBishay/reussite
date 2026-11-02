@@ -27,7 +27,9 @@ Not secrets. Names only here; values in the file.
 - `VAPID_PUBLIC_KEY`: the public half of the pair above (also `VITE_VAPID_PUBLIC_KEY` in `.env.production`).
 - `VAPID_SUBJECT`: the relay's https address, the VAPID token's `sub`.
 - `PUSH_HOSTS`: the push services a registered endpoint may point at.
-- `triggers.crons`: `* * * * *` (one of the free plan's five): sends due notifications, and at minute 0 prunes devices and items of push, and calendar feeds not written for 60 days.
+- `triggers.crons`: two of the free plan's five. `* * * * *`: sends due notifications, and at minute 0 prunes devices and items of push, and calendar feeds not written for 60 days. `*/5 * * * *`: the connector's maintenance (one space a run: cut its hot snapshot again, or write its calendar feed again; [connector.md](connector.md), "Maintenance"). `src/index.ts` tells them apart by `controller.cron`, and `MAINTAIN_CRON` in `relay/src/connector/maintain.ts` must equal the second expression (a relay test checks the file).
+- `observability`: `{ "enabled": true, "head_sampling_rate": 1 }` turns on Workers logs and invocation metrics (dashboard, the Worker, Observability), so that a request or cron run the free plan stops for CPU (error 1102) can be seen. The relay logs nothing personal: its only `console` call prints the name of a tool and of an error class (`relay/src/connector/tools.ts`), never a title, a key, a token or a list. Keep it so.
+- Migration `0008_connector_lease.sql` adds the lease and applied marks to `connector_pending` and `feed_dirty`, `compact_due`, `last_maintained` to `connector` ([connector.md](connector.md), "Applying a confirmation once"). Apply it **before** deploying the relay that uses it: `cd relay && npx wrangler d1 migrations apply prod-d1 --remote`.
 - Migration `0005_push.sql` creates `push_devices` and `push_items`.
 - Migration `0006_feed.sql` creates `feeds`. No new var or secret; `GET /cal/<fid>.ics` needs no route of its own on the same Worker. Optional tuning vars `RATE_FEED_NEW_IP_PER_MIN`, `RATE_FEED_PUT_PER_MIN`, `RATE_FEED_MISS_PER_MIN`. See [feed.md](feed.md).
 

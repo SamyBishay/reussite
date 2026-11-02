@@ -18,11 +18,13 @@ import { describe } from './render';
 import { resolveChanges } from './resolve';
 import type { View } from './view';
 import { docWriter, newId } from './writer';
-import { refreshFeed } from './feed';
 
 export const PENDING_MS = 60 * 60_000;
 const UNDO_KEEP_MS = 30 * 24 * 3600_000;
-const MAX_CHANGES = 80;
+/** A change-set is at most this long: more does not fit the free plan's 10 ms of CPU (docs/dev/connector.md, "CPU on the free plan"). The app's own AI path is not limited by it. */
+export const MAX_CHANGES = 25;
+/** How long a confirmation is claimed while it is applied; a killed request's lease runs out and the id works again. */
+export const LEASE_MS = 30_000;
 
 export interface Out { text: string; error?: boolean }
 const err = (text: string): Out => ({ text, error: true });
@@ -44,7 +46,7 @@ function validate(input: Input): { changes: Change[] } | { errors: string[] } {
   if (input.v !== undefined && String(input.v) !== '1') return { errors: ['Only change-set version 1 is understood ("v": 1).'] };
   const raw = input.changes;
   if (!Array.isArray(raw) || !raw.length) return { errors: ['"changes" must be a list with at least one change.'] };
-  if (raw.length > MAX_CHANGES) return { errors: [`At most ${MAX_CHANGES} changes in one change-set; send fewer.`] };
+  if (raw.length > MAX_CHANGES) return { errors: [`At most ${MAX_CHANGES} changes in one change-set, and this one has ${raw.length}. Split it into several change-sets of at most ${MAX_CHANGES} changes and send them one after the other.`] };
   const errors: string[] = [];
   const changes: Change[] = [];
   raw.forEach((c, i) => {
@@ -106,31 +108,64 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   };
 }
 
+const already = (undoId: string | null): Out => ({
+  text: `Already applied: this confirmation was used before, and nothing new was written.${undoId ? ` Undo id: ${undoId} (call undo with it to put things back).` : ''}`,
+});
+const gone = () => err(`${noWrite} That confirmation id is unknown or has expired (they last an hour). Send the changes again to get a new one.`);
+
+interface Pending { blob: string; expires: number; applied_at: number | null; undo_id: string | null }
+const pendingRow = (c: Ctx, id: string) =>
+  c.env.DB.prepare('SELECT blob, expires, applied_at, undo_id FROM connector_pending WHERE id = ?1 AND space = ?2 AND expires > ?3').bind(id, c.s.space, Date.now()).first<Pending>();
+
+/**
+ * A confirmation is applied at most once, and survives a request that is killed (the free plan stops one at 10 ms of CPU):
+ * - Nothing is consumed before the write. The row is *claimed* with a lease (`claimed_until`, `LEASE_MS`); a second call
+ *   while the lease holds is told it is being applied and writes nothing. A request that dies leaves a lease that runs out,
+ *   and the same id works again; one that fails cleanly (NeedCold, rate limit, an error) lets go of it at once.
+ * - The change batch and the row's `applied_at` (with the seq and the undo id) are in one D1 transaction (`commit`), so a
+ *   kill leaves both or neither. A retry of an applied id answers "Already applied" with the original undo id.
+ * - Even if a lease ran out under a request that was merely slow, the batch's insert is conditional on the row being unapplied,
+ *   so the slow one writes nothing when it gets there.
+ */
 async function confirmed(c: Ctx, id: string): Promise<Out> {
-  const row = await c.env.DB.prepare('SELECT blob, expires FROM connector_pending WHERE id = ?1 AND space = ?2 AND expires > ?3').bind(id, c.s.space, Date.now()).first<{ blob: string; expires: number }>();
-  if (!row) return err(`${noWrite} That confirmation id is unknown or has expired (they last an hour). Send the changes again to get a new one.`);
+  const row = await pendingRow(c, id);
+  if (!row) return gone();
+  if (row.applied_at !== null) return already(row.undo_id);
   const { cs, items } = await decryptJson<{ cs: ChangeSet; items: number }>(c.s.keys, b64uDecode(row.blob));
   // The list may have moved on since the person was shown the diff: if the plan is no longer the same size, show it again.
   const plan = planChanges(cs, c.v.snapshot(), gen(c.v));
   if (plan.items.length !== items) {
     if (needsCold(c.s)) throw new NeedCold(); // it may name an old finished step, which only the cold part holds
-    await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1').bind(id).run();
+    await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1 AND applied_at IS NULL').bind(id).run();
     return err(`${noWrite} The list changed since the person was shown these changes. Send the change-set again to get a fresh confirmation.`);
   }
-  // Taking the row is what makes a confirmation work once. If the write turns out to need the cold part, nothing has been
-  // written yet: put the row back, so the same id works when the tool runs again with it.
-  const taken = await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1').bind(id).run();
-  if (!taken.meta.changes) return err(`${noWrite} That confirmation id is unknown or has expired (they last an hour). Send the changes again to get a new one.`);
+  const now = Date.now();
+  const claim = await c.env.DB.prepare(
+    'UPDATE connector_pending SET claimed_until = ?1 WHERE id = ?2 AND space = ?3 AND applied_at IS NULL AND (claimed_until IS NULL OR claimed_until < ?4)',
+  ).bind(now + LEASE_MS, id, c.s.space, now).run();
+  if (!claim.meta.changes) {
+    const now2 = await pendingRow(c, id); // applied between our read and our claim, or being applied by another call
+    if (!now2) return gone();
+    if (now2.applied_at !== null) return already(now2.undo_id);
+    return err(`${noWrite} That confirmation is being applied right now by another call. Wait a moment and call apply_changes with the same id again; it is applied once.`);
+  }
   try {
-    return await commit(c, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, []);
-  } catch (e) {
-    if (e instanceof NeedCold) await c.env.DB.prepare('INSERT OR REPLACE INTO connector_pending (id, space, blob, expires) VALUES (?1, ?2, ?3, ?4)').bind(id, c.s.space, row.blob, row.expires).run();
-    throw e;
+    return await commit(c, plan, `${plan.items.length} change${plan.items.length === 1 ? '' : 's'}, confirmed`, [], id);
+  } finally {
+    // Not applied (NeedCold, rate limit, an error): let go, so the same id works at once. Applied: this matches nothing.
+    await c.env.DB.prepare('UPDATE connector_pending SET claimed_until = NULL WHERE id = ?1 AND applied_at IS NULL').bind(id).run().catch(() => undefined);
   }
 }
 
-/** Write the plan as one encrypted batch and keep what it replaced for undo. */
-async function commit(c: Ctx, plan: Plan, how: string, notes: string[]): Promise<Out> {
+/**
+ * Write the plan as one encrypted batch and keep what it replaced for undo. The batch, the undo record (sealed before the
+ * append so it can go in with it), the connector's clock, the "feed is behind" flag and, for a confirmation, its `applied_at`
+ * are one D1 transaction (`Edits.flush`, `appendBatchWith`). The one thing outside it is the seq's allocation (a killed request
+ * leaves a number unused, which readers ignore). Without a confirmation id (the one low-risk change applied at once) a retry
+ * after a kill is a new call and writes again: that path has no id to make it idempotent, and the AI is told what it did only
+ * by this answer.
+ */
+async function commit(c: Ctx, plan: Plan, how: string, notes: string[], pendingId?: string): Promise<Out> {
   const edits = new Edits(c.s);
   const writer = docWriter(edits, c.v);
   await applyPlanned(plan, () => true, writer);
@@ -142,16 +177,30 @@ async function commit(c: Ctx, plan: Plan, how: string, notes: string[]): Promise
     const freed = liveNextHeads(c.v.tasks, op.id).map(id => `${id} ${oneLine(c.v.tasks.get(id)?.title ?? '')}`.trim());
     if (freed.length) notes = [...notes, `Freed by it: ${freed.join('; ')}. It is on no day's list yet; day.update adds it to one.`];
   }
-  const seq = await edits.flush(c.env);
-  if (seq === null) return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
-  await refreshFeed(c.env, c.s).catch(() => false); // the calendar follows; a failure leaves it to the next device that opens
-
   const undoId = rid('u');
-  const now = Date.now();
-  await c.env.DB.batch([
-    c.env.DB.prepare('DELETE FROM connector_undo WHERE space = ?1 AND at < ?2').bind(c.s.space, now - UNDO_KEEP_MS),
-    c.env.DB.prepare('INSERT INTO connector_undo (id, space, blob, at) VALUES (?1, ?2, ?3, ?4)').bind(undoId, c.s.space, await sealToText(c.s.keys, { docs: edits.undo }), now),
-  ]);
+  const undoBlob = await sealToText(c.s.keys, { docs: edits.undo });
+  const { space } = c.s;
+  const db = c.env.DB;
+  const flushed = await edits.flush(c.env, {
+    when: pendingId ? { sql: 'EXISTS (SELECT 1 FROM connector_pending WHERE id = ?7 AND space = ?1 AND applied_at IS NULL)', args: [pendingId] } : undefined,
+    then: seq => {
+      const now = Date.now();
+      const ours = 'EXISTS (SELECT 1 FROM batches WHERE space = ?2 AND seq = ?5)';
+      return [
+        db.prepare('DELETE FROM connector_undo WHERE space = ?1 AND at < ?2').bind(space, now - UNDO_KEEP_MS),
+        db.prepare(`INSERT INTO connector_undo (id, space, blob, at) SELECT ?1, ?2, ?3, ?4 WHERE ${ours}`).bind(undoId, space, undoBlob, now, seq),
+        ...(pendingId
+          ? [db.prepare(`UPDATE connector_pending SET applied_at = ?1, undo_id = ?2, seq = ?3, claimed_until = NULL WHERE id = ?4 AND space = ?5 AND applied_at IS NULL AND EXISTS (SELECT 1 FROM batches WHERE space = ?5 AND seq = ?3)`).bind(now, undoId, seq, pendingId, space)]
+          : []),
+      ];
+    },
+  });
+  if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
+  if (flushed === 'empty') return { text: 'Nothing changed.' };
+  if (flushed === 'skipped') {
+    const row = pendingId ? await pendingRow(c, pendingId) : null; // another call applied it first
+    return row?.applied_at != null ? already(row.undo_id) : err(`${noWrite} It was applied by another call; check with query_tasks.`);
+  }
   const made = writer.made.filter(m => m.collection !== 'sessions' && m.collection !== 'days');
   return {
     text: [
@@ -184,12 +233,14 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
     if (u.kept) lines.push(`Left ${what} alone: ${u.kept.join(', ')} changed since`);
     if (u.inUse) lines.push(`Left ${what} alone: it was created by the change, and something made since refers to it`);
   }
-  if (!edits.empty) {
-    const seq = await edits.flush(c.env);
-    if (seq === null) return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
-    await refreshFeed(c.env, c.s).catch(() => false);
-  }
-  await c.env.DB.prepare('DELETE FROM connector_undo WHERE id = ?1').bind(id).run();
+  // The batch and the use of the undo id are one transaction: a kill leaves the id usable, and a second call can't undo twice.
+  const del = (db: D1Database) => db.prepare('DELETE FROM connector_undo WHERE id = ?1 AND space = ?2').bind(id, c.s.space);
+  const flushed = edits.empty ? 'empty' : await edits.flush(c.env, {
+    when: { sql: 'EXISTS (SELECT 1 FROM connector_undo WHERE id = ?7 AND space = ?1)', args: [id] },
+    then: () => [del(c.env.DB)],
+  });
+  if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
+  if (flushed === 'skipped') return err('Nothing to undo: that undo id is unknown, or it was already used.');
+  if (flushed === 'empty') await del(c.env.DB).run();
   return { text: lines.length ? ['Undone.', ...lines].join('\n') : 'Nothing to put back: everything it touched has changed since.' };
 }
-

@@ -54,7 +54,7 @@ You need a free Cloudflare account and `npx wrangler login`.
    - `CONNECTOR_WRAP_KEY`: 32 random bytes in base64, from `openssl rand -base64 32`.
    - `VAPID_PRIVATE_KEY`: the private key from step 4.
    Never put a secret in a file in the repository.
-6. **Deploy:** `cd relay && npx wrangler deploy`.
+6. **Deploy:** `cd relay && npx wrangler deploy`. The relay has two cron triggers (`triggers.crons` in `relay/wrangler.jsonc`: every minute for notifications, every five minutes for the connector's housekeeping; the free plan allows five, and the two expressions must stay as they are, since the Worker tells them apart by them) and Workers observability switched on (`observability`; it logs no list content). The D1 migrations of step 2 include the connector's confirmation leases (`0008_connector_lease.sql`); run them again after every update of the relay, before deploying it.
 
 ## 5. Point the app at your relay
 

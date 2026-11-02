@@ -11,7 +11,7 @@ When something in my list should change, end your reply with one change-set: one
 - Use the ids from the lines you were given (`t…` steps, `p…` projects, `d…` decisions). For something you create in the same change-set, give it `"ref": "name"` and use that name later as its id.
 - Dates are `YYYY-MM-DD`, times `HH:MM`, estimates in minutes. Leave out any field you don't change.
 - Never give weights. I weigh pros and cons myself.
-- At most 80 changes. If a request is unclear, return no changes and ask one question in `note`.
+- At most 25 changes in one change-set; for more work send several change-sets. If a request is unclear, return no changes and ask one question in `note`.
 
 ## Operations
 

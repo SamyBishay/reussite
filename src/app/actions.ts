@@ -1,12 +1,14 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
-import { projects } from './store';
+import { projects, decisions } from './store';
 import type { Address, Day, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
 import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
+import { standingToPlace } from '../domain/agenda';
+import { copyId } from '../domain/standing';
 import { parentProblem } from '../domain/places';
 import { liveNextHeads, nudgeAfter } from '../domain/events';
 import { releaseFrom } from '../domain/lists';
@@ -253,18 +255,39 @@ export async function moveFixed(id: string, k: string, at: string) {
 export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, doneAt: k + 'T12:00:00.000Z' });
 
 /** `extra` is what a picked offer sets on the copy (title, starter, link, the address or person); it wins over the standing item's own. */
-export async function cloneTemplate(id: string, k = today.value, at?: string, extra: Partial<Task> = {}) {
+export async function cloneTemplate(id: string, k = today.value, at?: string, extra: Partial<Task> = {}, copy?: string) {
   const tk = T(id);
   if (!tk) return null;
   // A copy with a time is due that day, or it falls out of the day's fixed times and the calendar.
   const time = at ?? tk.at ?? null;
-  const nid = await createTask(newTaskDoc(tk.title, tk.suit, tk.project, {
+  const nid = await createDoc('tasks', newTaskDoc(tk.title, tk.suit, tk.project, {
     est: tk.est ?? null, estBy: tk.estBy ?? null, where: whereOf(tk), from: id, note: tk.note || '', starter: tk.starter ?? null,
     app: tk.app ?? null, link: tk.link ?? null, at: time, dur: tk.dur ?? tk.est ?? null, due: time ? k : null, important: true,
     ...extra,
-  }));
+  }), copy);
   await addToday(nid, true, k);
   return nid;
+}
+
+/**
+ * Tonight's copy of a standing series made after the morning (or without one): every standing item that is on `today` by its weekday, not
+ * ended and not yet over, and that nothing stands in for, gets its copy on today's list, once. The copy's id is the series' and the day's
+ * (`copyId`), so two devices that place it at once make one, and a copy the person moved, dropped or shelved is not made again.
+ */
+const placing = new Set<string>();
+export async function placeStandingToday(): Promise<void> {
+  const k = today.value;
+  // A copy made here for a series that no longer exists (an Undo took the series back) goes with it: it was never the person's own step.
+  for (const c of tasks.value.values()) {
+    if (c.from && !tasks.value.has(c.from) && c.id === copyId(c.from, k) && c.status === 'open' && !c.started) await removeDoc('tasks', c.id);
+  }
+  const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
+  for (const tpl of standingToPlace(data, settings.value, k, Date.now())) {
+    const id = copyId(tpl.id, k);
+    if (placing.has(id) || tasks.value.has(id)) continue;
+    placing.add(id);
+    try { await cloneTemplate(tpl.id, k, undefined, {}, id); } finally { placing.delete(id); }
+  }
 }
 /**
  * Carry steps to a day's list; each carry counts (at 3, the step is too big or hides a decision). `release` false

@@ -488,6 +488,8 @@ export const en = {
   leadField: 'Leave early by (min)',
   leadHint: 'You’re notified this long before the time. Empty: {n} min.',
   weekdaysField: 'On these days',
+  untilField: 'Until (the last day)',
+  untilHint: 'After this day it is no longer placed in your plan, shown on the calendar or notified. Leave empty to go on until you drop it.',
   weekdaysHint: 'With a fixed time, it’s placed in your plan on these days by itself, and you’re notified before it starts even if the day isn’t planned.',
   beforeLeave: 'Before I leave',
   daysBefore: 'days before the last day',

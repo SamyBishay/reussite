@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -61,6 +61,8 @@ export interface Task {
   lead?: number | null;
   /** A standing obligation's days (ISO, 1 = Monday … 7 = Sunday): with `at` it is placed on those days by itself. */
   weekdays?: number[] | null;
+  /** A standing obligation's last day (schema 8): from the next day on it is neither placed, nor on the calendar, nor notified. None = it goes on until dropped. */
+  until?: DayKey | null;
   /** A fixed commitment typed at the morning check-in: on the day, not a work step. */
   fixed?: boolean;
   /** "Before I leave": due a number of days before the end of a stay. */

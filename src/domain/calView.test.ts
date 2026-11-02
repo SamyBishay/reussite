@@ -73,6 +73,18 @@ describe('the calendar’s events', () => {
     expect(evs[0]).toMatchObject({ kind: 'fixed', taskId: 'c', time: '19:00', endTime: '20:30', movable: true });
   });
 
+  it('stops showing a standing item after its last day, and a one-off with its words and time stands in for it', () => {
+    const tpl = choir({ weekdays: [1, 2], until: '2026-10-26' });
+    const days = calViewEvents(data({ tasks: [tpl] }), opts(), '2026-10-26', '2026-11-03').map(e => e.day);
+    expect(days).toEqual(['2026-10-26']); // Mon 26th is the last day; Tue 27th and the next week are after it
+    const one = task('one', { title: tpl.title, at: '19:00', due: '2026-10-26', dur: 90 });
+    const evs = calViewEvents(data({ tasks: [tpl, one] }), opts(), '2026-10-26', '2026-10-26');
+    expect(evs.map(e => e.taskId)).toEqual(['one']);
+    // Another title at the same time does not.
+    const other = task('other', { title: 'Dentist', at: '19:00', due: '2026-10-26' });
+    expect(calViewEvents(data({ tasks: [tpl, other] }), opts(), '2026-10-26', '2026-10-26').map(e => e.taskId).sort()).toEqual(['choir', 'other']);
+  });
+
   it('says where, short: the address’s name, else the place', () => {
     const d = data({ tasks: [task('a', { title: 'Meet', at: '12:00', due: '2026-10-22', addressId: 'ad' }), task('b', { title: 'Visit', at: '14:00', due: '2026-10-22', where: 'cairo' })], places: [place('cairo', 'Africa/Cairo')] }, {
       addresses: new Map([['ad', { id: 'ad', name: 'Chez Louise', street: '3 Rue X' } as never]]),

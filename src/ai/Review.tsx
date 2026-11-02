@@ -19,11 +19,11 @@ const FIELD: Record<string, Key> = {
   app: 'fApp', link: 'fLink', prompt: 'fPrompt', note: 'fNote', where: 'where', after: 'fAfter', kind: 'fKind', nudge: 'nudgeField', at: 'fAt', dur: 'fDur',
   doneDay: 'fDoneDay', order: 'fOrder', name: 'fName', goal: 'fGoal', smart: 'fSmart', outcome: 'fOutcome', measure: 'fMeasure', start: 'fStart', advances: 'fAdvances', advanceBy: 'fAdvanceBy', status: 'fStatus', plan: 'fPlan', first: 'fFirst',
   launches: 'fLaunches', timeZone: 'timeZone', place: 'fPlace', from: 'stayFrom', to: 'stayTo', option: 'fOption', items: 'fItems', steps: 'fSteps',
-  template: 'fTemplate', weekdays: 'weekdaysField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
+  template: 'fTemplate', weekdays: 'weekdaysField', until: 'untilField', lead: 'leadField', line: 'fLine', aliases: 'fAliases',
   category: 'addrCategory', mapsUrl: 'addrLink', street: 'addrStreet', state: 'addrState',
   preferences: 'aiPrefsTitle', chosen: 'fChosen', why: 'fWhy', mustBeTrue: 'fMustBeTrue', falsifier: 'fFalsifier', reviewOn: 'fReviewOn', projectId: 'project', problem: 'fProblem',
 };
-const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge', 'start']);
+const DATES = new Set(['due', 'doneDay', 'from', 'to', 'reviewOn', 'nudge', 'start', 'until']);
 const IDS = new Set(['after', 'plan', 'order', 'steps', 'first']);
 
 function fmt(field: string, v: unknown, refs: Plan['refTitles']): string {

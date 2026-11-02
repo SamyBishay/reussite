@@ -45,7 +45,7 @@ La page **Notifications** liste tout ce qui attend, et pas seulement le plus pre
 
 **Un lieu.** « chez », « au », « à » suivi d’un lieu que vous avez dans Lieux.
 
-**Une répétition.** « chorale chaque mercredi 19h30 », « tous les jours », « every Wednesday ». Avec une heure, cela fait une étape permanente ; sans heure, ou pour un écart plus long, le formulaire de l’étape s’ouvre avec Répétition rempli.
+**Une répétition.** « chorale chaque mercredi 19h30 », « tous les jours », « every Wednesday ». Avec une heure, cela fait une étape permanente ; sans heure, ou pour un écart plus long, le formulaire de l’étape s’ouvre avec Répétition rempli. Ajoutez « jusqu’au 31 décembre » (« until 31 Dec ») après, et la répétition s’arrête ce jour-là : « chorale chaque mardi 18h jusqu’au 31 décembre ».
 
 **Tout le reste** (une question, plusieurs choses à la fois, une longue phrase) ouvre le formulaire de l’étape, rempli autant que possible. Connecter une IA (Réglages → IA) permet d’écrire des phrases libres.
 

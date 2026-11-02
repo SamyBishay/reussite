@@ -224,6 +224,31 @@ describe('a standing obligation in the contract', () => {
     const p = planChanges(cs([{ op: 'task.update', id: 't1', set: { template: true, weekdays: [1], at: '19:00' } }]), s, gen);
     expect(p.items[0]!.diffs.map(d => d.field)).not.toContain('template');
   });
+  it('may end on a day: until is the last day, on a create (low-risk) and on an update of a series', () => {
+    const f = (set: object) => (planChanges(cs([{ op: 'task.create', set }]), snap(), gen).items[0]!.ops[0] as { fields: Partial<Task> }).fields;
+    const c = cs([{ op: 'task.create', set: { ...choir, until: '2026-12-31' } }]);
+    const p = planChanges(c, snap(), gen);
+    expect(isLowRisk(c, p)).toBe(true);
+    expect(f({ ...choir, until: '2026-12-31' }).until).toBe('2026-12-31');
+    expect(p.items[0]!.diffs.map(d => d.field)).toContain('until');
+    const s = snap();
+    s.tasks.set('t9', { id: 't9', title: 'Choir', project: 'inbox', template: true, weekdays: [1], at: '19:00', status: 'open' } as never);
+    const up = planChanges(cs([{ op: 'task.update', id: 't9', set: { until: '2026-12-31' } }]), s, gen);
+    expect(up.items[0]!.ops[0]).toMatchObject({ t: 'update', id: 't9', patch: { until: '2026-12-31' } });
+    expect(planChanges(cs([{ op: 'task.update', id: 't9', set: { until: null } }]), (() => { s.tasks.set('t9', { ...s.tasks.get('t9')!, until: '2026-12-31' } as never); return s; })(), gen).items[0]!.ops[0]).toMatchObject({ patch: { until: null } });
+    expect(readChangeSet({ v: 1, changes: [{ op: 'task.create', set: { ...choir, until: '31 December' } }] }).ok).toBe(false);
+  });
+  it('an end date on a step that is not a series is cut back with the reason, and an event may not have one', () => {
+    const made = planChanges(cs([{ op: 'task.create', set: { title: 'Plain', until: '2026-12-31' } }]), snap(), gen);
+    expect((made.items[0]!.ops[0] as { fields: Partial<Task> }).fields).not.toHaveProperty('until');
+    expect(made.notes?.[0]?.text).toContain('not standing');
+    const s = snap();
+    s.tasks.set('t1', { id: 't1', title: 'A', project: 'inbox', template: false, status: 'open', at: null } as never);
+    const up = planChanges(cs([{ op: 'task.update', id: 't1', set: { until: '2026-12-31', note: 'x' } }]), s, gen);
+    expect(up.notes?.[0]?.text).toContain('not standing');
+    expect(up.items[0]!.diffs.map(d => d.field)).toEqual(['note']);
+    expect(readChangeSet({ v: 1, changes: [{ op: 'task.create', set: { title: 'Call back', kind: 'event', until: '2026-12-31' } }] }).ok).toBe(false);
+  });
   it('still drops weights from decisions', () => {
     const p = plan([{ op: 'decision.create', set: { title: 'Move?', options: [{ name: 'Yes', pros: [{ text: 'cheap', w: 5 }] }] } }]);
     expect(JSON.stringify(p.items[0]!.ops)).not.toContain('"w":5');

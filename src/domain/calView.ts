@@ -11,7 +11,7 @@ import { chainIndex, isWaiting } from './chains';
 import { fixedOn, rawPlan, whereOf } from './lists';
 import { inArea, type Half } from './areas';
 import { locationOf } from './calItems';
-import { isoDow } from './repeat';
+import { copyId, standingDay, thingKey } from './standing';
 
 type WithId<T> = T & { id: string };
 
@@ -105,7 +105,12 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
   const lists = { days: data.days, tasks: data.tasks };
   const standing = [...data.tasks.values()].filter(t => t.template && t.status === 'open' && HHMM.test(t.at ?? '') && Array.isArray(t.weekdays) && t.weekdays.length);
   const copies = new Map<string, WithId<Task>[]>();
-  for (const c of data.tasks.values()) if (c.from) copies.set(c.from, [...(copies.get(c.from) ?? []), c]);
+  // A one-off with a series' words and time stands in for it that day, as in the agenda.
+  const ones = new Map<string, WithId<Task>[]>();
+  for (const c of data.tasks.values()) {
+    if (c.from) copies.set(c.from, [...(copies.get(c.from) ?? []), c]);
+    else if (!c.template && c.at && c.kind !== 'event' && HHMM.test(c.at)) { const key = thingKey(c.title, c.at.padStart(5, '0')); ones.set(key, [...(ones.get(key) ?? []), c]); }
+  }
   for (let k = from; k <= to; k = addDays(k, 1)) {
     const timed = fixedOn(lists, k).filter(t => !waiting(t) && HHMM.test(t.at ?? ''));
     for (const t of timed) {
@@ -116,7 +121,8 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
     // A standing item on its weekdays, until a copy of it is placed on the day (the copy is the event then).
     const plan = new Set(rawPlan(data.days, k));
     for (const tpl of standing) {
-      if (!tpl.weekdays!.includes(isoDow(k)) || (copies.get(tpl.id) ?? []).some(c => c.due === k || (!c.due && plan.has(c.id)))) continue;
+      const here = (c: WithId<Task>) => c.due === k || (!c.due && plan.has(c.id));
+      if (!standingDay(tpl, k) || data.tasks.has(copyId(tpl.id, k)) || (copies.get(tpl.id) ?? []).some(here) || (ones.get(thingKey(tpl.title, tpl.at!.padStart(5, '0'))) ?? []).some(here)) continue;
       const slot = gridSlot(k, tpl.at!, o.dayStart);
       out.push(task(tpl, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, tpl.dur ?? tpl.est) }));
     }

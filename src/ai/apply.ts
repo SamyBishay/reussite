@@ -3,7 +3,7 @@
 // wouldn't change anything, and prepares low-level writes. `applyPlanned` runs only the ticked
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
-import { eventClash, eventClashes, NUDGE_ONLY, type Change, type ChangeSet, type TaskSet } from './changeset';
+import { eventClash, eventClashes, NUDGE_ONLY, UNTIL_STANDING, type Change, type ChangeSet, type TaskSet } from './changeset';
 import type { Address, Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
@@ -244,6 +244,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'task.create': {
         const f = cleanTask(c.set);
         if (!f.label) delete f.label;
+        // Only a standing step ends on a day; on any other step `until` would sit unread, so it is cut back with the reason.
+        if (!f.template && 'until' in f) { if (f.until) refused.push({ at: ci, text: UNTIL_STANDING }); delete f.until; }
         const event = f.kind === 'event';
         if (!event) delete f.nudge; // only an event has a check date
         else if (c.ref) eventRefs.add(asRef(c.ref));
@@ -258,6 +260,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (!tk || tk.status === 'dropped') break;
         const f = cleanTask(c.set);
         delete f.template; // only a new step becomes a standing obligation
+        if (!tk.template && 'until' in f) { if (f.until) refused.push({ at: ci, text: UNTIL_STANDING }); delete f.until; }
         if (tk.template) {
           // A standing obligation keeps a time and its days, and has no date: the copies placed on days have those.
           if ('at' in f && !f.at) delete f.at;

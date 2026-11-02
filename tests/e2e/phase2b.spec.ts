@@ -126,7 +126,8 @@ test('the choir phrase makes a standing item with its time and weekday, and Undo
   // The item as the sheet shows it.
   await goTab(page, 'projects');
   await page.locator('[data-project=inbox] summary').click();
-  await page.locator('[data-project=inbox] [data-task]', { hasText: 'Choir' }).getByRole('button', { name: /Choir/ }).click();
+  // On a Monday the series also puts tonight's copy on the list (series.spec.ts), so the inbox holds two Choir rows: this one is the series.
+  await page.locator(`[data-project=inbox] [data-task="${c!.id}"]`).getByRole('button', { name: /Choir/ }).click();
   await expect(sheet(page).locator('input[name=title]')).toHaveValue('Choir, Hill House 602');
   await expect(sheet(page).locator('input[name=at]')).toHaveValue('19:00');
   await expandSheet(page);

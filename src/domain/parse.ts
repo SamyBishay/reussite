@@ -239,6 +239,21 @@ function takeDate(w: Work, today: DayKey): DayKey | null {
   return null;
 }
 
+// The last day of a repeat: "every Monday 19:00 until 31 Dec", "jusqu'au 31 décembre". Only read in a line that repeats, and only when the date follows the word.
+const UNTIL = new RegExp(NOT_WORD + "(?:until|till|through|jusqu'au|jusqu'a|jusqu'en|jusque)\\s+", 'u');
+function takeUntil(w: Work, today: DayKey): DayKey | null {
+  const s0 = w.s, f0 = w.f;
+  const m = w.take(UNTIL);
+  if (!m) return null;
+  const g0 = w.f;
+  const k = takeDate(w, today);
+  let i = 0;
+  while (i < g0.length && g0[i] === w.f[i]) i++;
+  if (k && !g0.slice(m.index, i).trim()) return k;
+  w.s = s0; w.f = f0;
+  return null;
+}
+
 /** "at <a place the person has>": the place, and it leaves the title. */
 function takePlace(w: Work, places: Named[]): string | null {
   const byLength = [...places].sort((a, b) => norm(b.name).length - norm(a.name).length);
@@ -274,19 +289,21 @@ function tidy(w: Work, hasTime: boolean): string {
 }
 
 // ---------- reading a line ----------
-interface Parts { title: string; at?: string; dur?: number; est?: number; due?: DayKey; where?: string; recur?: Recurrence }
+interface Parts { title: string; at?: string; dur?: number; est?: number; due?: DayKey; until?: DayKey; where?: string; recur?: Recurrence }
 
 function extract(text: string, ctx: ParseContext): Parts {
   const w = new Work(text);
   const recur = takeRecurrence(w);
   const time = takeTime(w);
   const len = takeDuration(w);
+  const until = recur ? takeUntil(w, ctx.today) : null;
   const due = takeDate(w, ctx.today);
   const where = takePlace(w, ctx.places);
   const p: Parts = { title: tidy(w, !!time) };
   if (recur) p.recur = recur;
   if (time) { p.at = time.at; if (time.dur ?? len) p.dur = time.dur ?? len!; } else if (len) p.est = len;
   if (due) p.due = due;
+  if (until) p.until = until;
   if (where) p.where = where;
   return p;
 }
@@ -424,11 +441,13 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
       const set: Record<string, unknown> = { title: p.title, template: true, weekdays: days, at: p.at };
       if (p.dur) set.dur = p.dur;
       if (p.where) set.where = p.where;
+      if (p.until) set.until = p.until;
       return { kind: 'changes', cs: csOf([create(set)]), intent: 'standing', title: p.title };
     }
     // A repeat with no time: the sheet's Repeats field holds it (a change-set has no way to say it).
     const rep: Repeat = { every: r.every, unit: r.unit, from: 'due' };
     if (r.unit === 'week' && r.weekdays.length) rep.weekdays = r.weekdays;
+    if (p.until) rep.until = p.until;
     const sheet = { ...prefill, repeat: rep };
     sheet.due = p.due ?? (r.weekdays.length ? nextWeekday(ctx.today, r.weekdays.find(d => d > isoDow(ctx.today)) ?? r.weekdays[0]!) : ctx.today);
     return { kind: 'sheet', prefill: sheet };

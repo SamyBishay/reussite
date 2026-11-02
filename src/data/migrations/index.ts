@@ -107,6 +107,13 @@ const v7: Migration = data => ({
   }),
 });
 
+/**
+ * 7 → 8 (an end date for standing items): a standing step may carry `until`, the last day it comes, optional, and none stored for what
+ * exists (no end). Nothing stored changes; the bump keeps a device on schema 7 from reading a schema 8 batch (it goes read-only
+ * instead of dropping the end date, or placing a series after the day it was told to stop).
+ */
+const v8: Migration = data => data;
+
 /** What the 6 → 7 migration did: projects given an outcome (they had a goal to copy), and steps given `advances`. */
 export interface GoalsReport { outcomes: number; steps: number }
 export function goalsReport(before: Data, after: Data): GoalsReport {
@@ -125,7 +132,7 @@ export function goalsReport(before: Data, after: Data): GoalsReport {
 }
 
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6, v7];
+export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6, v7, v8];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;

@@ -228,6 +228,19 @@ describe('standing obligations and repeats', () => {
     expect(run('water the plants every Sunday')).toEqual({ kind: 'sheet', prefill: { title: 'Water the plants', repeat: { every: 1, unit: 'week', from: 'due', weekdays: [7] }, due: '2026-10-25' } });
     expect(run('water the plants every Monday and Tuesday')).toMatchObject({ kind: 'sheet', prefill: { repeat: { weekdays: [1, 2] }, due: '2026-10-26' } });
   });
+  it('an end date after the repeat is the standing item\'s last day, not its due date', () => {
+    expect(made('rehearsal every Monday 19:00 until 31 Dec')).toEqual({ title: 'Rehearsal', template: true, weekdays: [1], at: '19:00', until: '2026-12-31' });
+    expect(made('choir every Tuesday 18:00 until December 31')).toMatchObject({ weekdays: [2], at: '18:00', until: '2026-12-31' });
+    expect(made('chorale chaque mardi 18h jusqu\'au 31 décembre')).toMatchObject({ title: 'Chorale', weekdays: [2], at: '18:00', until: '2026-12-31' });
+    expect(made('yoga every day 9:00 until 2027-01-15')).toMatchObject({ weekdays: [1, 2, 3, 4, 5, 6, 7], until: '2027-01-15' });
+    // A repeat for the sheet carries it in the Repeats field's own end date.
+    expect(run('water the plants every 3 days until 31 Dec')).toMatchObject({ kind: 'sheet', prefill: { repeat: { every: 3, unit: 'day', until: '2026-12-31' } } });
+    expect((run('water the plants every 3 days until 31 Dec') as { prefill: Record<string, unknown> }).prefill.due).toBe('2026-10-20');
+  });
+  it('"until" without a repeat stays a due date, and a word that is not followed by a date is left in the title', () => {
+    expect(made('finish the report until Friday')).toMatchObject({ due: '2026-10-23' });
+    expect((made('choir every Monday 19:00 until further notice') as { until?: string }).until).toBeUndefined();
+  });
   it('a repeat the schedule cannot hold keeps its time on the sheet', () => {
     expect(run('review every 2 weeks 19:00')).toMatchObject({ kind: 'sheet', prefill: { title: 'Review', at: '19:00', repeat: { every: 2, unit: 'week' } } });
     expect(run('yoga every Monday 19:00 from 26/10')).toMatchObject({ kind: 'sheet', prefill: { at: '19:00', due: '2026-10-26' } });

@@ -17,6 +17,7 @@ import { bigMoment, celebrate } from './celebrate';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
 import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../domain/duration';
 import { addDays, daysBetween } from '../domain/dates';
+import { ended } from '../domain/standing';
 import { isAllowedLink } from '../domain/links';
 import { moveTo } from '../domain/moves';
 import { stillOnDue, minutesBetween, shiftTime } from '../domain/calendar';
@@ -426,6 +427,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const [repeat, setRepeat] = useState<Repeat | null>(tk.repeat ?? null);
   const [rule, setRule] = useState(tk.dueRule ?? null);
   const [weekdays, setWeekdays] = useState<number[]>(tk.weekdays ?? []);
+  const [untilV, setUntilV] = useState(tk.until ?? '');
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
   // Something the person waits for (an event) hides what a step has: time, estimate, quadrant, due date.
@@ -456,7 +458,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const measure = measureOf(proj);
   const asksGoal = !tk.template && !ev && !!proj && tk.project !== 'inbox' && (measure.kind !== 'none' || tk.advances != null);
   // Optional fields live under More; the summary counts the ones that have a value.
-  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], rule);
+  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -511,6 +513,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       // Empty = the default from Settings; 0 = notified at the time itself.
       if (el('lead')) setIf('lead', v('lead').trim() === '' ? null : Math.max(0, Math.min(240, Math.round(Number(v('lead')) || 0))), tk.lead);
       setIf('weekdays', tk.template && weekdays.length ? [...weekdays].sort() : null, tk.weekdays);
+      if (tk.template) setIf('until', /^\d{4}-\d{2}-\d{2}$/.test(untilV) ? untilV : null, tk.until ?? null);
     }
     if (asksGoal) {
       setIf('advances', advV, tk.advances);
@@ -699,6 +702,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <div class="field" data-testid="weekdays"><span>{t('weekdaysField')}</span>
             <div class="toggles">{weekdayNames().map(([d, name]) => <label class="tog small"><input type="checkbox" checked={weekdays.includes(d)} onChange={e => setWeekdays((e.target as HTMLInputElement).checked ? [...weekdays, d].sort() : weekdays.filter(x => x !== d))} /> {name}</label>)}</div>
             <p class="hint">{t('weekdaysHint')}</p>
+            <label class="field"><span>{t('untilField')}</span><input type="date" name="until" data-testid="until" value={untilV} onChange={e => setUntilV((e.target as HTMLInputElement).value)} /></label>
+            <p class="hint">{t('untilHint')}</p>
           </div>
         )}
         {stayList.length > 0 && !ev && (
@@ -848,7 +853,7 @@ function PickSheet({ kind, k }: { kind: 'list' | 'standing'; k: string }) {
   const [added, setAdded] = useState<string[]>([]);
   const [offers, setOffers] = useState<Record<string, OfferChoice>>({});
   const items = kind === 'standing'
-    ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && inPlace(x)).sort(byOrder)
+    ? [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && !ended(x, today.value) && inPlace(x)).sort(byOrder)
     : candidates(k).slice(0, 14);
   const add = (id: string) => { setAdded([...added, id]); void (kind === 'standing' ? cloneTemplate(id, k, undefined, offerFieldsFor(offers[id])) : addByHand(id, false, k)); };
   return (

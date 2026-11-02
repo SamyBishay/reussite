@@ -7,6 +7,7 @@ import { addDays, type DayKey } from './dates';
 import { isoDow } from './repeat';
 import { atOnDay, placeOfDay } from './zone';
 import { zoneOfPlace } from './places';
+import { copyId, standingDay, thingKey } from './standing';
 
 type WithId<T> = T & { id: string };
 
@@ -70,14 +71,15 @@ export function clockOf(s: unknown): string | null {
   return m[1]!.padStart(2, '0') + ':' + m[2];
 }
 const leadOf = (n: unknown): number | null => (typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.min(Math.round(n), 24 * 60) : null);
-const weekdaysOf = (w: unknown): number[] => (Array.isArray(w) ? w.map(Number).filter(d => Number.isInteger(d) && d >= 1 && d <= 7) : []);
 
 /**
  * Every timed event on days `from`..`to` (inclusive), soonest first.
  *
  * Fixed-time items: a step with `at` that is due that day (or, with no due date, on that day's
- * list); a standing item (`template`) with `weekdays` and `at` on each matching day, unless a copy
- * of it was already placed that day (the copy is the event, or, done or dropped, there is none).
+ * list); a standing item (`template`) with `weekdays` and `at` on each matching day up to its `until`,
+ * unless a copy of it was already placed that day (the copy is the event, or, done or dropped, there is none)
+ * or a one-off with the same words and time stands in for it (a series made the morning of its first day
+ * next to a one-off for tonight must not be two).
  * Done and dropped items have no event. The check-in, the close and the review are left out of
  * days where they were already done.
  */
@@ -116,14 +118,15 @@ export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: Da
       if (!inRange(k)) continue;
       placed.add(root + ':' + k);
       const clock = clockOf(t.at);
+      if (clock && !t.from) placed.add(thingKey(t.title, clock) + ':' + k);
       if (clock && t.status === 'open') fixed(t, k, clock, tpl);
     }
   }
   for (const tpl of data.tasks.values()) {
-    const clock = clockOf(tpl.at), days = weekdaysOf(tpl.weekdays);
-    if (!tpl.template || tpl.status !== 'open' || !clock || !days.length) continue;
+    const clock = clockOf(tpl.at);
+    if (!tpl.template || tpl.status !== 'open' || !clock) continue;
     for (let k = from; k <= to; k = addDays(k, 1)) {
-      if (!days.includes(isoDow(k)) || placed.has(tpl.id + ':' + k)) continue;
+      if (!standingDay(tpl, k) || placed.has(tpl.id + ':' + k) || placed.has(thingKey(tpl.title, clock) + ':' + k) || data.tasks.has(copyId(tpl.id, k))) continue;
       put({
         id: 'fixed:' + tpl.id + ':' + k, kind: 'fixed', day: k, clock, taskId: tpl.id, rootId: tpl.id, template: true, title: tpl.title,
         lead: leadOf(tpl.lead) ?? leadOf(s.notifyLead) ?? 30, dur: tpl.dur ?? tpl.est ?? null,
@@ -152,3 +155,22 @@ export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: Da
 
 /** The fixed-time items of one day that are still to come or going on (not done, not dropped). */
 export const fixedOnDay = (data: AgendaData, s: AgendaSettings, k: DayKey): AgendaEvent[] => agenda(data, s, k, k).filter(e => e.kind === 'fixed');
+
+/** The length, in minutes, a fixed-time item takes up when it has none of its own (src/domain/dayOrder.ts reads the same). */
+const DEFAULT_MINUTES = 30;
+
+/**
+ * The standing items whose occurrence on day `k` has no card yet and is still to come or going on at `now` (epoch ms): the ones to place on
+ * that day's list. A series that offers an address or a person is left to the check-in, which asks. Nothing for a copy already made (even
+ * one the person moved), a one-off that stands in for it, an `until` passed, or a time long gone.
+ */
+export function standingToPlace(data: AgendaData, s: AgendaSettings, k: DayKey, now: number): WithId<Task>[] {
+  const out: WithId<Task>[] = [];
+  for (const e of fixedOnDay(data, s, k)) {
+    if (!e.template || !e.taskId) continue;
+    const tpl = data.tasks.get(e.taskId);
+    if (!tpl || tpl.offer || e.at + (e.dur && e.dur > 0 ? e.dur : DEFAULT_MINUTES) * 60_000 <= now) continue;
+    out.push(tpl);
+  }
+  return out;
+}

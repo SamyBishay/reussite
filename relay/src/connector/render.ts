@@ -47,9 +47,21 @@ export function chains(v: View): ChainIndex {
 }
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 /** When a standing step comes back: "every day at 20:00", "Mon Thu at 19:00". */
-export function standingText(t: Pick<Task, 'weekdays' | 'at'>): string {
+export function standingText(t: Pick<Task, 'weekdays' | 'at'> & Partial<Pick<Task, 'until'>>): string {
   const w = Array.isArray(t.weekdays) ? [...new Set(t.weekdays.map(Number).filter(d => Number.isInteger(d) && d >= 1 && d <= 7))].sort() : [];
-  return (w.length === 7 ? 'every day' : w.length ? w.map(d => DOW[d - 1]).join(' ') : 'on no day') + (t.at ? ' at ' + t.at : '');
+  return (w.length === 7 ? 'every day' : w.length ? w.map(d => DOW[d - 1]).join(' ') : 'on no day') + (t.at ? ' at ' + t.at : '') + (t.until ? ' until ' + t.until : '');
+}
+
+/**
+ * The standing steps that come on day `k` and have no card on it yet, still to come or going on at the request (a past day has none): what the
+ * app places on the day's list as soon as it is open, shown here so that `today` and `get_day` never hide an occurrence the calendar has.
+ */
+function standingOn(v: View, k: string): TaskW[] {
+  if (k < v.today) return [];
+  const now = v.at.getTime();
+  return fixedOnDay({ tasks: v.tasks, days: v.days, decisions: v.decisions, places: v.places, stays: v.stays }, v.settings, k)
+    .filter(e => e.template && e.taskId && v.tasks.has(e.taskId) && (k > v.today || e.at + (e.dur && e.dur > 0 ? e.dur : 30) * 60_000 > now))
+    .map(e => v.tasks.get(e.taskId!)!);
 }
 
 /** A step as a line; a chain's head says "+n after" and its chain's date, a step that waits says so, a standing step when it comes back. */
@@ -133,8 +145,8 @@ export function dayText(v: View, k: string): string {
   // The morning's shape (the app's check-in): from when, until when. Launch points no longer exist; a stored one is not shown.
   if (day?.shape?.start) L.push(`Shape: from ${day.shape.start}${day.shape.end ? ` until ${day.shape.end}` : ''} (${day.shape.preset} day).`);
   if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
-  const fixed = fixedOn(d, k);
-  if (fixed.length) L.push('Fixed times:\n' + fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`).join('\n'));
+  const fixed = fixedOn(d, k), series = standingOn(v, k);
+  if (fixed.length || series.length) L.push('Fixed times:\n' + [...fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`), ...series.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)} [no card on the day yet: the app puts it on the list when it opens; do not add a copy]`)].sort().join('\n'));
   // Things the person waits for whose check date has come: asked from that day until answered, as Today does. Not steps, never on the list.
   if (k >= v.today) {
     const checks = nudgesDue(v.tasks.values(), k);

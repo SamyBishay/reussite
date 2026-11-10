@@ -11,6 +11,7 @@ import {
 } from './actions';
 import { openHappened } from './EventUi';
 import { ConfirmButton, DropButton } from './ConfirmButton';
+import { Clock } from './Clock';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
 import { More, countSet } from './More';
@@ -560,6 +561,13 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   return (
     <form onSubmit={submit} data-testid="task-sheet">
       <h3><Title s={tk.title} /></h3>
+      {tk.started && !draft && !wasEvent && (
+        <div class="runstrip" data-testid="run-strip" role="group" aria-label={t('running')}>
+          <Clock tk={tk} big />
+          <button class="btn small" type="button" data-testid="run-pause" onClick={() => pauseTimer(id)}>{t('pause')}</button>
+          <button class="btn small primary" type="button" data-testid="run-done" onClick={() => openDone(id)}>{t('done')}</button>
+        </div>
+      )}
       <p class="hint">{t(hint)}</p>
       <div class="actionbar" data-testid="task-actions">
         <button class="btn small primary" type="submit">{t('save')}</button>

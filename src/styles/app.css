@@ -970,3 +970,6 @@ body > .row,body > li{list-style:none}
 .btn.twostate{display:inline-grid;justify-items:center;align-items:center;white-space:nowrap}
 .btn.twostate>span,.btn.twostate::after{grid-area:1/1}
 .btn.twostate::after{content:attr(data-other);visibility:hidden;height:0;overflow:hidden}
+/* The running card opens its sheet from a tap on its body; the sheet repeats the timer, Pause and Done at its top. */
+.first.running,.row.running{cursor:pointer}
+.runstrip{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s2) 0}

@@ -9,7 +9,7 @@ test('a dropped card leaves every list, waits in the Cemetery, and Restore bring
   await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
   const sheet = page.getByTestId('sheet');
   await sheet.getByRole('button', { name: 'Drop it' }).click();
-  await sheet.getByRole('button', { name: 'Tap again to drop it' }).click();
+  await sheet.getByRole('button', { name: 'Really?' }).click();
   await expect(row).toHaveCount(0);
 
   await goTab(page, 'matrix');
@@ -28,7 +28,7 @@ test('Start here drops its card on a second tap, on Today', async ({ page }) => 
   const first = page.getByTestId('first');
   await expect(first).toContainText('Dull errand');
   await first.getByTestId('drop').click();
-  await expect(first.getByTestId('drop')).toHaveText('Tap again to drop it');
+  await expect(first.getByTestId('drop')).toHaveText('Really?');
   await first.getByTestId('drop').click();
   await expect(page.locator('[data-task]', { hasText: 'Dull errand' })).toHaveCount(0);
 });

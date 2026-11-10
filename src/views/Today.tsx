@@ -67,7 +67,7 @@ function FirstCard({ tk }: { tk: Tk }) {
   const run = !!tk.started;
   const hasGo = !!tk.link || !!tk.prompt || !!tk.app;
   return (
-    <section class={'first' + (run ? ' running' : ' focus')} data-testid="first" data-task={tk.id}>
+    <section class={'first' + (run ? ' running' : ' focus')} data-testid="first" data-task={tk.id} onClick={run ? openFromBody(tk.id) : undefined}>
       <div class="top">
         <p class="eyebrow">{run ? t('running') : t('startHere')}</p>
         {!run && <div class="edits"><button class="btn" type="button" onClick={() => openSwap()}>{t('swap')}</button><button class="btn" type="button" onClick={() => openTask(tk.id)}>{t('edit')}</button></div>}
@@ -147,11 +147,17 @@ function SuggestCard({ tk, played }: { tk: Tk; played: boolean }) {
   );
 }
 
+/** A tap on the body of the running card opens its sheet; the timer keeps running. Buttons, links and fields inside it keep their own meaning. */
+const openFromBody = (id: string) => (e: MouseEvent) => {
+  if ((e.target as Element).closest('button, a, input, select, textarea, summary, label, .grip')) return;
+  openTask(id);
+};
+
 function Row({ tk, n, k, optional, at, shown }: { tk: Tk; n: number; k: string; optional?: boolean; at?: string; shown?: readonly string[] }) {
   const done = tk.status === 'done', run = !!tk.started;
   const isToday = k === today.value;
   return (
-    <li {...(done ? {} : { 'data-sort': '' })} class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id}>
+    <li {...(done ? {} : { 'data-sort': '' })} class={'row' + (done ? ' done' : '') + (run ? ' running' : '') + (optional ? ' optional' : '')} data-row={tk.id} data-task={tk.id} onClick={run ? openFromBody(tk.id) : undefined}>
       <span class={'num' + (done ? ' suit-' + tk.suit : '')} aria-hidden="true">{done ? settings.value.suits[tk.suit]?.glyph : n}</span>
       <div class="body">
         <p class="t"><Title s={tk.title} />{optional && <> <span class="tag">{t('ifRoom')}</span></>}</p>

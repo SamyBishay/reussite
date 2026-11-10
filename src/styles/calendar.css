@@ -60,6 +60,15 @@
 .sxhost .sx__event.k-projected .sx__time-grid-event-location{display:none}
 .sxhost .sx__event.k-projected.is-running{border-style:solid!important;border-color:var(--accent)!important;color:var(--ink)!important;font-style:normal;font-weight:600}
 
+/* A slot (time set aside to work on a step): drawn in every view, set apart from an event by a dashed outline in the suit's colour and
+   a light fill, with the word "slot" before the name. An event is solid with its bar; a slot is never taken for one. */
+.sxhost .sx__event.k-slot{
+  background:color-mix(in srgb,var(--card) 70%,transparent)!important;
+  border:1.5px dashed var(--ink-2)!important;color:var(--ink)!important;font-weight:500;cursor:pointer;
+}
+.sxhost .sx__event.k-slot.is-done{border-style:dotted!important}
+.sxhost .sx__list-event.k-slot{border-left:3px dashed var(--ink-2)}
+
 /* Month */
 .sxhost .sx__month-grid-day__header-date{font-family:var(--mono);cursor:pointer;min-width:28px;min-height:28px}
 .sxhost .sx__month-grid-day{cursor:pointer}

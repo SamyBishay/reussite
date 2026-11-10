@@ -292,6 +292,16 @@ textarea{min-height:84px;resize:vertical}
 .item .t{overflow-wrap:anywhere}
 .due{font:600 12.5px var(--mono);color:var(--ink-2);white-space:nowrap}
 .due.soon{color:var(--red)}
+.row3{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,.8fr);gap:var(--s3)}
+@media (max-width:360px){.row3{grid-template-columns:repeat(2,minmax(0,1fr))}.row3>:first-child{grid-column:1/-1}}
+/* A slot is time set aside, not an appointment: a dashed outline in the accent, never red, never filled like an event. */
+.slotchip{border:1px dashed var(--accent);background:none;border-radius:12px;padding:1px 8px;font:600 12.5px var(--mono);color:var(--ink-2);cursor:pointer;text-align:left;white-space:normal;overflow-wrap:anywhere;max-width:100%;min-width:0}
+.slotchip.passed{border-style:dotted;border-color:var(--line);color:var(--ink-2)}
+.slotchip b{font-weight:700;color:var(--ink)}
+.tag.missed{border-style:dashed;color:var(--ink-2)}
+.fieldgroup{border:1px solid var(--line);border-radius:12px;padding:var(--s3);margin:var(--s3) 0}
+.fieldgroup>legend{font:600 13px var(--mono);padding:0 6px;color:var(--ink-2)}
+.slotlog ul{margin:0;padding-left:1.1em}
 .axis-note{margin-top:var(--s3)}
 
 /* ---------- projects ---------- */

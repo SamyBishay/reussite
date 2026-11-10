@@ -28,8 +28,8 @@ describe('migrations', () => {
 
   it('refuses data from a newer version', async () => {
     const db = fresh();
-    await setLocal(db, 'schema', 9);
-    expect(await runMigrations(db)).toEqual({ status: 'newer', found: 9 });
+    await setLocal(db, 'schema', SCHEMA_VERSION + 1);
+    expect(await runMigrations(db)).toEqual({ status: 'newer', found: SCHEMA_VERSION + 1 });
   });
 
   it('fails loudly on a gap', () => {
@@ -66,7 +66,7 @@ describe('migration 1 → 2', () => {
   });
 });
 
-describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7 and 7 → 8', () => {
+describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7, 7 → 8 and 8 → 9', () => {
   // A schema-1, 2, 3, 4, 5 or 6 database as the earlier versions left them: Dexie version 1 (schemas 1 and 2: no memory or
   // exchanges tables), 2 (schema 3: no addresses or people tables) or 3 (schemas 4 and 5).
   async function oldDb(name: string, schema: number): Promise<void> {
@@ -200,6 +200,28 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7 and 7 → 8', (
 
   it('7 → 8: a partial document from a device on schema 7 is brought up as it is, with no end date added', () => {
     const [part] = upgradeEntries([{ c: 'tasks', d: { id: 't', _v: 7, _hlc: { at: 'h1' }, at: '20:00' } }]);
+    expect(part!.d).toEqual({ id: 't', _v: SCHEMA_VERSION, _hlc: { at: 'h1' }, at: '20:00' });
+  });
+
+  it('8 → 9 changes no data: a step has no deadline time, slot or slot log until one is written, and a second run changes nothing', () => {
+    const slot = { day: '2026-11-12', at: '14:00', dur: 45 };
+    const data = {
+      tasks: [
+        { id: 'a', _v: 8, _hlc: { title: 'h', at: 'h' }, title: 'Call the bank', at: '10:00', dur: 30, due: '2026-11-12', odd: 1 },
+        { id: 'b', _v: 9, _hlc: { title: 'h', slot: 'h9' }, title: 'Write the report', slot, slotLog: [{ from: null, to: slot, at: '2026-11-10T08:00:00Z', by: 'me', why: 'planned' }], dueAt: '17:00' },
+        { id: 'c', _v: 8, _hlc: { title: 'h' }, _del: 'h2', title: 'Gone' },
+      ],
+    };
+    const out = migrateData(structuredClone(data), 8, 9);
+    expect(out).toEqual(data);
+    for (const k of ['dueAt', 'slot', 'slotLog']) expect(out.tasks![0]).not.toHaveProperty(k);
+    expect(out.tasks![0]).toMatchObject({ at: '10:00', dur: 30 }); // an `at` already stored stays an event
+    expect(out.tasks![1]).toMatchObject({ slot, dueAt: '17:00', _hlc: { slot: 'h9' } });
+    expect(migrateData(structuredClone(out), 9, 9)).toEqual(out);
+  });
+
+  it('8 → 9: a partial document from a device on schema 8 is brought up as it is, with no slot added', () => {
+    const [part] = upgradeEntries([{ c: 'tasks', d: { id: 't', _v: 8, _hlc: { at: 'h1' }, at: '20:00' } }]);
     expect(part!.d).toEqual({ id: 't', _v: SCHEMA_VERSION, _hlc: { at: 'h1' }, at: '20:00' });
   });
 

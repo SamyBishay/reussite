@@ -12,7 +12,9 @@ import '../styles/calendar.css';
 import { effect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { addresses, clockNow, days, hereZone, places, projects, settings, stays, tasks, today } from '../app/store';
-import { moveFixed } from '../app/actions';
+import { moveFixed, setSlot } from '../app/actions';
+import { T } from '../app/model';
+import { readSlot } from '../domain/slots';
 import { openTask } from '../app/sheets';
 import { dayView } from './Today';
 import { deviceZone } from '../domain/zones';
@@ -43,14 +45,14 @@ export function windowAround(date: string): [string, string] {
 const plain = (k: string) => Temporal.PlainDate.from(k);
 
 function labelOf(e: CalViewEvent): string {
-  return e.kind === 'half' ? t('halfIn', { half: t(e.half === 'am' ? 'halfAm' : 'halfPm'), area: e.title }) : e.title;
+  return e.kind === 'half' ? t('halfIn', { half: t(e.half === 'am' ? 'halfAm' : 'halfPm'), area: e.title }) : e.kind === 'slot' ? t('slotWord') + ' · ' + e.title : e.title;
 }
 
 /** A library event from ours. A fixed-time item is on the grid at its clock reading; a stay and a half day are all-day. */
 function toLibrary(e: CalViewEvent, zone: string, phone: boolean): CalendarEventExternal {
   const base = {
     id: e.id, title: labelOf(e), ...(e.where ? { location: e.where } : {}),
-    calendarId: e.kind === 'stay' ? 'stay' : e.suit && e.kind === 'fixed' ? e.suit : 'neutral',
+    calendarId: e.kind === 'stay' ? 'stay' : e.suit && (e.kind === 'fixed' || e.kind === 'slot') ? e.suit : 'neutral',
     _options: { disableDND: phone || !e.movable, disableResize: true, additionalClasses: ['k-' + e.kind, ...(e.done ? ['is-done'] : []), ...(e.running ? ['is-running'] : []), ...(e.time ? ['is-timed'] : [])] },
   };
   if (e.time && e.endTime) {
@@ -116,10 +118,14 @@ export function CalendarGrid({ mode, date }: GridProps) {
         onEventUpdate: ev => {
           const e = byId.get(String(ev.id));
           const start = ev.start;
-          if (e?.kind !== 'fixed' || !e.taskId || !(start instanceof Temporal.ZonedDateTime)) { sync(); return; }
+          if ((e?.kind !== 'fixed' && e?.kind !== 'slot') || !e.taskId || !(start instanceof Temporal.ZonedDateTime)) { sync(); return; }
           const slot = appSlot(start.toPlainDate().toString(), start.toPlainTime().toString().slice(0, 5), settings.value.dayStart);
-          if (slot.day !== e.day || slot.at !== e.time) void moveFixed(e.taskId, slot.day, slot.at).finally(sync);
-          else sync();
+          if (slot.day === e.day && slot.at === e.time) { sync(); return; }
+          // A slot moves as a slot (its length kept, the move logged); an event moves as an event.
+          if (e.kind === 'slot') {
+            const cur = readSlot(T(e.taskId)?.slot);
+            void (cur ? setSlot(e.taskId, { day: slot.day, at: slot.at, dur: cur.dur }, 'moved') : Promise.resolve()).finally(sync);
+          } else void moveFixed(e.taskId, slot.day, slot.at).finally(sync);
         },
       },
     }, [controls, createDragAndDropPlugin(15), createCurrentTimePlugin()]);

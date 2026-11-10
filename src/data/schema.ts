@@ -4,7 +4,7 @@ import type { Repeat } from '../domain/repeat';
 import type { Option } from '../domain/decision';
 export type { Repeat, Option };
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export type SuitId = 'S' | 'D' | 'C' | 'H';
 export type By = 'me' | 'ai';
@@ -99,8 +99,20 @@ export interface Task {
   advances?: boolean | null;
   /** What a done advancing step adds to a count measure; missing or 0 reads as 1. */
   advanceBy?: number | null;
+  // v2, schema 9 (deadlines, events and slots apart)
+  /** The time of day (HH:MM) a deadline falls on, with `due`. Only a deadline: it never puts the step in a calendar or off a list. */
+  dueAt?: string | null;
+  /** Time set aside to work on this step, on a day: movable, never an event, one per step. Plan my day or the person writes it. */
+  slot?: Slot | null;
+  /** Where the slot has been: the last 20 writes of `slot`, newest last. */
+  slotLog?: SlotLogEntry[] | null;
   [extra: string]: unknown;
 }
+
+/** Work time set aside for a step: a day, a start (HH:MM) and a length in minutes. */
+export interface Slot { day: DayKey; at: string; dur: number }
+/** One write of a step's slot: `from` and `to` are null when it was set for the first time or taken off. `why`: planned, set, moved, reslotted, cleared. */
+export interface SlotLogEntry { from: Slot | null; to: Slot | null; at: string; by: By; why: 'planned' | 'set' | 'moved' | 'reslotted' | 'cleared' }
 
 export type SessionSource = 'timer' | 'corrected' | 'typed';
 export interface Session {

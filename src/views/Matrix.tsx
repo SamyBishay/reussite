@@ -10,7 +10,7 @@ import { chainOfHead, isOpen, isObligation, inPlace, quad, byPriority, rawPlan, 
 import { matchesQuery, queryWords } from '../domain/search';
 import { ChainFold } from '../app/ChainFold';
 import { openTask, openMove, moveToQuadrant } from '../app/sheets';
-import { Title, Suit, quadName, DueChip, suitName, openSheet } from '../app/ui';
+import { Title, Suit, quadName, DueChip, dueText, suitName, openSheet } from '../app/ui';
 import { daysBetween } from '../domain/dates';
 import { Fold } from '../app/More';
 import { t, fmtDate, type Key } from '../i18n';
@@ -92,15 +92,15 @@ function Mini({ tk, planned }: { tk: T; planned: boolean }) {
   const chain = chainOfHead(tk.id);
   const n = tk.due ? daysBetween(today.value, tk.due) : null;
   const near = n !== null && n <= settings.value.urgencyDays;
-  const dueText = n === null ? '' : n === 0 ? t('dueToday') : n === 1 ? t('dueTomorrow') : n < 0 ? t('dueLate', { n: Math.abs(n) }) : t('dueOn', { date: fmtDate(tk.due!) });
+  const dueTitle = tk.due ? dueText(tk.due, tk.dueAt).text : '';
   return (
     <div class={'item mini' + (planned ? ' planned' : '')} draggable data-task={tk.id} onDragStart={e => { e.dataTransfer?.setData('text/plain', tk.id); (e.currentTarget as HTMLElement).classList.add('dragging'); }}
       onDragEnd={e => (e.currentTarget as HTMLElement).classList.remove('dragging')}>
       <Suit s={tk.suit} />
-      <button type="button" class="linklike t" {...handlers} title={dueText || undefined} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
+      <button type="button" class="linklike t" {...handlers} title={dueTitle || undefined} onClick={() => { if (!wasLong()) openTask(tk.id); }}>
         <span class="clamp">{tk.kind === 'decision' && '⚖ '}<Title s={tk.title} />{chain && <> <span class="chainbadge" data-testid="chain-count" title={t('chainAfter', { n: chain.after })}>+{chain.after}</span></>}</span>
       </button>
-      {near && <span class="dot" role="img" aria-label={dueText} data-testid="mini-dot" />}
+      {near && <span class="dot" role="img" aria-label={dueTitle} data-testid="mini-dot" />}
     </div>
   );
 }

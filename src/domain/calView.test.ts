@@ -170,3 +170,23 @@ describe('projected steps (today’s order on the grid)', () => {
     expect(evs[0]).toMatchObject({ day: '2026-10-26', date: '2026-10-27', time: '01:00', endTime: '01:30' });
   });
 });
+
+describe('slots (time set aside) are drawn but are never events', () => {
+  const slot = { day: '2026-10-22', at: '14:00', dur: 45 };
+  it('draws a slot as its own kind at its time and length, movable; the same step with a due time is not an event', () => {
+    const d = data({ tasks: [task('rep', { title: 'Write the report for the council', slot, due: '2026-10-23', dueAt: '17:00' }), task('ev', { title: 'Call the dentist about the crown', at: '09:15', due: '2026-10-22', dur: 45 })] });
+    const evs = calViewEvents(d, opts(), '2026-10-19', '2026-10-25');
+    expect(evs.find(e => e.taskId === 'rep')).toMatchObject({ kind: 'slot', date: '2026-10-22', time: '14:00', endTime: '14:45', movable: true });
+    expect(kinds(evs).sort()).toEqual(['fixed:ev', 'slot:rep']); // a deadline's time (`dueAt`) puts nothing on the calendar
+  });
+  it('leaves out a slot of a dropped or waiting-for step and of a standing item, strikes a done one and keeps it still', () => {
+    const d = data({ tasks: [task('a', { title: 'Done thing', slot, status: 'done' }), task('b', { title: 'Dropped thing', slot, status: 'dropped' }), task('c', { title: 'Wait for the call back', slot, kind: 'event' })] });
+    const evs = calViewEvents(d, opts(), '2026-10-19', '2026-10-25');
+    expect(kinds(evs)).toEqual(['slot:a']);
+    expect(evs[0]).toMatchObject({ done: true, movable: false });
+  });
+  it('a time before the day starts is drawn on the next date, as an event is', () => {
+    const d = data({ tasks: [task('n', { title: 'Night shift', slot: { day: '2026-10-22', at: '01:00', dur: 30 } })] });
+    expect(calViewEvents(d, opts(), '2026-10-19', '2026-10-25')[0]).toMatchObject({ kind: 'slot', day: '2026-10-22', date: '2026-10-23', time: '01:00' });
+  });
+});

@@ -36,6 +36,19 @@ describe('the feed text', () => {
     expect(t).not.toMatch(/plumber|bill|VALUE=DATE|TRANSPARENT/i);
   });
 
+  it('carries neither a slot nor a deadline\'s time: only the step with an `at` is an event', () => {
+    const slot = { day: '2026-10-22', at: '14:00', dur: 45 };
+    const w = state({
+      tasks: [task('dent', { title: 'Dentist', at: '09:15', due: '2026-10-22', dur: 45 }), task('rep', { title: 'Write the council report', slot, due: '2026-10-22', dueAt: '17:00' })],
+      days: [day('2026-10-22', { plan: ['rep', 'dent'] })],
+    });
+    for (const detail of ['times', 'labels', 'full'] as const) {
+      const t = feedText(w, agendaSettings(), '2026-10-20', detail, itr, 0);
+      expect(t.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+      expect(t).not.toMatch(/council|report|T140000|T170000/i);
+    }
+  });
+
   it('leaves out dropped and done steps, one-off or standing, and their copies', () => {
     const w = state({
       tasks: [

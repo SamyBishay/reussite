@@ -1,8 +1,9 @@
 // Shared view pieces, ported from v1's render helpers.
 import type { ComponentChildren } from 'preact';
 import { settings, projects, today, toast } from './store';
-import { quad, blocked, waitingOn, spentOf, hasLogged, personal, estModel, addressById, personById, addressesOn, type T } from './model';
+import { quad, blocked, dueStateOf, eventMissed, waitingOn, spentOf, hasLogged, personal, estModel, addressById, personById, addressesOn, type T } from './model';
 import { openDue } from './due';
+import { SlotChip } from './SlotUi';
 import { OPTS } from '../domain/estimates';
 import { startTask } from './actions';
 import { t, lang, fmtDate, fmtMin, frTypo, type Key } from '../i18n';
@@ -33,10 +34,22 @@ export function Suit({ s }: { s: SuitId }) {
   return <span class={'g suit-' + s} aria-label={suitName(s, true)}>{g}</span>;
 }
 
-export function Due({ k }: { k: string }) {
-  const n = daysBetween(today.value, k);
-  const txt = n === 0 ? t('dueToday') : n === 1 ? t('dueTomorrow') : n < 0 ? t('dueLate', { n: Math.abs(n) }) : t('dueOn', { date: fmtDate(k) });
-  return <span class={'due' + (n <= settings.value.urgencyDays ? ' soon' : '')}>{txt}</span>;
+/**
+ * What a deadline says, and whether it is red. A date ahead: "due 12 Nov" (with its time when it has one). Today: "due today" and the
+ * time; once the time has gone, "was due 17:00" in the plain colour. An earlier day: "carried over · 8 Nov", not "late": a deadline
+ * that passed is not a failure to mark. Red is for what is still ahead and within the urgency window.
+ */
+export function dueText(k: string, at?: string | null): { text: string; soon: boolean } {
+  const n = daysBetween(today.value, k), st = dueStateOf(k, at);
+  const base = n === 0 ? t('dueToday') : n === 1 ? t('dueTomorrow') : n < 0 ? t('dueCarried', { date: fmtDate(k) }) : t('dueOn', { date: fmtDate(k) });
+  if (st === 'carried') return { text: base, soon: false };
+  if (st === 'passed') return { text: t('duePassed', { time: at! }), soon: false };
+  return { text: at ? t('dueWithTime', { when: base, time: at }) : base, soon: n <= settings.value.urgencyDays };
+}
+
+export function Due({ k, at }: { k: string; at?: string | null }) {
+  const d = dueText(k, at);
+  return <span class={'due' + (d.soon ? ' soon' : '')}>{d.text}</span>;
 }
 
 /** A step's due date, editable where it appears (brief §5): today, tomorrow, +1 week, clear. */
@@ -45,7 +58,7 @@ export function DueChip({ tk, empty = false }: { tk: T; empty?: boolean }) {
   if (!tk.due && !empty) return null;
   return (
     <button type="button" class="duechip" onClick={e => { e.stopPropagation(); openDue(tk.id); }} aria-label={t('changeDue')}>
-      {tk.due ? <Due k={tk.due} /> : <span class="due muted">{t('addDue')}</span>}
+      {tk.due ? <Due k={tk.due} at={tk.dueAt} /> : <span class="due muted">{t('addDue')}</span>}
     </button>
   );
 }
@@ -96,7 +109,9 @@ export function Meta({ tk, withQuad }: { tk: T; withQuad?: boolean }) {
     <Est key="e" tk={tk} />,
     spent > 0 && <span key="sp">{t('timedSoFar', { t: fmtMin(spent) })}</span>,
     tk.at && <span key="at" class="due">{tk.at}{tk.dur ? '–' + shiftTime(tk.at, tk.dur) : ''}</span>,
-    tk.due ? (tk.status === 'open' ? <DueChip key="due" tk={tk} /> : <Due key="due" k={tk.due} />) : tk.urgent && tk.status === 'open' && <span key="u" class="tag urg">{t('urgent')}</span>,
+    tk.at && eventMissed(tk) && <span key="ms" class="tag missed" data-testid="missed-tag">{t('missedTag')}</span>,
+    tk.slot && <SlotChip key="sl" tk={tk} />,
+    tk.due ? (tk.status === 'open' ? <DueChip key="due" tk={tk} /> : <Due key="due" k={tk.due} at={tk.dueAt} />) : tk.urgent && tk.status === 'open' && <span key="u" class="tag urg">{t('urgent')}</span>,
     tk.repeat && <span key="r" class="tag" title={t('repeats')}>↻</span>,
     blocked(tk) && w && <span key="w" class="tag">{t('waitsFor', { what: w.title.length > 40 ? w.title.slice(0, 38) + '…' : w.title })}</span>,
     (tk.carried || 0) >= 3 && <span key="c" class="tag warn">{t('carriedTag', { n: tk.carried })}</span>,

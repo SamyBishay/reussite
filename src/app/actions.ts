@@ -2,7 +2,8 @@
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
 import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects, decisions } from './store';
-import type { Address, Day, Person, Place, Project, Session, SessionSource, Stay, Task, Verdict, Visit } from '../data/schema';
+import type { Address, By, Day, Person, Place, Project, Session, SessionSource, Slot, SlotLogEntry, Stay, Task, Verdict, Visit } from '../data/schema';
+import { writeSlot } from '../domain/slots';
 import { fieldsOf } from '../data/doc';
 import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
@@ -232,7 +233,18 @@ export async function movePlan(id: string, dir: -1 | 1, k = today.value, shown?:
 }
 /** "Plan it on…": put a step on a day's list (and so off any other day's). */
 export const planOn = (id: string, k: string) => addToday(id, true, k);
-export const dueOn = (id: string, k: string | null) => patchTask(id, { due: k, dueRule: null });
+export const dueOn = (id: string, k: string | null, at?: string | null) =>
+  patchTask(id, { due: k, dueRule: null, ...(k ? (at !== undefined ? { dueAt: at || null } : {}) : { dueAt: null }) });
+/**
+ * Write a step's one slot (time set aside to work on it) and keep where it was in its log (src/domain/slots.ts). `reslotted` is a new
+ * slot after the old one passed; it is only ever written by the person's confirm, never by the clock.
+ */
+export async function setSlot(id: string, to: Slot | null, why: SlotLogEntry['why'] = 'set', by: By = 'me') {
+  const tk = T(id);
+  if (!tk) return;
+  const w = writeSlot(tk, to, by, why, new Date().toISOString());
+  if ('slot' in w) await patchTask(id, w);
+}
 /**
  * A step left open on day `k`, shelved: off that day's list and with no due date, and still open (it stays in the Matrix and its
  * project, and comes back when a day is planned). "Another day" with no day: putting it aside is not dropping it.

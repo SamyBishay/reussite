@@ -114,6 +114,14 @@ const v7: Migration = data => ({
  */
 const v8: Migration = data => data;
 
+/**
+ * 8 → 9 (deadlines, events and slots apart): a step may carry `dueAt` (the time of its deadline), `slot` (work time set aside, a day,
+ * a start and a length) and `slotLog` (where the slot has been), all optional. Nothing stored changes: a step written before reads as
+ * having none, and an `at` already stored stays an event. The bump keeps a device on schema 8 from reading a schema 9 batch (it goes
+ * read-only instead of dropping a slot or showing a deadline's time as nothing).
+ */
+const v9: Migration = data => data;
+
 /** What the 6 → 7 migration did: projects given an outcome (they had a goal to copy), and steps given `advances`. */
 export interface GoalsReport { outcomes: number; steps: number }
 export function goalsReport(before: Data, after: Data): GoalsReport {
@@ -132,7 +140,7 @@ export function goalsReport(before: Data, after: Data): GoalsReport {
 }
 
 /** migrations[i] upgrades from version i+1 to version i+2. Version 1 is the first v2 schema. */
-export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6, v7, v8];
+export const MIGRATIONS: Migration[] = [v2, v3, v4, v5, v6, v7, v8, v9];
 
 export function migrateData(data: Data, from: number, to = SCHEMA_VERSION, list = MIGRATIONS): Data {
   let out = data;

@@ -1,7 +1,8 @@
 // Read-side helpers, ported from v1. They read the signals, so views that call them re-render.
 import { computed } from '@preact/signals';
 import { tasks, sessions, projects, days, settings, today, pagePlace, viewAll, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
-import type { Task, Day, Session, Address, Person } from '../data/schema';
+import type { Task, Day, Session, Address, Person, Slot } from '../data/schema';
+import { dueState, slotState, eventMissed as eventMissedAt, type DueState, type SlotState } from '../domain/slots';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import type { Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
@@ -233,6 +234,16 @@ const nameOf = (x: Pick<T, 'title'>): string => {
   const cut = s.slice(0, 39), i = cut.lastIndexOf(' ');
   return (i > 20 ? cut.slice(0, i) : cut).trimEnd() + '…';
 };
+
+/** The clock reading where the person is, HH:MM (the signal moves with the clock, so what reads it re-renders). */
+export const clockHHMM = (): string => wallOf(clockNow.value, hereZone.value);
+/** Where a deadline stands today (src/domain/slots.ts): ahead, today, passed (today, its time gone) or carried (an earlier day). */
+export const dueStateOf = (due: string, dueAt?: string | null, k: string = today.value): DueState => dueState(due, dueAt, k, clockHHMM(), settings.value.dayStart);
+/** Is this step an event whose time has passed and that is not done? (Its day is its due date, else the list it is on.) */
+export const eventMissed = (tk: Task & { id: string }): boolean =>
+  tk.status === 'open' && !!tk.at && eventMissedAt(tk.due ?? L.ownerDay({ days: days.value, tasks: tasks.value }, tk.id), tk.at, tk.dur, today.value, clockHHMM(), settings.value.dayStart);
+/** Where a step's slot stands against the clock: ahead, now or passed. */
+export const slotStateOf = (s: Slot, k: string = today.value): SlotState => slotState(s, k, clockHHMM(), settings.value.dayStart);
 
 /** What the greeting's line needs (src/domain/greeting.ts): the hour where the person is, for the greetings that belong to it. */
 export function lineInputNow(): LineInput {

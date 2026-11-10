@@ -12,6 +12,7 @@ import { fixedOn, rawPlan, whereOf } from './lists';
 import { inArea, type Half } from './areas';
 import { locationOf } from './calItems';
 import { copyId, standingDay, thingKey } from './standing';
+import { readSlot } from './slots';
 
 type WithId<T> = T & { id: string };
 
@@ -30,7 +31,7 @@ export interface CalViewOptions {
   area?: string | null;
 }
 
-export type CalViewKind = 'fixed' | 'stay' | 'half' | 'projected';
+export type CalViewKind = 'fixed' | 'stay' | 'half' | 'projected' | 'slot';
 
 export interface CalViewEvent {
   /** Unique in a view: `<kind>:<id>:<day>`. */
@@ -125,6 +126,14 @@ export function calViewEvents(data: CalViewData, o: CalViewOptions, from: DayKey
       if (!standingDay(tpl, k) || data.tasks.has(copyId(tpl.id, k)) || (copies.get(tpl.id) ?? []).some(here) || (ones.get(thingKey(tpl.title, tpl.at!.padStart(5, '0'))) ?? []).some(here)) continue;
       const slot = gridSlot(k, tpl.at!, o.dayStart);
       out.push(task(tpl, k, { date: slot.date, time: slot.time, endTime: endClock(slot.time, tpl.dur ?? tpl.est) }));
+    }
+    // Slots: time set aside to work on a step, drawn in the same views as events but never one (kind 'slot'; the feed and the exports
+    // never read this kind). A step with a time of its own is an event and keeps that; a slot on it is drawn too, set apart by its style.
+    for (const t of data.tasks.values()) {
+      const sl = readSlot(t.slot);
+      if (!sl || sl.day !== k || t.template || t.kind === 'event' || t.status === 'dropped' || waiting(t)) continue;
+      const g = gridSlot(k, sl.at, o.dayStart), done = t.status === 'done';
+      out.push({ id: `slot:${t.id}:${k}`, kind: 'slot', day: k, date: g.date, time: g.time, endTime: endClock(g.time, sl.dur), taskId: t.id, title: shortLabel(t), suit: t.suit, ...(where(t) ? { where: where(t) } : {}), done, movable: !done });
     }
     for (const a of data.days.get(k)?.areas ?? []) {
       const name = data.places.get(a.placeId)?.name;

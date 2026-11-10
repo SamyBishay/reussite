@@ -32,12 +32,14 @@ export function DayPick({ value, onPick, clear, extra }: { value: string | null;
 
 function DueSheet({ id }: { id: string }) {
   const tk = T(id);
+  const [at, setAt] = useState(tk?.dueAt ?? '');
   if (!tk) return null;
   return (
     <div>
       <h3>{t('dueTitle')}</h3>
       <p class="hint">{tk.title}</p>
-      <DayPick value={tk.due} clear onPick={d => { closeSheet(); void dueOn(id, d); }} />
+      <label class="field"><span>{t('dueTimeField')}</span><input type="time" value={at} data-testid="due-time" onInput={e => setAt((e.target as HTMLInputElement).value)} /></label>
+      <DayPick value={tk.due} clear onPick={d => { closeSheet(); void dueOn(id, d, at || null); }} />
     </div>
   );
 }

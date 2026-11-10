@@ -5,6 +5,12 @@ import { importSample, morningClock } from './helpers';
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+/**
+ * WARNING (10 Nov): this spoofs `navigator.standalone`, the user agent and `screen`, so the app takes its iPhone branch in Firefox. It proves the band's
+ * CSS is built and positioned as designed under THAT assumption. It does not prove what an iPhone does: the real `env(safe-area-inset-top)`, the real
+ * status-bar style and the real visual viewport can only be read on the phone (Settings → Layout diagnostics). Five fixes on 1 Nov passed this test and
+ * the phone still failed. Invariant 11: unverified on device.
+ */
 async function island(page: Page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'standalone', { value: true });

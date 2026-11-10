@@ -25,6 +25,7 @@ import { openGoalReview } from '../flows/reviewai';
 import { aiOn } from '../ai/ask';
 import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
+import { openLayoutDiagnostics } from '../app/LayoutDiagnostics';
 import { AiSettings } from '../ai/AiSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
 import { ConnectorSettings } from '../app/ConnectorSettings';
@@ -433,6 +434,7 @@ export function Settings() {
           <details class="more"><summary>{t('changelog')}</summary><pre class="changelog">{changelog}</pre></details>
         </More>
       </Fold>
+      <button type="button" class="setrow" onClick={openLayoutDiagnostics} data-testid="layout-diag-open"><b>{t('diagLRow')}</b><small>{t('diagLRowHint')}</small></button>
     </div>
   );
 }

@@ -96,12 +96,12 @@ function StillOnSheet({ id, then }: { id: string; then: 'ask' | 'pause' | 'done'
   const save = (m: number) => {
     const min = Math.max(1, Math.min(elapsed, Math.round(m)));
     if (then === 'done') { closeSheet(); void complete(tk, null, today.value, min); }
-    else if (then === 'pause') openPause(id, min);
+    else if (then === 'pause') pauseTimer(id, min);
     else { closeSheet(); void stopTimer(tk, 'later', null, min); toast(t('timeFixed', { t: fmtMin(min) })); }
   };
   const going = () => {
     if (then === 'done') { closeSheet(); void complete(tk, null); }
-    else if (then === 'pause') openPause(id, undefined, true);
+    else if (then === 'pause') pauseTimer(id, undefined, true);
     else { closeSheet(); void patchTask(id, { stillAt: new Date().toISOString() }); }
   };
   const est = personal(tk)?.value ?? tk.est;
@@ -797,33 +797,13 @@ function MoveSheet({ id, mode }: { id: string; mode: 'matrix' | 'calendar' }) {
 }
 
 // ---------- pause ----------
-const WHY: [string, Key][] = [['later', 'whyLater'], ['focus', 'whyFocus'], ['blocked', 'whyBlocked'], ['interrupted', 'whyInterrupted'], ['tired', 'whyTired']];
-/** Pause: a resume note and a reason. A long-running timer first asks "Still on…?". */
-export function openPause(id: string, minutes?: number, checked = false) {
+/** Pause is one tap (10 Nov): the timer stops at once, the session is logged with no reason and the card keeps its resume note. A long-running timer first asks "Still on…?". */
+export function pauseTimer(id: string, minutes?: number, checked = false) {
   const tk = T(id);
   if (!tk) return;
   if (tk.started && minutes == null && !checked && isLong(tk)) return openStillOn(id, 'pause');
-  const submit = (e: Event) => {
-    e.preventDefault();
-    const f = e.currentTarget as HTMLFormElement;
-    const why = (f.querySelector('input[name=why]:checked') as HTMLInputElement | null)?.value || 'later';
-    const res = (f.elements.namedItem('resume') as HTMLInputElement).value.trim();
-    closeSheet();
-    const cur = T(id);
-    if (cur?.started) void stopTimer(cur, why, res, minutes);
-    else void patchTask(id, { resume: res || null });
-  };
-  openSheet(
-    <form onSubmit={submit} key={'p' + id}>
-      <h3>{t('pauseTitle')}</h3>
-      <p class="hint">{t('pauseHint')}{minutes != null ? ' ' + t('pauseWith', { t: fmtMin(minutes) }) : ''}</p>
-      <label class="field"><span>{t('whereStopped')}</span><input type="text" name="resume" defaultValue={tk.resume ?? ''} placeholder={t('whereStoppedPh')} autocomplete="off" /></label>
-      <div class="field"><span>{t('whyStop')}</span>
-        <div class="chips-pick">{WHY.map(([v, k], i) => <label class="pickchip"><input type="radio" name="why" value={v} defaultChecked={i === 0} /> {t(k)}</label>)}</div>
-      </div>
-      <div class="actions"><button class="btn primary" type="submit">{t('pauseTimer')}</button><button class="btn ghost" type="button" onClick={closeSheet}>{t('keepGoing')}</button></div>
-    </form>,
-  );
+  closeSheet();
+  if (tk.started) { void stopTimer(tk, null, null, minutes); toast(minutes != null ? t('pausedWith', { t: fmtMin(minutes) }) : t('paused')); }
 }
 
 // ---------- swap the first step ----------

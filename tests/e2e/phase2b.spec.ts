@@ -207,7 +207,7 @@ test('no list yet shows Plan the day; with a plan open Home has no card, and a s
   }
   await goTab(page, 'today');
   await page.getByTestId('first').getByRole('button', { name: 'Pause' }).click();
-  await sheet(page).getByRole('button', { name: /^(Pause|Save)/ }).first().click();
+  await expect(sheet(page)).toBeHidden(); // Pause is one tap now (10 Nov): no sheet
 });
 
 test('done on a step applies at once, asks how long in the card, and Undo takes back the step and the time', async ({ page }) => {

@@ -75,7 +75,7 @@ If a step comes with an app or a link, the button opens it for you and starts th
 
 ## Pause and stuck
 
-Tap **Pause** to stop. Leave yourself the next verb ("write the second paragraph") so starting again takes no thought, and say why you stopped.
+Tap **Pause** to stop: one tap, nothing to answer. The time so far is saved, and the step keeps its "where I stopped" note.
 
 Tap **I'm stuck** when it won't start. Réussite asks which friction it is:
 

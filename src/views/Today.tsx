@@ -4,7 +4,7 @@ import { signal } from '@preact/signals';
 import { today, settings, currentStay, places, hereZone } from '../app/store';
 import { T, dayCards, dayDoc, whereOf, candidates, carriedOn, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, nudges, type T as Tk } from '../app/model';
 import { startTask, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
-import { openTask, openDone, openPause, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
+import { openTask, openDone, pauseTimer, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { DoneFold } from '../app/DoneFold';
@@ -81,14 +81,14 @@ function FirstCard({ tk }: { tk: Tk }) {
         {run ? (
           <>
             <span class="timerbox"><TimerRings tk={tk} /><Clock tk={tk} big /></span>
-            <button class="btn" type="button" onClick={() => openPause(tk.id)}>{t('pause')}</button>
+            <button class="btn" type="button" data-testid="pause-timer" onClick={() => pauseTimer(tk.id)}>{t('pause')}</button>
             <button class="btn primary" type="button" onClick={() => openDone(tk.id)}>{t('done')}</button>
             <GoLink tk={tk} variant="small" />
           </>
         ) : (
           <>
             {hasGo && <GoLink tk={tk} variant="big" />}
-            <button class={'btn' + (hasGo ? '' : ' primary')} type="button" onClick={() => startTask(tk.id)}>{hasGo ? t('justStartTimer') : t('startTimer')}</button>
+            <button class={'btn' + (hasGo ? '' : ' primary')} type="button" data-testid="go-timer" onClick={() => startTask(tk.id)}>{hasGo ? t('justStartTimer') : t('startTimer')}</button>
             <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
           </>
         )}
@@ -169,7 +169,7 @@ function Row({ tk, n, k, optional, at, shown }: { tk: Tk; n: number; k: string; 
           : !isToday ? <>
             <button class="icon-btn" type="button" onClick={() => removeToday(tk.id, k)} aria-label={t('takeOff')}>×</button>
           </>
-          : run ? <><button class="icon-btn" type="button" onClick={() => openPause(tk.id)} aria-label={t('pause')}>❚❚</button><button class="icon-btn ok" type="button" onClick={() => openDone(tk.id)} aria-label={t('done')}>✓</button></>
+          : run ? <><button class="icon-btn" type="button" onClick={() => pauseTimer(tk.id)} aria-label={t('pause')}>❚❚</button><button class="icon-btn ok" type="button" onClick={() => openDone(tk.id)} aria-label={t('done')}>✓</button></>
             : <><button class="icon-btn" type="button" onClick={() => startTask(tk.id)} aria-label={t('startTimer')}>▶</button><button class="icon-btn ok" type="button" onClick={() => openDone(tk.id)} aria-label={t('done')} data-testid="row-done">✓</button></>}
         <button class="icon-btn" type="button" onClick={() => openTask(tk.id)} aria-label={t('details')} data-testid="details">⋯</button>
       </div>

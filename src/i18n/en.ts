@@ -171,6 +171,8 @@ export const en = {
   noDecisions: 'Decisions you make land here: the options, the weighted balances, the choice, and what would make you revisit it.',
   // why
   whyDone: 'Done',
+  paused: 'Paused.',
+  pausedWith: 'Paused. {t} saved.',
   whyLater: 'Done for now',
   whyFocus: 'Lost focus',
   whyBlocked: 'Blocked',
@@ -220,13 +222,6 @@ export const en = {
   saveTime: 'Save this time',
   didntTime: 'I didn’t time it',
   // pause
-  pauseTitle: 'Pause',
-  pauseHint: 'Leave yourself the next verb, so starting again takes no thought.',
-  whereStopped: 'Where did you stop? Next step:',
-  whereStoppedPh: 'Write the second paragraph…',
-  whyStop: 'Why did you stop?',
-  pauseTimer: 'Pause the timer',
-  keepGoing: 'Keep going',
   // swap / pick
   swapTitle: 'Swap the first step',
   swapHint: 'Pick one of the same weight. The current one moves down the list, it doesn’t disappear.',
@@ -556,7 +551,6 @@ export const en = {
   orStoppedClock: 'Or the time you stopped',
   stoppedClock: 'Stopped at',
   timeFixed: 'Saved {t}.',
-  pauseWith: '{t} will be saved.',
   // phase 1: moving steps
   // phase 1: frame and places
   tabCalendar: 'Calendar',

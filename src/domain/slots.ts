@@ -92,3 +92,25 @@ export function slotsFor(o: DayOrder, day: DayKey, end: number, zone?: string): 
   }
   return out;
 }
+
+export interface TimeCounts { steps: number; due: number; dueAt: number; at: number; fixed: number; standing: number; slot: number; atFromAi: number }
+type Counted = { template?: boolean; _del?: unknown; due?: string | null; dueAt?: string | null; at?: string | null; fixed?: boolean; slot?: unknown; src?: string; by?: string };
+/**
+ * How many steps carry each of the three times, for the owner to see what exists (counts only, no titles). `atFromAi`: a one-off, not
+ * fixed, step with an `at` that an AI made (`src` or `by` is `ai`): the `at` that planning, not the person, probably wrote. A step
+ * the person made and an AI later gave an `at` is not told apart; that is the limit of the stored data.
+ */
+export function timeCounts(tasks: Iterable<Counted>): TimeCounts {
+  const c: TimeCounts = { steps: 0, due: 0, dueAt: 0, at: 0, fixed: 0, standing: 0, slot: 0, atFromAi: 0 };
+  for (const t of tasks) {
+    if (t._del) continue;
+    if (t.template) { c.standing++; continue; }
+    c.steps++;
+    if (t.due) c.due++;
+    if (t.dueAt) c.dueAt++;
+    if (t.fixed) c.fixed++;
+    if (readSlot(t.slot)) c.slot++;
+    if (t.at) { c.at++; if (!t.fixed && (t.src === 'ai' || t.by === 'ai')) c.atFromAi++; }
+  }
+  return c;
+}

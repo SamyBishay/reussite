@@ -1,7 +1,8 @@
 // Copy diagnostics (brief §11): a plain-text block a friend can paste into a bug report.
 // Never titles, notes, names, addresses, keys or the recovery key: only versions, states,
 // counts, times and error text that has been scrubbed (errorlog.ts).
-import { db, settings } from './store';
+import { db, settings, tasks } from './store';
+import { timeCounts } from '../domain/slots';
 import { getLocal } from '../data/db';
 import { SCHEMA_VERSION } from '../data/schema';
 import { readErrors, scrub, AI_ERR_KEY } from './errorlog';
@@ -52,6 +53,10 @@ export async function buildDiagnostics(): Promise<string> {
     line('installed to Home Screen', standalone), line('notifications', perm), line('storage persisted', persisted));
   out.push('', '[ai]', line('provider', s.aiProvider === 'none' ? 'none' : s.aiProvider + host),
     line('last error', ai ? ai.code + (ai.status ? ' ' + ai.status : '') + ' at ' + ai.at : 'none'));
+
+  const n = timeCounts(tasks.value.values());
+  out.push('', '[times]', line('steps', n.steps), line('with a due date', n.due), line('with a due time', n.dueAt), line('with an at (appointment)', n.at), line('fixed at the check-in', n.fixed),
+    line('at made by an AI (not fixed)', n.atFromAi), line('standing', n.standing), line('with a slot', n.slot));
 
   for (const name of new Set([...Object.keys(FALLBACK), ...registry.keys()])) {
     out.push('', '[' + name + ']');

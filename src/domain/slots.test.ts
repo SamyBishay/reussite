@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventMissed, dueState, slotState, readSlot, writeSlot, slotsFor, slotEnd, MAX_SLOT_LOG } from './slots';
+import { timeCounts, eventMissed, dueState, slotState, readSlot, writeSlot, slotsFor, slotEnd, MAX_SLOT_LOG } from './slots';
 import type { DayOrder } from './dayOrder';
 import { wallToInstant } from './zone';
 
@@ -100,5 +100,15 @@ describe('eventMissed: an appointment that passed stays, marked', () => {
     expect(eventMissed('2026-11-11', '08:00', 30, '2026-11-10', '23:00')).toBe(false);
     expect(eventMissed(null, '10:00', 30, '2026-11-10', '23:00')).toBe(false);
     expect(eventMissed('2026-11-10', 'x', 30, '2026-11-10', '23:00')).toBe(false);
+  });
+});
+
+describe('timeCounts: what exists, counts only', () => {
+  it('counts each field on one-off steps, standing apart, deleted ignored, and the at an AI made', () => {
+    const c = timeCounts([
+      { due: '2026-11-10' }, { due: '2026-11-11', dueAt: '17:00' }, { at: '10:00', src: 'ai' }, { at: '11:00', src: 'page' }, { at: '12:00', fixed: true, src: 'ai' },
+      { at: '13:00', by: 'ai' }, { slot: { day: '2026-11-10', at: '14:00', dur: 30 } }, { slot: 'junk' }, { template: true, at: '19:00' }, { _del: 'h', at: '09:00', src: 'ai' },
+    ]);
+    expect(c).toEqual({ steps: 8, due: 2, dueAt: 1, at: 4, fixed: 1, standing: 1, slot: 1, atFromAi: 2 });
   });
 });

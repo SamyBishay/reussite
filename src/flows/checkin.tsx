@@ -8,7 +8,7 @@ import { areaOfStep } from '../app/areas';
 import { areaName, placeName } from '../app/sheets';
 import { areasOnPage, HALF_DAY_AT, type Half, type HalfDay } from '../domain/areas';
 import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, personal, planEst, lastDoneOf, cardsOn, minutesOn, timeOnDay, dayZone, dayOrderOf, carriedOn, missedOn, type T as Tk } from '../app/model';
-import { dayPatch, cloneTemplate, addSession, newTaskDoc, startTask } from '../app/actions';
+import { dayPatch, cloneTemplate, addSession, newTaskDoc, startTask, planDaySlots } from '../app/actions';
 import { CarriedFlow, MissedFlow } from '../app/CarryUi';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Meta, Est, Suit, quadName, suitName, timerLabel } from '../app/ui';
@@ -380,6 +380,7 @@ function Checkin() {
       ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}),
       first: first ? { id: first, title: T(first)?.title ?? '' } : null, load: p.total.est,
     }, plan); // what the plan puts on the day leaves any other day's list (a card is on one list)
+    await planDaySlots(k); // the plan's time: a slot for each planned step, never an `at`
     // The first step alone: the one the day's order puts first now, which a fixed-time item close at hand may be.
     setFirstId(dayOrderOf(k).order[0]?.id ?? first);
     setBusy(false);

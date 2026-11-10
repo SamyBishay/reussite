@@ -52,14 +52,21 @@ export function openSlot(id: string) {
   openSheet(<SlotSheet key={'slot' + id} id={id} />);
 }
 
-/** The slot's three inputs, in a form: a day, a start and a length. Read back by `slotFromForm`. */
+/** The slot's three inputs, in a form: a day, a start and a length, and a button that empties them (a time input cannot always be cleared by hand). Read back by `slotFromForm`. */
 export function SlotFields({ value }: { value: Slot | null }) {
+  // The inputs are uncontrolled and made again (a new key) when emptied: WebKit leaves a date or time input that was set to '' by script
+  // with bad input, which stops the form from being sent.
+  const [vals, setVals] = useState({ day: value?.day ?? '', at: value?.at ?? '', dur: value ? String(value.dur) : '' }), [gen, setGen] = useState(0);
+  const on = (k: 'day' | 'at' | 'dur') => (e: Event) => setVals(v => ({ ...v, [k]: (e.target as HTMLInputElement).value }));
   return (
-    <div class="row3 slotfields" data-testid="slot-fields">
-      <label class="field"><span>{t('day')}</span><input type="date" name="slotDay" defaultValue={value?.day ?? ''} data-testid="slot-day" /></label>
-      <label class="field"><span>{t('slotStart')}</span><input type="time" name="slotAt" defaultValue={value?.at ?? ''} data-testid="slot-at" /></label>
-      <label class="field"><span>{t('slotLen')}</span><input type="number" name="slotDur" min={MIN_SLOT} max="720" inputMode="numeric" defaultValue={value ? String(value.dur) : ''} data-testid="slot-dur" /></label>
-    </div>
+    <>
+      <div class="row3 slotfields" data-testid="slot-fields" key={gen}>
+        <label class="field"><span>{t('day')}</span><input type="date" name="slotDay" defaultValue={vals.day} onInput={on('day')} data-testid="slot-day" /></label>
+        <label class="field"><span>{t('slotStart')}</span><input type="time" name="slotAt" defaultValue={vals.at} onInput={on('at')} data-testid="slot-at" /></label>
+        <label class="field"><span>{t('slotLen')}</span><input type="number" name="slotDur" min={MIN_SLOT} max="720" inputMode="numeric" defaultValue={vals.dur} onInput={on('dur')} data-testid="slot-dur" /></label>
+      </div>
+      {(vals.day || vals.at || vals.dur) && <p class="hint"><button class="btn small ghost" type="button" data-testid="slot-clear" onClick={() => { setVals({ day: '', at: '', dur: '' }); setGen(g => g + 1); }}>{t('slotRemove')}</button></p>}
+    </>
   );
 }
 

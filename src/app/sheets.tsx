@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
 import {
   patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, droppedLine, reopen, setFirst, startTask, addSession, editSession,
@@ -14,6 +14,8 @@ import { ConfirmButton, DropButton } from './ConfirmButton';
 import { Clock } from './Clock';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
+import { SlotFields, SlotLog, slotFromForm } from './SlotUi';
+import { readSlot, writeSlot } from '../domain/slots';
 import { More, countSet } from './More';
 import { bigMoment, celebrate } from './celebrate';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
@@ -486,7 +488,17 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
     if (v('label').trim() !== (tk.label ?? '').trim()) p.label = v('label').trim();
     setIf('urgent', c('urgent'), !!tk.urgent);
     setIf('important', c('important'), !!tk.important);
-    if (!rule) setIf('due', v('due') || null, tk.due);
+    if (!rule) {
+      setIf('due', v('due') || null, tk.due);
+      // The deadline's time goes with its date: none without one.
+      setIf('dueAt', v('due') && v('dueAt') ? v('dueAt') : null, tk.dueAt ?? null);
+    }
+    // The one slot, with its log: the sheet's Save is the person's confirm, so a new slot after the old one passed is a re-slot.
+    if (!ev && el('slotAt')) {
+      const was = readSlot(tk.slot), to = slotFromForm(v);
+      const why = was && !draft && isOpen(tk) && slotStateOf(was) === 'passed' ? 'reslotted' : was ? 'moved' : 'set';
+      Object.assign(p, writeSlot(tk, to, 'me', why, new Date().toISOString()));
+    }
     setIf('suit', v('suit') as Task['suit'], tk.suit);
     if (where !== whereOf(tk)) p.where = where;
     if (v('project')) setIf('project', v('project'), tk.project);
@@ -614,6 +626,14 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
       )}
       {!ev && (
         <>
+      <fieldset class="fieldgroup" data-testid="group-due"><legend>{t('fieldDue')}</legend>
+        <div class="row2">
+          <label class="field"><span>{t('dueField')}</span><input type="date" name="due" defaultValue={tk.due ?? ''} disabled={!!rule} /></label>
+          <label class="field"><span>{t('dueTimeField')}</span><input type="time" name="dueAt" defaultValue={tk.dueAt ?? ''} disabled={!!rule} data-testid="due-at" /></label>
+        </div>
+        <p class="hint">{t('dueFieldHint')}</p>
+      </fieldset>
+      <fieldset class="fieldgroup" data-testid="group-at"><legend>{t('fieldAt')}</legend>
       <div class="row2 timebox" data-testid="timebox">
         <label class="field"><span>{t('startField')}</span>
           <span class="clockpick"><input type="time" name="at" value={atV} onInput={e => setStart((e.target as HTMLInputElement).value)} data-testid="at" />
@@ -631,16 +651,20 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         </>
       )}
       {seen && <p class="hint"><button class="btn small" type="button" data-testid="set-time" onClick={() => setStart(seen.at)}>{t('setTimeHint', { t: seen.at })}</button></p>}
+      <p class="hint">{t('atFieldHint')}</p>
+      </fieldset>
+      <fieldset class="fieldgroup" data-testid="group-slot"><legend>{t('fieldSlot')}</legend>
+        <SlotFields value={readSlot(tk.slot)} />
+        <p class="hint">{t('slotHint')}</p>
+        <SlotLog tk={tk} />
+      </fieldset>
       <div class="field"><span>{t('urgImp')}</span>
         <div class="toggles">
           <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>
           <label class="tog"><input type="checkbox" name="important" defaultChecked={!!tk.important} /> {t('importantLabel')}</label>
         </div>
       </div>
-      <div class="row2">
-        <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
-        <label class="field"><span>{t('dueField')}</span><input type="date" name="due" defaultValue={tk.due ?? ''} disabled={!!rule} /></label>
-      </div>
+      <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
       <label class="field" data-testid="where-field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       {asksGoal && (
         <div class="field" data-testid="moves-goal"><span>{t('movesGoal')}</span>

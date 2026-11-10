@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { today, projects, here } from '../app/store';
 import { placeName } from '../app/sheets';
 import { T, proposalFor, rawPlan, personal, planEst } from '../app/model';
-import { dayPatch } from '../app/actions';
+import { dayPatch, planDaySlots } from '../app/actions';
 import { recordPlanning } from '../app/home';
 import { openSheet, closeSheet } from '../app/sheet';
 import { Title, Suit, suitName } from '../app/ui';
@@ -89,6 +89,7 @@ function Morning() {
     const kept = draft ? keptItems(draft) : [];
     const load = kept.reduce((a, i) => a + ((i.id ? (T(i.id) ? planEst(T(i.id)!) : null) : i.step?.est) ?? 0), 0);
     await dayPatch(k, { checkin: new Date().toISOString(), ...(load ? { load } : {}) });
+    await planDaySlots(k);
     closeSheet();
   };
 

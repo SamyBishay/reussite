@@ -2,7 +2,7 @@
 import { computed } from '@preact/signals';
 import { tasks, sessions, projects, days, settings, today, pagePlace, viewAll, here, hereZone, decisions, places, stays, clockNow, addresses, people, type WithId } from './store';
 import type { Task, Day, Session, Address, Person, Slot } from '../data/schema';
-import { dueState, slotState, eventMissed as eventMissedAt, type DueState, type SlotState } from '../domain/slots';
+import { dueState, slotState, slotsFor, eventMissed as eventMissedAt, type DueState, type SlotState } from '../domain/slots';
 import { fit, predict, type Point, type Prediction } from '../domain/estimates';
 import type { Quadrant } from '../domain/tasks';
 import * as L from '../domain/lists';
@@ -174,6 +174,15 @@ export function dayOrderOf(k: string = today.value): DayOrder {
     now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: start, end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone),
     cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: startedWithLogged(T(rid)!) } : null, optional: new Set(dayDoc(k)?.optional ?? []),
   });
+}
+
+/**
+ * Plan my day's slots for a day: one per open planned step, at the start and for the length the day's one order gives it (`slotsFor`,
+ * src/domain/slots.ts). Fixed-time items are not slots, and a step the day has no room left for gets none.
+ */
+export function slotsOfDay(k: string = today.value): Map<string, Slot> {
+  const s = settings.value, zone = dayZone(k), shape = dayDoc(k)?.shape;
+  return slotsFor(dayOrderOf(k), k, atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone), zone);
 }
 
 /**

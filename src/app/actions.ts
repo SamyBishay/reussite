@@ -1,6 +1,6 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
-import { T, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
+import { T, slotsOfDay, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects, decisions } from './store';
 import type { Address, By, Day, Person, Place, Project, Session, SessionSource, Slot, SlotLogEntry, Stay, Task, Verdict, Visit } from '../data/schema';
 import { writeSlot } from '../domain/slots';
@@ -262,6 +262,13 @@ export async function moveFixed(id: string, k: string, at: string) {
   if (!tk) return;
   if (tk.due) await patchTask(id, { at, due: k, dueRule: null });
   else { await planOn(id, k); await patchTask(id, { at }); }
+}
+/**
+ * Plan my day writes slots, never a time (`at`): once a day's plan is accepted, each open planned step gets the slot the day's order
+ * gives it (replacing an earlier one, which stays in its log). Called after the check-in's and the morning's plan are written.
+ */
+export async function planDaySlots(k: string) {
+  for (const [id, slot] of slotsOfDay(k)) await setSlot(id, slot, 'planned');
 }
 /** A done step moved to another day changes its done date. */
 export const moveDone = (id: string, k: string) => patchTask(id, { doneDay: k, doneAt: k + 'T12:00:00.000Z' });

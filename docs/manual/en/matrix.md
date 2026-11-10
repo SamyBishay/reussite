@@ -31,7 +31,8 @@ Moving a step to another box just sets its two ticks.
 
 - Drag a step to another box, or long-press it on a phone. Or tap the step to open it and use **Move to…**. The small cards have no buttons of their own.
 - **View all 5** under a box opens that quadrant's steps in a sheet, each with its buttons (the **⇄** move button, the date).
-- **All cards** at the bottom opens one list of every step, each with its quadrant named. Search, and filter by project or suit, there.
+- **The search field** at the top narrows the four boxes as you type, by a step's title, short name, note, project or place. Capitals and accents do not matter ("cafe" finds "Café"), and every word you type must be there. The boxes stay; a box with no match says so. The × (or Escape) clears it.
+- **All cards** at the bottom opens one list of every step, each with its quadrant named. Filter by project or suit there; the search at the top narrows this list too.
 - The matrix shows the place you chose to view in the place pill (see [Places and trips](places-and-trips.md)): that place's steps and the ones marked Anywhere, or every step with **Everywhere**.
 - Change a due date wherever a step appears.
 - If you view one of the place's **areas**, the matrix shows the steps set to that area alone (not the place's own, not Anywhere's).

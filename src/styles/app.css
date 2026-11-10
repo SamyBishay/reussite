@@ -973,3 +973,8 @@ body > .row,body > li{list-style:none}
 /* The running card opens its sheet from a tap on its body; the sheet repeats the timer, Pause and Done at its top. */
 .first.running,.row.running{cursor:pointer}
 .runstrip{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s2) 0}
+/* The Matrix's search field: full width at the top, the clear button inside its right end (a 44px target). */
+.matrixsearch{position:relative;margin:0 0 var(--s3)}
+.matrixsearch input[type=search]{width:100%;padding-right:48px}
+.matrixsearch .clear{position:absolute;right:0;top:0;width:44px;height:44px;border:0;background:none;color:var(--ink-2);font-size:22px;line-height:1;cursor:pointer}
+.matrix-none{margin:0 0 var(--s3)}

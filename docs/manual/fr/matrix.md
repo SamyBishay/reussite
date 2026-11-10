@@ -31,7 +31,8 @@ Déplacer une étape dans une autre case règle simplement ses deux cases à coc
 
 - Faites glisser une étape vers une autre case, ou appuyez longuement dessus sur un téléphone. Ou touchez l’étape pour l’ouvrir et utilisez **Déplacer vers…** : les petites cartes n’ont pas de boutons.
 - **Voir les 5** sous une case ouvre les étapes de ce quadrant dans une feuille, chacune avec ses boutons (le déplacement **⇄**, la date).
-- **Toutes les cartes**, en bas, ouvre une seule liste de toutes les étapes, chacune avec son quadrant. Cherchez et filtrez par projet ou par famille là.
+- **Le champ de recherche**, en haut, réduit les quatre boîtes pendant que vous tapez, selon le titre, le nom court, la note, le projet ou le lieu d’une étape. Les majuscules et les accents ne comptent pas (« cafe » trouve « Café »), et chaque mot tapé doit y être. Les boîtes restent ; une boîte sans résultat le dit. La croix (ou Échap) l’efface.
+- **Toutes les cartes**, en bas, ouvre une seule liste de toutes les étapes, chacune avec son quadrant. Filtrez par projet ou par famille là ; la recherche du haut réduit aussi cette liste.
 - Si vous regardez l’une des **zones** du lieu, la matrice montre les étapes de cette zone seule (ni celles du lieu, ni celles de Partout).
 - Une étape qui en attend une autre n’apparaît qu’une fois, en une seule carte : la première étape, avec « +2 après » sous son titre. Touchez-la pour déplier le reste, en grisé. Quand la première est faite, la suivante prend sa place.
 - La matrice montre ce que vous avez choisi de voir dans la pastille du lieu (voir [Lieux et voyages](places-and-trips.md)) : les étapes de ce lieu et celles marquées Partout, ou toutes les étapes avec **Tous les lieux**.

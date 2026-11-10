@@ -713,6 +713,10 @@ export const fr: Partial<Strings> = {
   stepsDoneShort: { one: '{n} étape', other: '{n} étapes' },
   // phase 1: matrix
   search: 'Chercher',
+  matrixSearchPh: 'Chercher dans vos cartes',
+  matrixSearchClear: 'Effacer la recherche',
+  matrixSearchNone: 'Aucune carte ne correspond à « {q} ».',
+  searchBoxNone: 'Rien ici ne correspond.',
   allProjects: 'Tous les projets',
   allSuits: 'Toutes les couleurs',
   moveHint: 'Faites glisser une étape vers un autre quadrant, ou appuyez longuement dessus sur téléphone.',

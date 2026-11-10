@@ -5,8 +5,9 @@ import { Cemetery } from './Cemetery';
 import { Decisions } from './Decisions';
 import { useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { tasks, today, settings, projects } from '../app/store';
-import { chainOfHead, isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, type T } from '../app/model';
+import { tasks, today, settings, projects, places } from '../app/store';
+import { chainOfHead, isOpen, isObligation, inPlace, quad, byPriority, rawPlan, blocked, whereOf, type T } from '../app/model';
+import { matchesQuery, queryWords } from '../domain/search';
 import { ChainFold } from '../app/ChainFold';
 import { openTask, openMove, moveToQuadrant } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, suitName, openSheet } from '../app/ui';
@@ -25,13 +26,20 @@ const META: Record<number, [Key, Key]> = { 1: ['qNowSub', 'qNowHint'], 2: ['qPro
 const QUADS: Quadrant[] = [1, 2, 3, 4];
 /** How many cards a box shows before "View all". */
 const PEEK = 3;
-/** The search and the project and suit filters of the folded list of every card. */
+/** The search (the field at the top of the Matrix: it narrows the four boxes, their View all sheets and the All cards list) and the project and suit filters of All cards. */
 const filters = signal({ q: '', project: '', suit: '' });
+
+/** What a search looks in: the title, the short name, the note, the project's name and the place's name. */
+const searchFields = (x: T): (string | null | undefined)[] => {
+  const w = whereOf(x);
+  return [x.title, x.label, x.note, x.project === 'inbox' ? 'Inbox' : projects.value.get(x.project)?.name, w && w !== 'any' ? places.value.get(w)?.name ?? w : null];
+};
 
 /** The open cards on the page (the view's place and area), and in each quadrant in priority order. */
 function pageCards(): { all: T[]; qs: Record<number, T[]> } {
   // A step that waits for another is inside its head's card ("+n after"), not a card of its own.
-  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x) && !blocked(x) && inPlace(x) && showsInArea('matrix', x));
+  const q = filters.value.q;
+  const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x) && !blocked(x) && inPlace(x) && showsInArea('matrix', x) && matchesQuery(q, searchFields(x)));
   const qs: Record<number, T[]> = { 1: [], 2: [], 3: [], 4: [] };
   all.forEach(x => qs[quad(x)]!.push(x));
   Object.values(qs).forEach(a => a.sort(byPriority));
@@ -104,13 +112,14 @@ function QuadSheet({ k }: { k: Quadrant }) {
   return (
     <div class={'quadsheet q' + k} data-testid="quad-sheet">
       <h3>{quadName(k)} <small>{t(META[k]![0])}</small></h3>
-      {items.length === 0 ? <p class="hint">{t(META[k]![1])}</p> : <ul class="items">{items.map(x => <li key={x.id}><Item tk={x} planned={planSet.has(x.id)} /></li>)}</ul>}
+      {items.length === 0 ? <p class="hint">{queryWords(filters.value.q).length ? t('searchBoxNone') : t(META[k]![1])}</p> : <ul class="items">{items.map(x => <li key={x.id}><Item tk={x} planned={planSet.has(x.id)} /></li>)}</ul>}
     </div>
   );
 }
 
 /** One quadrant: its name and how many (what it means is its tooltip), the first three cards and a button for the rest. A card dropped on it moves there. */
 function Box({ k, items, planSet, over, setOver }: { k: Quadrant; items: T[]; planSet: Set<string>; over: number | null; setOver: (k: number | null) => void }) {
+  const searching = queryWords(filters.value.q).length > 0;
   return (
     <section class={'quad q' + k + (over === k ? ' over' : '')} data-testid={'quad' + k} aria-label={quadName(k)}
       onDragOver={e => { e.preventDefault(); setOver(k); }} onDragLeave={() => setOver(null)}
@@ -120,7 +129,7 @@ function Box({ k, items, planSet, over, setOver }: { k: Quadrant; items: T[]; pl
         <span class="count" data-testid={'quad-count' + k}>{items.length}</span>
       </header>
       {items.length === 0
-        ? <p class="hint quad-empty">{t(META[k]![1])}</p>
+        ? <p class="hint quad-empty">{searching ? t('searchBoxNone') : t(META[k]![1])}</p>
         : <ul class="items">{items.slice(0, PEEK).map(x => <li key={x.id}><Mini tk={x} planned={planSet.has(x.id)} /></li>)}</ul>}
       {items.length > PEEK && <button class="linklike quad-more" type="button" data-testid={'quad-all' + k} onClick={() => openSheet(<QuadSheet k={k} />)}>{t('viewAllN', { n: items.length })}</button>}
     </section>
@@ -132,13 +141,12 @@ function AllCards({ qs, planSet }: { qs: Record<number, T[]>; planSet: Set<strin
   const f = filters.value;
   const set = (p: Partial<typeof f>) => (filters.value = { ...f, ...p });
   const projs = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped');
-  const q = f.q.trim().toLowerCase();
+  // The text search is the field at the top of the Matrix: `qs` is already narrowed by it.
   const list = QUADS.flatMap(k => qs[k]!.map(x => [k, x] as const))
-    .filter(([, x]) => (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit) && (!q || x.title.toLowerCase().includes(q) || (x.note || '').toLowerCase().includes(q)));
+    .filter(([, x]) => (!f.project || x.project === f.project) && (!f.suit || x.suit === f.suit));
   return (
     <div class="allcards">
       <div class="filters" data-testid="filters">
-        <input type="search" value={f.q} placeholder={t('search')} aria-label={t('search')} onInput={e => set({ q: (e.target as HTMLInputElement).value })} />
         <select aria-label={t('project')} value={f.project} onChange={e => set({ project: (e.target as HTMLSelectElement).value })}>
           <option value="">{t('allProjects')}</option>{projs.map(p => <option value={p.id}>{p.name}</option>)}
         </select>
@@ -151,16 +159,32 @@ function AllCards({ qs, planSet }: { qs: Record<number, T[]>; planSet: Set<strin
   );
 }
 
+/** The search field at the top: cards are filtered as you type; the clear button (or Escape) empties it. */
+function SearchField() {
+  const q = filters.value.q;
+  const set = (v: string) => (filters.value = { ...filters.value, q: v });
+  return (
+    <div class="matrixsearch" data-testid="matrix-search-box">
+      <input type="search" value={q} placeholder={t('matrixSearchPh')} aria-label={t('matrixSearchPh')} autocomplete="off" enterkeyhint="search" data-testid="matrix-search"
+        onInput={e => set((e.target as HTMLInputElement).value)} onKeyDown={e => { if (e.key === 'Escape' && q) { e.preventDefault(); set(''); } }} />
+      {q && <button type="button" class="clear" aria-label={t('matrixSearchClear')} data-testid="matrix-search-clear" onClick={() => set('')}>×</button>}
+    </div>
+  );
+}
+
 export function Matrix() {
   const [over, setOver] = useState<number | null>(null);
   const [allOpen, setAllOpen] = useState(false);
   const { all, qs } = pageCards();
   const oblig = [...tasks.value.values()].filter(x => x.status === 'open' && isObligation(x) && inPlace(x)).sort((a, b) => (a.at || '99').localeCompare(b.at || '99') || a.title.localeCompare(b.title));
   const planSet = new Set(rawPlan(today.value));
+  const searching = queryWords(filters.value.q).length > 0;
   return (
     <div>
+      <SearchField />
       <CommandBox scope={{ kind: 'matrix' }} compact />
       <ReviewBanner day={today.value} testid="matrix-review-card" chatTestid="matrix-review-chat" />
+      {searching && all.length === 0 && <p class="hint matrix-none" role="status" data-testid="matrix-search-none">{t('matrixSearchNone', { q: filters.value.q.trim() })}</p>}
       <div class="matrix" data-testid="matrix">
         {QUADS.map(k => <Box key={k} k={k} items={qs[k]!} planSet={planSet} over={over} setOver={setOver} />)}
       </div>

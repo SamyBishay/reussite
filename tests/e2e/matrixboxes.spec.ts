@@ -126,10 +126,10 @@ test('every card is in one list, folded at the bottom, each with its quadrant na
   await expect(list.locator('.item')).toHaveCount(total);
   await expect(list.locator('[data-testid=quad-tag]')).toHaveCount(total);
   await expect(list.locator('.item', { hasText: 'scanned receipts' }).getByTestId('quad-tag')).toHaveText('Later');
-  // The search and the project and suit filters are in the fold.
-  await fold.getByRole('searchbox').fill('receipts');
+  // The project and suit filters are in the fold; the text search is the field at the top of the Matrix (matrixsearch.spec.ts) and narrows this list too.
+  await page.getByTestId('matrix-search').fill('receipts');
   await expect(list.locator('.item')).toHaveCount(1);
-  await fold.getByRole('searchbox').fill('');
+  await page.getByTestId('matrix-search').fill('');
   await fold.getByLabel('Project').selectOption({ label: 'Thesis' });
   await expect(list.locator('.item')).toHaveCount(1);
   await expect(list).toContainText('second paragraph');

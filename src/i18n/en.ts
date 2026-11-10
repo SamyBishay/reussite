@@ -888,6 +888,10 @@ export const en = {
   stepsDoneShort: { one: '{n} step', other: '{n} steps' } as P,
   // phase 1: matrix
   search: 'Search',
+  matrixSearchPh: 'Search your cards',
+  matrixSearchClear: 'Clear the search',
+  matrixSearchNone: 'No card matches “{q}”.',
+  searchBoxNone: 'Nothing here matches.',
   allProjects: 'All projects',
   allSuits: 'All suits',
   moveHint: 'Drag a step to another quadrant, or long-press it on a phone.',

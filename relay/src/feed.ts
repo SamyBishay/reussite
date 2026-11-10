@@ -152,11 +152,35 @@ export function served(ics: string, updated: number, now: number): string {
 export const FEED_CACHE = 'no-cache';
 const text = (status: number) => new Response(null, { status, headers: { 'Cache-Control': 'no-store' } });
 
+/** A fetch is logged at most this often per address (a calendar app asks every few minutes to hours). */
+export const FETCH_LOG_MS = 10 * 60_000;
+
+/**
+ * What kind of calendar app fetched a feed, from its User-Agent: a coarse name, so that an old address can be told from a current one. The full User-Agent
+ * and the IP are never stored.
+ */
+export function clientName(ua: string | null): string {
+  const u = ua ?? '';
+  if (!u) return 'unknown';
+  if (/google-?calendar|googlebot|google-calendar-importer/i.test(u)) return 'Google Calendar';
+  if (/dataaccessd|calendaragent|\biOS\/|accountsd|iphone|ipad|macintosh.*calendar|com\.apple/i.test(u)) return 'Apple Calendar';
+  if (/outlook|microsoft|ms-office|exchange/i.test(u)) return 'Outlook';
+  if (/thunderbird|lightning/i.test(u)) return 'Thunderbird';
+  if (/proton/i.test(u)) return 'Proton Calendar';
+  if (/fastmail/i.test(u)) return 'Fastmail';
+  if (/^mozilla\//i.test(u)) return 'a browser';
+  return u.split(/[\s(]/)[0]!.slice(0, 30) || 'unknown';
+}
+
 /** `GET /cal/:fid.ics`: no sign-in, no CORS. An alias serves the feed it points at. Only misses are counted against the IP. */
 export async function serveFeed(req: Request, env: Env, fid: string): Promise<Response> {
   if (req.method !== 'GET' && req.method !== 'HEAD') return text(405);
-  type Served = { ics: string; updated: number; alias: string | null };
-  let row = FEED_ID.test(fid) ? await env.DB.prepare('SELECT ics, updated, alias FROM feeds WHERE fid = ?1').bind(fid).first<Served>() : null;
+  type Served = { ics: string; updated: number; alias: string | null; fetched?: number | null };
+  let row = FEED_ID.test(fid) ? await env.DB.prepare('SELECT ics, updated, alias, fetched FROM feeds WHERE fid = ?1').bind(fid).first<Served>() : null;
+  // Remember that this address was fetched, and by what kind of app (the address asked for, an old alias included, not the feed it follows).
+  if (row && req.method === 'GET' && Date.now() - (row.fetched ?? 0) >= FETCH_LOG_MS) {
+    await env.DB.prepare('UPDATE feeds SET fetched = ?2, fetched_by = ?3 WHERE fid = ?1').bind(fid, Date.now(), clientName(req.headers.get('User-Agent'))).run();
+  }
   if (row?.alias) row = await env.DB.prepare('SELECT ics, updated, alias FROM feeds WHERE fid = ?1 AND alias IS NULL').bind(row.alias).first<Served>();
   if (!row) {
     if (!(await countKey(env, 'feed-miss:' + clientIp(req), Date.now(), feedMissLimit(env)))) return limited();

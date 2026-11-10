@@ -60,3 +60,9 @@ At start, when the page becomes visible, after each sync, and 4 seconds after an
 ## What the relay can see
 
 The calendar text: at `times`, when something starts and where in time zone names, and nothing of what it is; at `labels`, the steps' short names too; at `full`, also their places and addresses, titles, notes, links and the link that opens each in the app. Who asks for it (IP addresses, the calendar app's user agent).
+
+## Which addresses exist, and which stopped syncing (10 Nov 2026)
+
+`feeds.updated` is the last write. Since migration 0009 `feeds.fetched` (ms) and `feeds.fetched_by` (a coarse name such as "Google Calendar" or "Apple Calendar", never the whole user agent or an IP) record the last fetch of an address, at most once per 10 minutes, under the address that was asked for (an old alias is logged as itself, not as the feed it follows). Fetches before the migration are not known.
+
+`npm --prefix relay run feeds` (`--local` for the dev database) lists every address read-only: a short form of the id, its last write, its last fetch and by what, its events, and a mark on any that nobody has written for `FEED_STALE_MS` (the one that stopped syncing). It prints no calendar text and deletes nothing. The logic is `relay/src/feedReport.ts`.

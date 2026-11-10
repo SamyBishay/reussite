@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { b64uEncode } from '../../src/sync/bytes';
 import { aliasPath, feedPath, feedUrl, FEED_STALE_MS, MAX_FEED_BYTES } from '../../src/feed/protocol';
-import { served, writeFeed } from '../src/feed';
+import { clientName, FETCH_LOG_MS, served, writeFeed } from '../src/feed';
 import type { Env } from '../src/env';
 import { handle } from '../src/index';
 import { APP, BASE, freshMinute } from './helpers';
@@ -120,6 +120,42 @@ describe('reading a feed', () => {
     expect(codes.slice(30)).toEqual([429, 429]);
     // A malformed id is a miss too.
     expect((await get('nope', { ip: 'other' })).status).toBe(404);
+  });
+});
+
+describe('remembering fetches (10 Nov)', () => {
+  beforeEach(() => freshMinute());
+  const row = (fid: string) => env.DB.prepare('SELECT fetched, fetched_by FROM feeds WHERE fid = ?1').bind(fid).first<{ fetched: number | null; fetched_by: string | null }>();
+
+  it('records when an address was fetched and by what kind of app, never the full user agent', async () => {
+    const f = newFeed();
+    await put(f);
+    expect(await row(f.fid)).toMatchObject({ fetched: null, fetched_by: null });
+    const before = Date.now();
+    await get(f.fid, { headers: { 'User-Agent': 'GoogleCalendar/1.0 (secret-device-name)' } });
+    const r = (await row(f.fid))!;
+    expect(r.fetched).toBeGreaterThanOrEqual(before);
+    expect(r.fetched_by).toBe('Google Calendar');
+  });
+  it('logs at most once per FETCH_LOG_MS per address, and an old address is logged under its own name', async () => {
+    const mine = newFeed(), list = newFeed();
+    await put(mine); await put(list);
+    await req('POST', aliasPath(mine.fid), JSON.stringify({ to: list.fid }), { auth: mine.secret, headers: { 'Content-Type': 'application/json' } });
+    await get(mine.fid, { headers: { 'User-Agent': 'iOS/18.0 dataaccessd/1.0' } });
+    const first = (await row(mine.fid))!.fetched!;
+    expect((await row(mine.fid))!.fetched_by).toBe('Apple Calendar');
+    expect((await row(list.fid))!.fetched).toBeNull(); // the list's own address was not the one asked for
+    await get(mine.fid, { headers: { 'User-Agent': 'curl/8.0' } });
+    expect((await row(mine.fid))!.fetched).toBe(first); // within FETCH_LOG_MS: no second write
+    await env.DB.prepare('UPDATE feeds SET fetched = ?2 WHERE fid = ?1').bind(mine.fid, Date.now() - FETCH_LOG_MS - 1000).run();
+    await get(mine.fid, { headers: { 'User-Agent': 'curl/8.0' } });
+    expect((await row(mine.fid))!.fetched_by).toBe('curl/8.0');
+  });
+  it('names a few calendar apps and keeps nothing else of the user agent', () => {
+    expect(clientName('Mozilla/5.0 (X11; Linux) Gecko Firefox/130')).toBe('a browser');
+    expect(clientName('Microsoft Outlook 16.0')).toBe('Outlook');
+    expect(clientName(null)).toBe('unknown');
+    expect(clientName('SomeCalendar/2.1 (my-phone-name 123)')).toBe('SomeCalendar/2.1');
   });
 });
 

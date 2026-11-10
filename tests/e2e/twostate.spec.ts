@@ -1,4 +1,4 @@
-// Two-state buttons (request of 29 Oct, never verified until 10 Nov): "Drop it" → "Confirm" and the other confirm buttons. When the button
+// Two-state buttons (request of 29 Oct, never verified until 10 Nov): "Drop it" → "Yes" and the other confirm buttons. When the button
 // is armed its label never wraps and nothing beside it moves, at 320 and 390, in English and French. Every confirm button is measured here.
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { expandSettings, goTab, openMenu, noSideways, setLanguage, PHONES, LANGS } from './helpers';

@@ -182,7 +182,7 @@ export const fr: Partial<Strings> = {
   takeOffToday: 'Retirer d’aujourd’hui',
   markDone: 'Marquer comme fait',
   dropIt: 'Abandonner',
-  dropAgain: 'Confirmer',
+  dropAgain: 'Oui',
   dropped: 'Abandonnée.',
   droppedUnlocked: 'Abandonnée. Débloqué : {what}',
   promptCopied: 'Consigne copiée. Collez-la dans la nouvelle conversation.',

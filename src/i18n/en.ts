@@ -208,7 +208,7 @@ export const en = {
   takeOffToday: 'Take off today',
   markDone: 'Mark done',
   dropIt: 'Drop it',
-  dropAgain: 'Confirm',
+  dropAgain: 'Yes',
   dropped: 'Dropped.',
   droppedUnlocked: 'Dropped. Unlocked: {what}',
   promptCopied: 'Prompt copied. Paste it into the new chat.',

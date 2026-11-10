@@ -209,7 +209,9 @@ export function App() {
   useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   // Home and the Calendar never scroll (the page is one screen tall, what is inside scrolls), and the phone's rubber band is off while they are shown (html.home-lock, src/styles/app.css).
-  useEffect(() => { const on = view.value === 'home' || view.value === 'calendar'; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value]);
+  // First-run set-up is none of them: it is a stack of pages that scroll, though the view behind it is Home (so the lock was on and the pages could not move).
+  const setup = onboarding.value === 'show';
+  useEffect(() => { const on = (view.value === 'home' || view.value === 'calendar') && !setup; document.documentElement.classList.toggle('home-lock', on); return () => document.documentElement.classList.remove('home-lock'); }, [view.value, setup]);
   useEffect(() => {
     const onHash = () => { const v = fromHash(); if (v) view.value = v; else if (ready.value) { openLinkedTask(); void openLinkedPlan(); } };
     window.addEventListener('hashchange', onHash);

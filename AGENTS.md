@@ -57,3 +57,7 @@ One list. The first eight are about the product, the rest about how sessions wor
 16. **If an item turns out much bigger than described,** stop that item, report why, and go on to the next.
 17. **If a prompt looks cut off, say so before starting.**
 18. **Leave nothing running.** Kill every background job and watcher you start before you finish.
+19. **When your own change breaks a test, fix the change and carry on.** Never fix it by weakening a test or changing what it asserts.
+20. **When wording doesn't fit, use the shortest neutral label that does,** and say so in the report.
+21. **Never deploy with a failing check:** stop and report instead.
+22. **Otherwise, stop and ask only when a fix would change something the owner decided.**

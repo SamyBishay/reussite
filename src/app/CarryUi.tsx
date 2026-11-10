@@ -9,6 +9,7 @@ import { carry, planOn, shelve, dropTask, droppedLine, skipThisTime, finishTask,
 import { openSheet, closeSheet } from './sheet';
 import { Title, Meta } from './ui';
 import { flows } from './sheets';
+import { ConfirmButton, DropButton } from './ConfirmButton';
 import { addDays } from '../domain/dates';
 import { wallOf } from '../domain/zone';
 import { t, fmtDate } from '../i18n';
@@ -21,7 +22,6 @@ const DONE_MINUTES = [5, 15, 30, 60];
 /** One open step from yesterday and what to do with it. `release` false keeps it on yesterday's list too (the check-in writes the day's list itself). */
 export function CarriedCard({ tk, k, release, onNext }: { tk: Tk; k: string; release: boolean; onNext: () => void }) {
   const [mode, setMode] = useState<'ask' | 'day' | 'done'>('ask');
-  const [armed, setArmed] = useState(false);
   const heavy = (tk.carried || 0) >= 2;
   const answer = async (f: () => Promise<unknown> | void) => { await f(); onNext(); };
   return (
@@ -37,8 +37,7 @@ export function CarriedCard({ tk, k, release, onNext }: { tk: Tk; k: string; rel
             <button class="btn" type="button" data-testid="carried-decision" onClick={() => void (async () => { await planOn(tk.id, k); await patchTask(tk.id, { kind: 'decision' }); flows.decide(null, { taskId: tk.id }); })()}>{t('carryDecision')}</button>
           </div>
           <div class="go quiet">
-            <button class="btn ghost small" type="button" data-testid="carried-drop"
-              onClick={() => { if (!armed) return setArmed(true); void answer(async () => { toast(droppedLine(await dropTask(tk.id))); }); }}>{armed ? t('dropAgain') : t('dropIt')}</button>
+            <DropButton tk={tk} testid="carried-drop" onDrop={onNext} />
             <button class="btn ghost small" type="button" data-testid="carried-done" onClick={() => setMode('done')}>{t('alreadyDone')}</button>
             {heavy && <button class="btn ghost small" type="button" onClick={() => flows.breakDown(tk.id)}>{t('shrinkIt')}</button>}
           </div>
@@ -84,7 +83,6 @@ export function CarriedFlow({ ids, k, release, onDone }: { ids: string[]; k: str
 export function MissedCard({ id, onNext, on = today.value }: { id: string; onNext: () => void; on?: string }) {
   const tk = T(id);
   const [moving, setMoving] = useState(false);
-  const [armed, setArmed] = useState(false);
   const [day, setDay] = useState(today.value);
   const [at, setAt] = useState(tk?.at ?? '');
   if (!tk) return null;
@@ -106,7 +104,7 @@ export function MissedCard({ id, onNext, on = today.value }: { id: string; onNex
       {!moving ? (
         <div class="go">
           <button class="btn small" type="button" data-testid="missed-move" onClick={() => { setMoving(true); pick(today.value); }}>{t('missedMove')}</button>
-          <button class="btn small" type="button" data-testid="missed-remove" onClick={() => { if (!armed) return setArmed(true); void remove(); }}>{armed ? t('dropAgain') : t('missedRemove')}</button>
+          <ConfirmButton cls="btn small" testid="missed-remove" label={t('missedRemove')} confirmLabel={t('dropAgain')} onConfirm={remove} />
           <button class="btn small ghost" type="button" data-testid="missed-done" onClick={() => void finishTask(tk, null, on).then(onNext)}>{t('alreadyDone')}</button>
         </div>
       ) : (

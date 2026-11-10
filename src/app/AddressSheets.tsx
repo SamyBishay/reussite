@@ -8,6 +8,7 @@ import { addressById, categories, categoryName, personById, type A } from './mod
 import { createAddress, editAddress, removeAddress, recordVisit, editVisit, createPerson, editPerson, removePerson } from './actions';
 import { openSheet, closeSheet, ExtLink, Title } from './ui';
 import { PlaceSelect, openTask, placeName } from './sheets';
+import { ConfirmButton } from './ConfirmButton';
 import { stepsOfPerson } from '../domain/people';
 import { t, fmtDate, type Key } from '../i18n';
 import { isAllowedLink } from '../domain/links';
@@ -54,7 +55,6 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
   const [note, setNote] = useState(cur?.note ?? '');
   const [msg, setMsg] = useState<Key | null>(null);
   const [err, setErr] = useState('');
-  const [armed, setArmed] = useState(false);
   // Without a clipboard to read (Firefox) or after a refusal, a plain field to paste into.
   const [manual, setManual] = useState(typeof navigator === 'undefined' || !navigator.clipboard?.readText);
   const [pasted, setPasted] = useState('');
@@ -104,7 +104,6 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
   };
   const remove = async () => {
     if (!cur) return;
-    if (!armed) return setArmed(true);
     await removeAddress(cur.id);
     closeSheet();
     toast(t('addrRemoved'));
@@ -164,7 +163,7 @@ function AddressSheet({ id, place }: { id: string | null; place: string }) {
       {cur && <Visits a={cur} />}
       {cur && (
         <div class="actions" style="margin-top:var(--s2)">
-          <button class="btn ghost small" type="button" disabled={off} onClick={() => void remove()} data-testid="addr-remove">{armed ? t('deleteAgain') : t('addrRemove')}</button>
+          <ConfirmButton disabled={off} onConfirm={remove} testid="addr-remove" label={t('addrRemove')} confirmLabel={t('deleteAgain')} />
         </div>
       )}
     </form>
@@ -203,7 +202,6 @@ function VisitSheet({ addressId, stepId, day, visit }: { addressId: string; step
   const [note, setNote] = useState(visit?.note ?? '');
   const [d, setD] = useState(visit?.day ?? day);
   const [verdict, setVerdict] = useState<Verdict | null>(visit?.verdict ?? null);
-  const [armed, setArmed] = useState(false);
   if (!a) return <p class="hint">{t('addrGone')}</p>;
   const off = readOnly.value;
   // After a step, the day is the step's; by hand and when editing it can be changed.
@@ -216,7 +214,6 @@ function VisitSheet({ addressId, stepId, day, visit }: { addressId: string; step
   };
   const del = async () => {
     if (!visit) return;
-    if (!armed) return setArmed(true);
     await editVisit(addressId, visit.id, null);
     back();
   };
@@ -239,7 +236,7 @@ function VisitSheet({ addressId, stepId, day, visit }: { addressId: string; step
           <>
             <button class="btn primary" type="button" disabled={off || !verdict} onClick={() => verdict && void save(verdict)} data-testid="visit-save">{t('save')}</button>
             <button class="btn" type="button" onClick={back}>{t('back')}</button>
-            <button class="btn ghost" type="button" disabled={off} onClick={() => void del()} data-testid="visit-delete">{armed ? t('deleteAgain') : t('visitDelete')}</button>
+            <ConfirmButton cls="btn ghost" disabled={off} onConfirm={del} testid="visit-delete" label={t('visitDelete')} confirmLabel={t('deleteAgain')} />
           </>
         ) : <button class="btn ghost" type="button" onClick={closeSheet} data-testid="visit-skip">{t('skip')}</button>}
       </div>
@@ -289,7 +286,6 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
   const [note, setNote] = useState(cur?.note ?? '');
   const [seen, setSeen] = useState(cur?.lastSeen ?? '');
   const [err, setErr] = useState('');
-  const [armed, setArmed] = useState(false);
   if (id && !cur) return <p class="hint">{t('personGone')}</p>;
   const off = readOnly.value;
   const options = reachOptions(reach);
@@ -310,7 +306,6 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
   };
   const remove = async () => {
     if (!cur) return;
-    if (!armed) return setArmed(true);
     await removePerson(cur.id);
     closeSheet();
     toast(t('personRemoved'));
@@ -348,7 +343,7 @@ function PersonSheet({ id, place }: { id: string | null; place: string }) {
         <button class="btn primary" type="submit" disabled={off} data-testid="person-save">{t('save')}</button>
         {cur?.reach && isAllowedLink(cur.reach) && <ExtLink href={cur.reach} class="btn" testid="person-open">{t('personOpen', { app: reachLabel(cur.reach) })}</ExtLink>}
       </div>
-      {cur && <div class="actions" style="margin-top:var(--s2)"><button class="btn ghost small" type="button" disabled={off} onClick={() => void remove()} data-testid="person-remove">{armed ? t('deleteAgain') : t('personRemove')}</button></div>}
+      {cur && <div class="actions" style="margin-top:var(--s2)"><ConfirmButton disabled={off} onConfirm={remove} testid="person-remove" label={t('personRemove')} confirmLabel={t('deleteAgain')} /></div>}
     </form>
   );
 }

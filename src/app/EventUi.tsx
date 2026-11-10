@@ -7,6 +7,7 @@ import { today, toast } from './store';
 import { T, type T as Tk } from './model';
 import { finishTask, dropTask, droppedLine, snoozeEvent } from './actions';
 import { closeSheet, openSheet, Title } from './ui';
+import { DropButton } from './ConfirmButton';
 import { nudgeAfter, snoozeNudge } from '../domain/events';
 import { t, fmtDate } from '../i18n';
 
@@ -68,23 +69,13 @@ function StillWaitingSheet({ id }: { id: string }) {
   );
 }
 
-/** Drop in two taps, as everywhere: the first arms it, the second drops. Freed steps are placed as for any step dropped. */
-function DropEvent({ tk }: { tk: Tk }) {
-  const [armed, setArmed] = useState(false);
-  return (
-    <button class="btn ghost small" type="button" data-testid="event-drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id).then(f => toast(droppedLine(f))); }}>
-      {armed ? t('dropAgain') : t('dropIt')}
-    </button>
-  );
-}
-
 /** The three answers to "did it happen?". */
 export function EventActions({ tk }: { tk: Tk }) {
   return (
     <div class="go">
       <button class="btn small" type="button" onClick={() => openHappened(tk.id)} data-testid="event-happened">{t('happenedBtn')}</button>
       <button class="btn small" type="button" onClick={() => openStillWaiting(tk.id)} data-testid="event-still">{t('stillWaiting')}</button>
-      <DropEvent tk={tk} />
+      <DropButton tk={tk} testid="event-drop" />
     </div>
   );
 }

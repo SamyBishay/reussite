@@ -10,6 +10,7 @@ import {
   deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists, type Finished,
 } from './actions';
 import { openHappened } from './EventUi';
+import { ConfirmButton, DropButton } from './ConfirmButton';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, GoLink, quadName, basisLine, learningLine } from './ui';
 import { DayPick } from './due';
 import { More, countSet } from './More';
@@ -243,7 +244,6 @@ function SessionSheet({ taskId, sessionId }: { taskId: string; sessionId: string
   const s = sessionId ? sessionsOf(taskId).find(x => x.id === sessionId) : undefined;
   const [d, setD] = useState(s?.d ?? today.value);
   const [why, setWhy] = useState(s?.why ?? 'done');
-  const [armed, setArmed] = useState(false);
   if (!tk) return null;
   const back = () => openTask(taskId);
   const save = async (m: number) => {
@@ -265,7 +265,7 @@ function SessionSheet({ taskId, sessionId }: { taskId: string; sessionId: string
       <DurationPicker base={s?.m ?? personal(tk)?.value ?? tk.est ?? null} onPick={m => void save(m)} />
       <div class="actions">
         <button class="btn ghost" type="button" onClick={back}>{t('back')}</button>
-        {s && <button class="btn ghost" type="button" onClick={() => { if (!armed) return setArmed(true); void deleteSession(s.id).then(back); }}>{armed ? t('deleteAgain') : t('deleteSession')}</button>}
+        {s && <ConfirmButton cls="btn ghost" label={t('deleteSession')} confirmLabel={t('deleteAgain')} onConfirm={() => deleteSession(s.id).then(back)} />}
       </div>
     </div>
   );
@@ -301,15 +301,7 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 
 // ---------- the task sheet ----------
 /** `moveMode` 'calendar': from the Calendar, the sheet's Move to… offers "Plan it on…" and "Due on…" in place of the quadrants. */
-/** Drop a step, on a second tap: the step's sheet and the Start here cards. */
-export function DropButton({ tk, onDrop }: { tk: Tk; onDrop?: () => void }) {
-  const [armed, setArmed] = useState(false);
-  return (
-    <button class="btn ghost small" type="button" data-testid="drop" onClick={() => { if (!armed) return setArmed(true); void dropTask(tk.id).then(f => toast(droppedLine(f))); onDrop?.(); }}>
-      {armed ? t('dropAgain') : tk.repeat ? t('dropSeries') : t('dropIt')}
-    </button>
-  );
-}
+export { DropButton };
 
 export function openTask(id: string, moveMode: 'matrix' | 'calendar' = 'matrix') {
   openSheet(<TaskSheet key={id + Date.now()} id={id} moveMode={moveMode} />);

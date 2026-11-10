@@ -966,3 +966,7 @@ body > .row,body > li{list-style:none}
 .decisions .subsec{font:600 12px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:var(--s3) 0 var(--s2)}
 .decisions .decs li{padding:var(--s2) var(--s3);border-radius:10px;gap:0}
 .decisions .decs .meta{font-size:12.5px;line-height:1.35}
+/* A two-tap button (ConfirmButton.tsx): the other label sits in the same cell, invisible (`data-other`), so it is as wide as the longer of the two and never changes size when armed. */
+.btn.twostate{display:inline-grid;justify-items:center;align-items:center;white-space:nowrap}
+.btn.twostate>span,.btn.twostate::after{grid-area:1/1}
+.btn.twostate::after{content:attr(data-other);visibility:hidden;height:0;overflow:hidden}

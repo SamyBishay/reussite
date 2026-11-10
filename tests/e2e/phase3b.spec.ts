@@ -113,7 +113,7 @@ test(`the Calendar view and Settings do not scroll sideways at ${width}px with t
 });
 }
 
-test('the calendar feed: generic titles, short names when asked, places and links in full, a new address replaces the old, off removes it', async ({ page, request }) => {
+test('the calendar feed: short names by default, times only when asked, places and links in full, a new address replaces the old, off removes it', async ({ page, request }) => {
   await addChoir(page);
   await page.locator('.row', { hasText: 'Choir, Hill House 602' }).getByTestId('details').click();
   await expandSheet(page);
@@ -130,23 +130,24 @@ test('the calendar feed: generic titles, short names when asked, places and link
   const first = await link();
   expect(first).toMatch(/^http:\/\/localhost:8787\/cal\/[A-Za-z0-9_-]{32}\.ics$/);
   await expect(feed.getByTestId('feed-webcal')).toHaveAttribute('href', first.replace('http:', 'webcal:'));
-  await expect(feed.getByTestId('feed-titles-warn')).toHaveCount(0); // the default says only times
+  await expect(feed.getByTestId('feed-titles-warn')).toContainText('not end-to-end encrypted'); // the default is short names (10 Nov)
 
   const fetchFeed = async (url: string) => request.get(url);
   await expect.poll(async () => (await fetchFeed(first)).status()).toBe(200);
   const res = await fetchFeed(first);
   expect(res.headers()['content-type']).toBe('text/calendar; charset=utf-8');
   expect(res.headers()['access-control-allow-origin']).toBeUndefined();
-  const generic = await res.text();
-  expect(generic).toContain('SUMMARY:Fixed time');
-  expect(generic).not.toContain('Choir');
-  expect(generic).not.toContain('VALARM');
+  const labels = await res.text();
+  expect(labels).toContain('SUMMARY:Choir');
+  expect(labels).not.toContain('SUMMARY:Fixed time');
+  expect(labels).not.toContain('URL:');
+  expect(labels).not.toContain('VALARM');
 
   await page.getByTestId('feed-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });
-  await feed.getByTestId('feed-detail').selectOption('labels');
-  await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('SUMMARY:Choir'), { timeout: 20_000 }).toBe(true);
-  expect(await (await fetchFeed(first)).text()).not.toContain('URL:');
-  await expect(feed.getByTestId('feed-titles-warn')).toContainText('not end-to-end encrypted');
+  await feed.getByTestId('feed-detail').selectOption('times');
+  await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('SUMMARY:Fixed time'), { timeout: 20_000 }).toBe(true);
+  expect(await (await fetchFeed(first)).text()).not.toContain('Choir');
+  await expect(feed.getByTestId('feed-titles-warn')).toHaveCount(0);
   await feed.getByTestId('feed-detail').selectOption('full');
   await expect.poll(async () => (await (await fetchFeed(first)).text()).includes('#task/'), { timeout: 20_000 }).toBe(true);
 

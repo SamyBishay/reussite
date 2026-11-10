@@ -16,7 +16,7 @@ What an event says is the synced setting `feedDetail`, three levels (`calItems.t
 | `labels` | the step's short name (`shortLabel`) | nothing |
 | `full` | the short name | LOCATION: the linked address's street address (else its name), else the name of the place or area the step is set to ("Anywhere" gives none); DESCRIPTION: the full title, the leave-by line (fixed-time items with a lead), the note, the link; URL: `<app address>#task/<id>`, which opens the step's sheet (`taskFromHash` in `nav.ts`) |
 
-`feedDetail` replaces the old `feedTitles` switch: until the person picks a level, `withDefaults` reads `feedTitles: true` as `labels` and anything else as `times`; the old key is left in the document. No migration is needed (settings are filled in on read). The warning that this is not end-to-end encrypted shows on `labels` and `full`. Add to calendar (the one-off file) always uses `full`.
+`feedDetail` replaces the old `feedTitles` switch: the default is `labels` (it was `times` until 10 Nov). Settings are stored sparsely, so a stored `feedDetail: 'times'` is a level the person picked and stays; an old `feedTitles: false` with no level reads as `times`. No migration is needed (settings are filled in on read, so every device and the relay's copy follow the new default at their next upload). The warning that this is not end-to-end encrypted shows on `labels` and `full`. Add to calendar (the one-off file) always uses `full`.
 
 ## Identity
 

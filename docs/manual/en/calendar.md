@@ -36,8 +36,8 @@ Your list has one feed, shared by all your devices: switch it on, off or make a 
 
 **What the feed says** has three levels:
 
-- **Times only.** It says only "Fixed time", and when. This is the default.
-- **Short names.** Each step's short name.
+- **Times only.** It says only "Fixed time", and when.
+- **Short names.** Each step's short name. This is the default.
 - **Short names, places and notes.** Also the place or address, the title, the note and the link, and a link that opens the step in Réussite.
 
 - On the last two levels what the feed says is stored in plain text on the relay, and whoever runs it can read it. Réussite warns you.

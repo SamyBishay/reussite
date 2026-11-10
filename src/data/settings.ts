@@ -149,7 +149,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notify: { fixed: true, checkin: true, close: true, decision: true, review: true },
   notifyText: 'generic',
   notifyLead: 30,
-  feedDetail: 'times',
+  feedDetail: 'labels',
   feedShared: null,
   sound: true,
   volume: 0.6,
@@ -197,7 +197,9 @@ export function withDefaults(saved: Partial<Settings> | undefined, since?: numbe
     out[k] = isPlainObject(d) && isPlainObject(v) ? { ...d, ...v } : v;
   }
   // The feed's old on/off switch for titles becomes a level, until the person picks one (the old key is kept as it was).
-  if (saved && saved.feedDetail === undefined && saved.feedTitles === true) out.feedDetail = 'labels';
+  // The default is `labels` (10 Nov; it was `times`). Settings are stored sparsely, so a stored `times` is one the person picked and stays. The old switch
+  // set to off was a choice of the same kind.
+  if (saved && saved.feedDetail === undefined && saved.feedTitles === false) out.feedDetail = 'times';
   return out as Settings;
 }
 

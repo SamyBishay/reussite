@@ -90,20 +90,21 @@ describe('uploading', () => {
     days.value = new Map();
   });
 
-  it('sends generic titles, skips an unchanged text, sends short names when asked, and a new address replaces the old', async () => {
+  it('sends short names by default, skips an unchanged text, sends times only when chosen, and a new address replaces the old', async () => {
     await feedOn();
     const first = calls.at(-1)!;
     expect(first.method).toBe('PUT');
     expect(first.url).toBe(`http://localhost:8787/v1/feed/${feedId.value}`);
     expect(first.body).toContain('BEGIN:VCALENDAR');
-    expect(first.body).not.toContain('Choir');
+    expect(first.body).toContain('Choir'); // short names are the default
     const n = calls.length;
     await uploadFeed();
     expect(calls.length).toBe(n); // same text apart from DTSTAMP: nothing sent
 
-    settings.value = withDefaults({ relayUrl: 'http://localhost:8787', feedDetail: 'labels' });
+    settings.value = withDefaults({ relayUrl: 'http://localhost:8787', feedDetail: 'times' });
     await uploadFeed();
-    expect(calls.at(-1)!.body).toContain('Choir');
+    expect(calls.at(-1)!.body).not.toContain('Choir');
+    expect(calls.at(-1)!.body).toContain('Fixed time');
 
     const old = feedId.value!, oldAuth = calls[0]!.auth;
     await regenerateFeed();

@@ -36,8 +36,8 @@ Votre liste a un seul flux, partagé par tous vos appareils : activez-le, dés
 
 **Ce que dit le flux** a trois niveaux :
 
-- **Les heures seulement.** Il dit seulement « Heure fixe », et quand. C’est le choix par défaut.
-- **Noms courts.** Le nom court de chaque étape.
+- **Les heures seulement.** Il dit seulement « Heure fixe », et quand.
+- **Noms courts.** Le nom court de chaque étape. C’est le choix par défaut.
 - **Noms courts, lieux et notes.** Aussi le lieu ou l’adresse, le titre, la note et le lien, et un lien qui ouvre l’étape dans Réussite.
 
 - Aux deux derniers niveaux, ce que dit le flux est stocké en clair sur le relais, et celui qui le fait tourner peut le lire. Réussite vous prévient.

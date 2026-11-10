@@ -19,13 +19,15 @@ describe('settings defaults', () => {
     expect(s.notifyText).toBe('titles');
     expect(s.notifyLead).toBe(45);
     const d = withDefaults({});
-    expect(d).toMatchObject({ notifyText: 'generic', notifyLead: 30, feedDetail: 'times' });
+    expect(d).toMatchObject({ notifyText: 'generic', notifyLead: 30, feedDetail: 'labels' });
     expect(Object.values(d.notify).every(Boolean)).toBe(true);
   });
   it('reads the old feedTitles switch as the feed level until one is chosen, and keeps the old key', () => {
     expect(withDefaults({ feedTitles: true } as never)).toMatchObject({ feedDetail: 'labels', feedTitles: true });
     expect(withDefaults({ feedTitles: false } as never).feedDetail).toBe('times');
-    expect(withDefaults({}).feedDetail).toBe('times');
+    // Short names are the default (10 Nov); a stored `times` is a choice and stays.
+    expect(withDefaults({}).feedDetail).toBe('labels');
+    expect(withDefaults({ feedDetail: 'times' }).feedDetail).toBe('times');
     expect(withDefaults({ feedTitles: true, feedDetail: 'full' } as never).feedDetail).toBe('full');
     expect(withDefaults({ feedTitles: true, feedDetail: 'times' } as never).feedDetail).toBe('times');
   });

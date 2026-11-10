@@ -75,7 +75,7 @@ Si une étape vient avec une appli ou un lien, le bouton l’ouvre pour vous et 
 
 ## Pause et blocage
 
-Touchez **Pause** pour vous arrêter. Laissez-vous le prochain verbe (« écrire le deuxième paragraphe ») pour que reprendre ne demande aucune réflexion, et dites pourquoi vous vous êtes arrêté.
+Touchez **Pause** pour vous arrêter : un seul geste, rien à répondre. Le temps écoulé est enregistré et l’étape garde sa note « où j’en étais ». Une étape qui a déjà du temps enregistré propose **Reprendre**, pas Lancer : le chrono repart du total, et chaque reprise reste une ligne à part dans les sessions de l’étape. La marquer faite ne demande jamais combien de temps elle a pris.
 
 Touchez **Je bloque** quand ça ne démarre pas. Réussite demande quelle est la friction :
 

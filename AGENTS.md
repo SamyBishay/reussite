@@ -1,6 +1,6 @@
 # Réussite — notes for coding agents
 
-Réussite is a local-first PWA for planning with a CBT method for adult ADHD. The build brief (what to build, by phase) is the Claude doc "Réussite 2 — build brief" on the owner's account (https://claude.ai/code/artifact/b9d2a428-4a60-475c-8f19-e7b64cea1b19), read with the Claude Docs connector. Ignore `BRIEF.md` in this repo: it is out of date and not to be consulted. Read the doc, `DECISIONS.md` (choices already made) and `docs/METHOD.en.md` (the method) before changing behaviour.
+Réussite is a local-first PWA for planning with a CBT method for adult ADHD. The build brief (what to build, by phase) is the Claude doc "Réussite 2 — build brief" on the owner's account (https://claude.ai/code/artifact/b9d2a428-4a60-475c-8f19-e7b64cea1b19), read with the Claude Docs connector. It is background: `DECISIONS.md` and the owner's message win over it. Ignore `BRIEF.md` in this repo: it is out of date. Read `DECISIONS.md` (choices already made) and `docs/METHOD.en.md` (the method) before changing behaviour.
 
 ## Commands
 
@@ -37,11 +37,23 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 
 ## Invariants
 
+One list. The first eight are about the product, the rest about how sessions work.
+
 1. **Never lose data.** No hard deletes: set `_del`. Never drop a field you don't recognise. Importing and restoring merge; they don't replace.
 2. **Migrations are mandatory.** Any change to stored shapes bumps `SCHEMA_VERSION` and adds a function to `src/data/migrations/index.ts`, with a test on fixtures of every earlier version. Migrations run before any write, after a local backup.
 3. **Settings are data.** New settings get defaults in `DEFAULT_SETTINGS`; an update never resets a value the person chose.
 4. **Every write goes through `store.ts`** (`createDoc`, `update`, `upsert`, `removeDoc`) so it gets field clocks and respects read-only mode.
-5. **No hard-coded UI text, and nothing personal.** Strings go in `en.ts`, and in `fr.ts` by the end of the phase. French typography is applied automatically.
+5. **No hard-coded UI text, and nothing personal.** Every string goes in `en.ts` and `fr.ts` in the same change. French typography is applied automatically.
 6. **`private/` is never committed, printed or sent anywhere.** Checks that read it print counts only.
-7. **Tests must pass** (`npm test`, `npm run typecheck`, `npm run e2e`) before a commit. Nothing may scroll sideways at 320, 375 or 430 px.
+7. **Tests must pass before a commit:** typecheck, the unit tests, and the e2e specs of what you touched; the whole `npm run e2e` before a merge or a deploy. Nothing may scroll sideways at 320, 375 or 430 px.
 8. Links open outside the app; only schemes in `ALLOWED_SCHEMES` are accepted.
+9. **A request is done, or the last message says why not.** Done means a passing test or a commit hash that names it. Never close one as "check on the phone" or "not now". A backlog only on the owner's word. The final message lists every request of the session as done (hash, how verified) or not done (reason).
+10. **Verified means a test.** A passing test that exercises the behaviour at 320×568 and 390×844, in English and French. Typecheck alone is not verification. If only an iPhone can show it, it goes on a phone checklist and stays unverified until the owner ticks it.
+11. **Phone-only behaviour is unverified.** iOS top and notch, push and 320 px wraps can't be proven by emulation. Add a test that measures the symptom at 320, 375 and 430, and write "unverified on device" in the last message.
+12. **The owner's words outrank the plan.** If a plan or prompt says "only if it blocks" about something the owner asked for, do it anyway and say so. Requests given in a session are done in that session; never file them for the owner to apply, and never write "proposed brief edits" in place of the work.
+13. **Look before reversing.** Before changing a surface, grep `DECISIONS.md` for it. If the request reverses an entry, name that entry, ask once, then mark the old entry superseded.
+14. **A repeated request means the last fix failed.** Find the earlier commit and add the test it lacked.
+15. **One implementation per interaction.** Grep before adding a button or a rule (Drop, Start here, calendar text). Extend the existing one, and merge duplicates you touch.
+16. **If an item turns out much bigger than described,** stop that item, report why, and go on to the next.
+17. **If a prompt looks cut off, say so before starting.**
+18. **Leave nothing running.** Kill every background job and watcher you start before you finish.

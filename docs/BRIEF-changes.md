@@ -1,6 +1,6 @@
 # Proposed brief changes (week of 2 Nov 2026)
 
-Edits to the build brief that follow from `docs/PLAN-2026-11-02.md`. The owner applies them to the brief; this file is not the brief.
+Edits to the build brief that follow from `docs/PLAN-2026-11-02.md`. Requests given in a session are done in that session; this file is only a record of what changed, not the brief.
 
 - **One order for the day.** A pure `dayOrder` decides the day: fixed-time items at their time, planned steps filling the gaps in the planned order. Start here is its head. Home's "Coming up" is gone, and so is the next-step bar's own rule (it reads `dayOrder` too).
 - **Home's greeting.** A greeting about the day that changes each time Home opens and doesn't repeat within a day, ending with an invitation to use the box. No counts of missed or carried things, and never the words database, record, entry or field.

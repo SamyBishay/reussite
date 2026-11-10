@@ -1,6 +1,6 @@
 // Bottom sheets: the task sheet, done and "how long did it take?", sessions, timer fixes,
 // moving a step, pause, swap, pick, suit piles.
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
 import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, type T as Tk } from './model';
@@ -440,6 +440,10 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   // A time written in the title or the note, with no fixed time set: offer to set it.
   const [titleV, setTitleV] = useState(tk.title);
   const [noteV, setNoteV] = useState(tk.note || '');
+  // The note is shown in full when the sheet opens: the box grows to its text.
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const fitNote = () => { const el = noteRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 2 + 'px'; } };
+  useEffect(() => { fitNote(); requestAnimationFrame(fitNote); }, []);
   const [atV, setAtV] = useState(tk.at ?? '');
   // The end is picked on the clock like the start; the length (`dur`) is worked out from the two.
   const [endV, setEndV] = useState(tk.at && tk.dur ? shiftTime(tk.at, tk.dur) : '');
@@ -458,7 +462,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const measure = measureOf(proj);
   const asksGoal = !tk.template && !ev && !!proj && tk.project !== 'inbox' && (measure.kind !== 'none' || tk.advances != null);
   // Optional fields live under More; the summary counts the ones that have a value.
-  const hiddenSet = countSet(tk.label, tk.starter, tk.note, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
+  const hiddenSet = countSet(tk.label, tk.starter, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -657,6 +661,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         </>
       )}
       {err && <p class="err">{err}</p>}
+      <label class="field note-field"><span>{t('note')}</span><textarea ref={noteRef} name="note" data-testid="note" defaultValue={tk.note || ''} onInput={e => { setNoteV((e.target as HTMLTextAreaElement).value); fitNote(); }} /></label>
       <More n={hiddenSet} testid="task-more">
       {!ev && (
         <>
@@ -672,7 +677,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <select name="project">{projs.map(p => <option value={p.id} selected={p.id === tk.project}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>
       {feedOn && !tk.template && !ev && <FeedsField where={where} value={feed} onChange={setFeed} onWhere={setWhere} />}
-      <label class="field"><span>{t('note')}</span><textarea name="note" defaultValue={tk.note || ''} onInput={e => setNoteV((e.target as HTMLTextAreaElement).value)} /></label>
         <div class="row2">
           <label class="field"><span>{t('kindField')}</span>
             <select name="kind" data-testid="kind" onChange={e => setKindV((e.target as HTMLSelectElement).value as Task['kind'])}>

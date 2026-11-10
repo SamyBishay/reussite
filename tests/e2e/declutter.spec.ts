@@ -14,10 +14,11 @@ test('a task sheet shows only the essentials until More is opened', async ({ pag
   await expect(s.locator('input[name=urgent]')).toBeVisible();
   await expect(s.locator('input[name=est]')).toBeVisible();
   await expect(s.locator('input[name=due]')).toBeVisible();
-  for (const hidden of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('textarea[name=note]'), s.locator('select[name=project]'), s.locator('input[name=link]'), s.locator('input[name=app]')]) await expect(hidden).toBeHidden();
+  for (const hidden of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('select[name=project]'), s.locator('input[name=link]'), s.locator('input[name=app]')]) await expect(hidden).toBeHidden();
+  await expect(s.locator('textarea[name=note]')).toBeVisible(); // the note is never folded (30 Oct)
   await expect(s.getByTestId('task-more')).not.toHaveAttribute('open', '');
   await s.getByTestId('task-more').locator('summary').click();
-  for (const shown of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('textarea[name=note]'), s.locator('select[name=project]'), s.locator('input[name=link]')]) await expect(shown).toBeVisible();
+  for (const shown of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('select[name=project]'), s.locator('input[name=link]')]) await expect(shown).toBeVisible();
 });
 
 test('More says how many hidden fields have a value', async ({ page }) => {

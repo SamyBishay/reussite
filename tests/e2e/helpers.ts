@@ -201,3 +201,12 @@ export async function openTripSheet(page: Page) {
   await page.getByTestId('stays').getByTestId('plan-trip').click();
   await expect(page.getByTestId('sheet').getByTestId('trip-sheet')).toBeVisible();
 }
+
+/** Switch the app's language from Settings (the choice is kept, so later pages are in it). */
+export async function setLanguage(page: Page, lang: 'en' | 'fr') {
+  await goTab(page, 'settings');
+  await page.getByRole('button', { name: lang === 'fr' ? 'Français' : 'English', exact: true }).click();
+}
+/** The two phone sizes every layout fix is measured at, with the two languages (invariant 10). */
+export const PHONES: [number, number][] = [[320, 568], [390, 844]];
+export const LANGS = ['en', 'fr'] as const;

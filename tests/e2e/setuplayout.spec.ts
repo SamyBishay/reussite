@@ -25,7 +25,37 @@ async function checkPage(page: Page, where: string) {
   expect(a.obTop, where + ': the page starts above its padding').toBeGreaterThanOrEqual(a.padTop - 1);
   expect(a.locked, where + ': the page is locked (home-lock)').toBe(false);
   await noSideways(page, where);
-  if (a.sh > a.ih + 1) {
+  if (a.sh > a.ih + 1 && test.info().project.name === 'iphone') {
+    // Mobile WebKit has no mouse wheel (Playwright refuses it), so here the test asserts what makes a swipe able to scroll the page: the document is the
+    // scroller and nothing locks it. The swipe itself stays on the owner's phone checklist (invariant 11, unverified on device).
+    const s = await page.evaluate(() => {
+      const ob = document.querySelector('.ob') as HTMLElement, root = document.documentElement;
+      const cs = (e: Element) => getComputedStyle(e);
+      // On the viewport's scroller, `visible` on html acts as `auto` (the overflow of html, or of body when html is visible, goes to the viewport).
+      const viewportOverflow = cs(root).overflowY !== 'visible' ? cs(root).overflowY : cs(document.body).overflowY;
+      const touchNone: string[] = [];
+      for (let e: Element | null = ob; e; e = e.parentElement) if (cs(e).touchAction === 'none') touchNone.push(e.tagName + '.' + e.className);
+      return {
+        scroller: document.scrollingElement === root, viewportOverflow, rootOverflow: cs(root).overflowY, bodyOverflow: cs(document.body).overflowY,
+        rootPos: cs(root).position, bodyPos: cs(document.body).position, touchNone, clientH: root.clientHeight, scrollH: root.scrollHeight,
+        lock: root.classList.contains('home-lock'),
+      };
+    });
+    expect(s.scroller, where + ': the document is not the scroller').toBe(true);
+    expect(['auto', 'scroll', 'visible'], where + ': the scroller does not scroll (overflow-y ' + s.viewportOverflow + ')').toContain(s.viewportOverflow);
+    expect(s.scrollH, where + ': scrollHeight does not exceed clientHeight').toBeGreaterThan(s.clientH);
+    expect(s.lock, where + ': home-lock is on').toBe(false);
+    expect([s.rootOverflow, s.bodyOverflow], where + ': html or body has overflow hidden').not.toContain('hidden');
+    expect([s.rootPos, s.bodyPos], where + ': html or body is position fixed').not.toContain('fixed');
+    expect(s.touchNone, where + ': touch-action none on an ancestor').toEqual([]);
+    // A programmatic scroll brings the last control fully into view, and back.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY), { message: where + ': the page does not scroll' }).toBeGreaterThan(0);
+    const b = await info();
+    expect(b.lowest, where + ': the last control is below the screen').toBeLessThanOrEqual(b.ih + 0.5);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  } else if (a.sh > a.ih + 1) {
     // Taller than the screen: the wheel moves it, and the lowest control comes on screen.
     await page.mouse.move(a.ih / 4, a.ih / 2);
     for (let i = 0; i < Math.ceil(a.sh / 250); i++) { await page.mouse.wheel(0, 250); await page.waitForTimeout(40); }

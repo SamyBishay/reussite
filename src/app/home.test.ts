@@ -285,7 +285,7 @@ describe('Undo long after', () => {
     await submitHome('done call the dentist');
     await settle();
     expect([...sessions.value.values()]).toHaveLength(1);
-    vi.setSystemTime(new Date('2026-11-03T10:00:00Z'));
+    vi.setSystemTime(new Date('2030-01-03T10:00:00Z')); // far enough ahead of the real clock, which the stored clocks follow
     await undoExchange(only().id);
     await settle();
     expect(tasks.value.get('s1')).toMatchObject({ status: 'open', started: null });

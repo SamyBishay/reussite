@@ -76,6 +76,14 @@ export const allCards = () => [...tasks.value.values()].filter(t => t.status ===
 export const ratio = computed(() => ratioOf(tasks.value.values(), spent.value));
 export const running = (): T | undefined => [...tasks.value.values()].find(t => t.started && t.status === 'open' && !isEvent(t));
 export const elapsedSec = (t: T, now = Date.now()) => (t.started ? Math.max(0, (now - Date.parse(t.started)) / 1000) : 0);
+/** The time already logged on a card, in seconds (every session of every run). */
+export const loggedSec = (id: string): number => spentOf(id) * 60;
+/** A card with logged time is continued, never started. */
+export const hasLogged = (id: string): boolean => spentOf(id) > 0;
+/** What a running timer shows: the card's logged total plus this run. Each run is still saved as its own session. */
+export const shownSec = (t: T, now = Date.now()): number => loggedSec(t.id) + elapsedSec(t, now);
+/** `started` moved back by the logged total, for the day's order: the time left in the estimate counts what is already done. */
+const startedWithLogged = (t: T): string => (t.started && hasLogged(t.id) ? new Date(Date.parse(t.started) - loggedSec(t.id) * 1000).toISOString() : t.started!);
 
 const byOrder = L.byOrder;
 export { byOrder };
@@ -139,7 +147,7 @@ export function missedOn(k: string = today.value): string[] {
   const floor = atOnDay(k, s.dayStart, s.dayStart, zone), rid = fixed.find(f => T(f.id)?.started);
   return dayOrder({
     now: clockNow.value, floor, end: floor + 48 * 3_600_000, cards: [], est: () => null, fixed,
-    running: rid ? { id: rid.id, started: T(rid.id)!.started! } : null,
+    running: rid ? { id: rid.id, started: startedWithLogged(T(rid.id)!) } : null,
   }).missed.filter(id => T(id)?.status === 'open');
 }
 
@@ -163,7 +171,7 @@ export function dayOrderOf(k: string = today.value): DayOrder {
   const start = shape?.start ? Math.max(floor, atOnDay(k, shape.start, s.dayStart, zone)) : floor;
   return dayOrder({
     now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: start, end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone),
-    cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: T(rid)!.started! } : null, optional: new Set(dayDoc(k)?.optional ?? []),
+    cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: startedWithLogged(T(rid)!) } : null, optional: new Set(dayDoc(k)?.optional ?? []),
   });
 }
 

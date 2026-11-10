@@ -2,7 +2,7 @@
 // the system prompt; compact lines for at most 25 steps, and the calibration line whenever the
 // AI is asked for estimates.
 import { projects, tasks, places, settings, today, here, type WithId } from '../app/store';
-import { T, dayDoc, byOrder } from '../app/model';
+import { T, dayDoc, byOrder, spentOf } from '../app/model';
 import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
 import { PILLARS, type Plan, type PlanInput } from '../domain/planner';
 import type { Proposal } from '../domain/propose';
@@ -101,6 +101,7 @@ export function stuckPrompt(id: string, friction: string): P {
     STEP_HEADER + '\n' + stepLine(tk),
     tk.starter ? 'Starter that didn\'t work: ' + one(tk.starter) : 'No starter yet.',
     tk.resume ? 'Where they stopped: ' + one(tk.resume) : '',
+    spentOf(tk.id) > 0 ? 'Time already logged: ' + fmtMin(spentOf(tk.id)) + '. They continue this step; do not say start.' : '',
     tk.app ? 'App or place: ' + one(tk.app) : '',
     memo.text,
   ]);

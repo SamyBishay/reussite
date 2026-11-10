@@ -75,7 +75,7 @@ If a step comes with an app or a link, the button opens it for you and starts th
 
 ## Pause and stuck
 
-Tap **Pause** to stop: one tap, nothing to answer. The time so far is saved, and the step keeps its "where I stopped" note.
+Tap **Pause** to stop: one tap, nothing to answer. A step with time already logged offers **Continue**, not Start: the clock picks up from the total, and each run stays its own line in the step's sessions. Marking such a step done never asks how long it took. The time so far is saved, and the step keeps its "where I stopped" note.
 
 Tap **I'm stuck** when it won't start. Réussite asks which friction it is:
 

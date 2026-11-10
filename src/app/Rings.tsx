@@ -1,7 +1,7 @@
 // The dragon's concentric rings (brief §16), used sparingly: an empty state's quiet mark, and a running
 // timer's progress (the outer ring fills over the step's estimate; with none, the rings stay still).
 import { useEffect, useState } from 'preact/hooks';
-import { elapsedSec, planEst, type T } from './model';
+import { shownSec, planEst, type T } from './model';
 
 /** Three still rings, for a list with nothing in it. Decorative. */
 export function Rings({ size = 56 }: { size?: number }) {
@@ -26,7 +26,7 @@ const R = 42, LEN = 2 * Math.PI * R;
 export function TimerRings({ tk, size = 72 }: { tk: T; size?: number }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-  const p = progressOf(elapsedSec(tk, now), planEst(tk));
+  const p = progressOf(shownSec(tk, now), planEst(tk));
   return (
     <svg class="rings timer" width={size} height={size} viewBox="0 0 96 96" aria-hidden="true" focusable="false" data-testid="timer-rings" data-progress={p == null ? '' : p.toFixed(3)}>
       <circle cx="48" cy="48" r={R} fill="none" style="stroke:var(--card-2)" stroke-width="6" />

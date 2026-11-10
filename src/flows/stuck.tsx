@@ -6,7 +6,7 @@ import { today, toast } from '../app/store';
 import { T, planOf, isOpen, running } from '../app/model';
 import { patchTask, startTask, createTask, newTaskDoc, setFirst } from '../app/actions';
 import { openSheet, closeSheet } from '../app/sheet';
-import { Title } from '../app/ui';
+import { Title, timerLabel } from '../app/ui';
 import { openDecision } from './decision';
 import { t, type Key } from '../i18n';
 import { ask as askAi } from '../ai/ask';
@@ -85,7 +85,7 @@ function Stuck({ id: given }: { id?: string }) {
       <label class="field"><span>{t('smallerStarter')}</span><input type="text" value={smaller} onInput={e => { setSmaller((e.target as HTMLInputElement).value); setAiNote(null); }} placeholder={t('starterPh')} autocomplete="off" data-testid="stuck-smaller" /></label>
       {aiNote != null ? <p class="hint" data-testid="stuck-ai-note">{t('aiStarterProposed')}{aiNote ? ' ' + aiNote : ''}</p>
         : <AiAction ai={ai} label={t('aiSmallerStarter')} onClick={() => void suggest()} testid="ai-stuck" />}
-      <div class="actions"><button class="btn primary" type="button" onClick={() => void restart()} data-testid="stuck-restart">{tk.started ? t('backToIt') : t('restartTimer')}</button></div>
+      <div class="actions"><button class="btn primary" type="button" onClick={() => void restart()} data-testid="stuck-restart">{tk.started ? t('backToIt') : timerLabel(tk, 'restart')}</button></div>
       {second && (
         <div class="notice" data-testid="stuck-second">
           <p><b>{t('stalledAgain')}</b></p>

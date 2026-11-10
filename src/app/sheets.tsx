@@ -141,6 +141,8 @@ export function openDone(id: string) {
     void complete(tk, null);
     return;
   }
+  // Time already logged is the card's time: finishing never asks for a duration (10 Nov).
+  if (spentOf(id) > 0) { closeSheet(); void complete(tk, null); return; }
   openSheet(<DurationSheet key={id} tk={tk} />);
 }
 
@@ -193,7 +195,7 @@ export function openDoneOn(id: string) {
       <h3>{t('doneOnTitle')}</h3>
       <p class="hint">{tk.title}</p>
       <DayPick value={null} extra={[[t('pickYesterday'), addDays(k, -1)], [t('pickDaysAgo', { n: 2 }), addDays(k, -2)], [t('pickToday'), k]]}
-        onPick={d => d && openSheet(<DurationSheet key={'dur' + id + d} tk={tk} day={d > k ? k : d} />)} />
+        onPick={d => { if (!d) return; if (spentOf(id) > 0) { closeSheet(); void complete(tk, null, d > k ? k : d); } else openSheet(<DurationSheet key={'dur' + id + d} tk={tk} day={d > k ? k : d} />); }} />
     </div>,
   );
 }

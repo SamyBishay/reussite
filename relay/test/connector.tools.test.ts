@@ -123,6 +123,9 @@ describe('reading', () => {
   it('get_task: the step with its sessions, by id or by title', async () => {
     const byId = await tool(access, 'get_task', { id: 't5' });
     expect(byId.text).toContain('Sessions (1, 14m in all):\n' + day(-3) + ' | 14m | timer | done');
+    // Time is logged: the AI is told to offer Continue, not Start (10 Nov).
+    expect(byId.text).toContain('Continue, not Start');
+    expect((await tool(access, 'get_task', { id: 't4' })).text).not.toContain('Continue, not Start');
     expect((await tool(access, 'get_task', { id: 'écrire à hélène' })).text).toContain('t4 | Écrire à Hélène');
     const amb = await tool(access, 'get_task', { id: 'Call' });
     expect(amb.isError).toBe(true);

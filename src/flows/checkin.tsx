@@ -11,7 +11,7 @@ import { T, rawPlan, dayDoc, candidates, isOpen, quad, blocked, inPlace, persona
 import { dayPatch, cloneTemplate, addSession, newTaskDoc, startTask } from '../app/actions';
 import { CarriedFlow, MissedFlow } from '../app/CarryUi';
 import { openSheet, closeSheet } from '../app/sheet';
-import { Title, Meta, Est, Suit, quadName, suitName } from '../app/ui';
+import { Title, Meta, Est, Suit, quadName, suitName, timerLabel } from '../app/ui';
 import { flows } from '../app/sheets';
 import { t, lang, fmtMin, type Key } from '../i18n';
 import { addDays } from '../domain/dates';
@@ -217,7 +217,7 @@ function Checkin() {
             {fo?.kind === 'fixed' && <p class="hint">{t('leaveAtLine', { t: wallOf(fo.start, dayZone(k)) })}</p>}
             <p class="meta"><Est tk={x} /></p>
             <div class="actions">
-              {!x.template && <button class="btn primary" type="button" onClick={() => { void startTask(x.id); closeSheet(); }} data-testid="ci-start">{t('start')}</button>}
+              {!x.template && <button class="btn primary" type="button" onClick={() => { void startTask(x.id); closeSheet(); }} data-testid="ci-start">{timerLabel(x, 'plain')}</button>}
               <button class="btn ghost" type="button" onClick={closeSheet} data-testid="ci-later">{t('notYet')}</button>
             </div>
           </>

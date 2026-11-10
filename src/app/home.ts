@@ -5,7 +5,7 @@
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
 import { db, tasks, places, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
-import { T, addressesOn } from './model';
+import { T, addressesOn, spentOf } from './model';
 import { addSession } from './actions';
 import { openNewTask, flows } from './sheets';
 import { fieldsOf, type Stored } from '../data/doc';
@@ -267,7 +267,7 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
   if (!plan.items.length) { toast(cs.note || t('chgNoneLeft')); return false; }
   const first = cs.changes[0];
   const done = cs.changes.length === 1 && first?.op === 'task.done' ? first.id : null;
-  const timed = !!(done && T(done)?.started);
+  const timed = !!(done && (T(done)?.started || spentOf(done) > 0));
   const record = async (n: number, undo: UndoDoc[]) => {
     homeCard.value = null;
     const id = gen.id('c');

@@ -56,6 +56,7 @@ export const en = {
   swap: 'Swap',
   edit: 'Edit',
   startTimer: 'Start the timer',
+  continueTimer: 'Continue',
   justStartTimer: 'Just start the timer',
   alreadyDone: 'Already done',
   pause: 'Pause',

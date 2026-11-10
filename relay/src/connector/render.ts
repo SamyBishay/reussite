@@ -91,6 +91,8 @@ function step(v: View, t: TaskW): string {
   if (t.starter) extra.push(`starter: ${oneLine(t.starter)}`);
   if (t.resume) extra.push(`resume: ${oneLine(t.resume)}`);
   if (t.started) extra.push(`timer running since ${t.started.slice(11, 16)} UTC`);
+  const logged = [...v.sessions.values()].filter(x => x.taskId === t.id).reduce((n, x) => n + (Number(x.m) || 0), 0);
+  if (logged > 0) extra.push(`${mins(logged)} already logged: Continue it, don't Start it`);
   if (blocked(t, v.tasks)) extra.push('waiting on ' + listOf(t.after).map(id => waitName(v, id)).join(', '));
   return line(v, t) + (extra.length ? '\n    ' + extra.join(' · ') : '');
 }
@@ -243,6 +245,7 @@ export function taskText(v: View, t: TaskW): string {
     f('created', t.created), f('by', t.src === 'ai' ? 'an AI' : null),
   ].filter(Boolean);
   const ss = [...v.sessions.values()].filter(s => s.taskId === t.id).sort((a, b) => String(a.d + a.at).localeCompare(String(b.d + b.at)));
+  if (ss.length) L.push('Time is logged on this step: offer Continue, not Start. The timer picks up from the total; each run is its own session.');
   L.push(ss.length ? `Sessions (${ss.length}, ${mins(ss.reduce((a, s) => a + (Number(s.m) || 0), 0))} in all):\n` + ss.map(s => `${s.d} | ${s.m}m | ${s.source}${s.why ? ' | ' + s.why : ''}`).join('\n') : 'Sessions: none.');
   return L.join('\n');
 }

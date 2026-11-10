@@ -41,6 +41,7 @@ export const fr: Partial<Strings> = {
   swap: 'Échanger',
   edit: 'Modifier',
   startTimer: 'Lancer le chrono',
+  continueTimer: 'Reprendre',
   justStartTimer: 'Lancer seulement le chrono',
   alreadyDone: 'Déjà fait',
   pause: 'Pause',

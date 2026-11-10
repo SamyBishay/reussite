@@ -1,7 +1,7 @@
 // Shared view pieces, ported from v1's render helpers.
 import type { ComponentChildren } from 'preact';
 import { settings, projects, today, toast } from './store';
-import { quad, blocked, waitingOn, spentOf, personal, estModel, addressById, personById, addressesOn, type T } from './model';
+import { quad, blocked, waitingOn, spentOf, hasLogged, personal, estModel, addressById, personById, addressesOn, type T } from './model';
 import { openDue } from './due';
 import { OPTS } from '../domain/estimates';
 import { startTask } from './actions';
@@ -121,6 +121,12 @@ const platform = typeof window !== 'undefined' ? detectPlatform() : { ios: false
  * A link to the step's app or website. Opens from the tap itself (nothing awaited first,
  * or iOS ignores it); copies the prompt for a step that carries one and starts the timer.
  */
+/** The label of a button that starts a card's timer: a card with logged time is continued, never started (one rule, every place the timer is offered). */
+export function timerLabel(tk: { id: string }, kind: 'start' | 'justStart' | 'restart' | 'plain' = 'start'): string {
+  if (hasLogged(tk.id)) return t('continueTimer');
+  return t(kind === 'justStart' ? 'justStartTimer' : kind === 'restart' ? 'restartTimer' : kind === 'plain' ? 'start' : 'startTimer');
+}
+
 export function GoLink({ tk, variant }: { tk: T; variant: 'big' | 'small' | 'inline' }) {
   const target = resolveLink(tk, platform, settings.value.linksInApp);
   if (!target || tk.status !== 'open') return null;

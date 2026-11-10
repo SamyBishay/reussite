@@ -12,6 +12,7 @@ import { addDays } from '../../../src/domain/dates';
 import { fixedOnDay } from '../../../src/domain/agenda';
 import { dayOrder } from '../../../src/domain/dayOrder';
 import { atOnDay, placeOfDay, wallOf } from '../../../src/domain/zone';
+import { readSlot } from '../../../src/domain/slots';
 import { chainIndex, chainOf, effectiveDue, isWaiting, type ChainIndex } from '../../../src/domain/chains';
 import { noteBlock, noteHead, notesMatching, type Note } from '../../../src/domain/memory';
 import { findByName, norm } from '../../../src/domain/names';
@@ -84,10 +85,15 @@ export function header(v: View): string {
 /** A step's title in a "waiting on" list: something the person waits for (an event) is named as such. */
 const waitName = (v: View, id: string): string => { const x = v.tasks.get(id); return x ? oneLine(x.title) + (isEvent(x) ? ' [waiting for]' : '') : id; };
 
+/** A step's slot, said the way `at` is: the day, the start and the length. Time set aside to work on it, not an appointment. */
+const slotWords = (s: { day: string; at: string; dur: number }): string => `${s.day} ${s.at} for ${mins(s.dur)}`;
+
 /** One step with what a person needs to start it. */
 function step(v: View, t: TaskW): string {
   const extra: string[] = [];
-  if (t.at) extra.push(`at ${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}`);
+  if (t.at) extra.push(`at ${t.at}${t.dur ? ' for ' + mins(t.dur) : ''} [appointment]`);
+  const slot = readSlot(t.slot);
+  if (slot) extra.push(`slot ${slotWords(slot)} [work time]`);
   if (t.starter) extra.push(`starter: ${oneLine(t.starter)}`);
   if (t.resume) extra.push(`resume: ${oneLine(t.resume)}`);
   if (t.started) extra.push(`timer running since ${t.started.slice(11, 16)} UTC`);
@@ -141,7 +147,7 @@ export function dayText(v: View, k: string): string {
     const lo = work.reduce((a, t) => a + (personal(v, t)?.lo ?? t.est ?? 0), 0);
     const hi = work.reduce((a, t) => a + (personal(v, t)?.hi ?? t.est ?? 0), 0);
     const total = est > 0 ? ` · estimated ${lo !== hi ? `${mins(est)} (range ${mins(lo)} to ${mins(hi)})` : mins(est)}` : '';
-    L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? (t.due && t.due > k && isOpen(t) ? ` [${t.at}, fixed for ${t.due}]` : ` [${t.at}]`) : ''}${t.started ? ' [running]' : ''}`).join('\n'));
+    L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? (t.due && t.due > k && isOpen(t) ? ` [${t.at}, fixed for ${t.due}]` : ` [${t.at}]`) : ''}${readSlot(t.slot) ? ` [slot ${slotWords(readSlot(t.slot)!)}]` : ''}${t.started ? ' [running]' : ''}`).join('\n'));
   } else L.push('List: empty.');
 
   // The morning's shape (the app's check-in): from when, until when. Launch points no longer exist; a stored one is not shown.
@@ -233,7 +239,10 @@ export function taskText(v: View, t: TaskW): string {
     f('status', (event && t.status === 'done' ? 'happened' : t.status) + (t.doneDay ? ' on ' + t.doneDay : '')),
     event ? f('waiting for', `something outside the person's hands, not a step to do or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
-    f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''}` : null),
+    f('due time', t.due && t.dueAt ? `${t.dueAt} on ${t.due} (a deadline: it is in no calendar and the step stays on the list)` : null),
+    f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''} (an appointment: it is in the calendar)` : null),
+    f('slot', readSlot(t.slot) ? `${slotWords(readSlot(t.slot)!)} (work time set aside: movable, not an appointment)` : null),
+    f('slot log', Array.isArray(t.slotLog) && t.slotLog.length ? t.slotLog.slice(-5).map(e => `${e.at.slice(0, 16)} ${e.by} ${e.why}: ${e.from && readSlot(e.from) ? slotWords(readSlot(e.from)!) : 'none'} → ${e.to && readSlot(e.to) ? slotWords(readSlot(e.to)!) : 'none'}`).join('; ') : null),
     f('standing', t.template ? `${standingText(t)}${t.lead != null ? `, leave ${mins(t.lead)} before` : ''}; drop it to end the series` : null),
     f('copy of', t.from ? `${t.from} ${oneLine(v.tasks.get(t.from)?.title ?? '')}` : null),
     f('where', t.where && t.where !== 'any' ? v.places.get(t.where)?.name ?? t.where : null),

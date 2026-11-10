@@ -49,6 +49,16 @@ A skipped step is only left off today's list; it stays on your list. To change t
 
 **Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour. `[E?]`
 
+## Deadlines, appointments and slots
+
+A step can carry three different things, each in its own field in the step’s sheet:
+
+- **Due** is a deadline, a day and, if you like, a time: it must be done by then. It never goes in the calendar and never takes the step off your list. After the time has passed today the step stays on Today and says “was due 17:00”, in the ordinary colour. After the day it says “carried over”, not “late”.
+- **At** is an appointment, something that happens at that time: a call, a visit, a lunch. It goes in the calendar and the reminders. If its time passes and it is not done, it stays on Today marked **missed**, and a small card offers **Move** or **Remove**.
+- **Slot** is time you set aside to work on the step: a day, a start and a length. Planning your day gives each planned step a slot. It can move, there is only one per step, and it is not an appointment. When it passes and the step is still open, the card says “slot passed” with **Re-slot**: that opens a proposed new time, and nothing moves until you confirm. The sheet keeps a short log of where the slot has been.
+
+Typed on Home, “pay the rent by 17:00” or “avant 17h” sets a deadline time; a bare time, “lunch Monday 19:00”, sets an appointment. Slots come only from planning the day or the step’s sheet.
+
 ## Start
 
 Today shows the first step on a card, **Start here**. It shows the step's starter: the smallest first action. Tap **Start the timer**, or **Already done** if you did it already. Forgot to start? **I started earlier** takes two taps. **Drop it**, tapped twice, drops a step that no longer matters; it waits in the Cemetery. Start here is always there: with nothing open on today's list, it shows the step your list would pick next, with **Start the timer**, **Put it first** and **Choose from your list**.

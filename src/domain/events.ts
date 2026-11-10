@@ -14,7 +14,7 @@ import { isEvent, listOf, type TaskW } from './lists';
  */
 export function toEventFields(): Partial<Task> {
   return {
-    kind: 'event', est: null, est0: null, estBy: null, starter: null, due: null, dueRule: null, at: null, dur: null, lead: null,
+    kind: 'event', est: null, est0: null, estBy: null, starter: null, due: null, dueAt: null, dueRule: null, at: null, dur: null, slot: null, lead: null,
     weekdays: null, repeat: null, offer: null, urgent: false, important: false, template: false, started: null,
   };
 }

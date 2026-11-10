@@ -3,7 +3,7 @@
 // wouldn't change anything, and prepares low-level writes. `applyPlanned` runs only the ticked
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
-import { eventClash, eventClashes, NUDGE_ONLY, UNTIL_STANDING, type Change, type ChangeSet, type TaskSet } from './changeset';
+import { eventClash, eventClashes, NUDGE_ONLY, UNTIL_STANDING, DUE_AT_NEEDS_DUE, type Change, type ChangeSet, type TaskSet } from './changeset';
 import type { Address, Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
@@ -11,6 +11,7 @@ import { isAllowedLink } from '../domain/links';
 import { norm } from '../domain/names';
 import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
 import { toEventFields } from '../domain/events';
+import { readSlot, writeSlot } from '../domain/slots';
 import { mergeMilestones, measureOf, outcomeOf, sameMeasure } from '../domain/goal';
 import type { Measure } from '../data/schema';
 import { buildPreferences, DEFAULT_FORM, DETAILS, type Detail, type PreferenceForm } from '../domain/preferences';
@@ -171,12 +172,15 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       if (k === 'title' && !v) continue;
       if (k === 'label') { o.label = String(v).trim(); continue; }
       if (k === 'weekdays') { const w = [...new Set((v as number[] | null) ?? [])].sort((a, b) => a - b); o.weekdays = w.length ? w : null; continue; }
+      if (k === 'slot') { o.slot = v === null ? null : readSlot(v); if (o.slot === null && v !== null) delete o.slot; continue; }
       (o as Record<string, unknown>)[k] = v;
     }
     // A standing obligation with no time or no days would sit unseen: it stays an ordinary step.
     if (o.template && (!o.at || !o.weekdays?.length)) delete o.template;
+    // A standing obligation is a time and days, not a deadline or work time.
+    if (o.template) { delete o.dueAt; delete o.slot; }
     if (o.est != null) o.estBy = by;
-    if ('due' in o) o.dueRule = null;
+    if ('due' in o) { o.dueRule = null; if (!o.due) o.dueAt = null; }
     return o;
   };
 
@@ -244,6 +248,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
       case 'task.create': {
         const f = cleanTask(c.set);
         if (!f.label) delete f.label;
+        if (f.dueAt && !f.due) { refused.push({ at: ci, text: DUE_AT_NEEDS_DUE }); delete f.dueAt; }
+        if (f.slot) f.slotLog = writeSlot({}, f.slot, by, 'set', gen.now()).slotLog;
         // Only a standing step ends on a day; on any other step `until` would sit unread, so it is cut back with the reason.
         if (!f.template && 'until' in f) { if (f.until) refused.push({ at: ci, text: UNTIL_STANDING }); delete f.until; }
         const event = f.kind === 'event';
@@ -252,7 +258,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const p = f.project && !isRef(f.project) ? s.projects.get(f.project) : undefined;
         // An event is made with nothing a step has (no estimate, not important): the change-set may not give any (the contract refuses it).
         const fields = { ...(event ? toEventFields() : {}), ...f, title: c.set.title, suit: f.suit ?? p?.suit, by, src: by === 'me' ? 'home' : 'ai' } as Partial<Task> & { title: string };
-        items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
+        items.push({ target: 'task', kind: 'create', title: c.set.title, diffs: Object.entries(f).filter(([k]) => k !== 'title' && k !== 'estBy' && k !== 'dueRule' && k !== 'slotLog').map(([field, after]) => ({ field, before: undefined, after })), ops: [{ t: 'task', ref: c.ref, fields }] });
         break;
       }
       case 'task.update': {
@@ -260,6 +266,13 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (!tk || tk.status === 'dropped') break;
         const f = cleanTask(c.set);
         delete f.template; // only a new step becomes a standing obligation
+        if (f.dueAt && !(f.due ?? tk.due)) { refused.push({ at: ci, text: DUE_AT_NEEDS_DUE }); delete f.dueAt; }
+        if (tk.template) { delete f.dueAt; delete f.slot; }
+        // One slot, and its log: a slot written here keeps the old one in the step's log; the same slot is no change.
+        if ('slot' in f) {
+          const w = writeSlot(tk, f.slot ?? null, by, 'set', gen.now());
+          if ('slot' in w) f.slotLog = w.slotLog; else delete f.slot;
+        }
         if (!tk.template && 'until' in f) { if (f.until) refused.push({ at: ci, text: UNTIL_STANDING }); delete f.until; }
         if (tk.template) {
           // A standing obligation keeps a time and its days, and has no date: the copies placed on days have those.
@@ -291,7 +304,7 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         if (!becomes && !wasEvent) delete f.nudge;
         const diffs: Diff[] = [];
         for (const [k, v] of Object.entries(f)) {
-          if (k === 'estBy' || k === 'dueRule') continue;
+          if (k === 'estBy' || k === 'dueRule' || k === 'slotLog') continue;
           const cur = k === 'where' ? tk.where || s.projects.get(tk.project)?.where || 'any' : k === 'label' ? tk.label ?? '' : k === 'after' ? ((Array.isArray(tk.after) ? tk.after : tk.after ? [tk.after] : []).length ? tk.after : null) : tk[k];
           if (same(cur, v)) { delete (f as Record<string, unknown>)[k]; continue; }
           diffs.push({ field: k, before: cur, after: v });

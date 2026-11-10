@@ -28,6 +28,7 @@ The parser is pure and deterministic. It reads English and French at once, whate
 | Drop | `drop X`, `abandon`, `scrap` | `supprimer X`, `abandonner X` | `task.drop`; opens the review |
 | A day | `today`, `tonight`, `tomorrow`, `the day after tomorrow`, `in 3 days/weeks/months`, `friday`, `next friday`, `26/10`, `26 oct`, `october 26`, `2026-10-26` | `aujourd'hui`, `ce soir`, `demain`, `après-demain`, `dans 3 jours/semaines/mois`, `vendredi`, `vendredi prochain`, `26/10`, `26 oct`, `le 26 octobre` | `due` |
 | A time | `19:00`, `7pm`, `7:30 pm`, `at 19h`, `noon` | `19h`, `19h30`, `à 19h`, `midi`, `vers 19h` | `at` |
+| A deadline's time | `by 17:00`, `before 5pm`, `due 26/10 at 9:30`, `by friday 17:00` | `avant 17h`, `pour le 26/10 à 17h`, `d'ici vendredi 17h` | `dueAt` (and `due`: the day it names, else today, or tomorrow if the time has passed). The deadline word goes with it; a bare time stays `at` |
 | A length | `1h`, `2h30`, `45 min`, `for 2 hours`, `about 20 minutes` | `1h`, `45 min`, `pendant 2 heures`, `environ 20 minutes` | `dur` if the line has a time, else `est` |
 | A range | `14h-15h30`, `14:00 to 15:30` | `14h à 15h30`, `de 14h à 15h30` | `at` and `dur` |
 | A place | `at <a place you have>` | `chez`, `au`, `à <un lieu que vous avez>` | `where` |
@@ -35,6 +36,7 @@ The parser is pure and deterministic. It reads English and French at once, whate
 
 Rules that are easy to get wrong:
 
+- **A time right after by, before, due, avant, d'ici, jusqu'à or pour (a day may stand between) is a deadline's time (`dueAt`), never an appointment (`at`); the first other time is the appointment.** The line never makes a `slot`: slots come from Plan my day and the step's sheet (`docs/dev/slots.md`).
 - **"Nh" is a time when N is 5 or more, or after at, à, vers, from, de; `1h`, `2h30` and anything after for, pendant, about is a length.** `19h`, `7pm` and `14:30` are always times.
 - **A weekday on its own is the next one, never today.** `26/10` is day first (month first only when the day is over 12 and the month is not); a date already gone this year is next year's. Short English day names (`mon`, `sat`, `sun`) count only after on, by, next, this, every.
 - **A time with no date** is today, or tomorrow if it has already passed today by the day-start rule (`atOnDay`): at 20:00, "call mum 9:00" is tomorrow; at 00:30 with the day starting at 04:00 it is that same morning.

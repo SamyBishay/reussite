@@ -461,3 +461,36 @@ describe('it is deterministic', () => {
     expect(made('appeler la banque tomorrow at 10am')).toMatchObject({ due: '2026-10-21', at: '10:00' });
   });
 });
+
+describe('a deadline’s time is not an appointment (plan 10 Nov)', () => {
+  it('"by / before / due / avant / d’ici / pour le" and a time set `dueAt` and `due`, never `at`', () => {
+    expect(made('Pay the rent by 17:00')).toEqual({ title: 'Pay the rent', due: '2026-10-20', dueAt: '17:00' });
+    expect(made('Send the form before 5pm Friday')).toEqual({ title: 'Send the form', due: '2026-10-23', dueAt: '17:00' });
+    expect(made('Send the form by Friday 17:00')).toEqual({ title: 'Send the form', due: '2026-10-23', dueAt: '17:00' });
+    expect(made('Send the form due 26/10 at 9:30')).toEqual({ title: 'Send the form', due: '2026-10-26', dueAt: '09:30' });
+    expect(made('Envoyer le dossier avant 17h')).toEqual({ title: 'Envoyer le dossier', due: '2026-10-20', dueAt: '17:00' });
+    expect(made('Envoyer le dossier pour le 26/10 à 17h')).toEqual({ title: 'Envoyer le dossier', due: '2026-10-26', dueAt: '17:00' });
+    expect(made('Envoyer le dossier d’ici vendredi 17h')).toEqual({ title: 'Envoyer le dossier', due: '2026-10-23', dueAt: '17:00' });
+  });
+  it('a deadline word with a date and no time sets `due` alone, as before', () => {
+    expect(made('Send the form by Friday')).toEqual({ title: 'Send the form', due: '2026-10-23' });
+    expect(made('Envoyer le dossier pour le 26/10')).toEqual({ title: 'Envoyer le dossier', due: '2026-10-26' });
+  });
+  it('a bare time is an appointment: `at` and no `dueAt`', () => {
+    expect(made('Lunch with Alex Monday 19:00')).toMatchObject({ at: '19:00', due: '2026-10-26' });
+    expect(made('Lunch with Alex Monday 19:00')).not.toHaveProperty('dueAt');
+    expect(made('Déjeuner avec Alex lundi 19h')).toMatchObject({ at: '19:00', due: '2026-10-26' });
+    expect(made('Déjeuner avec Alex lundi 19h')).not.toHaveProperty('dueAt');
+  });
+  it('an appointment with a deadline of its own keeps both, apart', () => {
+    expect(made('Call the dentist at 10:00 by 17:00')).toMatchObject({ title: 'Call the dentist', at: '10:00', dueAt: '17:00' });
+  });
+  it('the line never makes a slot, and the change-set it makes is accepted', () => {
+    const r = run('Pay the rent by 17:00');
+    if (r.kind !== 'changes') throw new Error(r.kind);
+    expect(JSON.stringify(r.cs)).not.toContain('slot');
+    const back = readChangeSet(JSON.parse(JSON.stringify({ v: 1, changes: r.cs.changes })));
+    expect(back).toMatchObject({ ok: true });
+    if (back.ok) expect(back.cs.changes[0]).toMatchObject({ op: 'task.create', set: { dueAt: '17:00', due: '2026-10-20' } });
+  });
+});

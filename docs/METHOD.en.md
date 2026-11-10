@@ -51,6 +51,13 @@ When you're stuck, the starter is the two-minute version. If the stored one didn
 
 Then a short exchange to adjust, and one change-set: `day.update` with the plan and the first step, plus any new or broken-down steps. When the person lays out their day, write the whole list with `plan`, not `add` (the day may already hold steps from an earlier plan), then read the day back. A series made today for tonight comes on the list by itself, and its last day is its `until`. Read what a write answers, the warnings too, before asking for a yes. The questionnaire above stays the way without an AI.
 
+### Deadlines, appointments and work time
+A step can carry three different things, each in its own field. Never mix them.
+
+- **Due** (`due`, with an optional `dueAt` time): the step must be done by then. It is in no calendar and it stays on Today after its time, shown as passed; once its day has gone it is carried over, not late.
+- **At** (`at`, with `dur`): an appointment, something that happens at that time whether or not you are ready: a call, a visit, a lunch. It goes in the calendar and the reminders. Use it only for a real appointment. If it passes undone it stays on Today, marked missed, and the person moves or removes it.
+- **Slot** (`slot`: a day, a start and a length): time set aside to work on a step. Plan the person's work time with slots, never with `at`. A slot can move, there is one per step, it is not an appointment and it is not in the calendar feed. When one passes unfinished the step stays on Today and the person decides whether to re-slot it; never move it for them.
+
 ### Through the day
 Start here follows the clock: it is the first step that fits before the next fixed item, in the planned order. A step that doesn't fit the gap waits for the next one and a shorter one moves up; a step is never split. When a fixed item gets close it takes over: the step in hand (what is left of it if it is timed, its estimate if not), plus a margin of a fifth of its length and at least 5 minutes, would run into the time to leave. A fixed item whose time has passed is asked about on its own, **Move** or **Remove**, never in red. The Calendar draws the day's planned steps as faded blocks between the fixed items; they are a projection that moves with the clock, not a commitment.
 

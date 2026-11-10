@@ -13,7 +13,8 @@ L’onglet tient sur un écran, comme l’accueil : la page elle-même ne déf
 Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) . Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine, jusqu’à son dernier jour s’il en a un.
-- Les jours passés ne montrent eux aussi que les éléments à heure fixe ; ce qui est fait est barré.
+- Les **créneaux** sont du temps que vous mettez de côté pour travailler sur une étape (voir [Aujourd’hui](daily-loop.md)). Ils apparaissent dans toutes les vues, distincts des rendez-vous : un contour en pointillés au lieu d’un bloc plein, et le mot « créneau » avant le nom. Faites-en glisser un sur la grille des heures pour le déplacer ; il reste un créneau. Ils ne sont pas dans le flux.
+- Les jours passés montrent la même chose ; ce qui est fait est barré.
 - Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
 - Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu.
 
@@ -28,7 +29,7 @@ Si vous regardez l’une des zones de votre lieu (la pastille du lieu), le calen
 
 ## Le flux de calendrier
 
-Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos éléments à heure fixe y restent à jour, d’une semaine en arrière à six semaines devant.
+Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos rendez-vous (les étapes à heure fixe) y restent à jour ; les créneaux et les échéances n’y sont pas envoyés, d’une semaine en arrière à six semaines devant.
 
 Tant que le flux est éteint sur cet appareil, une petite ligne sous la grille, **Les voir dans votre appli de calendrier : Réglages → Calendrier**, vous mène là où l’allumer. Une fois allumé, la ligne disparaît.
 

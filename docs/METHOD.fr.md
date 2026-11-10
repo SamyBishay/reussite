@@ -51,6 +51,13 @@ Quand vous êtes bloqué, le démarreur est la version deux minutes. Si celui qu
 
 Puis un court échange pour ajuster, et un seul lot de changements : `day.update` avec le plan et la première étape, plus les étapes nouvelles ou découpées. Quand la personne déroule sa journée, écrire la liste entière avec `plan`, pas `add` (la journée peut déjà contenir des étapes d'un plan précédent), puis relire la journée. Une série créée aujourd’hui pour ce soir vient d’elle-même sur la liste, et son dernier jour est son `until`. Lire la réponse d'une écriture, avertissements compris, avant de demander un oui. Le questionnaire ci-dessus reste la voie sans IA.
 
+### Échéances, rendez-vous et temps de travail
+Une étape peut porter trois choses différentes, chacune dans son propre champ. Ne les mélangez jamais.
+
+- **Pour le** (`due`, avec une heure `dueAt` facultative) : l’étape doit être faite d’ici là. Elle n’est dans aucun calendrier et reste sur Aujourd’hui après l’heure, indiquée comme passée ; une fois le jour passé, elle est reportée, pas en retard.
+- **À** (`at`, avec `dur`) : un rendez-vous, quelque chose qui a lieu à cette heure que la personne soit prête ou non : un appel, une visite, un déjeuner. Il va dans le calendrier et les rappels. Seulement pour un vrai rendez-vous. S’il passe sans être fait, il reste sur Aujourd’hui, marqué manqué, et la personne le déplace ou le retire.
+- **Créneau** (`slot` : un jour, un début et une durée) : du temps mis de côté pour travailler sur une étape. Planifiez le temps de travail avec des créneaux, jamais avec `at`. Un créneau peut bouger, il y en a un par étape, ce n’est pas un rendez-vous et il n’est pas dans le flux du calendrier. Quand il passe sans que l’étape soit finie, l’étape reste sur Aujourd’hui et la personne décide de le replanifier ; ne le déplacez jamais à sa place.
+
 ### Dans la journée
 Commencez ici suit l’horloge : c’est la première étape qui tient avant le prochain élément fixe, dans l’ordre prévu. Une étape qui ne tient pas dans le creux attend le suivant et une plus courte remonte ; une étape n’est jamais coupée. Quand un élément fixe approche, il prend le dessus : l’étape en cours (ce qu’il en reste si elle est chronométrée, son estimation sinon), plus une marge d’un cinquième de sa durée et d’au moins 5 minutes, empiéterait sur l’heure de partir. Un élément fixe dont l’heure est passée est posé seul, **Déplacer** ou **Retirer**, jamais en rouge. Le calendrier dessine les étapes prévues du jour comme des blocs pâles entre les éléments fixes ; c’est une projection qui suit l’horloge, pas un engagement.
 

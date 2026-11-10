@@ -203,6 +203,33 @@ function takeTime(w: Work): { at: string; dur?: number } | null {
   return { at: a.at, dur: r?.dur };
 }
 
+// ---- a deadline's time ("by 17:00", "before 5pm", "avant 17h", "pour le 26/10 à 17h"): the time of a deadline, not an appointment ----
+/** The words that make what follows a deadline. "pour" alone is one only when a time or a date follows it. */
+const DEADLINE_WORD = "(?:by|before|due(?:\\s+(?:by|on|at))?|avant|d'ici|jusqu'a|pour)";
+/** A day as it can stand between the deadline word and its time ("by Friday 17:00"): the words takeDate reads, without a deadline word before them. */
+const DAY_WORDS = '(?:(?:the|le)\\s+)?(?:today|tomorrow|tmrw|demain|aujourd\'hui|' + WD + '|' + WDA + '|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?|\\d{1,2}(?:st|nd|rd|th|er)?\\s+(?:of\\s+|de\\s+)?' + MONTHS + '|' + MONTHS + '\\s+\\d{1,2}(?:st|nd|rd|th)?)';
+const DEADLINE_BEFORE = new RegExp(NOT_WORD + '(' + DEADLINE_WORD + ')\\s+(?:(?:the|le)\\s+)?(?:' + DAY_WORDS + '\\s+)?(?:(?:at|a|vers)\\s+)?$', 'u');
+/** Where the deadline word that governs a time starts, and how long it is (with its space), in the text before the time; none when the time is bare. */
+function deadlineWordBefore(before: string): { at: number; len: number } | null {
+  const m = DEADLINE_BEFORE.exec(before);
+  return m ? { at: m.index, len: m[1]!.length + 1 } : null;
+}
+
+/** The deadline's time and the appointment's, apart: a time right after a deadline word is `dueAt` (the word goes with it); the first other time is `at`. */
+function takeTimes(w: Work): { at?: string; dur?: number; dueAt?: string } {
+  let dueAt: string | undefined;
+  for (const tm of timesIn(w.f, w.s)) {
+    const d = deadlineWordBefore(w.f.slice(0, tm.start));
+    if (!d) continue;
+    dueAt = tm.at;
+    w.put(tm.start, tm.end - tm.start, ' '); // the time first, so the word's place has not moved
+    w.put(d.at, d.len, ' ');
+    break;
+  }
+  const a = takeTime(w);
+  return { ...(a ? { at: a.at, ...(a.dur ? { dur: a.dur } : {}) } : {}), ...(dueAt ? { dueAt } : {}) };
+}
+
 // A word before a date that goes with it ("for Friday", "pour le 26/10", "by tomorrow").
 const PRE = '(?:(?:pour|avant|jusqu\'a|jusqu\'au|d\'ici|by|before|until|for|on|next|this|ce|cette|le|la|the)\\s+){0,2}';
 const MORN = '(?:\\s+(?:morning|evening|afternoon|night|matin|soir|apres-midi|apres midi))?';
@@ -289,19 +316,20 @@ function tidy(w: Work, hasTime: boolean): string {
 }
 
 // ---------- reading a line ----------
-interface Parts { title: string; at?: string; dur?: number; est?: number; due?: DayKey; until?: DayKey; where?: string; recur?: Recurrence }
+interface Parts { title: string; at?: string; dueAt?: string; dur?: number; est?: number; due?: DayKey; until?: DayKey; where?: string; recur?: Recurrence }
 
 function extract(text: string, ctx: ParseContext): Parts {
   const w = new Work(text);
   const recur = takeRecurrence(w);
-  const time = takeTime(w);
+  const time = takeTimes(w);
   const len = takeDuration(w);
   const until = recur ? takeUntil(w, ctx.today) : null;
   const due = takeDate(w, ctx.today);
   const where = takePlace(w, ctx.places);
-  const p: Parts = { title: tidy(w, !!time) };
+  const p: Parts = { title: tidy(w, !!time.at) };
   if (recur) p.recur = recur;
-  if (time) { p.at = time.at; if (time.dur ?? len) p.dur = time.dur ?? len!; } else if (len) p.est = len;
+  if (time.at) { p.at = time.at; if (time.dur ?? len) p.dur = time.dur ?? len!; } else if (len) p.est = len;
+  if (time.dueAt) p.dueAt = time.dueAt;
   if (due) p.due = due;
   if (until) p.until = until;
   if (where) p.where = where;
@@ -427,6 +455,7 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
   const p = extract(text, ctx);
   const prefill: Partial<Task> = { title: p.title };
   if (p.due) prefill.due = p.due;
+  if (p.dueAt) { prefill.dueAt = p.dueAt; if (!p.due) prefill.due = dayOfTime(p.dueAt, ctx); } // a deadline's time: due that day, never an `at`
   if (p.at) { prefill.at = p.at; if (!p.due && !p.recur) prefill.due = dayOfTime(p.at, ctx); }
   if (p.dur) prefill.dur = p.dur;
   if (p.est) { prefill.est = p.est; prefill.estBy = 'me'; }
@@ -455,6 +484,6 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
 
   if (words(p.title) > PLAIN_WORDS) return unknown('long', prefill);
   const set: Record<string, unknown> = { title: p.title };
-  for (const k of ['due', 'at', 'dur', 'est', 'where'] as const) if (prefill[k] != null) set[k] = prefill[k];
+  for (const k of ['due', 'dueAt', 'at', 'dur', 'est', 'where'] as const) if (prefill[k] != null) set[k] = prefill[k];
   return { kind: 'changes', cs: csOf([create(set)]), intent: 'add', title: p.title };
 }

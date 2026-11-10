@@ -20,7 +20,7 @@
 | Remove "today's played cards" from the top of Projects and Calendar | 29 Oct, again 1 Nov | chat, session | Shipped on the second ask | ebd2146, e651942 |
 | The Drop confirm state must not wrap at 320 px | 29 Oct | chat | **Unverified.** No test covers "Drop again" at 320 px, and three separate Drop buttons exist | `sheets.tsx:307`, `EventUi.tsx:76`, `CarryUi.tsx:41` |
 | Tapping the running card opens its sheet without pausing | 29 Oct | chat | **Unverified.** The ⋯ button opens the sheet; nothing names the tap | `Today.tsx:174` |
-| Fixed time vs due | 29 Oct | chat | **Unverified.** The plan filed it as "check on the phone" | `PLAN-2026-11-02.md:28` |
+| Fixed time vs due | 29 Oct | chat | **Shipped 10 Nov, verified by tests.** Deadline (`due`/`dueAt`), appointment (`at`) and slot (`slot`) are three fields; see `docs/dev/slots.md`. On a phone: unverified on device | `tests/e2e/deadlines.spec.ts`, `cardfields.spec.ts`, `planslots.spec.ts`; `DECISIONS.md` 2026-11-10 |
 | "Waiting for" event steps with a nudge date | 31 Oct | session | Shipped the same day | 98d095a, 82da148 |
 | Top of every page under the iOS blur | 1 Nov, four times | session | **Shipped then reported broken.** Five attempts in one day. Nothing has touched the band since 948fd8f, so the later layout commits (e9e6ffd, c994469) or the spoofed test are the suspects | 398342e, cb994b1, 948fd8f; `topband.spec.ts` |
 | Connecting people to projects | n/a | n/a | Dropped by you | n/a |

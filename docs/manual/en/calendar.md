@@ -13,7 +13,8 @@ The tab is one screen tall, like Home: the page itself never scrolls, only the g
 The calendar is for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md). Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
 
 - **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays, up to its last day if it has one.
-- Past days show only the fixed-time items too; a done one is struck through.
+- **Slots** are time you set aside to work on a step (see [Today](daily-loop.md)). They show in every view, set apart from appointments: a dashed outline instead of a solid block, and the word “slot” before the name. Drag one on the hour grid to move it; it stays a slot. They are not in the feed.
+- Past days show the same; a done one is struck through.
 - A **stay** is a coloured band over its days. A **half day** you chose in the morning check-in shows as a small label: "Afternoon · Heliopolis".
 - Each event shows the step's **short name** and, when there is room, the address or place.
 
@@ -28,7 +29,7 @@ If you view one of your place's areas (the place pill), the calendar shows that 
 
 ## The calendar feed
 
-Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your fixed-time items stay up to date there, from a week back to six weeks ahead.
+Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your appointments (the steps with a fixed time) stay up to date there; slots and deadlines are not sent, from a week back to six weeks ahead.
 
 While this device’s feed is off, a small line under the grid, **Show these in your calendar app: Settings → Calendar**, takes you to where you switch it on. Once it is on, the line goes away.
 

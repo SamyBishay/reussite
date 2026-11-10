@@ -49,6 +49,16 @@ Une étape passée est seulement laissée hors de la liste d’aujourd’hui ;
 
 **La pratique dit :** une liste courte avec une petite première étape est plus facile à démarrer qu’une longue. Une journée planifiée en quelques minutes vaut mieux qu’une journée planifiée pendant une heure. `[E?]`
 
+## Échéances, rendez-vous et créneaux
+
+Une étape peut porter trois choses différentes, chacune dans son propre champ de la fiche :
+
+- **Pour le** est une échéance, un jour et, si vous voulez, une heure : l’étape doit être faite d’ici là. Elle n’entre jamais dans le calendrier et ne quitte jamais votre liste. Quand l’heure est passée aujourd’hui, l’étape reste dans Aujourd’hui et dit « était pour 17:00 », dans la couleur ordinaire. Après le jour, elle dit « reporté », pas « en retard ».
+- **À** est un rendez-vous, quelque chose qui a lieu à cette heure : un appel, une visite, un déjeuner. Il va dans le calendrier et les rappels. Si son heure passe sans qu’il soit fait, il reste dans Aujourd’hui marqué **manqué**, et une petite carte propose **Déplacer** ou **Retirer**.
+- **Créneau** est du temps que vous mettez de côté pour travailler sur l’étape : un jour, un début et une durée. Planifier la journée donne un créneau à chaque étape prévue. Il peut bouger, il y en a un seul par étape, et ce n’est pas un rendez-vous. Quand il est passé et que l’étape est toujours ouverte, la carte dit « créneau passé » avec **Replanifier** : cela ouvre un nouveau créneau proposé, et rien ne bouge avant votre confirmation. La fiche garde un petit journal des endroits où le créneau est passé.
+
+Saisi sur l’accueil, « payer le loyer avant 17h » ou « by 17:00 » fixe l’heure d’une échéance ; une heure seule, « déjeuner lundi 19h », fixe un rendez-vous. Les créneaux ne viennent que de la planification de la journée ou de la fiche de l’étape.
+
 ## Démarrer
 
 Aujourd’hui montre la première étape sur une carte, **Commencez ici**. Elle affiche le démarreur de l’étape : la plus petite première action. Touchez **Lancer le chrono**, ou **Déjà fait** si c’est déjà fait. Vous avez oublié de démarrer ? **J’ai commencé plus tôt** demande deux touches. **Abandonner**, touché deux fois, abandonne une étape qui ne compte plus ; elle attend au cimetière. Commencez ici est toujours là : quand plus rien n’est ouvert sur la liste du jour, la carte montre l’étape que votre liste choisirait ensuite, avec **Lancer le chrono**, **La mettre en premier** et **Choisir dans votre liste**.

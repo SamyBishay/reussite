@@ -13,7 +13,9 @@ test('the manual index and a page are plain pages, with the app one link away', 
   await expect(page.locator('h1')).toHaveText('Getting started');
   await expect(page.getByRole('link', { name: /Next/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Previous/ })).toBeVisible();
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).fontFamily.startsWith('"Atkinson'))).toBe(true);
+  // Engines differ in how they write the computed family (Firefox quotes names with spaces, WebKit doesn't): compare the first family without quotes, and ask that the face really loaded.
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).fontFamily.split(',')[0]!.trim().replace(/^["']|["']$/g, ''))).toBe('Atkinson Hyperlegible Next');
+  await expect.poll(() => page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].some(f => f.family.replace(/^["']|["']$/g, '') === 'Atkinson Hyperlegible Next' && f.status === 'loaded'); })).toBe(true);
   const img = page.locator('picture img').first();
   if (await img.count()) { await img.scrollIntoViewIfNeeded(); await expect.poll(() => img.evaluate(e => (e as HTMLImageElement).naturalWidth)).toBeGreaterThan(0); }
 });

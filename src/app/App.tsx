@@ -185,6 +185,7 @@ export function App() {
         {withSide && <Side />}
         <Runbar />
         <main>
+          {view.value === 'home' && <UpdateBanner />}
           {view.value !== 'home' && view.value !== 'notifications' && <><UpdateBanner /><PlaceBanner /><ReadOnlyBanner /><SyncStaleBanner /></>}
           {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
           {!bare && view.value !== 'calendar' && <Footer />}

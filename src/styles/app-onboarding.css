@@ -1,0 +1,78 @@
+/* ---------- first-run onboarding ---------- */
+.app.onboard{max-width:560px;padding-block:24px 40px;min-height:100dvh;align-content:start}
+.ob .bigchoices .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ob-actions .btn{flex:1 1 auto;justify-content:center}
+.ob-skip{display:block;margin:var(--s4) 0 0;min-height:44px;padding:8px 0;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-align:left}
+.ob-pair-link{margin-top:var(--s4);justify-content:center;text-align:center}
+.ob-notherapy{margin-top:var(--s5)}
+.obplace{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s2);margin-top:var(--s2)}
+.obplace select{grid-column:1 / -1}
+.obplace .btn{min-width:44px;justify-content:center;padding-inline:10px}
+.obsuit{display:grid;grid-template-columns:64px minmax(0,1fr);gap:var(--s2);margin-top:var(--s2)}
+.obsuit input:first-child{text-align:center;font-size:20px;padding-inline:4px}
+.presets{display:grid;gap:var(--s2);margin-top:var(--s2)}
+.btn.preset{justify-content:flex-start}
+.btn.preset[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.preset .dots{display:inline-flex;gap:var(--s1);flex:none}
+.preset .dots i{width:14px;height:14px;border-radius:50%;display:block}
+.ob-how{margin-top:var(--s5)}
+.obpillar{margin-top:var(--s3)}
+.obpillar .hint{margin:var(--s1) 0 0}
+.obsteps{margin:var(--s3) 0;padding-left:1.4em;display:grid;gap:var(--s2)}
+.obapps{margin:var(--s2) 0 0;padding-left:1.2em;display:grid;gap:var(--s2)}
+.obsteps a{overflow-wrap:anywhere;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.obchat{display:grid;gap:var(--s2);margin:var(--s3) 0}
+.obchat .bubble{margin:0;padding:10px 14px;border-radius:16px;max-width:92%;overflow-wrap:anywhere}
+.obchat .bubble.you{background:var(--card);justify-self:start}
+.obchat .bubble.me{background:var(--accent-soft);justify-self:end}
+.morn-say.obsay{grid-template-columns:minmax(0,1fr);margin-top:var(--s3)}
+.morn-say.obsay textarea{width:100%}
+.nextsteps{background:var(--card);border-radius:16px;padding:14px 16px;margin-top:var(--s4);display:grid;gap:var(--s2)}
+.nextsteps .eyebrow,.nextsteps .hint{margin:0}
+.nextsteps .picklist.menu .linklike{display:grid;gap:var(--s1);align-content:center;text-align:left}
+.nextsteps small{color:var(--ink-2);overflow-wrap:anywhere}
+.ob details.more>summary{min-height:44px}
+.ob .btn.small{min-height:44px}
+
+/* The manual (src/manual): plain reading, pictures that never push the page sideways. */
+.manual{overflow-wrap:anywhere}
+.manual article>*:first-child{margin-top:0}
+.manual h2.man-h1{margin:var(--s2) 0 var(--s3);font:700 24px/1.25 var(--serif)}
+.manual h3{margin:0 var(--s7) var(--s2) 0}
+.manual article h3,.manual article h4,.manual article h5{margin:var(--s5) 0 var(--s2);font:700 18px/1.3 var(--sans)}
+.manual article h4,.manual article h5{font-size:16px}
+.manual p,.manual li{font-size:16px;line-height:1.55;color:var(--ink)}
+.manual p{margin:var(--s3) 0}
+.manual ul,.manual ol{margin:var(--s3) 0;padding-left:22px}
+.manual li{margin:var(--s2) 0}
+.manual blockquote{margin:var(--s3) 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}
+.manual blockquote{color:var(--ink)}
+.manual code{font-family:var(--mono);font-size:.92em;background:var(--card);border:1px solid transparent;border-radius:5px;padding:0 4px}
+.manual pre{white-space:pre-wrap;background:var(--card);border:1px solid transparent;border-radius:8px;padding:10px;font:13px/1.5 var(--mono)}
+.manual hr{border:0;border-top:1px solid var(--line);margin:var(--s5) 0}
+.manual figure{margin:var(--s4) 0;text-align:center}
+.manual .shot{display:block;margin:0 auto;max-width:min(100%,300px);height:auto;border:1px solid var(--line);border-radius:12px}
+.manual .shot-alt{color:var(--ink-3);font-size:14px}
+.manual .lnk.wrap{white-space:normal}
+.manual .man-nav{margin:var(--s4) 0}
+
+/* The task sheet's actions: a bar under the title that stays in view while the fields scroll under it. */
+.sheet .actionbar{position:sticky;top:-20px;z-index:3;display:flex;flex-wrap:wrap;gap:var(--s2);margin:var(--s3) calc(-1 * var(--s4)) var(--s2);padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.sheet .actionbar>*{min-width:0}
+.clockpick{display:flex;gap:var(--s2);align-items:center}.clockpick>input{flex:1;min-width:0}
+
+/* Ordering by dragging: a grip to hold, and ↑ ↓ that stay for the keyboard and screen readers, shown when focused. */
+.grip{display:inline-grid;place-items:center;width:28px;height:44px;flex:none;color:var(--ink-3);font-size:20px;line-height:1;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.grip.sm{width:24px;height:36px;font-size:17px}
+.kbd-only:not(:focus){position:absolute;width:1px;height:1px;padding:0;margin:calc(-1 * var(--s1));overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.drag-ghost{opacity:.4}
+.drag-chosen{box-shadow:0 6px 18px rgba(0,0,0,.2)}
+body > .row,body > li{list-style:none}
+/* chains: "+n after" under a head's title, the steps that wait unfolded inside the card */
+.chain{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);align-items:baseline;font-size:13.5px;min-width:0}
+.chain-toggle{color:var(--ink-2);font-weight:600;min-height:32px;padding:4px 0}
+.chain-due{color:var(--ink-2)}
+.chain-list{flex:1 1 100%;list-style:none;margin:var(--s1) 0 0;padding:0 0 0 4px;border-left:2px solid var(--line);display:grid;gap:var(--s1)}
+.chain-list li{color:var(--ink-3);overflow-wrap:anywhere}
+.chain-list .linklike{color:var(--ink-3);text-align:left}
+.proj li.waiting .stept{color:var(--ink-3)}

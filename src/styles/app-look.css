@@ -1,0 +1,183 @@
+/* ---------- phase 4b: areas ---------- */
+.tag.area{background:var(--sea-soft);color:var(--sea-deep)}
+.areaeditor{margin:var(--s2) 0 var(--s3) var(--s3);padding-left:10px;border-left:2px solid var(--line)}
+.areahint{margin:0 0 var(--s2)}
+.arearow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s2);align-items:center;margin-top:var(--s2)}
+.areahead{margin:var(--s4) 0 var(--s1);font:700 13px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.personpage li small{display:block}
+.halflabel{align-self:center;min-width:6.5em;font:600 13px var(--mono);color:var(--ink-2)}
+
+/* ---------- phase 4b: the look (brief §16) ---------- */
+/* Fewer lines: cards are set apart by space and a soft surface. A dashed edge still means "optional" or "done". */
+.row.done,.row.optional,.pilelist li.todo,.planlist li.offerrow,.planlist .role-plan,.planlist .role-optional{border-color:var(--line)}
+.row{padding:var(--s3) var(--s4);border-radius:16px}
+.foot{border-top:0}
+.tabbar,.homein{border-top-color:transparent}
+.sheet .actionbar{border-bottom-color:transparent}
+.first.focus{background:var(--card);border:2px solid var(--accent-soft)}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 8px var(--accent-soft)}}
+.first.running{border-color:var(--accent);box-shadow:none}
+
+/* Above 1024 px: the content is a centred column, the suit piles a column of their own beside it with room
+   around them; the Matrix and the Calendar get a wider column; body text is one size up. */
+@media (min-width:1024px){
+  body{font-size:calc(var(--base-size,16px) + 2px)}
+  .app,.app.bare,.app.noside{max-width:none;padding-inline:var(--s7);padding-top:16px;grid-template-columns:minmax(0,1fr) minmax(0,720px) minmax(0,1fr);column-gap:var(--s7);row-gap:var(--s5)}
+  #runbar,main{grid-column:2}
+  .side{grid-column:3;grid-row:1 / span 2;justify-self:start;width:min(100%,232px);top:var(--s7);container-type:inline-size}
+  .app.wide{max-width:1360px;grid-template-columns:minmax(0,1fr) 200px}
+  .app.wide #runbar,.app.wide main{grid-column:1}
+  .app.wide .side{grid-column:2;width:100%}
+  .app.wide.noside{grid-template-columns:minmax(0,1fr)}
+  .found{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s5) var(--s4);max-width:none;align-items:start}
+  .pile{align-content:start}
+  .side{gap:var(--s5)}
+  .homein-in{max-width:720px}
+  .tabbar-in{max-width:720px}
+}
+.ob-mark{display:block;margin:var(--s5) 0 var(--s5)}
+/* The mark: the light painting's heart on the light ground, the dark one's on the dark (src/app/Mark.tsx). */
+.mark img{display:block;height:100%;width:auto}
+.mark .mark-d{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mark .mark-l{display:none}:root:not([data-theme="light"]) .mark .mark-d{display:block}}
+:root[data-theme="dark"] .mark .mark-l{display:none}
+:root[data-theme="dark"] .mark .mark-d{display:block}
+/* The rings: an empty state's mark, and the running timer's progress beside its clock. */
+.rings{display:block;flex:none}
+.emptystate{display:grid;justify-items:start;gap:var(--s3);margin-top:var(--s5)}
+.timerbox{display:inline-flex;align-items:center;gap:var(--s3)}
+/* The close-of-day show: a heart outline around the count, drawn in once the deal is done. */
+.show-heart-wrap{position:relative;display:grid;place-items:center;padding:var(--s5) var(--s6)}
+.show-heart{position:absolute;left:50%;top:54%;width:150px;height:auto;transform:translate(-50%,-50%) scale(.9);opacity:.25;transition:opacity .6s ease-out,transform .6s ease-out}
+.show-heart path{stroke:#C6708E}
+.show-heart.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.set>div>p+p,.foldbody>div>p+p{margin-top:var(--s3)}
+/* Waiting for (event steps): a calm row, the answers under the words; long words wrap, nothing runs sideways. */
+.waitlist li{grid-template-columns:minmax(0,1fr)}
+.waitlist .h-text{font-weight:600;text-align:left;overflow-wrap:anywhere}
+.waitlist small{overflow-wrap:anywhere}
+.waitlist .go{margin-top:var(--s1)}
+.banner.nudge{display:grid;justify-content:stretch;gap:var(--s2)}
+.banner.nudge p{overflow-wrap:anywhere}
+.banner.missed{display:grid;justify-content:stretch;gap:var(--s2);background:var(--panel);border:1px dashed var(--line);color:var(--ink-2);margin-top:var(--s3)}
+.banner.missed p{overflow-wrap:anywhere}
+.banner.missed .go{margin-top:0;flex-wrap:wrap}
+.missed-move{display:grid;gap:var(--s2)}
+.carrycard{display:grid;gap:var(--s2)}
+.carrycard .t{overflow-wrap:anywhere}
+.carrycard .go{flex-wrap:wrap}
+/* ---------- the morning ritual: pillars ---------- */
+.pillar{margin-top:var(--s4)}
+.pillar h4{font:600 13px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin:0}
+.pillar .picklist{margin-top:var(--s2)}
+.pillar .picklist li{grid-template-columns:minmax(0,1fr)}
+.pillar .go{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.pillar-empty,.pillar-skipped{margin:var(--s2) 0 0}
+/* ---------- the morning with an AI: a proposal to keep, swap or skip ---------- */
+.morning .picklist li>div:first-child{min-width:0;overflow-wrap:anywhere}
+.morn-skipped{opacity:.6}
+.morn-skipped p:first-child{text-decoration:line-through}
+.morn-line{margin:var(--s1) 0 0}
+.morn-pillar{margin-top:var(--s3)}
+.morn-pillar .picklist{margin-top:var(--s1)}
+.morn-say{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s2);margin-top:var(--s2)}
+.morn-say>*{min-width:0}
+.planmeta.over{color:var(--ink)}
+
+/* The place menu: a place and its areas, then Everywhere, two ticks a row. */
+.placemenu .hint{margin-top:var(--s1)}
+.pm-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--s1)}
+.pm-row{display:grid;grid-template-columns:minmax(0,1fr) 68px 68px;align-items:center;gap:var(--s2)}
+.pm-head{margin-top:var(--s4);padding:0 var(--s3);font:600 12px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);text-align:center}
+.pm-head span:first-child{text-align:left}
+.pm-list .pm-row{background:var(--card);border-radius:12px;padding:0 var(--s3);min-height:48px}
+.pm-name{min-width:0;overflow-wrap:anywhere;font-weight:600}
+.pm-area .pm-name{padding-left:var(--s5);font-weight:400}
+.pm-area .pm-name::before{content:"›";margin-right:var(--s2);color:var(--ink-3)}
+.pm-all{margin-top:var(--s2)}
+.pm-tick{display:grid;place-items:center;min-height:48px;cursor:pointer}
+.pm-tick input{width:22px;height:22px;accent-color:var(--accent);margin:0}
+.placemenu .actions{margin-top:var(--s4)}
+/* Today's rhythm: the day navigator, the banners, Start here, the carry card and the list's block are one column with 12px between them (--s3);
+   Start here stands a little apart from the banners above it, and nothing sets its own margin. Rows breathe: the meta line's dots are dropped
+   (the gap says it, so a dot never starts a wrapped line), the buttons of Start here have room between them and above the quiet row. */
+.todayview{display:flex;flex-direction:column;gap:var(--s3)}
+.todayview>*{margin-top:0;margin-bottom:0}
+.todayview>.daynav{margin-top:var(--s4);margin-bottom:var(--s1)}
+.todayview>.first{margin-top:var(--s3)}
+.todayview>.banner~.first,.todayview>.nudge~.first{margin-top:var(--s5)}
+.todayview .first{gap:var(--s4)}
+.todayview .first .go{gap:var(--s3)}
+.todayview .first .go.quiet{gap:var(--s2);margin-top:var(--s1)}
+.todayview .first .hint{margin:0}
+.first .meta>span[aria-hidden="true"],.row .meta>span[aria-hidden="true"]{display:none}
+.first .meta,.row .meta{gap:var(--s1) var(--s3)}
+.row .body{gap:var(--s2)}
+.row .ctrls{margin-top:var(--s1)}
+.todayview .adders{margin-top:var(--s3)}
+.todayview .sec{margin-top:var(--s6)}
+/* Today on a phone is condensed so that, on a Sunday before the review, the whole of Start here shows on an iPhone SE (375x667) without scrolling (2026-11-01):
+   8px between the blocks (4px more around Start here), the suit piles a row of small cards, the review box's text and button side by side, and Start here
+   with less padding and gap; every button the card has keeps its height (44px for the main ones). */
+@media (max-width:919px){.app[data-view="today"] #runbar:empty{display:none}}
+@media (max-width:767px){
+  .app[data-view="today"]{gap:var(--s2)}
+  .app[data-view="today"] .side,.app[data-view="today"] .found{gap:var(--s2)}
+  .app[data-view="today"] .pile{padding:0;gap:var(--s1)}
+  .app[data-view="today"] .pc{max-width:30px}
+  .app[data-view="today"] .pc .r{font-size:11px}
+  .app[data-view="today"] .pc .s{font-size:8px}
+  .app[data-view="today"] .pc .big{font-size:17px}
+  .app[data-view="today"] .pile small{font-size:10.5px}
+  .todayview{gap:var(--s2)}
+  .app[data-view="today"] .daynav{margin-top:0;margin-bottom:0}
+  .todayview>.first,.todayview>.banner~.first,.todayview>.nudge~.first{margin-top:var(--s1)}
+  .todayview>.banner{padding:8px 12px;gap:var(--s2);font-size:14px;line-height:1.35}
+  .todayview>.banner>p{flex:1 1 11em}
+  .todayview .first{padding:12px 16px;gap:var(--s2)}
+  .todayview .first .t{font-size:clamp(20px,5.6vw,26px)}
+  .todayview .first .go{gap:var(--s2)}
+  .todayview .first .go.quiet{margin-top:0}
+}
+/* On a short phone the line that explains "Open it" (it starts the timer) makes way: the button says it in the sheet it opens. */
+@media (max-width:767px) and (max-height:700px){.todayview .first .hint{display:none}}
+/* Today's minutes timed, in the masthead between the date and the pill: it takes the room that is left (a flex-basis of 0) and, when the text does not fit,
+   the span wraps to a second line that the cell clips, so it goes whole or not at all. */
+.mast-timed{flex:1 1 0;min-width:0;margin:0 0 0 calc(var(--s2) * -1);height:20px;line-height:20px;overflow:hidden;text-align:center;font-size:12.5px;color:var(--ink-3);white-space:normal}
+.mast-timed span{display:inline-block;white-space:nowrap;margin-inline-start:var(--s2)}
+/* WebKit does not break before an atomic inline that starts the line, so the span could stay on the first line and be clipped half-way; a zero-width space before it gives the break "whole or hidden" needs. */
+.mast-timed::before{content:"\200B"}
+
+/* Decisions on the Matrix: compact rows under the four boxes. */
+.decisions{margin-top:var(--s5)}
+.decisions .sec{margin-top:0}
+.decisions .subsec{font:600 12px/1.3 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:var(--s3) 0 var(--s2)}
+.decisions .decs li{padding:var(--s2) var(--s3);border-radius:10px;gap:0}
+.decisions .decs .meta{font-size:12.5px;line-height:1.35}
+/* A two-tap button (ConfirmButton.tsx): the other label sits in the same cell, invisible (`data-other`), so it is as wide as the longer of the two and never changes size when armed. */
+.btn.twostate{display:inline-grid;justify-items:center;align-items:center;white-space:nowrap}
+.btn.twostate>span,.btn.twostate::after{grid-area:1/1}
+.btn.twostate::after{content:attr(data-other);visibility:hidden;height:0;overflow:hidden}
+/* The running card opens its sheet from a tap on its body; the sheet repeats the timer, Pause and Done at its top. */
+.first.running,.row.running{cursor:pointer}
+.runstrip{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s2) 0}
+/* The Matrix's search field: full width at the top, the clear button inside its right end (a 44px target). */
+.matrixsearch{position:relative;margin:0 0 var(--s3)}
+.matrixsearch input[type=search]{width:100%;padding-right:48px}
+.matrixsearch .clear{position:absolute;right:0;top:0;width:44px;height:44px;border:0;background:none;color:var(--ink-2);font-size:22px;line-height:1;cursor:pointer}
+.matrix-none{margin:0 0 var(--s3)}
+/* The last row of Settings: Layout diagnostics (LayoutDiagnostics.tsx). The screen is a full-screen layer with two thin lines fixed to the top. */
+.setrow{display:grid;justify-items:start;gap:var(--s1);width:100%;margin-top:var(--s5);padding:12px 14px;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--card);min-height:44px}
+.setrow small{font-weight:400;color:var(--ink-2)}
+.layoutdiag{position:fixed;inset:0;z-index:40;background:var(--ground);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.layoutdiag .ld-body{max-width:560px;margin:0 auto;padding:calc(var(--sat) + 24px) 16px 40px}
+.ld-line{position:fixed;left:0;right:0;height:0;border-top:1px solid;z-index:41;pointer-events:none}
+.ld-line.ld-inset{border-color:#d12}
+.ld-line.ld-content{border-color:#12d}
+.ld-sw{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle}
+.ld-sw.ld-inset{border-color:#d12}
+.ld-sw.ld-content{border-color:#12d}
+.ld-rows{margin:var(--s3) 0;display:grid;gap:var(--s2)}
+.ld-row{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--line-2);border-radius:10px;background:var(--card)}
+.ld-row dt{font:600 12px var(--sans);color:var(--ink-2);overflow-wrap:anywhere}
+.ld-row dd{margin:0;font:500 14px var(--mono);overflow-wrap:anywhere;word-break:break-word}

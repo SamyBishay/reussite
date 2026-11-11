@@ -99,10 +99,31 @@ test('an iPhone home-screen app gets the ios-app class and at least 62px above t
   await page.goto('/#home');
   await expect(page.locator('html')).toHaveClass(/ios-app/);
   const top = await page.locator('.app').evaluate(el => parseFloat(getComputedStyle(el).paddingTop));
-  expect(top).toBeGreaterThanOrEqual(62 + 12);
+  expect(top).toBeGreaterThanOrEqual(86 + 12);
   const h1 = await page.getByTestId('home').locator('h1').boundingBox();
-  expect(h1!.y).toBeGreaterThanOrEqual(62 + 12);
+  expect(h1!.y).toBeGreaterThanOrEqual(86 + 12);
 });
+
+// The status bar's blur fades out about 83px down on the owner's phone (a screenshot, 2026-11-11): the title, the clock and the buttons' top line were inside it.
+// The emulated phone can't draw that blur, so this measures what the page controls: nothing of Home's top bar starts above 83px.
+for (const w of [320, 375, 430]) {
+  test(`an iPhone home-screen app keeps Home's title, clock and buttons below the status bar's blur (${w}px wide)`, async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'standalone', { value: true });
+      Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+      Object.defineProperty(screen, 'width', { get: () => innerWidth });
+      Object.defineProperty(screen, 'height', { get: () => innerHeight });
+    });
+    await page.setViewportSize({ width: w, height: 800 });
+    await page.goto('/#home');
+    await expect(page.locator('html')).toHaveClass(/ios-app/);
+    for (const id of ['home-clock', 'home-bell', 'home-menu']) {
+      const box = await page.getByTestId(id).boundingBox();
+      expect(box!.y, id).toBeGreaterThanOrEqual(83);
+    }
+    expect((await page.getByTestId('home').locator('h1').boundingBox())!.y).toBeGreaterThanOrEqual(83);
+  });
+}
 
 test('an ordinary browser tab does not get the class', async ({ page }) => {
   await page.goto('/#home');

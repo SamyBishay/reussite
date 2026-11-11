@@ -17,7 +17,7 @@ const world = () => ({
   days: { '2026-10-26': { date: '2026-10-26', plan: ['bank', 'a'], launches: [], first: null, checkin: null, closed: null, summary: null } }, decisions: {}, meta: { settings: { here: 'home' } },
 });
 
-/** The island: a phone's home-screen app with the inset read as 0 (--sat is then 62px). */
+/** The island: a phone's home-screen app with the inset read as 0 (--sat is then 86px). */
 async function island(page: Page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'standalone', { value: true });

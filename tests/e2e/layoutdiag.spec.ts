@@ -35,9 +35,9 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     expect(Math.abs((await yOf('ld-line-content')) - content)).toBeLessThan(1.5);
     expect(content).toBeGreaterThanOrEqual(inset);
     await noSideways(page, 'layout diagnostics');
-    // With the iPhone class the applied inset reads 62: the screen shows the app's own number, not the browser's.
+    // With the iPhone class the applied inset reads 86: the screen shows the app's own number, not the browser's.
     await page.evaluate(() => document.documentElement.classList.add('ios-app'));
-    await expect(page.getByTestId('ld-applied').locator('dd')).toContainText('62', { timeout: 3000 });
+    await expect(page.getByTestId('ld-applied').locator('dd')).toContainText('86', { timeout: 3000 });
     await page.getByTestId('ld-close').click();
     await expect(screenEl).toHaveCount(0);
     await expect(page.getByTestId('settings')).toBeVisible();

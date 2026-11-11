@@ -103,14 +103,14 @@ for (const [w, h] of PHONES) {
     await page.setViewportSize({ width: w, height: h });
     await page.goto('/');
     await expect(page.getByTestId('ob-language')).toBeVisible();
-    // The class `ios-app` (src/app/ios.ts) raises the top inset to 62px; only a phone can show the real one (invariant 11: unverified on device).
+    // The class `ios-app` (src/app/ios.ts) raises the top inset to 86px; only a phone can show the real one (invariant 11: unverified on device).
     await page.evaluate(() => document.documentElement.classList.add('ios-app'));
     await checkPage(page, 'first page, ios-app');
     const top = await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top);
-    expect(top).toBeGreaterThanOrEqual(62);
+    expect(top).toBeGreaterThanOrEqual(86);
     await page.getByTestId('ob-next').click();
     await expect(page.getByTestId('ob-pillars')).toBeVisible();
     await checkPage(page, 'categories page, ios-app');
-    expect(await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top)).toBeGreaterThanOrEqual(62);
+    expect(await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top)).toBeGreaterThanOrEqual(86);
   });
 }

@@ -48,7 +48,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.locator(`.app[data-view="${v}"]`)).toBeVisible();
       await page.waitForTimeout(150);
       const before = await stripHits(page);
-      expect(before.sat, v).toBe(62);
+      expect(before.sat, v).toBe(86);
       expect(before.hits, v + ': content in the strip').toEqual([]);
       // Scroll the page as far as it goes (Home and the Calendar's grid keep to their own box) and look again.
       await page.evaluate(() => window.scrollTo(0, document.scrollingElement!.scrollHeight));

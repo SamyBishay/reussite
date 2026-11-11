@@ -1,13 +1,13 @@
-# Proposed brief changes (week of 2 Nov 2026)
+# Changes since the brief (week of 2 Nov 2026): a record
 
-Edits to the build brief that follow from `docs/PLAN-2026-11-02.md`. Requests given in a session are done in that session; this file is only a record of what changed, not the brief.
+What `docs/PLAN-2026-11-02.md` changed relative to the build brief. This is a record, not a list of proposals and not a to-do for the owner: requests given in a session are done in that session (`AGENTS.md`, invariant 12), so every item below was built when it was asked for, and the brief is not edited from here. `DECISIONS.md` and the owner's message outrank both the brief and this file; where an item was later changed or shelved, the line says so, and the entry in `DECISIONS.md` has the date and the reason.
 
 - **One order for the day.** A pure `dayOrder` decides the day: fixed-time items at their time, planned steps filling the gaps in the planned order. Start here is its head. Home's "Coming up" is gone, and so is the next-step bar's own rule (it reads `dayOrder` too).
-- **Home's greeting.** A greeting about the day that changes each time Home opens and doesn't repeat within a day, ending with an invitation to use the box. No counts of missed or carried things, and never the words database, record, entry or field.
+- **Home's greeting.** A greeting about the day that changes each time Home opens and doesn't repeat within a day, ending with an invitation to use the box. No counts of missed or carried things, and never the words database, record, entry or field. (Done; Home was later made bare, the greeting and the box, 975e8be.)
 - **Done cards fold.** In every list of cards, done ones drop below the open ones into one "N done" row; open cards keep their order.
 - **The morning ritual.** The planning message, then: yesterday in one line, carried and missed items one at a time, the day's shape (start and end), one step per pillar (the four suits), the plan with projected times, and a flag when the summed estimates exceed the free time. Launch points and restart nudges are gone.
 - **No bulk carry.** Carried-over steps and missed fixed-time items are decided one at a time; nothing is rescheduled or shelved silently.
-- **Planned steps in the Calendar.** Projected and faded in the in-app Calendar, from `dayOrder`; never stored as times, never in the feed.
+- **Planned steps in the Calendar.** Projected and faded in the in-app Calendar, from `dayOrder`; never stored as times, never in the feed. (Done, then shelved by the owner on 1 Nov: the code and its tests stay, nothing is drawn.)
 - **SMART goals v2.** A project's goal is an outcome in one sentence, a measure (count, milestones or none) and start and due dates. Steps carry `advances`; only advancing steps move the bar, and card counts never do. The five S/M/A/R/T fields stay, folded.
 - **The Sunday review checks goals.** Each project's goal, then each open step: does it move the goal?
 - **The close shows rewards.** The pillars played and the project bars that moved.

@@ -12,14 +12,16 @@ Your list is scrambled (encrypted) on your device before it is sent. Only your d
 
 1. Settings → **Sync & devices** → **Set up sync**.
 2. **Make my recovery key.** It is a long key of 14 groups of 4 characters, shown as letters and a QR code.
-3. **Save it now**, in a password manager, printed on paper, or as a photo kept somewhere safe.
-4. Tap **I've saved it**. Until you do, a card reminds you.
+3. **Save it now**: **Copy the key** into a password manager, **Save as a file**, print it, or keep a photo of the code somewhere safe.
+4. Tap **I've saved it**. It is the one tap before moving on; until you do, the bell on Home reminds you.
+
+You can see the key again at any time: Settings → Sync & devices → **Show recovery key** (with Copy and Save as a file).
 
 > **If you lose every device and the recovery key, your list is gone.** Nobody can get it back: not us, and not whoever runs the relay.
 
 ## Add another device
 
-On the new device, open Réussite, then Settings → Sync & devices → **Join with a recovery key**. Or, on a brand new device, choose **I already use Réussite on another device** on the first screen. Scan the QR code, or type the key. Spaces, dashes and lower case don't matter. If you mix up I, L and O with 1 and 0, it still reads it. A typo is caught by the check at the end.
+On the new device, open Réussite, then Settings → Sync & devices → **Restore with a recovery key**. Or, on a brand new device, choose **Restore with a recovery key** on the first screen. Scan the QR code, or type the key. Spaces, dashes and lower case don't matter. If you mix up I, L and O with 1 and 0, it still reads it. A typo is caught by the check at the end.
 
 What was on the new device stays: it is added to your list, never replaced.
 
@@ -27,7 +29,7 @@ What was on the new device stays: it is added to your list, never replaced.
 
 **You lost your phone, but you have another device.**
 1. On the other device, open Settings → Sync & devices. Your devices are listed, with when each was last seen.
-2. Get a new device, install Réussite, and join with the recovery key. **Show recovery key** on the working device shows it again.
+2. Get a new device, install Réussite, and restore with the recovery key. **Show recovery key** on the working device shows it again.
 
 **You lost every device, but you kept the key.** Install Réussite on the new device, join with the key, and your list comes back from the scrambled copy.
 

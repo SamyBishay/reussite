@@ -53,8 +53,9 @@ test('sync: set up on one device, join on another by typing the key, edits trave
   const key = await setUp(pa);
   expect(key.replace(/\s+/g, '-')).toMatch(/^([0-9A-Z]{4}-){13}[0-9A-Z]{4}$/);
   await expect(pa.getByTestId('sync-setup-sheet').or(pa.getByTestId('sync-key-sheet'))).toBeVisible();
-  // "later": the card on Today stays until the key is confirmed
-  await pa.getByRole('button', { name: 'I’ll do it later' }).click();
+  // No "later" button: closing the sheet without the tap leaves the card on Today until the key is confirmed
+  await expect(pa.getByRole('button', { name: 'I’ll do it later' })).toHaveCount(0);
+  await pa.keyboard.press('Escape');
   await pa.getByTestId('tab-today').click();
   await expect(pa.getByTestId('key-card')).toBeVisible();
   await expect(pa.locator('main')).not.toContainText('Synced at'); // quiet on Today
@@ -135,7 +136,7 @@ test('sync: a valid key with no list on the relay warns first, and "go back" joi
   await page.getByTestId('sync-empty-back').click();
   await expect(page.getByTestId('sync-join-key')).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('sync')).toContainText('Join with a recovery key'); // still off
+  await expect(page.getByTestId('sync')).toContainText('Restore with a recovery key'); // still off
 });
 
 test('sync: turning it off keeps the list and forgets the key; delete everywhere needs the typed word', async ({ page }) => {
@@ -442,11 +443,13 @@ test('one-tap link: opened in the browser that holds the list, it shows the revi
   expect(new URL(tab.url()).pathname).toBe('/'); // the link is gone from the address, so a reload does not run it again
   expect(new URL(tab.url()).hash).toBe('#home');
   await noSideways(tab, 'drop review');
-  // it opens on Home, and what is applied is an exchange of its own: the receipt on Home, a row in History
+  // it opens on Home, and what is applied is an exchange of its own: a row in History
   await expect(tab.getByTestId('home')).toBeVisible();
   await tab.getByTestId('apply-changes').click();
   await expect(tab.getByTestId('sheet')).toBeHidden();
-  await expect(tab.getByTestId('receipt')).toContainText('1 change');
+  await tab.getByTestId('home-menu').click();
+  await tab.getByTestId('menu-history').click();
+  await expect(tab.getByTestId('history-row').first()).toContainText('1 change');
   await tab.getByTestId('tab-matrix').click();
   await expect(tab.locator('.matrix')).toContainText('answer the direct one');
   expect(posts.filter(u => u.endsWith('/inbox'))).toEqual([]);

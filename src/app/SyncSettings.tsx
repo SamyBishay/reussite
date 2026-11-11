@@ -24,11 +24,15 @@ function Groups({ text }: { text: string }) {
 /** The key on screen: groups, QR code, copy, and what to do with it. */
 export function KeyView({ text }: { text: string }) {
   const copy = () => navigator.clipboard?.writeText(text).then(() => toast(t('syncKeyCopied')), () => undefined);
+  const file = async () => { await saveFile('reussite-recovery-key.txt', text + '\n', 'text/plain'); toast(t('syncKeyFileSaved')); };
   return (
     <>
       <Groups text={text} />
       <div class="qrbox"><QrCode text={text} label={t('syncKeyQr')} /></div>
-      <div class="actions"><button class="btn" type="button" onClick={copy}>{t('syncCopyKey')}</button></div>
+      <div class="actions">
+        <button class="btn" type="button" onClick={copy} data-testid="key-copy">{t('syncCopyKey')}</button>
+        <button class="btn" type="button" onClick={() => void file()} data-testid="key-save-file">{t('syncSaveKeyFile')}</button>
+      </div>
       <p class="hint">{t('syncKeySaveHint')}</p>
       <p class="warnline">{t('syncWarning')}</p>
     </>
@@ -57,7 +61,6 @@ function SetUpSheet() {
       <KeyView text={key} />
       <div class="actions">
         <button class="btn primary" type="button" data-testid="sync-key-saved" onClick={async () => { await confirmKeySaved(); closeSheet(); }}>{t('syncKeySavedBtn')}</button>
-        <button class="btn ghost" type="button" onClick={closeSheet}>{t('syncKeyLater')}</button>
       </div>
     </div>
   );

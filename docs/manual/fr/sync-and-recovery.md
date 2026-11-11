@@ -12,14 +12,16 @@ Votre liste est brouillée (chiffrée) sur votre appareil avant d’être envoy�
 
 1. Réglages → **Synchronisation et appareils** → **Activer la synchronisation**.
 2. **Créer ma clé de récupération.** C’est une longue clé de 14 groupes de 4 caractères, affichée en lettres et en QR code.
-3. **Gardez-la maintenant**, dans un gestionnaire de mots de passe, imprimée sur papier, ou en photo rangée en lieu sûr.
-4. Touchez **Je l’ai gardée**. Tant que vous ne l’avez pas fait, une carte vous le rappelle.
+3. **Gardez-la maintenant** : **Copier la clé** dans un gestionnaire de mots de passe, **Enregistrer dans un fichier**, imprimez-la, ou gardez une photo du code en lieu sûr.
+4. Touchez **Je l’ai gardée**. C’est le seul geste avant de continuer ; tant que vous ne l’avez pas fait, la cloche de l’accueil vous le rappelle.
+
+Vous pouvez revoir la clé quand vous voulez : Réglages → Synchronisation et appareils → **Montrer la clé de récupération** (avec Copier et Enregistrer dans un fichier).
 
 > **Si vous perdez tous vos appareils et la clé de récupération, votre liste est perdue.** Personne ne peut la récupérer : ni nous, ni celui qui fait tourner le relais.
 
 ## Ajouter un autre appareil
 
-Sur le nouvel appareil, ouvrez Réussite, puis Réglages → Synchronisation et appareils → **Rejoindre avec une clé de récupération**. Ou, sur un appareil tout neuf, choisissez **J’utilise déjà Réussite sur un autre appareil** sur le premier écran. Scannez le QR code, ou saisissez la clé. Les espaces, les tirets et les minuscules n’ont pas d’importance. Si vous confondez I, L et O avec 1 et 0, elle la lit quand même. Une faute de frappe est repérée par la vérification à la fin.
+Sur le nouvel appareil, ouvrez Réussite, puis Réglages → Synchronisation et appareils → **Restaurer avec une clé de récupération**. Ou, sur un appareil tout neuf, choisissez **Restaurer avec une clé de récupération** sur le premier écran. Scannez le QR code, ou saisissez la clé. Les espaces, les tirets et les minuscules n’ont pas d’importance. Si vous confondez I, L et O avec 1 et 0, elle la lit quand même. Une faute de frappe est repérée par la vérification à la fin.
 
 Ce qui était sur le nouvel appareil reste : c’est ajouté à votre liste, jamais remplacé.
 

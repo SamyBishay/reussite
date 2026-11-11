@@ -84,7 +84,7 @@ test('in French the offer and its sentence are French, and fit at 320px', async 
   await page.clock.setFixedTime(SUNDAY);
   await connectorOn(page);
   await page.getByRole('button', { name: 'Français' }).click();
-  await expect(page.getByTestId('settings')).toContainText('Réglages');
+  await expect(page.locator('#topbar')).toContainText('Réglages');
   await goNotifications(page);
   const offer = page.getByTestId('home-plan-chat');
   await expect(offer).toHaveText('La planifier dans votre chat IA');

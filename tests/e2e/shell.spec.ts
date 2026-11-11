@@ -114,10 +114,10 @@ test('#settings opens Settings, and Home’s menu reaches Settings, Places, Memo
   await page.keyboard.press('Escape');
   await openMenu(page, 'memory');
   await expect(page.getByTestId('memory')).toBeVisible();
-  await expect(page.locator('main h2')).toHaveText('Memory');
+  await expect(page.locator('#topbar h2')).toHaveText('Memory');
   await expect(page.locator('.mast, .side, .foot')).toHaveCount(0);
   await openMenu(page, 'history');
-  await expect(page.locator('main h2')).toHaveText('History');
+  await expect(page.locator('#topbar h2')).toHaveText('History');
   await openMenu(page, 'settings');
   await expandSettings(page);
   await expect(page.getByTestId('open-import')).toBeVisible();

@@ -40,7 +40,7 @@ async function english(page: Page, only = ''): Promise<string[]> {
 async function inFrench(page: Page) {
   await goTab(page, 'settings');
   await page.getByRole('button', { name: 'Français' }).click();
-  await expect(page.getByTestId('settings')).toContainText('Réglages');
+  await expect(page.locator('#topbar')).toContainText('Réglages');
 }
 
 test('the app in French has no English left: the tabs, the menu pages, the sheets, the flows and Settings', async ({ page }) => {

@@ -38,7 +38,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     // The top edge's own numbers are on the screen: sticky at 0, full width, opaque.
     await expect(page.getByTestId('ld-topbar').locator('dd')).toContainText('sticky · top 0px');
     await expect(page.getByTestId('ld-topbar-width').locator('dd')).toContainText(w + 'px / ' + w);
-    await expect(page.getByTestId('ld-topbar-bg').locator('dd')).toContainText('opacity 1');
+    await expect(page.getByTestId('ld-topbar-bg').locator('dd')).toContainText(/(opacity|opacité) 1$/);
     // With the iPhone classes (no inset reported) the applied inset reads 86: the screen shows the app's own number, not the browser's.
     await page.evaluate(() => document.documentElement.classList.add('ios-app', 'ios-noinset'));
     await expect(page.getByTestId('ld-applied').locator('dd')).toContainText('86', { timeout: 3000 });

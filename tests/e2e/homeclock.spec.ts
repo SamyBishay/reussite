@@ -6,7 +6,7 @@ import { stubNow, noSideways } from './helpers';
 test('Home shows the wordmark as its h1 with the small clock beside it, the date under it, and the greeting centred under the bigger mark', async ({ page }) => {
   await stubNow(page, new Date(2026, 10, 1, 15, 15, 0));
   await page.goto('/#home');
-  const h1 = page.getByTestId('home').locator('h1');
+  const h1 = page.locator('#topbar h1');
   await expect(h1).toHaveText('Réussite');
   await expect(h1).toBeVisible();
   await expect(page.locator('h1')).toHaveCount(1);
@@ -101,7 +101,7 @@ test('an iPhone home-screen app gets the ios-app class and at least 62px above t
   // The top edge (#topbar) holds the status bar's room; the screen starts below it by layout.
   const top = await page.locator('#topbar').evaluate(el => parseFloat(getComputedStyle(el).paddingTop));
   expect(top).toBeGreaterThanOrEqual(86);
-  const h1 = await page.getByTestId('home').locator('h1').boundingBox();
+  const h1 = await page.locator('#topbar h1').boundingBox();
   expect(h1!.y).toBeGreaterThanOrEqual(86 + 12);
 });
 
@@ -122,7 +122,7 @@ for (const w of [320, 375, 430]) {
       const box = await page.getByTestId(id).boundingBox();
       expect(box!.y, id).toBeGreaterThanOrEqual(83);
     }
-    expect((await page.getByTestId('home').locator('h1').boundingBox())!.y).toBeGreaterThanOrEqual(83);
+    expect((await page.locator('#topbar h1').boundingBox())!.y).toBeGreaterThanOrEqual(83);
   });
 }
 

@@ -53,7 +53,7 @@ export function Topbar() {
   if (!ready.value || onboarding.value === 'show') return null;
   const side = v === 'today';
   return (
-    <div class={'topbar-in' + (WIDE.includes(v) ? ' wide' : '') + (side ? ' side' : '')} data-testid="topbar-in">
+    <div class={'topbar-in' + (WIDE.includes(v) ? ' wide' : '') + (side ? ' has-side' : '')} data-testid="topbar-in">
       {v === 'home' ? <HomeBar /> : BARE.includes(v) ? <h2 class="sec topbar-title">{t(TITLE_KEY[v]!)}</h2> : <Mast />}
     </div>
   );

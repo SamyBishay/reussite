@@ -18,9 +18,9 @@ p{margin:0}
 :root{--dockpad:max(calc(env(safe-area-inset-bottom,0px) - 20px),0px);--tabbar-h:calc(57px + var(--dockpad));--dock:var(--tabbar-h);--kb:0px;--fabr:max(16px,env(safe-area-inset-right,0px))}
 body.kb{--dock:0px}
 .notif+.notif{margin-top:var(--s3)}
-.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:12px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
+.app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:var(--s4) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
 @media (min-width:920px){
-  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:16px calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
+  .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:var(--s4) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
   .app.bare,.app.noside{grid-template-columns:minmax(0,1fr)}
   #runbar{grid-column:1;grid-row:1}
   main{grid-column:1;grid-row:2}
@@ -32,9 +32,12 @@ main{min-width:0}
 /* `#topbar` is in index.html, sticky at y = 0, full width and opaque (the page's ground: no alpha, no opacity, no filter), padded by the status bar's room. Its content (src/app/Topbar.tsx)
    is Home's bar, a tab's masthead or the title of a screen behind Home. It is in the flow, so every screen starts below it by layout; the .app padding is only the gap. */
 .topbar{position:sticky;top:0;z-index:10;width:100%;background:var(--ground);opacity:1;padding-top:var(--sat);flex:none}
-.topbar-in{max-width:1080px;margin:0 auto;padding:12px 16px 4px}
+.topbar-in{max-width:1080px;margin:0 auto;padding:12px 16px 0}
+@media (min-width:920px){.topbar-in{padding-top:28px}}
 .topbar-title{margin:0;min-height:36px;align-items:center}
-@media (min-width:920px) and (max-width:1023.98px){.topbar-in.side{padding-right:calc(288px + var(--s7) + 16px)}}
+/* Things scrolled into view (scrollIntoView, a link to an anchor, focus) stop below the top edge, not under it. */
+html{scroll-padding-top:var(--topbar-h,0px)}
+@media (min-width:920px) and (max-width:1023.98px){.topbar-in.has-side{padding-right:calc(288px + var(--s7) + 16px)}}
 @media (min-width:1024px){.topbar-in{max-width:720px;padding-inline:0}.topbar-in.wide{max-width:1360px;padding-inline:var(--s7)}}
 /* Home and the Calendar are one screen tall: the body is a column of the top edge and the root, which takes what is left, so the screen is sized by the flow and not by a number. */
 body:has(.app[data-view="home"]),body:has(.app[data-view="calendar"]){display:flex;flex-direction:column;height:100dvh;overflow:hidden}
@@ -92,7 +95,7 @@ body.kb .tabbar{display:none}
    between the bar and the fixed input. Home never scrolls: the app is exactly one screen tall (the top padding, the tab bar, the input and the receipt taken off) and
    everything shrinks to fit. With cards under the greeting (Plan the day, the missed card, an exchange's, Next steps) the mark and the greeting get smaller first;
    when even that is not enough, the card area scrolls inside itself, never the page. */
-.app[data-view="home"]{flex:1 1 0;min-height:0;width:100%;overflow:hidden;grid-template-rows:auto minmax(0,1fr);row-gap:0;padding-block-end:calc(var(--dock) + var(--kb) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
+.app[data-view="home"]{flex:1 1 0;min-height:0;width:100%;overflow:hidden;padding-block-start:0;grid-template-rows:auto minmax(0,1fr);row-gap:0;padding-block-end:calc(var(--dock) + var(--kb) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
 .app[data-view="home"] main{display:flex;flex-direction:column;min-height:0}
 html.home-lock,html.home-lock body{overflow:hidden;overscroll-behavior:none}
 .home{--markh:clamp(72px,23dvh,200px);flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s3)}
@@ -696,9 +699,10 @@ main>.banner{margin-top:var(--s3)}
 }
 /* The Calendar tab is one screen tall, like Home: the page does not scroll (html.home-lock), the grid fills the room between the bar and the tab bar and scrolls
    inside itself, and the Log, a mode of the same bar, scrolls inside its own box (.calscroll). */
-.app[data-view="calendar"].noside{flex:1 1 0;min-height:0;width:100%;overflow:hidden;row-gap:0;grid-template-rows:auto minmax(0,1fr);padding-block-end:calc(var(--dock) + var(--kb) + 8px)}
+.app[data-view="calendar"].noside{flex:1 1 0;min-height:0;width:100%;overflow:hidden;padding-block-start:0;row-gap:0;grid-template-rows:auto minmax(0,1fr);padding-block-end:calc(var(--dock) + var(--kb) + 8px)}
 .app[data-view="calendar"] #runbar:not(:empty){margin-top:var(--s2)}
-.app[data-view="calendar"] main{display:flex;flex-direction:column;min-height:0}
+.app[data-view="calendar"] #runbar{grid-row:1}
+.app[data-view="calendar"] main{grid-row:2;display:flex;flex-direction:column;min-height:0}  /* the empty banner row is hidden, so name the rows: the grid takes the 1fr one */
 .calview{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--s2)}
 .calview>.calbar{flex:none;margin-top:var(--s2)}
 .calview>.calhint,.calview>.calfeed{flex:none;margin:0;font-size:12.5px;line-height:1.35}

@@ -14,15 +14,15 @@ async function checkPage(page: Page, where: string) {
     const lowest = controls.reduce((m, e) => Math.max(m, e.getBoundingClientRect().bottom), 0);
     return {
       scrollY: window.scrollY, ih: window.innerHeight, sh: document.documentElement.scrollHeight,
-      padTop: parseFloat(getComputedStyle(app).paddingTop), obTop: ob.getBoundingClientRect().top, lowest,
+      padTop: parseFloat(getComputedStyle(app).paddingTop), barBottom: document.getElementById('topbar')!.getBoundingClientRect().bottom, obTop: ob.getBoundingClientRect().top, lowest,
       locked: getComputedStyle(document.documentElement).overflow === 'hidden',
     };
   });
   const a = await info();
   expect(a.scrollY, where + ': a new page starts at the top').toBe(0);
-  // Starts right under the top padding (which already holds the status-bar inset): at most one spacing step (the mark's margin) lower.
-  expect(a.obTop, where + ': the page starts too low').toBeLessThanOrEqual(a.padTop + 25);
-  expect(a.obTop, where + ': the page starts above its padding').toBeGreaterThanOrEqual(a.padTop - 1);
+  // Starts right under the top edge (#topbar, which holds the status-bar inset) and the page's top padding: at most one spacing step (the mark's margin) lower.
+  expect(a.obTop, where + ': the page starts too low').toBeLessThanOrEqual(a.barBottom + a.padTop + 25);
+  expect(a.obTop, where + ': the page starts above its padding').toBeGreaterThanOrEqual(a.barBottom + a.padTop - 1);
   expect(a.locked, where + ': the page is locked (home-lock)').toBe(false);
   await noSideways(page, where);
   if (a.sh > a.ih + 1 && test.info().project.name === 'iphone') {

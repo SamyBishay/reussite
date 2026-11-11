@@ -65,6 +65,7 @@ for (const w of [320, 375, 430]) {
         for (const v of VIEWS) {
           await page.evaluate(h => { location.hash = '#' + h; }, v);
           await expect(page.locator(`.app[data-view="${v}"]`)).toBeVisible();
+          await page.evaluate(() => window.scrollTo(0, 0));
           await page.waitForTimeout(120);
           const e = await topEdge(page);
           expect(e.position, v).toBe('sticky');
@@ -128,6 +129,7 @@ for (const w of [320, 375, 430]) {
 }
 
 test('without the fallback class the top edge pads by exactly the inset the browser reports', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); // the floor is for portrait
   await page.goto('/#today');
   await expect(page.locator('html')).not.toHaveClass(/ios-noinset/);
   // `ios-app` alone (the inset is reported): no floor.
@@ -137,12 +139,15 @@ test('without the fallback class the top edge pads by exactly the inset the brow
   expect((await topEdge(page)).padTop).toBe(86);
 });
 
-test('the top edge is in the page before the script runs', async ({ page }) => {
-  const html = await (await page.request.get('/')).text();
-  const i = html.indexOf('id="topbar"');
-  expect(i).toBeGreaterThan(0);
-  expect(i).toBeLessThan(html.indexOf('id="root"'));
-  expect(i).toBeLessThan(html.indexOf('<script type="module"'));
+test('the top edge is in the page before the script runs: with every script blocked it is there, sticky at 0, full width and opaque', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(/\.js(\?.*)?$/, route => route.abort());
+  await page.goto('/');
+  await expect(page.locator('#topbar')).toHaveCount(1);
+  expect(await page.locator('#root').evaluate(el => el.childElementCount)).toBe(0); // nothing of the app has run
+  const e = await topEdge(page);
+  expect(e).toMatchObject({ position: 'sticky', top: 0, left: 0, width: 390, opacity: '1', bgAlpha: 1 });
+  expect(e.bg).toBe(e.bodyBg);
 });
 
 test('a sheet and its scrim sit above the top edge', async ({ page }) => {

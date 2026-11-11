@@ -34,7 +34,6 @@ export function Memory() {
   const shown = all.filter(n => matches(n, q));
   return (
     <div data-testid="memory">
-      <h2 class="sec" style="margin-top:0">{t('memoryTitle')}</h2>
       <p class="hint">{t('memIntro')}</p>
       <div class="actions">
         <button class="btn" type="button" disabled={readOnly.value} onClick={() => openSheet(<NewNote key={'mn' + Date.now()} />)} data-testid="memory-new">{t('memNew')}</button>

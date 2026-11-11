@@ -403,7 +403,6 @@ function Data() {
 export function Settings() {
   return (
     <div data-testid="settings">
-      <h2 class="sec" style="margin-top:0">{t('tabSettings')}</h2>
       <Appearance />
       <Method />
       <NotifySettings />

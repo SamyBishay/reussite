@@ -98,8 +98,9 @@ test('an iPhone home-screen app gets the ios-app class and at least 62px above t
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/#home');
   await expect(page.locator('html')).toHaveClass(/ios-app/);
-  const top = await page.locator('.app').evaluate(el => parseFloat(getComputedStyle(el).paddingTop));
-  expect(top).toBeGreaterThanOrEqual(86 + 12);
+  // The top edge (#topbar) holds the status bar's room; the screen starts below it by layout.
+  const top = await page.locator('#topbar').evaluate(el => parseFloat(getComputedStyle(el).paddingTop));
+  expect(top).toBeGreaterThanOrEqual(86);
   const h1 = await page.getByTestId('home').locator('h1').boundingBox();
   expect(h1!.y).toBeGreaterThanOrEqual(86 + 12);
 });

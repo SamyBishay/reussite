@@ -1,16 +1,16 @@
-// The app frame: masthead and suit piles, "Still on…?" banner, the view, footer, and the tab bar at the bottom.
+// The app frame: suit piles, "Still on…?" banner, the view, footer, and the tab bar at the bottom.
 import { effect } from '@preact/signals';
 import type { FunctionComponent } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, pageView, places, setView, viewingElsewhere, clockNow } from './store';
-import { cardsOn, minutesOn, running, T, dayDoc } from './model';
-import { regionOf, viewsElsewhere } from '../domain/view';
+import { ready, readOnly, settings, today, toastMsg, start, here, pagePlace, places, setView, viewingElsewhere, clockNow } from './store';
+import { cardsOn, running, T } from './model';
+import { regionOf } from '../domain/view';
 import { applyTheme } from './theme';
 import { SheetHost, suitName } from './ui';
 import { OverlayHost } from './sheet';
-import { openPile, openTask, placeName, areaName, rankOf, isLong, openStillOn, flows, moment } from './sheets';
+import { openPile, openTask, rankOf, isLong, openStillOn, flows, moment } from './sheets';
 import { patchTask } from './actions';
-import { openPlaceMenu } from './PlacesSheet';
+
 import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { lastSyncAt, startSync, syncNow, syncStale } from './sync';
@@ -35,7 +35,7 @@ import { openVisit } from './AddressSheets';
 import { openBreakDown } from '../flows/breakdown';
 import { openStuck } from '../flows/stuck';
 import { openDecision } from '../flows/decision';
-import { t, lang, locale, fmtDate, fmtMin, type Key } from '../i18n';
+import { t, lang, locale } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { aiReady } from '../ai/ask';
@@ -46,6 +46,7 @@ import { decideOnboarding, onboarding } from './onboarding';
 import { Onboarding } from '../flows/onboarding';
 import { AddCard } from './AddCard';
 import { Footer } from './Footer';
+import { BARE, WIDE, TAB_KEY } from './Topbar';
 
 // Guided flows open from sheets; registering them here keeps imports one-way.
 flows.breakDown = openBreakDown;
@@ -56,31 +57,6 @@ flows.visit = openVisit;
 effect(() => { applyTheme(settings.value); });
 // "By time of day" re-checks every minute.
 setInterval(() => { if (settings.value.theme === 'time') applyTheme(settings.value); }, 60_000);
-
-/** The pill: where the person is, or, when the lists show something else, what they show. */
-function PlacePill() {
-  const v = pageView.value, elsewhere = viewsElsewhere(places.value, here.value, v);
-  const shown = v.all ? t('viewEverywhere') : v.id === 'any' ? placeName('any') : areaName(v.id);
-  const label = elsewhere ? (v.all ? '<b>' + escapeHtml(shown) + '</b>' : t('viewingPill', { place: '<b>' + escapeHtml(shown) + '</b>' })) : t('inPlace', { place: '<b>' + escapeHtml(placeName(here.value)) + '</b>' });
-  return (
-    <button class="here" type="button" onClick={openPlaceMenu} aria-label={t('placePillLabel', { here: placeName(here.value), view: shown })} aria-haspopup="dialog" data-testid="place-pill" data-viewing={elsewhere ? '' : undefined}
-      dangerouslySetInnerHTML={{ __html: label }} />
-  );
-}
-function Mast() {
-  const d = dayDoc(today.value);
-  // On Today the minutes timed so far sit between the date and the pill, small and quiet; the cell takes only the room left and its text drops out of sight when it does not fit.
-  const timed = view.value === 'today' ? minutesOn(today.value) : 0;
-  return (
-    <header class="mast">
-      <h1 class="vh">{t(TAB_KEY[view.value] ?? 'appName')}</h1>
-      <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
-      {timed > 0 && <p class="mast-timed" data-testid="mast-timed" title={t('timed', { t: fmtMin(timed) })}><wbr /><span>{t('timedMast', { t: fmtMin(timed) })}</span></p>}
-      <PlacePill />
-    </header>
-  );
-}
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 function Side() {
   const cards = cardsOn(today.value);
@@ -104,7 +80,6 @@ function Side() {
   );
 }
 
-const TAB_KEY: Record<string, Key> = { home: 'tabHome', today: 'tabToday', matrix: 'tabMatrix', projects: 'tabProjects', calendar: 'tabCalendar' };
 // Line icons, 24 px grid; the label is what names the tab.
 const TAB_ICON: Record<string, string> = {
   home: 'M4 11 12 4l8 7M6 10v9h12v-9',
@@ -156,10 +131,6 @@ function Toast() {
   return toastMsg.value ? <div class="toast" role="status" aria-live="polite">{toastMsg.value}</div> : null;
 }
 
-/** Home, Settings and the screens behind Home's bell and menu have no masthead or footer; the others keep them. The suit piles are Today's alone. */
-const BARE: View[] = ['home', 'notifications', 'settings', 'memory', 'history', 'addresses', 'waiting'];
-/** Views that get a wider column above 1024 px (brief §16). */
-const WIDE: View[] = ['matrix', 'calendar'];
 const SCREENS: Record<View, FunctionComponent> = { home: Home, today: Today, matrix: Matrix, projects: Projects, calendar: Calendar, settings: Settings, memory: Memory, history: History, addresses: Addresses, notifications: Notifications, waiting: Waiting };
 
 /** A link with `#task/<id>` (an event in a calendar app) opens that step's sheet, if it still exists. */
@@ -213,7 +184,6 @@ export function App() {
   return (
     <>
       <div class={'app' + (bare ? ' bare' : '') + (noSide ? ' noside' : '') + (WIDE.includes(view.value) ? ' wide' : '')} data-view={view.value}>
-        {!bare && <Mast />}
         {withSide && <Side />}
         <Runbar />
         <main>

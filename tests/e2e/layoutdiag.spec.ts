@@ -17,7 +17,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await row.click();
     const screenEl = page.getByTestId('layout-diag');
     await expect(screenEl).toBeVisible();
-    for (const k of ['standalone', 'display', 'inset', 'applied', 'content', 'inner', 'vv', 'screen', 'viewport', 'statusbar', 'theme']) {
+    for (const k of ['standalone', 'display', 'inset', 'applied', 'topbar', 'topbar-width', 'topbar-bg', 'content', 'inner', 'vv', 'screen', 'viewport', 'statusbar', 'theme']) {
       const v = (await page.getByTestId('ld-' + k).locator('dd').innerText()).trim();
       expect(v, k).not.toBe('');
     }
@@ -35,8 +35,12 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     expect(Math.abs((await yOf('ld-line-content')) - content)).toBeLessThan(1.5);
     expect(content).toBeGreaterThanOrEqual(inset);
     await noSideways(page, 'layout diagnostics');
-    // With the iPhone class the applied inset reads 86: the screen shows the app's own number, not the browser's.
-    await page.evaluate(() => document.documentElement.classList.add('ios-app'));
+    // The top edge's own numbers are on the screen: sticky at 0, full width, opaque.
+    await expect(page.getByTestId('ld-topbar').locator('dd')).toContainText('sticky · top 0px');
+    await expect(page.getByTestId('ld-topbar-width').locator('dd')).toContainText(w + 'px / ' + w);
+    await expect(page.getByTestId('ld-topbar-bg').locator('dd')).toContainText('opacity 1');
+    // With the iPhone classes (no inset reported) the applied inset reads 86: the screen shows the app's own number, not the browser's.
+    await page.evaluate(() => document.documentElement.classList.add('ios-app', 'ios-noinset'));
     await expect(page.getByTestId('ld-applied').locator('dd')).toContainText('86', { timeout: 3000 });
     await page.getByTestId('ld-close').click();
     await expect(screenEl).toHaveCount(0);

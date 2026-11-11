@@ -28,6 +28,16 @@ export interface Reading {
   standalone: string; displayStandalone: string; inset: number; applied: number; appPad: number; contentTop: number | null; contentWhat: string;
   innerHeight: number; vvHeight: number | null; vvOffsetTop: number | null; vvScale: number | null; screenHeight: number; iosClass: boolean;
   viewport: string; statusBar: string; themeColor: string; touchCallout: string; ua: string;
+  /** The top edge (`#topbar`): what the browser computes for it, which is what iOS reads to decide the status bar's look. */
+  topbar: { found: boolean; position: string; top: string; width: string; background: string; opacity: string; rect: string };
+}
+
+/** The top edge's computed style and box. */
+export function readTopbar(): Reading['topbar'] {
+  const el = document.getElementById('topbar');
+  if (!el) return { found: false, position: '—', top: '—', width: '—', background: '—', opacity: '—', rect: '—' };
+  const c = getComputedStyle(el), r = el.getBoundingClientRect();
+  return { found: true, position: c.position, top: c.top, width: c.width + ' / ' + innerWidth, background: c.backgroundColor, opacity: c.opacity, rect: 'y ' + (Math.round(r.top * 100) / 100) + ' → ' + (Math.round(r.bottom * 100) / 100) };
 }
 
 export function read(): Reading {
@@ -49,6 +59,7 @@ export function read(): Reading {
     iosClass: document.documentElement.classList.contains('ios-app'),
     viewport: meta('viewport'), statusBar: meta('apple-mobile-web-app-status-bar-style'), themeColor: meta('theme-color'),
     touchCallout: typeof CSS !== 'undefined' && CSS.supports ? String(CSS.supports('-webkit-touch-callout', 'none')) : '—',
+    topbar: readTopbar(),
     ua: /iPhone|iPod|iPad/.test(navigator.userAgent) ? navigator.userAgent.replace(/^Mozilla\/5\.0 /, '') : navigator.userAgent.slice(0, 60),
   };
 }
@@ -68,6 +79,9 @@ export function LayoutDiagnostics() {
     ['display', t('diagLDisplay'), r.displayStandalone],
     ['inset', t('diagLInset'), px(r.inset)],
     ['applied', t('diagLApplied'), px(r.applied) + ' · ' + t('diagLAppPad', { n: px(r.appPad) }) + (r.iosClass ? ' · ios-app' : '')],
+    ['topbar', t('diagLTopbar'), r.topbar.found ? r.topbar.position + ' · top ' + r.topbar.top + ' · ' + r.topbar.rect : t('diagLTopbarNone')],
+    ['topbar-width', t('diagLTopbarWidth'), r.topbar.width],
+    ['topbar-bg', t('diagLTopbarBg'), r.topbar.background + ' · ' + t('diagLTopbarOpacity', { n: r.topbar.opacity })],
     ['content', t('diagLContent'), px(r.contentTop) + ' · ' + r.contentWhat],
     ['inner', t('diagLInner'), px(r.innerHeight)],
     ['vv', t('diagLVv'), px(r.vvHeight) + ' · ' + t('diagLVvTop', { n: px(r.vvOffsetTop) }) + (r.vvScale != null && r.vvScale !== 1 ? ' · ×' + r.vvScale : '')],

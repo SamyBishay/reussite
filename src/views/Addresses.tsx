@@ -59,7 +59,6 @@ export function Addresses() {
   if (!addressesOn()) {
     return (
       <div data-testid="addresses-off">
-        <h2 class="sec" style="margin-top:0">{t('addrTitle')}</h2>
         <p class="hint">{t('addrOff')}</p>
         <div class="actions"><button class="btn" type="button" onClick={() => go('settings')}>{t('tabSettings')}</button></div>
       </div>
@@ -72,7 +71,6 @@ export function Addresses() {
   const off = readOnly.value;
   return (
     <div data-testid="addresses">
-      <h2 class="sec" style="margin-top:0">{t('addrTitle')}</h2>
       <p class="hint">{t('addrIntro')}</p>
       <div class="actions">
         <button class="btn primary" type="button" disabled={off} onClick={() => openNewAddress(place)} data-testid="addr-new">{t('addrNewBtn')}</button>

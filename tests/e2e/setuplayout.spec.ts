@@ -103,8 +103,8 @@ for (const [w, h] of PHONES) {
     await page.setViewportSize({ width: w, height: h });
     await page.goto('/');
     await expect(page.getByTestId('ob-language')).toBeVisible();
-    // The class `ios-app` (src/app/ios.ts) raises the top inset to 86px; only a phone can show the real one (invariant 11: unverified on device).
-    await page.evaluate(() => document.documentElement.classList.add('ios-app'));
+    // The classes `ios-app ios-noinset` (src/app/ios.ts: an iPhone home-screen app whose inset reads 0) make the top edge 86px of status-bar room; only a phone can show the real one (invariant 11: unverified on device).
+    await page.evaluate(() => document.documentElement.classList.add('ios-app', 'ios-noinset'));
     await checkPage(page, 'first page, ios-app');
     const top = await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top);
     expect(top).toBeGreaterThanOrEqual(86);

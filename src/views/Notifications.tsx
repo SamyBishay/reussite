@@ -87,7 +87,6 @@ export function Notifications() {
   useEffect(() => { markSeen(entries().map(e => e.key)); }, [keys]);
   return (
     <div data-testid="notifications">
-      <h2 class="sec" style="margin-top:0">{t('notifTitle')}</h2>
       {list.length ? list.map(e => <div key={e.key} class="notif">{e.node}</div>) : <div class="emptystate"><Rings /><p class="hint" data-testid="notifications-empty">{t('notifEmpty')}</p></div>}
     </div>
   );

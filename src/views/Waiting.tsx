@@ -12,7 +12,6 @@ export function Waiting() {
   const list = waiting.value;
   return (
     <div data-testid="waiting">
-      <h2 class="sec" style="margin-top:0">{t('waitingTitle')}</h2>
       <p class="hint">{t('waitingIntro')}</p>
       {list.length ? (
         <ul class="picklist waitlist">

@@ -141,27 +141,33 @@ function HomeInput() {
   );
 }
 
-export function Home() {
+/** Home's bar: the wordmark with the clock, the date, the bell and the menu. It lives in the page's top edge (src/app/Topbar.tsx), not in the screen. */
+export function HomeBar() {
   const d = dayDoc(today.value);
+  return (
+    <div class="homebar">
+      <div class="homehead">
+        <div class="wordrow"><h1 class="word">{t('appName')}</h1><DoveClock /></div>
+        <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
+      </div>
+      <div class="homebtns">
+        <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
+          {unread() && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
+        </button>
+        <button type="button" class="icon-btn" onClick={() => openSheet(<HomeMenu />)} aria-label={t('menu')} data-testid="home-menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function Home() {
   // The dot counts Next steps' reminder line, which needs to know what the browser supports.
   useEffect(() => { if (nextSteps.value.on) refreshPushState(); }, [nextSteps.value.on]);
   return (
     <div class="home" data-testid="home">
-      <div class="homebar">
-        <div class="homehead">
-          <div class="wordrow"><h1 class="word">{t('appName')}</h1><DoveClock /></div>
-          <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
-        </div>
-        <div class="homebtns">
-          <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
-            {unread() && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
-          </button>
-          <button type="button" class="icon-btn" onClick={() => openSheet(<HomeMenu />)} aria-label={t('menu')} data-testid="home-menu">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-          </button>
-        </div>
-      </div>
       <div class="homestage">
         <section class="greeting" data-testid="greeting">
           <div class="hello"><Mark size="var(--markh)" /><GreetingLine /></div>

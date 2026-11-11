@@ -15,6 +15,8 @@
     <title>Réussite</title>
   </head>
   <body>
+    <!-- The top edge (src/app/Topbar.tsx): a sticky, opaque element at y = 0 that exists before any script runs and is never re-created; iOS reads it as the top of the page. -->
+    <div id="topbar" class="topbar"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

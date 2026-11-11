@@ -24,7 +24,6 @@ export function History() {
   const list = [...exchanges.value.values()].filter(x => lastAt(x) >= cut).sort((a, b) => lastAt(b) - lastAt(a));
   return (
     <div data-testid="history">
-      <h2 class="sec" style="margin-top:0">{t('historyTitle')}</h2>
       <p class="hint">{t('historyIntro')}</p>
       {list.length ? (
         <ul class="picklist history">

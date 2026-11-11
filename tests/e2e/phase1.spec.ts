@@ -423,6 +423,9 @@ test('a fixed time and its end are picked on the clock, always in view; the leng
 const planIds = (page: Page) => page.locator('[data-testid=plan-list] > li').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.task));
 
 test('Today’s list is ordered by dragging a grip, and the order stays; ↑ and ↓ are the keyboard way', async ({ page }) => {
+  // The page's top edge (#topbar, in the flow) takes about 50px of the screen; this test drags across the whole list, so it gets that much room back.
+  const vs = page.viewportSize()!;
+  await page.setViewportSize({ width: vs.width, height: vs.height + 60 });
   await importSample(page);
   await addCard(page, 'Extra errand'); // by hand with nothing running: the top of what is left, so the list under Start here has three rows
   await page.getByTestId('plan-list').scrollIntoViewIfNeeded();

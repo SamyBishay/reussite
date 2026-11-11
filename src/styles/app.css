@@ -166,7 +166,7 @@ body.kb .app[data-view="home"]{padding-block-end:var(--s3)}
 body.kb .app[data-view="home"] .home{justify-content:flex-start;--markh:clamp(40px,8dvh,72px)}
 body.kb .app[data-view="home"] .homestage{flex:0 0 auto}
 body.kb .app[data-view="home"] .homecards{max-height:20dvh}
-body.kb .app[data-view="home"] .homein,body.kb .app[data-view="home"] .receipt{position:static;border-top:0;padding:0;background:none}
+body.kb .app[data-view="home"] .homein,body.kb .app[data-view="home"] .receipt{position:static;margin-inline:-16px}
 .history .h-text{font-weight:600;overflow-wrap:anywhere}
 .picklist.menu li{padding:0}
 .picklist.menu .linklike{width:100%;min-height:48px;padding:10px 12px;display:flex;align-items:center}

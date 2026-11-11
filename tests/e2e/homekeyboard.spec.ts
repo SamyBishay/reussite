@@ -6,13 +6,14 @@ import { test, expect } from '@playwright/test';
 import { goTab, importSample, morningClock, noSideways, setLanguage, PHONES, LANGS } from './helpers';
 
 for (const [w, h] of PHONES) for (const lang of LANGS) for (const withList of [false, true]) {
-  test(`Home with the keyboard open shows the logo, the greeting and the input above it (${w}×${h}, ${lang}${withList ? ', with a list and its cards' : ''})`, async ({ page }) => {
+  test(`Home with the keyboard open shows the logo, the greeting and the input above it (${w}×${h}, ${lang}${withList ? ', with a list and its cards' : ''})`, async ({ page, isMobile }) => {
     await page.setViewportSize({ width: w, height: h });
     if (withList) { await morningClock(page); await importSample(page); } else await page.goto('/');
     await setLanguage(page, lang);
     await goTab(page, 'home');
     await expect(page.getByTestId('greeting')).toBeVisible();
-    await page.evaluate(() => document.body.classList.add('kb'));
+    // On a phone engine the app's own handler sets the state when the field takes the focus; elsewhere the state is set by hand.
+    if (isMobile) { await page.getByTestId('home-input').focus(); await expect(page.locator('body.kb')).toHaveCount(1); } else await page.evaluate(() => document.body.classList.add('kb'));
     const r = await page.evaluate(() => {
       const q = (s: string) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: b.height, w: b.width }; };
       return { bar: q('.homebar'), mark: q('.hello .mark'), line: q('.hello .greetline') ?? q('.hello > :last-child'), input: q('[data-testid=home-input]'), ih: innerHeight, sy: scrollY, tab: getComputedStyle(document.querySelector('.tabbar')!).display };
@@ -27,7 +28,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) for (const withList of [f
     expect(r.tab).toBe('none');
     await noSideways(page, 'home with the keyboard open');
     // And back: the input returns to the bottom.
-    await page.evaluate(() => document.body.classList.remove('kb'));
+    if (isMobile) { await page.getByTestId('home-input').blur(); await expect(page.locator('body.kb')).toHaveCount(0); } else await page.evaluate(() => document.body.classList.remove('kb'));
     const back = await page.evaluate(() => { const b = document.querySelector('[data-testid=home-input-bar]')!.getBoundingClientRect(); return { bottom: b.bottom, ih: innerHeight, pos: getComputedStyle(document.querySelector('[data-testid=home-input-bar]')!).position }; });
     expect(back.pos).toBe('fixed');
     expect(back.bottom).toBeLessThanOrEqual(back.ih);

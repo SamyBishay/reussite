@@ -7,8 +7,9 @@ import { running } from './model';
 import { t } from '../i18n';
 
 export const updateReady = signal(false);
+let asked = false;
 // Playwright cannot make Firefox fetch a changed worker script, so tests/e2e/homeupdate.spec.ts asks for the box with this event. It only shows the box.
-if (typeof window !== 'undefined') window.addEventListener('reussite:update-ready', () => { updateReady.value = true; });
+if (typeof window !== 'undefined') window.addEventListener('reussite:update-ready', () => { asked = true; updateReady.value = true; });
 let apply: () => void = () => undefined;
 let hide: () => void = () => undefined;
 
@@ -19,7 +20,7 @@ export function UpdateHost() {
       if (reg) document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void reg.update(); });
     },
   });
-  updateReady.value = !!need;
+  updateReady.value = !!need || asked;
   apply = () => updateServiceWorker(true);
   hide = () => setNeed(false);
   return null;

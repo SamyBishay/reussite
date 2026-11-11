@@ -2,8 +2,6 @@
 body{margin:0;background:var(--ground);color:var(--ink);font:var(--base-size,16px)/var(--lh) var(--sans);-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
 /* Never let anything widen the page sideways (iPhone pans into any overflow). */
 html,body{max-width:100%;overflow-x:hidden}
-/* `clip` clips without making the body a scroll container, which would stop the sticky top edge from sticking and can move fixed things. */
-@supports (overflow-x:clip){body{overflow-x:clip}}
 @supports (overflow:clip){html,body{overflow-x:clip}}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}

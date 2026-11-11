@@ -425,6 +425,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const [rule, setRule] = useState(tk.dueRule ?? null);
   const [weekdays, setWeekdays] = useState<number[]>(tk.weekdays ?? []);
   const [untilV, setUntilV] = useState(tk.until ?? '');
+  // WebKit keeps a date input that was emptied by script in a bad-input state, which stops the form from being sent: once it is emptied the input is made again.
+  const [untilGen, setUntilGen] = useState(0);
   const [ask, setAsk] = useState<Partial<Task> | null>(null);
   const [err, setErr] = useState('');
   // Something the person waits for (an event) hides what a step has: time, estimate, quadrant, due date.
@@ -732,7 +734,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <div class="field" data-testid="weekdays"><span>{t('weekdaysField')}</span>
             <div class="toggles">{weekdayNames().map(([d, name]) => <label class="tog small"><input type="checkbox" checked={weekdays.includes(d)} onChange={e => setWeekdays((e.target as HTMLInputElement).checked ? [...weekdays, d].sort() : weekdays.filter(x => x !== d))} /> {name}</label>)}</div>
             <p class="hint">{t('weekdaysHint')}</p>
-            <label class="field"><span>{t('untilField')}</span><input type="date" name="until" data-testid="until" value={untilV} onChange={e => setUntilV((e.target as HTMLInputElement).value)} /></label>
+            <label class="field"><span>{t('untilField')}</span><input key={untilGen} type="date" name="until" data-testid="until" defaultValue={untilV} onChange={e => { const v = (e.target as HTMLInputElement).value; setUntilV(v); if (!v) setUntilGen(g => g + 1); }} /></label>
             <p class="hint">{t('untilHint')}</p>
           </div>
         )}

@@ -21,9 +21,15 @@ export function startKeyboard() {
     // A finger that is down keeps things as they are: the bar coming back under it would swallow the tap
     // on the button that took the focus away.
     const open = pressing ? document.body.classList.contains('kb') : focus && !(seen && c <= 120);
+    const was = document.body.classList.contains('kb');
     document.body.classList.toggle('kb', open);
+    if (was && !open) { unscroll(); setTimeout(() => { unscroll(); window.scrollTo(window.scrollX, window.scrollY); }, 120); }
     document.documentElement.style.setProperty('--kb', (open ? c : 0) + 'px');
   };
+  // Home and the Calendar are one screen tall and never scroll, yet iOS scrolls the page by itself to show a focused field (even under overflow:hidden) and can leave it scrolled when the keyboard goes:
+  // the sticky top edge is then out of sight and the fixed tab bar is not at the bottom. Put such a page back at the top.
+  const unscroll = () => { const d = document.documentElement; if (d.classList.contains('home-lock') && (window.scrollY || d.scrollTop || document.body.scrollTop)) { window.scrollTo(0, 0); d.scrollTop = 0; document.body.scrollTop = 0; } };
+  window.addEventListener('scroll', unscroll, { passive: true });
   document.addEventListener('focusin', e => { focus = isText(e.target as Element); seen = false; update(); });
   // Moving from one field to the next fires focusout first; look again once focus has landed.
   document.addEventListener('focusout', () => setTimeout(() => { focus = isText(document.activeElement); if (!focus) seen = false; update(); }, 50));

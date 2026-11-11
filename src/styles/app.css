@@ -2,6 +2,8 @@
 body{margin:0;background:var(--ground);color:var(--ink);font:var(--base-size,16px)/var(--lh) var(--sans);-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
 /* Never let anything widen the page sideways (iPhone pans into any overflow). */
 html,body{max-width:100%;overflow-x:hidden}
+/* `clip` clips without making the body a scroll container, which would stop the sticky top edge from sticking and can move fixed things. */
+@supports (overflow-x:clip){body{overflow-x:clip}}
 @supports (overflow:clip){html,body{overflow-x:clip}}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -106,7 +108,6 @@ html.home-lock,html.home-lock body{overflow:hidden;overscroll-behavior:none}
   .home:has(.homecards:not(:empty)){--markh:38px}
   .homecards .first{padding:14px 16px;gap:var(--s2)}.homecards .first .t{font-size:19px}.homecards .first .hint{display:none}
 }
-body.kb .hello .mark{display:none}
 .homebar{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex:none}
 .homehead{min-width:0}
 .wordrow{display:flex;align-items:center;gap:var(--s2)}
@@ -161,6 +162,13 @@ body.kb .fab{display:none}
 .help-ex{display:flex;flex-wrap:wrap;gap:var(--s1);margin:var(--s1) 0 var(--s2)}
 .help-ex .chip{padding:4px 12px;max-width:100%;white-space:normal;text-align:left}
 .homein .send{flex:0 0 auto;width:44px;padding:0;justify-content:center}
+/* The keyboard is open on Home (body.kb). iOS covers the bottom of the screen with the keyboard and its accessory bar and does not say how much of the page that is, so the input leaves the bottom
+   and sits in the flow right under the greeting, in the upper part of the screen that is always in view. The mark and the greeting stay (smaller); the cards under them scroll inside a short box. */
+body.kb .app[data-view="home"]{padding-block-end:var(--s3)}
+body.kb .app[data-view="home"] .home{justify-content:flex-start;--markh:clamp(40px,8dvh,72px)}
+body.kb .app[data-view="home"] .homestage{flex:0 0 auto}
+body.kb .app[data-view="home"] .homecards{max-height:20dvh}
+body.kb .app[data-view="home"] .homein,body.kb .app[data-view="home"] .receipt{position:static;border-top:0;padding:0;background:none}
 .history .h-text{font-weight:600;overflow-wrap:anywhere}
 .picklist.menu li{padding:0}
 .picklist.menu .linklike{width:100%;min-height:48px;padding:10px 12px;display:flex;align-items:center}

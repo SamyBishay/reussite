@@ -2,7 +2,7 @@
 // item, a short exchange adjusts it, and it ends in one change-set on the review screen. OpenRouter is stubbed; every name here is invented.
 // The clock is fixed to a Monday morning so nothing depends on the hour.
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { expandSettings, goTab, noSideways } from './helpers';
+import { expandSettings, goTab, goNotifications, noSideways, openMenu } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
@@ -150,8 +150,11 @@ test('the five sections show; skip a pillar item, swap a goal’s first step, ac
   await expect(sheet(page)).toBeHidden();
   expect(seen).toHaveLength(1);
 
-  // Home shows the receipt with Undo and no longer offers the plan; Today lists the day in its order.
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  // The accepted plan is an exchange in History, with its Undo; Home says nothing (its line is for what the local parser did) and no longer offers the plan; Today lists the day in its order.
+  await openMenu(page, 'history');
+  await expect(page.getByTestId('history-row').first()).toBeVisible();
+  await expect(page.getByTestId('history-undo').first()).toBeVisible();
+  await goTab(page, 'home');
   await expect(page.getByTestId('home-plan-ai')).toHaveCount(0);
   await goTab(page, 'today');
   const titles = await page.getByTestId('plan-list').locator('[data-task]').allInnerTexts();
@@ -211,6 +214,7 @@ test('an empty day: Plan the day opens the conversation, and the ritual is one t
   const empty = { ...w, tasks: Object.fromEntries(Object.entries(w.tasks).filter(([id]) => id !== 'dent')) };
   await stub(page, reply1);
   await start(page, { world: empty });
+  await goNotifications(page);
   await expect(page.getByTestId('home-plan')).toBeVisible();
   await page.getByTestId('home-plan-ritual').click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
@@ -227,6 +231,7 @@ test('an empty day: Plan the day opens the conversation, and the ritual is one t
 test('with no AI set up, Plan the day on Home opens the ritual', async ({ page }) => {
   const w = world();
   await start(page, { ai: false, world: { ...w, tasks: Object.fromEntries(Object.entries(w.tasks).filter(([id]) => id !== 'dent')) } });
+  await goNotifications(page);
   await page.getByTestId('home-plan').click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
   await expect(page.getByTestId('home-plan-ritual')).toHaveCount(0);

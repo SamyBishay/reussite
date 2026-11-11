@@ -17,6 +17,7 @@ p{margin:0}
    labels clear of the indicator's line, so the buttons sit low, as in the system's own apps, and the pages get the rest. */
 :root{--dockpad:max(calc(env(safe-area-inset-bottom,0px) - 20px),0px);--tabbar-h:calc(57px + var(--dockpad));--dock:var(--tabbar-h);--kb:0px;--fabr:max(16px,env(safe-area-inset-right,0px))}
 body.kb{--dock:0px}
+.notif+.notif{margin-top:var(--s3)}
 .app{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:calc(var(--sat) + 12px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4)}
 @media (min-width:920px){
   .app{grid-template-columns:minmax(0,1fr) 288px;column-gap:var(--s7);padding-block:calc(var(--sat) + 28px) calc(var(--tabbar-h) + var(--inputh,0px) + var(--rcpt,0px) + 24px)}
@@ -134,6 +135,7 @@ body.kb .hello .mark{display:none}
 .homecard .ai-note{margin:0}
 .receipt{position:fixed;left:0;right:0;bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px));z-index:5;background:var(--ground);display:flex;align-items:center;justify-content:space-between;gap:var(--s1) var(--s2);color:var(--ink-2);font-size:14.5px;margin:0;padding-block:2px;padding-inline-start:max(20px,calc((100vw - 1048px)/2 + 4px));padding-inline-end:calc(var(--fabr) + 68px)}
 /* The receipt rests in its own row just above the input, so that nothing floats over its Undo: the round Add button's column is left free (56px and 12px), and the toast lifts above it. Its height is --rcpt, set by Home. */
+.receipt .homeline{min-height:44px;max-width:100%;padding-inline:0;color:var(--ink-2);text-align:start;overflow-wrap:anywhere}
 .receipt .undo{min-height:44px;padding-inline:6px;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 /* The input is fixed above the tab bar (and the keyboard); its height is --inputh, set by Home. */
 .fab{position:fixed;right:var(--fabr);bottom:calc(var(--dock) + var(--kb) + var(--inputh,0px) + 16px);z-index:7;width:56px;height:56px;border-radius:50%;border:0;padding:0;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px rgba(0,0,0,.22),0 1px 3px rgba(0,0,0,.16)}
@@ -487,6 +489,8 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 .colors label{display:grid;gap:var(--s1);font-size:13px;font-weight:600;color:var(--ink-2)}
 .colors input[type=color]{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:2px}
 .suitrow{display:grid;grid-template-columns:3.5em minmax(0,1fr) minmax(0,1fr);gap:var(--s2);align-items:end}
+.suitrow .suitdesc{grid-column:1/-1}
+.obpillar{display:grid;gap:var(--s1)}
 .placerow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s2);align-items:end}
 .counts{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:var(--s1) var(--s4);font-size:14.5px;margin-top:var(--s3)}
 .counts .n{font-family:var(--mono);text-align:right}

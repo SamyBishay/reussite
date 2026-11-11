@@ -60,27 +60,50 @@ for (const size of SIZES) {
       }
     });
 
-    test('with the Plan the day card', async ({ page }) => {
+    test('Plan the day waiting: Home stays bare with a quiet dot, and the bell page holds the card', async ({ page }) => {
       await island(page);
       await page.goto('/');
-      await expect(page.getByTestId('home-plan')).toBeVisible();
-      await fits(page, 'plan the day');
+      await expect(page.getByTestId('greeting-hello')).toBeVisible();
+      await expect(page.getByTestId('home-plan')).toHaveCount(0);
+      await expect(page.getByTestId('home-cards')).toHaveCount(0);
+      await expect(page.getByTestId('bell-dot')).toBeVisible();
+      await fits(page, 'plan the day waiting');
+      await page.getByTestId('home-bell').click();
       await expect(page.getByTestId('home-plan')).toBeInViewport();
+      await noSideways(page, 'the bell page with Plan the day');
+      // Seen: back on Home the dot is gone.
+      await page.getByTestId('tab-home').click();
+      await expect(page.getByTestId('bell-dot')).toHaveCount(0);
+      await fits(page, 'plan the day seen');
     });
 
-    test('with an exchange\'s card (How long?)', async ({ page }) => {
+    test('a change shows one line, which opens the card; a question goes to Today', async ({ page }) => {
       await island(page);
       await morningClock(page);
       await importSample(page);
       await page.getByTestId('tab-home').click();
-      await page.getByTestId('home-input').fill('done sort the scanned receipts');
+      await page.getByTestId('home-input').fill('call the bank tomorrow');
       await page.getByTestId('home-input').press('Enter');
       await page.getByTestId('home-input').blur();
+      await expect(page.getByTestId('home-line')).toContainText('Created: ');
+      await expect(page.getByTestId('home-cards')).toHaveCount(0);
+      await fits(page, 'the Created line');
+      await page.getByTestId('home-line-open').click();
+      await expect(page.getByTestId('sheet')).toBeVisible();
+      await page.getByTestId('sheet').getByRole('button', { name: 'Close' }).click();
+      // The next input takes the line away.
+      await page.getByTestId('home-input').fill('done sort the scanned receipts');
+      await page.getByTestId('home-input').press('Enter');
+      await page.getByTestId('home-input').blur({ timeout: 1500 }).catch(() => undefined); // the card takes the person to Today
       await expect(page.getByTestId('card-duration')).toBeVisible();
-      await fits(page, 'duration card');
+      await expect(page.getByTestId('todayview')).toBeVisible();
+      await page.getByTestId('tab-home').click();
+      await expect(page.getByTestId('home-card')).toHaveCount(0);
+      await expect(page.getByTestId('home-line')).toContainText('Changed: ');
+      await fits(page, 'the Changed line');
     });
 
-    test('with Next steps and a missed card', async ({ page }) => {
+    test('Next steps and a missed card are on the bell page, which fits', async ({ page }) => {
       await island(page);
       await page.clock.setFixedTime(NOW);
       await page.goto('/#settings');
@@ -98,14 +121,15 @@ for (const size of SIZES) {
       }));
       await page.reload();
       await page.getByTestId('tab-home').click();
+      await expect(page.getByTestId('next-steps')).toHaveCount(0);
+      await expect(page.getByTestId('missed-card')).toHaveCount(0);
+      await expect(page.getByTestId('bell-dot')).toBeVisible();
+      await fits(page, 'home with Next steps and a missed card waiting');
+      await page.getByTestId('home-bell').click();
       await expect(page.getByTestId('next-steps')).toBeVisible();
       await expect(page.getByTestId('missed-card')).toBeVisible();
-      await fits(page, 'next steps and missed');
-      // Whatever does not fit scrolls inside the card area, which can be read to its end.
-      const cards = page.getByTestId('home-cards');
-      await cards.evaluate(el => { el.scrollTop = el.scrollHeight; });
-      await expect(page.getByTestId('next-dismiss')).toBeInViewport();
-      await fits(page, 'next steps and missed, scrolled');
+      await noSideways(page, 'the bell page with Next steps and a missed card');
+      await expect(page.getByTestId('next-dismiss')).toBeVisible();
     });
   });
 }

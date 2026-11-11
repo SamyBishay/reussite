@@ -1,7 +1,7 @@
 // A weekly series made on the day it comes (after the morning, or with no check-in) shows on that day's list once, at its time; and a series
 // can end: "until 31 Dec" is its last day. The clock is fixed to a Monday at 11:00, so the evening's rehearsal is still ahead.
 import { test, expect, type Page } from '@playwright/test';
-import { goTab, noSideways, expandSheet } from './helpers';
+import { goTab, noSideways, expandSheet, undoLast } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const input = (page: Page) => page.getByTestId('home-input');
@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
 
 test('a weekly series said on its day, before its time, is on the list once, and stays one after a reload', async ({ page }) => {
   await say(page, 'rehearsal every Monday 19:00');
-  await expect(page.getByTestId('receipt')).toContainText('as a standing item');
+  await expect(page.getByTestId('home-line')).toContainText('Created: ');
   await goTab(page, 'today');
   // Its copy for tonight is put on the list by itself, once.
   const row = page.locator('[data-task]', { hasText: 'Rehearsal' });
@@ -54,9 +54,9 @@ test('a weekly series said on its day, before its time, is on the list once, and
 
 test('a one-off for tonight with the same words and time stands in for the series: one card, not two', async ({ page }) => {
   await say(page, 'rehearsal 19:00');
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   await say(page, 'rehearsal every Monday 19:00');
-  await expect(page.getByTestId('receipt')).toContainText('2 changes');
+  await expect(page.getByTestId('home-line')).toContainText('Rehearsal');
   await goTab(page, 'today');
   await expect(page.locator('[data-task]', { hasText: 'Rehearsal' })).toHaveCount(1);
   const tasks = await live(page, 'tasks');
@@ -66,7 +66,7 @@ test('a one-off for tonight with the same words and time stands in for the serie
 
 test('a series that ended before today is not put on the list', async ({ page }) => {
   await say(page, 'rehearsal every Monday 19:00 until 2026-10-25');
-  await expect(page.getByTestId('receipt')).toContainText('as a standing item');
+  await expect(page.getByTestId('home-line')).toContainText('Created: ');
   const { tpl, mine } = await copies(page, 'Rehearsal');
   expect(tpl).toMatchObject({ template: true, weekdays: [1], at: '19:00', until: '2026-10-25' });
   expect(mine).toHaveLength(0);
@@ -76,7 +76,7 @@ test('a series that ended before today is not put on the list', async ({ page })
 
 test('its last day is today: it is put on the list tonight', async ({ page }) => {
   await say(page, 'rehearsal every Monday 19:00 until 2026-10-26');
-  await expect(page.getByTestId('receipt')).toContainText('as a standing item');
+  await expect(page.getByTestId('home-line')).toContainText('Created: ');
   expect((await copies(page, 'Rehearsal')).mine).toHaveLength(1);
 });
 
@@ -85,7 +85,7 @@ for (const width of [320, 375, 430]) {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await say(page, 'choir every Tuesday 18:00 until 2026-12-31');
-    await expect(page.getByTestId('receipt')).toContainText('as a standing item');
+    await expect(page.getByTestId('home-line')).toContainText('Created: ');
     expect((await copies(page, 'Choir')).tpl).toMatchObject({ weekdays: [2], at: '18:00', until: '2026-12-31' });
 
     await goTab(page, 'projects');
@@ -111,9 +111,9 @@ for (const width of [320, 375, 430]) {
 
 test('Undo of a series takes tonight\'s copy with it', async ({ page }) => {
   await say(page, 'rehearsal every Monday 19:00');
-  await expect(page.getByTestId('receipt')).toContainText('as a standing item');
+  await expect(page.getByTestId('home-line')).toContainText('Created: ');
   await expect.poll(async () => (await copies(page, 'Rehearsal')).mine.length).toBe(1);
-  await page.getByTestId('undo').click();
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await undoLast(page);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
   await expect.poll(async () => (await live(page, 'tasks')).filter(t => t.title === 'Rehearsal').length).toBe(0);
 });

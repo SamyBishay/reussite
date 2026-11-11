@@ -173,7 +173,7 @@ for (const lang of LANGS) for (const theme of THEMES) {
 
       // The morning check-in and its plan, then the list it made. The room is counted from the hour the pictures are taken to the end
       // the day is given, so the end is late: the picture shows the plan, not an overfull evening.
-      await page.goto('/#home');
+      await page.goto('/#notifications');
       await page.getByTestId('home-plan').click();
       await page.getByTestId('ci-until').fill('23:59');
       await page.getByTestId('ci-next').click();
@@ -265,7 +265,7 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#home');
       await page.getByTestId('home-input').fill(lang === 'fr' ? 'appeler la banque demain' : 'call the bank tomorrow');
       await page.getByTestId('home-send').click();
-      await expect(page.getByTestId('receipt')).toBeVisible();
+      await expect(page.getByTestId('home-line')).toBeVisible();
       await shot(page, 'home');
 
       // The close of the day (celebrations are off, so it is the summary): the pillars played, the bar that moved, tomorrow's first step.

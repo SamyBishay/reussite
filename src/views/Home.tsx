@@ -1,29 +1,26 @@
-// Home (brief §5): where the person types. It holds a slim top bar (the date, the bell and the menu), the mark with a greeting, centred in the room above the input, one card (an exchange's), the last receipt and the input,
-// and never more. The greeting is a plain line, with Plan the day when there is no list or Close the day when it is all played (Start here lives on Today alone); the card is what an open exchange has to say (what is waiting is behind the bell); the receipt is the last thing applied, with Undo. The menu icon holds what
-// has no tab: Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
-import { useEffect, useRef, useState } from 'preact/hooks';
-import { today, clockNow } from '../app/store';
-import { T, dayDoc, greetingNow, planEst, lineInputNow } from '../app/model';
+// Home (brief §5): where the person types, and nothing else. A slim top bar (wordmark, clock, date, the bell with its neutral dot, the menu), the mark with a greeting,
+// centred in the room above the input, one line after a change ("Created: …", "Changed: …") and the input. What waits (Plan the day, the missed step, Next steps, banners)
+// is behind the bell (Notifications); what Home would ask (a pick, how long, an answer) is shown on Today. The menu icon holds what has no tab:
+// Settings, Places, Addresses & people (and + Address, one tap from here), Memory and History.
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { today } from '../app/store';
+import { T, dayDoc, lineInputNow } from '../app/model';
+import { openTask } from '../app/sheets';
 import { shownGreetings, rememberGreeting } from '../app/greetingShown';
 import { openSheet, closeSheet } from '../app/ui';
-import { DurationPicker } from '../app/sheets';
 import { openPlaces } from '../app/PlacesSheet';
 import { openNewAddress } from '../app/AddressSheets';
 import { addressesOn } from '../app/model';
 import { go, type View } from '../app/nav';
-import { MissedNow } from '../app/CarryUi';
 import { isTouch } from '../app/keyboard';
-import { cardNow, choose, dismissCard, reviewAgain, saveDuration, submitHome, openExchange, receiptLine, undoExchange, canUndo, type HomeCard } from '../app/home';
+import { cardNow, homeLine, submitHome } from '../app/home';
 import { HomeHelp } from '../app/HomeHelp';
-import { NextStepsCard } from '../app/NextSteps';
 import { aiOn } from '../ai/ask';
-import { notifications } from './Notifications';
-import { openCheckin } from '../flows/checkin';
-import { openPlanDay } from '../flows/morning';
-import { ChatOffer } from '../app/ChatOffer';
+import { unread } from './Notifications';
+import { nextSteps } from '../app/onboarding';
+import { refreshPushState } from '../app/push';
 import { Mark } from '../app/Mark';
 import { DoveClock } from '../app/DoveClock';
-import { openClose } from '../flows/close';
 import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
 
@@ -67,100 +64,30 @@ function GreetingLine() {
   return <p class={'greetline' + size} data-testid="greeting-hello" data-key={line.key}>{text}</p>;
 }
 
-/** Under the line: Plan the day when there is no list yet, Close the day when it is all played, and nothing else. Start here, the running step and tomorrow's first step belong to Today. */
-function GreetingBody() {
-  const g = greetingNow.value;
-  if (!g) return null;
-  if (g.kind === 'plan') {
-    return (
-      <section class="first" data-testid="greeting-plan">
-        <p class="eyebrow">{t('noListYet')}</p>
-        <p class="t">{t('planTheDayQ')}</p>
-        <div class="go">
-          <button class="btn primary" type="button" onClick={openPlanDay} data-testid="home-plan">{t('planTheDay')}</button>
-          {aiOn.value && <button class="btn ghost" type="button" onClick={openCheckin} data-testid="home-plan-ritual">{t('mornMyself')}</button>}
-          <ChatOffer what="day" testid="home-plan-chat" />
-        </div>
-      </section>
-    );
-  }
-  return (
-    <section class="first" data-testid="greeting-done">
-      <p class="eyebrow">{t('listPlayed')}</p>
-      <p class="t">{t('allDone')}</p>
-      <p class="hint">{t('addOneOrClose')}</p>
-      <div class="go"><button class="btn" type="button" onClick={openClose}>{t('closeTheDay')}</button></div>
-    </section>
-  );
-}
-
-// ---------- the card ----------
-function CardBody({ c }: { c: HomeCard }) {
-  if (c.kind === 'pick') {
-    return (
-      <div class="homecard" data-testid="card-pick">
-        <p class="eyebrow">{t('homePick')}</p>
-        <div class="picks">{c.candidates.map(x => <button class="btn pickbtn" type="button" onClick={() => void choose(c, x)} data-testid="pick">{x.name}</button>)}</div>
-        <div class="actions"><button class="btn small ghost" type="button" onClick={dismissCard}>{t('cancel')}</button></div>
-      </div>
-    );
-  }
-  if (c.kind === 'duration') {
-    const tk = T(c.task);
-    if (!tk) return null;
-    return (
-      <div class="homecard" data-testid="card-duration">
-        <p class="eyebrow">{t('howLong')}</p>
-        <p class="t2">{t('homeHowLong', { title: tk.title })}</p>
-        <DurationPicker base={planEst(tk)} onPick={m => void saveDuration(c, m)} />
-        <div class="actions"><button class="btn small ghost" type="button" onClick={dismissCard} data-testid="not-timed">{t('didntTime')}</button></div>
-        <p class="hint">{t('homeHowLongHint')}</p>
-      </div>
-    );
-  }
-  if (c.kind === 'review') {
-    return (
-      <div class="homecard row" data-testid="card-review">
-        <p><b>{t('receiptChanges', { n: c.cs.changes.length })}</b></p>
-        <div class="actions"><button class="btn small primary" type="button" onClick={() => reviewAgain(c)} data-testid="card-review-open">{t('homeReviewBtn')}</button><button class="btn small ghost" type="button" onClick={dismissCard}>{t('cancel')}</button></div>
-      </div>
-    );
-  }
-  return (
-    <div class="homecard" data-testid="card-answer">
-      <p class="ai-note">{c.text}</p>
-      <div class="actions">{c.action && <button class="btn small" type="button" onClick={c.action.run}>{c.action.label}</button>}<button class="btn small ghost" type="button" onClick={dismissCard}>{t('ok')}</button></div>
-    </div>
-  );
-}
-
-function Card() {
-  const c = cardNow.value;
-  return c ? <div data-testid="home-card" data-kind={c.kind}><CardBody c={c} /></div> : null;
-}
-
-// ---------- the receipt ----------
-function Receipt() {
-  const ex = openExchange(clockNow.value);
-  if (!ex || !canUndo(ex)) return null;
-  return <ReceiptLine ex={ex} />;
-}
-function ReceiptLine({ ex }: { ex: NonNullable<ReturnType<typeof openExchange>> }) {
+// ---------- the line ----------
+/** After a change was applied: "Created: <title>" or "Changed: <title>", in the row just above the input. A tap opens the card; it goes at the next input. */
+function Line() {
+  const l = homeLine.value;
   const el = useRef<HTMLParagraphElement>(null);
-  // The receipt is fixed in a row just above the input, where a toast would cover Undo. Its height is published (as --rcpt) for the page's bottom
-  // padding and so that the toast lifts above it.
-  useEffect(() => {
-    const p = el.current!, root = document.documentElement.style;
+  // The row is fixed just above the input; its height is published (as --rcpt) for the page's bottom padding and so that the toast lifts above it.
+  useLayoutEffect(() => {
+    const p = el.current;
+    const root = document.documentElement.style;
+    if (!p) { root.removeProperty('--rcpt'); return; }
     const set = () => root.setProperty('--rcpt', p.offsetHeight + 'px');
     set();
     const ro = new ResizeObserver(set);
     ro.observe(p);
     return () => { ro.disconnect(); root.removeProperty('--rcpt'); };
-  }, []);
+  }, [!!l]);
+  if (!l) return null;
+  const text = l.title
+    ? t(l.kind === 'created' ? 'homeLineCreated' : 'homeLineChanged', { title: l.title })
+    : t('homeLineChangedN', { n: l.n });
+  const open = () => { if (l.id && T(l.id)) openTask(l.id); else go('history'); };
   return (
-    <p class="receipt" ref={el} data-testid="receipt" role="status">
-      <span>{receiptLine(ex)}</span>
-      <button class="linklike undo" type="button" onClick={() => void undoExchange(ex.id)} data-testid="undo">{t('undo')}</button>
+    <p class="receipt" ref={el} data-testid="home-line" role="status">
+      <button type="button" class="linklike homeline" onClick={open} data-testid="home-line-open">{text}</button>
     </p>
   );
 }
@@ -172,8 +99,8 @@ function HomeInput() {
   const [busy, setBusy] = useState(false);
   const ta = useRef<HTMLTextAreaElement>(null);
   const bar = useRef<HTMLFormElement>(null);
-  // The bar's height is published for the page's bottom padding and the toast, which sit above it.
-  useEffect(() => {
+  // The bar's height is published for the page's bottom padding and the toast, which sit above it. Before the first paint, so that Home never shows a frame without its room.
+  useLayoutEffect(() => {
     const el = bar.current!, root = document.documentElement.style;
     const set = () => root.setProperty('--inputh', el.offsetHeight + 'px');
     set();
@@ -181,6 +108,9 @@ function HomeInput() {
     ro.observe(el);
     return () => { ro.disconnect(); root.removeProperty('--inputh'); };
   }, []);
+  // Home never asks: a pick, a duration or an answer shows on Today.
+  const mounted = useRef(false);
+  useEffect(() => { if (mounted.current && cardNow.value && !(cardNow.value.kind === 'answer' && cardNow.value.asking)) go('today'); mounted.current = true; }, [cardNow.value]);
   useEffect(() => {
     const el = ta.current;
     if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 128) + 'px'; }
@@ -213,6 +143,8 @@ function HomeInput() {
 
 export function Home() {
   const d = dayDoc(today.value);
+  // The dot counts Next steps' reminder line, which needs to know what the browser supports.
+  useEffect(() => { if (nextSteps.value.on) refreshPushState(); }, [nextSteps.value.on]);
   return (
     <div class="home" data-testid="home">
       <div class="homebar">
@@ -223,7 +155,7 @@ export function Home() {
         <div class="homebtns">
           <button type="button" class="icon-btn bell" onClick={() => go('notifications')} aria-label={t('notifTitle')} data-testid="home-bell">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0" /></svg>
-            {notifications().length > 0 && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
+            {unread() && <i class="dot" data-testid="bell-dot" aria-hidden="true" />}
           </button>
           <button type="button" class="icon-btn" onClick={() => openSheet(<HomeMenu />)} aria-label={t('menu')} data-testid="home-menu">
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -234,14 +166,8 @@ export function Home() {
         <section class="greeting" data-testid="greeting">
           <div class="hello"><Mark size="var(--markh)" /><GreetingLine /></div>
         </section>
-        <div class="homecards" data-testid="home-cards">
-          <GreetingBody />
-          <MissedNow />
-          <Card />
-          <NextStepsCard />
-        </div>
       </div>
-      <Receipt />
+      <Line />
       <HomeInput />
     </div>
   );

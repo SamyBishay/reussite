@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningClock, newCardSheet, importSample, noSideways, goTab, openMenu, expandSheet, addCard } from './helpers';
+import { morningClock, newCardSheet, importSample, noSideways, goTab, goNotifications, undoLast, openMenu, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 
@@ -83,7 +83,7 @@ test('an existing step offers a time written in its title or note', async ({ pag
 // ---------- Home: the input, the receipt and Undo ----------
 const input = (page: Page) => page.getByTestId('home-input');
 // On a phone the keyboard hides the tab bar while the input has focus, so let go of it after sending.
-const say = async (page: Page, text: string) => { await input(page).fill(text); await input(page).press('Enter'); await input(page).blur(); };
+const say = async (page: Page, text: string) => { if (!(await input(page).count())) await page.getByTestId('tab-home').click(); await input(page).fill(text); await input(page).press('Enter'); await input(page).blur({ timeout: 1500 }).catch(() => undefined); };
 const store = (page: Page, name: string) => page.evaluate(n => new Promise<Record<string, unknown>[]>((res, rej) => {
   const open = indexedDB.open('reussite');
   open.onerror = () => rej(open.error);
@@ -92,14 +92,14 @@ const store = (page: Page, name: string) => page.evaluate(n => new Promise<Recor
 const live = async (page: Page, name: string) => (await store(page, name)).filter(d => !d._del);
 const RECEIPTS = 'Open Files and sort the scanned receipts';
 
-// The round Add button floats over the page's right edge: the receipt's Undo must never sit under it.
+// The round Add button floats over the page's right edge: the line above the input must never sit under it.
 for (const width of [320, 375, 430]) {
-  test(`the receipt's Undo is not covered by the floating Add button at ${width}px`, async ({ page }) => {
+  test(`the line above the input is not covered by the floating Add button at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 700 });
     await importSample(page);
     await goTab(page, 'home');
     await say(page, 'choir every Monday 19:00 at Hill House 602');
-    const undo = page.getByTestId('undo');
+    const undo = page.getByTestId('home-line-open');
     await expect(undo).toBeVisible();
     await expect(page.getByTestId('add-card')).toBeVisible();
     await undo.scrollIntoViewIfNeeded();
@@ -110,7 +110,7 @@ for (const width of [320, 375, 430]) {
       return pts.map(([x, y]) => { const top = document.elementFromPoint(r.left + r.width * x, r.top + r.height * y); return !!top && (top === el || el.contains(top)); });
     });
     expect(hit).toEqual([true, true, true, true, true]);
-    await noSideways(page, 'Home with a receipt');
+    await noSideways(page, 'Home with the line');
   });
 }
 
@@ -118,7 +118,7 @@ test('the choir phrase makes a standing item with its time and weekday, and Undo
   await importSample(page);
   await goTab(page, 'home');
   await say(page, 'choir every Monday 19:00 at Hill House 602');
-  await expect(page.getByTestId('receipt')).toContainText('Added “Choir, Hill House 602” as a standing item');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Choir, Hill House 602');
   await expect(input(page)).toHaveValue('');
   const c = (await live(page, 'tasks')).find(x => x.template && /^Choir/.test(String(x.title)));
   expect(c).toMatchObject({ title: 'Choir, Hill House 602', template: true, weekdays: [1], at: '19:00', status: 'open' });
@@ -137,9 +137,9 @@ test('the choir phrase makes a standing item with its time and weekday, and Undo
   await page.keyboard.press('Escape');
 
   await goTab(page, 'home');
-  await expect(page.getByTestId('receipt')).toBeVisible();
-  await page.getByTestId('undo').click();
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await expect(page.getByTestId('home-line')).toBeVisible();
+  await undoLast(page);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
   expect((await live(page, 'tasks')).filter(x => /^Choir/.test(String(x.title)))).toHaveLength(0);
   await goTab(page, 'projects');
   await expect(page.locator('[data-project=inbox] [data-task]', { hasText: 'Choir' })).toHaveCount(0);
@@ -150,7 +150,7 @@ test('on a Monday Start here is the next step until the choir needs the time, th
   await page.clock.setFixedTime(at(10, 0));
   await page.goto('/');
   await say(page, 'choir every Monday 19:00 at Hill House 602');
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   await goTab(page, 'today');
   await addCard(page, 'Call the bank');
   await expect(page.getByTestId('first')).toContainText('Call the bank');
@@ -184,13 +184,17 @@ test('on a Monday Start here is the next step until the choir needs the time, th
   await expect(page.getByTestId('first')).toContainText('Call the bank');
 });
 
-test('no list yet shows Plan the day; with a plan open Home has no card, and a started step runs on Today alone', async ({ page }) => {
+test('no list yet shows Plan the day on the bell page; with a plan open Home has no card, and a started step runs on Today alone', async ({ page }) => {
   await page.goto('/');
+  await goNotifications(page);
   await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
   await importSample(page);
   await goTab(page, 'home');
   await expect(page.getByTestId('greeting-hello')).toBeVisible();
   await expect(page.getByTestId('greeting-next')).toHaveCount(0);
+  // Home itself never shows the card; with a plan open the bell page has none either.
+  await expect(page.getByTestId('greeting-plan')).toHaveCount(0);
+  await goNotifications(page);
   await expect(page.getByTestId('greeting-plan')).toHaveCount(0);
   await goTab(page, 'today');
   await expect(page.getByTestId('first')).toContainText('Open Doctolib');
@@ -210,24 +214,25 @@ test('no list yet shows Plan the day; with a plan open Home has no card, and a s
   await expect(sheet(page)).toBeHidden(); // Pause is one tap now (10 Nov): no sheet
 });
 
-test('done on a step applies at once, asks how long in the card, and Undo takes back the step and the time', async ({ page }) => {
+test('done on a step applies at once, asks how long on Today, and Undo (in History) takes back the step and the time', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'home');
   await say(page, 'done sort the scanned receipts');
-  await expect(page.getByTestId('receipt')).toContainText('Done: “' + RECEIPTS + '”');
+  // Home never asks: the question is the first thing on Today.
   const card = page.getByTestId('card-duration');
+  await expect(page.getByTestId('todayview')).toBeVisible();
   await expect(card).toContainText('How long did “' + RECEIPTS + '” take?');
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'done' });
-  // Home shows its greeting and the card, then the receipt and the input: no more.
-  await expect(page.getByTestId('home-card')).toHaveCount(1); // the greeting and the card (the bar, the receipt and the input are around it)
   await card.getByTestId('dur').nth(2).click(); // 30 minutes (no estimate: 5, 15, 30, …)
   await expect(card).toHaveCount(0);
   const sessions = (await live(page, 'sessions')).filter(s => s.source === 'typed' && s.m === 30);
   expect(sessions).toHaveLength(1);
-  await expect(page.locator('[data-testid=home] .homecards > *')).toHaveCount(0);
+  await goTab(page, 'home');
+  await expect(page.getByTestId('home-line')).toContainText('Changed: ' + RECEIPTS);
+  await expect(page.getByTestId('home-card')).toHaveCount(0);
 
-  await page.getByTestId('undo').click();
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await undoLast(page);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'open', doneDay: null });
   expect((await live(page, 'sessions')).filter(s => s.m === 30)).toHaveLength(0);
 });
@@ -242,15 +247,18 @@ test('a length can be typed as the answer, and "I didn’t time it" leaves no se
   await expect(page.getByTestId('card-duration')).toHaveCount(0);
   expect((await live(page, 'sessions')).filter(s => s.m === 90 && s.source === 'typed')).toHaveLength(1);
 
-  await say(page, 'done open'); // several steps start with "Open": a tap says which
+  await say(page, 'done open'); // several steps start with "Open": a tap, on Today, says which
   await expect(page.getByTestId('card-pick')).toBeVisible();
   await page.getByTestId('pick').filter({ hasText: 'send the signed lease' }).click();
   await expect(page.getByTestId('card-duration')).toBeVisible();
   await page.getByTestId('not-timed').click();
   await expect(page.getByTestId('card-duration')).toHaveCount(0);
   expect((await live(page, 'sessions')).length).toBe(before + 1);
-  // One receipt for the whole conversation, one Undo.
-  await expect(page.getByTestId('receipt')).toContainText('2 changes');
+  // One exchange for the whole conversation, one Undo (in History); Home's line is about the last thing done.
+  await goTab(page, 'home');
+  await expect(page.getByTestId('home-line')).toContainText('Changed: ');
+  await openMenu(page, 'history');
+  await expect(page.getByTestId('history-row').first()).toContainText('2 changes');
 });
 
 test('drop opens the review, and nothing changes until it is applied', async ({ page }) => {
@@ -260,18 +268,19 @@ test('drop opens the review, and nothing changes until it is applied', async ({ 
   await expect(page.getByTestId('review')).toBeVisible();
   await expect(page.getByTestId('chg')).toHaveCount(1);
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'open' });
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
-  // Closing it leaves the card, to open again.
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
+  // Closing it leaves the card, on Today, to open again.
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('card-review')).toContainText('1 change');
   await page.getByTestId('card-review-open').click();
   await page.getByTestId('apply-changes').click();
   await expect(sheet(page)).toBeHidden();
-  await expect(page.getByTestId('receipt')).toContainText('Dropped “' + RECEIPTS + '”');
   await expect(page.getByTestId('card-review')).toHaveCount(0);
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'dropped' });
-  await page.getByTestId('undo').click();
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await goTab(page, 'home');
+  await expect(page.getByTestId('home-line')).toContainText('Changed: ' + RECEIPTS);
+  await undoLast(page);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
   expect((await live(page, 'tasks')).find(x => x.title === RECEIPTS)).toMatchObject({ status: 'open' });
 });
 
@@ -283,16 +292,16 @@ test('a question opens the task sheet, filled in, and writes nothing', async ({ 
   await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
   await expect(sheet(page).locator('input[name=title]')).toHaveValue(/buy milk at the shop/i);
   expect((await live(page, 'tasks')).length).toBe(n);
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
 });
 
 test('a short line adds a step to the Inbox; History lists it with its Undo, and Home starts clean after Undo', async ({ page }) => {
   await importSample(page);
   await goTab(page, 'home');
   await say(page, 'call the bank tomorrow');
-  await expect(page.getByTestId('receipt')).toContainText('Added “Call the bank”');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Call the bank');
   await say(page, 'pay the water bill');
-  await expect(page.getByTestId('receipt')).toContainText('2 changes');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Pay the water bill');
   await openMenu(page, 'history');
   const rows = page.getByTestId('history-row');
   await expect(rows).toHaveCount(1);
@@ -304,7 +313,7 @@ test('a short line adds a step to the Inbox; History lists it with its Undo, and
   await expect(rows.first()).toContainText('Undone');
   expect((await live(page, 'tasks')).filter(x => /^(Call the bank|Pay the water bill)$/.test(String(x.title)))).toHaveLength(0);
   await goTab(page, 'home');
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
 });
 
 test('Undo in History asks first after ten minutes; a step edited since stays', async ({ page }) => {
@@ -314,7 +323,7 @@ test('Undo in History asks first after ten minutes; a step edited since stays', 
   await page.clock.setFixedTime(t0);
   await goTab(page, 'home');
   await say(page, 'call the bank tomorrow');
-  await expect(page.getByTestId('receipt')).toContainText('Added “Call the bank”');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Call the bank');
   await page.clock.setFixedTime(new Date(+t0 + 11 * 60_000));
   await openMenu(page, 'history');
   const rows = page.getByTestId('history-row');
@@ -385,14 +394,17 @@ for (const width of [320, 375, 430]) {
     };
     await above('empty');
     await say(page, 'done sort the scanned receipts');
+    // The question is on Today; Home keeps only its line.
     await expect(page.getByTestId('card-duration')).toBeVisible();
-    await expect(page.getByTestId('receipt')).toBeVisible();
-    await noSideways(page, 'duration card and receipt');
-    const undo = await page.getByTestId('undo').boundingBox();
+    await noSideways(page, 'duration card on Today');
+    await goTab(page, 'home');
+    await expect(page.getByTestId('home-line')).toBeVisible();
+    await noSideways(page, 'the line on Home');
+    const undo = await page.getByTestId('home-line-open').boundingBox();
     expect(undo!.height).toBeGreaterThanOrEqual(44);
     // The last of the page is not hidden behind the input.
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const last = await page.getByTestId('receipt').boundingBox();
+    const last = await page.getByTestId('home-line').boundingBox();
     expect(last!.y + last!.height).toBeLessThanOrEqual((await page.getByTestId('home-input-bar').boundingBox())!.y + 0.5);
 
     await input(page).fill('a long line with many words, written over several lines\nthat the box has to hold\nwithout widening the page\nor hiding its own end');
@@ -404,7 +416,7 @@ for (const width of [320, 375, 430]) {
 
     await say(page, 'done open');
     await expect(page.getByTestId('card-pick')).toBeVisible();
-    await noSideways(page, 'which one');
+    await noSideways(page, 'which one, on Today');
     await page.getByTestId('card-pick').getByRole('button', { name: 'Cancel' }).click();
     // Toasts and the review sit clear of the input.
     await say(page, 'drop text alex');
@@ -421,7 +433,7 @@ test('sending closes the keyboard on a phone and keeps the focus on a desktop', 
   await page.goto('/');
   await input(page).fill('call the bank');
   await input(page).press('Enter');
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   if (isMobile) {
     await expect(page.getByTestId('tabbar')).toBeVisible();
     await expect(input(page)).not.toBeFocused();
@@ -434,5 +446,5 @@ test('sending closes the keyboard on a phone and keeps the focus on a desktop', 
   await input(page).press('Shift+Enter');
   await input(page).pressSequentially('second line');
   await expect(input(page)).toHaveValue('first line\nsecond line');
-  await expect(page.getByTestId('receipt')).toContainText('Added “Call the bank”');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Call the bank');
 });

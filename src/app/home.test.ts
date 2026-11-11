@@ -5,7 +5,7 @@ import { withDefaults } from '../data/settings';
 import { setKey } from '../ai/ask';
 import { setLocal } from '../data/db';
 import { sheet, closeSheet } from './sheet';
-import { choose, homeCard, recordArrival, openExchange, pruneExchanges, receiptLine, run, saveDuration, submitHome, undoExchange, canUndo, OPEN_MS } from './home';
+import { choose, homeCard, homeLine, lineOf, recordArrival, openExchange, pruneExchanges, receiptLine, run, saveDuration, submitHome, undoExchange, canUndo, OPEN_MS } from './home';
 import { newTaskFields } from '../domain/effects';
 
 const settle = () => new Promise(r => setTimeout(r, 40));
@@ -24,6 +24,7 @@ beforeAll(async () => {
 afterEach(async () => {
   vi.useRealTimers();
   homeCard.value = null;
+  homeLine.value = null;
   closeSheet();
   await settle();
   for (const x of [...exchanges.value.values()]) await db.table_('exchanges').delete(x.id);
@@ -382,5 +383,29 @@ describe('a line the parser can’t read, with an AI set up', () => {
     expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('limit') });
     (homeCard.value as { action: { run: () => void } }).action.run();
     expect(sheet.value).not.toBeNull();
+  });
+});
+
+describe('the line Home shows after a change', () => {
+  const made = (id: string) => ({ c: 'tasks' as const, id, created: true as const });
+  const edited = (id: string) => ({ c: 'tasks' as const, id, fields: { due: { was: null, now: '2026-11-12' } } });
+  it('says Created for an add, with the step it made (a standing item\'s copy for tonight is not a second one)', () => {
+    expect(lineOf([made('a')], 'Call the bank', 1, 'add')).toMatchObject({ kind: 'created', title: 'Call the bank', id: 'a' });
+    expect(lineOf([made('tpl'), made('copy')], 'Choir', 2, 'standing')).toMatchObject({ kind: 'created', title: 'Choir', id: 'tpl' });
+  });
+  it('says Changed for a done, a move or a drop, and opens the one card it touched', () => {
+    expect(lineOf([edited('b')], 'Call the bank', 1, 'move')).toMatchObject({ kind: 'changed', title: 'Call the bank', id: 'b' });
+  });
+  it('with several things and no name says how many, and opens no card', () => {
+    const l = lineOf([edited('a'), edited('b')], '', 2, 'changes');
+    expect(l).toMatchObject({ kind: 'changed', title: '', n: 2 });
+    expect(l.id).toBeUndefined();
+  });
+  it('is set by a line the parser applied, and the next input replaces it', async () => {
+    homeLine.value = null;
+    await submitHome('call the bank tomorrow');
+    expect(homeLine.value).toMatchObject({ kind: 'created', title: 'Call the bank' });
+    await submitHome('call the dentist');
+    expect(homeLine.value).toMatchObject({ kind: 'created', title: 'Call the dentist' });
   });
 });

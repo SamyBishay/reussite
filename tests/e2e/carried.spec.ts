@@ -132,10 +132,13 @@ test('Today and the bell offer the same cards, with no bulk carry', async ({ pag
   expect((await doc(page, 'days', TODAY)).plan).toEqual(['bank', 'a', 'b', 'c']);
 });
 
-test('a timed item that has passed is one small card on Home and on Today: Move, then it is gone', async ({ page }) => {
+test('a timed item that has passed is one small card on the bell page and on Today: Move, then it is gone', async ({ page }) => {
   await start(page, 'home');
-  await expect(page.getByTestId('missed-card')).toContainText('“Call the bank” was at 10:00.');
   await expect(page.getByTestId('greeting-hello')).not.toContainText(/missed|passed|carried|behind/i);
+  await expect(page.getByTestId('missed-card')).toHaveCount(0); // Home says nothing of it; the bell has the dot
+  await expect(page.getByTestId('bell-dot')).toBeVisible();
+  await page.getByTestId('home-bell').click();
+  await expect(page.getByTestId('missed-card')).toContainText('“Call the bank” was at 10:00.');
   await page.getByTestId('tab-today').click();
   await expect(page.getByTestId('missed-card')).toContainText('Call the bank');
   await page.getByTestId('missed-move').click();
@@ -145,6 +148,8 @@ test('a timed item that has passed is one small card on Home and on Today: Move,
   await expect(page.getByTestId('missed-card')).toHaveCount(0);
   expect(await doc(page, 'tasks', 'bank')).toMatchObject({ at: '17:00', due: TODAY });
   await page.getByTestId('tab-home').click();
+  await expect(page.getByTestId('missed-card')).toHaveCount(0); // Home never carries it
+  await page.getByTestId('home-bell').click();
   await expect(page.getByTestId('missed-card')).toHaveCount(0);
 });
 
@@ -152,7 +157,8 @@ for (const width of [320, 375, 430]) {
   test(`the cards don’t scroll sideways at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await start(page, 'home');
-    await noSideways(page, 'Home with the missed card');
+    await page.getByTestId('home-bell').click();
+    await noSideways(page, 'the bell page with the missed card');
     await page.getByTestId('missed-move').click();
     await noSideways(page, 'the move form');
     await page.getByTestId('tab-today').click();

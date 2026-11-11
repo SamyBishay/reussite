@@ -18,8 +18,8 @@ import { startFeed } from './feed';
 import { watchStanding } from './standing';
 import { watchBigMoments } from './celebrate';
 import { startPush } from './push';
-import { UpdateBanner } from './UpdateBanner';
-import { reloadNewest } from './reload';
+import { UpdateBanner, UpdateHost } from './UpdateBanner';
+import { StillBanner, ReadOnlyBanner, SyncStaleBanner, ViewingBanner } from './Banners';
 import { Today, openClose } from '../views/Today';
 import { Matrix } from '../views/Matrix';
 import { Projects } from '../views/Projects';
@@ -131,42 +131,14 @@ function Tabs() {
   );
 }
 
-/** Only the "Still on …?" banner lives here: a forgotten timer is data to fix, so it shows on every tab. Start here, the clock and Pause are Today's alone. */
+/** Only the "Still on …?" banner lives here: a forgotten timer is data to fix, so it shows on every tab but Home (there it is an entry of Notifications). Start here, the clock and Pause are Today's alone. */
 function Runbar() {
-  const r = running();
-  void clockNow.value;
-  if (r && isLong(r)) {
-    // "Still on …?" (brief §5): a forgotten timer is fixed in two taps.
-    return (
-      <div id="runbar"><div class="banner warn" data-testid="still-banner"><p>{t('stillOn', { title: r.title })}</p>
-        <div class="go"><button class="btn small" type="button" onClick={() => openStillOn(r.id, 'ask')} data-testid="still-fix">{t('stoppedAt')}</button>
-          <button class="btn small ghost" type="button" onClick={() => void patchTask(r.id, { stillAt: new Date().toISOString() })}>{t('stillGoing')}</button></div></div></div>
-    );
-  }
-  return <div id="runbar" />;
-}
-/** This device's copy is old and sync is not bringing it up to date: say what that means here and offer the fixes. */
-function SyncStaleBanner() {
-  if (!syncStale(clockNow.value)) return null;
-  const at = lastSyncAt.value;
-  const msg = at ? t('syncStale', { when: new Date(at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) }) : t('syncStaleNever');
-  return (
-    <div class="banner warn" role="status" data-testid="sync-stale">
-      <p>{msg}</p>
-      <div class="actions">
-        <button class="btn small" type="button" data-testid="sync-stale-now" onClick={() => void syncNow()}>{t('syncNow')}</button>
-        <button class="btn small" type="button" onClick={() => go('settings')}>{t('syncStaleSettings')}</button>
-      </div>
-    </div>
-  );
+  return <div id="runbar">{view.value !== 'home' && view.value !== 'notifications' && <StillBanner />}</div>;
 }
 
 function PlaceBanner() {
-  if (!viewingElsewhere.value || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || view.value === 'waiting' || (view.value === 'calendar' && calMode.value === 'log')) return null;
-  return (
-    <div class="banner" data-testid="viewing-banner"><p>{t('viewingPage', { place: placeName(pagePlace.value) })}</p>
-      <button class="btn small" type="button" onClick={() => setView(null)}>{t('backTo', { place: placeName(regionOf(places.value, here.value)) })}</button></div>
-  );
+  if (view.value === 'home' || view.value === 'settings' || view.value === 'memory' || view.value === 'history' || view.value === 'addresses' || view.value === 'notifications' || view.value === 'waiting' || (view.value === 'calendar' && calMode.value === 'log')) return null;
+  return <ViewingBanner />;
 }
 function Moment() {
   const m = moment.value;
@@ -245,10 +217,7 @@ export function App() {
         {withSide && <Side />}
         <Runbar />
         <main>
-          <UpdateBanner />
-          <PlaceBanner />
-          {readOnly.value && <div class="banner warn"><p>{t('newerData')}</p><button class="btn small" type="button" onClick={() => void reloadNewest()}>{t('reload')}</button></div>}
-          <SyncStaleBanner />
+          {view.value !== 'home' && view.value !== 'notifications' && <><UpdateBanner /><PlaceBanner /><ReadOnlyBanner /><SyncStaleBanner /></>}
           {ready.value && onboarding.value !== 'pending' ? <V /> : <p class="hint" style="margin-top:var(--s5)">{t('loading')}</p>}
           {!bare && view.value !== 'calendar' && <Footer />}
         </main>
@@ -258,6 +227,7 @@ export function App() {
       <SheetHost />
       <OverlayHost />
       <PreviewHost />
+      <UpdateHost />
       <InboxHost />
       <DropHost />
       <Moment />

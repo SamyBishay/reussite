@@ -43,7 +43,7 @@ export type HomeCard =
   /** A change-set waiting for the person's yes in the review ("3 changes · Review"). */
   | { kind: 'review'; cs: ChangeSet; text: string; turn: TurnKind; title: string; at: number }
   /** What an AI said (a clarification, an answer), with an optional button (step 7). */
-  | { kind: 'answer'; text: string; action?: { label: string; run: () => void }; at: number };
+  | { kind: 'answer'; text: string; action?: { label: string; run: () => void }; at: number; /** "Asking…": the AI has not replied; Home stays where it is. */ asking?: true };
 
 export const homeCard = signal<HomeCard | null>(null);
 /** The card, unless it is older than ten minutes. */
@@ -53,6 +53,30 @@ export const cardNow = computed(() => {
 });
 const live = (): HomeCard | null => { const c = homeCard.value; return c && Date.now() - c.at < OPEN_MS ? c : null; };
 export const dismissCard = () => { homeCard.value = null; };
+
+// ---------- the line ----------
+/**
+ * The one line Home shows under the greeting after a change was applied ("Created: Call the bank", "Changed: Call the bank"). Only in memory;
+ * a tap opens the card (`id`), or History when it is not one card. It goes at the next input. Undo is in History (the exchange).
+ */
+export type HomeLine = { kind: 'created' | 'changed'; title: string; id?: string; n: number };
+export const homeLine = signal<HomeLine | null>(null);
+/**
+ * What the line says of a change-set: a step it made (an add, or a standing item with its copy for tonight) is "Created", whatever else it did is "Changed";
+ * one card touched, or the one made, is what a tap opens. Several things with no name are "Changed: n changes", and a tap opens History.
+ */
+export function lineOf(undo: UndoDoc[], title: string, n: number, turn: TurnKind = 'changes'): HomeLine {
+  const cards = new Map<string, boolean>();
+  for (const u of undo) if (u.c === 'tasks') cards.set(u.id, (cards.get(u.id) ?? false) || !!u.created);
+  const made = [...cards].filter(([, c]) => c).map(([id]) => id);
+  if ((turn === 'add' || turn === 'standing') && made.length) {
+    const id = made.find(i => T(i)?.title === title) ?? made[0]!;
+    return { kind: 'created', title: title || T(id)?.title || '', id, n };
+  }
+  const only = cards.size === 1 && undo.every(u => u.c === 'tasks' || u.c === 'sessions' || u.c === 'days') ? [...cards.keys()][0]! : null;
+  if (only) return { kind: made.length ? 'created' : 'changed', title: title || T(only)?.title || '', id: only, n };
+  return { kind: 'changed', title: title || '', n };
+}
 
 // ---------- exchanges ----------
 export type TurnKind = Intent | 'changes';
@@ -148,6 +172,7 @@ export async function undoExchange(id: string): Promise<void> {
   await update<Exchange>('exchanges', id, { undone: [...ex.changes] });
   const c = homeCard.value;
   if (c && ((c.kind === 'duration' && c.exchange === id) || c.kind === 'review')) homeCard.value = null;
+  homeLine.value = null;
   toast(kept ? t('undoneKept', { n: kept }) : t('undoneOk'));
 }
 export const canUndo = hasLive;
@@ -192,6 +217,7 @@ function narrow(candidates: Named[], text: string): Named | null {
 export async function submitHome(raw: string): Promise<boolean> {
   const text = raw.trim();
   if (!text || readOnly.value) return false;
+  homeLine.value = null;
   const card = live();
   if (card?.kind === 'pick') {
     const one = narrow(card.candidates, text);
@@ -238,7 +264,7 @@ export async function routeUnknown(text: string, p: Extract<HomeParse, { kind: '
 async function askHome(text: string, prefill: Partial<Task>): Promise<boolean> {
   const turns = (await continuing())?.turns ?? [];
   const { system, user, notes } = homePrompt(text, turns);
-  const asking = { kind: 'answer' as const, text: t('homeAsking'), at: Date.now() };
+  const asking = { kind: 'answer' as const, text: t('homeAsking'), at: Date.now(), asking: true as const };
   homeCard.value = asking;
   const r = await askChanges('home', 'quick', system, user, { notes });
   if (homeCard.value === asking) homeCard.value = null;
@@ -272,6 +298,7 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
     homeCard.value = null;
     const id = gen.id('c');
     const { exchange } = await addTurn({ at: new Date().toISOString(), text, kind: turn, reply: title || cs.note || undefined, n }, { cs: id, undo });
+    homeLine.value = lineOf(undo, title, n, turn);
     // A step ticked done with no timer running: how long did it take? (With one, its time was saved.)
     if (done && !timed) homeCard.value = { kind: 'duration', task: done, exchange, cs: id, at: Date.now() };
     // A step that feeds an address asks how it was, as when it is ticked on Today.

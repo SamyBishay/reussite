@@ -31,6 +31,7 @@ import type { Task } from '../data/schema';
 import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 import { SyncCards } from '../app/SyncSettings';
+import { HomeCardNow } from '../app/HomeCards';
 
 export { openClose };
 
@@ -285,15 +286,10 @@ export function Today() {
   const s = !fid && !(af && every.length && !plan.length) ? candidates()[0] : undefined;
   const checks = decisionsToCheck(k);
   return (
-    <div class="todayview">
+    <div class="todayview" data-testid="todayview">
       <Navigator k={k} />
       <StayNotice />
-      <SyncCards />
-      {checks.map(dc => (
-        <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
-      ))}
-      {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
-      <ReviewBanner day={k} />
+      <HomeCardNow />
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (
@@ -306,6 +302,12 @@ export function Today() {
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
+      <SyncCards />
+      {checks.map(dc => (
+        <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>
+      ))}
+      {nudges.value.map(tk => <NudgeRow key={tk.id} tk={tk} />)}
+      <ReviewBanner day={k} />
       <MissedNow />
       {yOpen.length > 0 && (
         <div class="carry" data-testid="carry-card"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried} data-testid="carry-open">{t('carryButton')}</button></div>

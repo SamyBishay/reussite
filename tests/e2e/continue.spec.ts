@@ -56,7 +56,7 @@ for (const lang of LANGS) {
     const input = page.getByTestId('home-input').or(page.locator('.homein textarea')).first();
     await input.fill((lang === 'fr' ? 'fait ' : 'done ') + 'book the dentist');
     await input.press('Enter');
-    await expect(page.getByTestId('receipt')).toBeVisible();
+    await expect(page.getByTestId('home-line')).toBeVisible();
     await expect(page.getByTestId('card-duration')).toHaveCount(0);
   });
 }

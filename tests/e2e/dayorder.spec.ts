@@ -1,7 +1,7 @@
 // One order for the day (plan 2 Nov): Start here follows the clock and lives on Today alone (not on Home, not on the other tabs), done cards fold under the
 // list, and Home opens with a plain greeting line that does not repeat. The clock is fixed to a Monday so the tests do not depend on the hour.
 import { test, expect, type Page } from '@playwright/test';
-import { goTab, addCard, noSideways } from './helpers';
+import { goTab, goNotifications, addCard, noSideways } from './helpers';
 
 const input = (page: Page) => page.getByTestId('home-input');
 const say = async (page: Page, text: string) => { await input(page).fill(text); await input(page).press('Enter'); await input(page).blur(); };
@@ -15,7 +15,7 @@ async function aDay(page: Page) {
   await page.clock.setFixedTime(at(11, 0));
   await page.goto('/');
   await say(page, CALL);
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   await goTab(page, 'today');
   for (const title of ['Buy stamps', 'Sort the drawer', FIRST]) await addCard(page, title);
 }
@@ -115,9 +115,9 @@ test('a fixed item whose time has passed leaves the order: a day of only that ha
   await page.clock.setFixedTime(at(10, 0));
   await page.goto('/');
   await say(page, CALL);
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   await at_(page, 15, 0); // the call (14:00, 30 minutes long) is over
-  await goTab(page, 'home');
+  await goNotifications(page);
   await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
   await expect(page.getByTestId('greeting-done')).toHaveCount(0);
   await expect(page.getByTestId('greeting-next')).toHaveCount(0);

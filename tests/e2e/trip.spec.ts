@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningClock, noSideways, openMenu, expandSettings } from './helpers';
+import { morningClock, noSideways, openMenu, expandSettings, goNotifications } from './helpers';
 
 // Phase 4, step 3: the planner's offers (address or person) and "Plan this trip". Every name, link and number here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -36,6 +36,7 @@ const person = (name: string, o: Record<string, unknown> = {}) => ({ name, place
 async function openPlan(page: Page) {
   await morningClock(page);
   await page.goto('/');
+  await goNotifications(page);
   await page.locator('main').getByRole('button', { name: /Plan the day|Planifier la journée/ }).click();
   await page.getByTestId('ci-next').click(); // nothing was planned yesterday, so the first screen is the day's shape
   await page.getByTestId('ci-next').click(); // the pillars

@@ -19,7 +19,7 @@ async function aDay(page: Page) {
   await setNow(page, at(11, 0));
   await page.goto('/');
   await say(page, 'visit the flat 12:00');
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  await expect(page.getByTestId('home-line')).toBeVisible();
   await say(page, 'call the bank 15:00');
   await goTab(page, 'today');
   for (const title of ['Buy stamps', 'Sort the drawer', 'Water the plants']) await addCard(page, title);

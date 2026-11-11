@@ -1,10 +1,10 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { importSample, noSideways, goTab, openMenu, addCard } from './helpers';
+import { importSample, noSideways, goTab, openMenu, addCard, undoLast } from './helpers';
 
 // Home's AI with memory (phase 2b, step 7). OpenRouter is stubbed; every note and name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
 const input = (page: Page) => page.getByTestId('home-input');
-const say = async (page: Page, text: string) => { await input(page).fill(text); await input(page).press('Enter'); await input(page).blur(); };
+const say = async (page: Page, text: string) => { if (!(await input(page).count())) await page.getByTestId('tab-home').click(); await input(page).fill(text); await input(page).press('Enter'); await input(page).blur({ timeout: 1500 }).catch(() => undefined); };
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
 
@@ -62,7 +62,7 @@ async function setUpIn(page: Page) {
   await goTab(page, 'home');
 }
 
-test('a question about a person sends his note and his steps, shows the notes first, and answers on the card', async ({ page }) => {
+test('a question about a person sends his note and his steps, shows the notes first, and answers on Today', async ({ page }) => {
   await importSample(page);
   const seen = await stub(page, { v: 1, changes: [], note: 'Ibrahim works night shifts, so mornings are quiet.' });
   await setUpIn(page);
@@ -116,10 +116,10 @@ test('one added step is applied at once with Undo; three changes open the review
   await setUpIn(page);
   await say(page, 'I should probably get the spare key from Ibrahim before the weekend');
   await page.getByTestId('ai-send').click();
-  await expect(page.getByTestId('receipt')).toContainText('1 change');
+  await expect(page.getByTestId('home-line')).toContainText('Created: Open Messages and ask Ibrahim for the spare key');
   await expect(page.getByTestId('review')).toHaveCount(0);
-  await page.getByTestId('undo').click();
-  await expect(page.getByTestId('receipt')).toHaveCount(0);
+  await undoLast(page);
+  await expect(page.getByTestId('home-line')).toHaveCount(0);
   await goTab(page, 'matrix');
   await expect(page.locator('.matrix')).not.toContainText('spare key');
   await goTab(page, 'home');
@@ -165,7 +165,7 @@ test('the month’s spend shows in Settings, and at the limit Home goes back to 
 });
 
 for (const width of [320, 375, 430]) {
-  test(`the answer card, the preview and the spend in Settings do not scroll sideways at ${width}px`, async ({ page }) => {
+  test(`the answer card (on Today), the preview and the spend in Settings do not scroll sideways at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await importSample(page);

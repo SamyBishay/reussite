@@ -3,7 +3,7 @@
 // flips each answer before the one change-set is confirmed on the review screen. OpenRouter is stubbed; every name here is invented.
 // The clock is fixed to a Sunday morning (the review day) so nothing depends on the hour.
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { expandSettings, goTab, noSideways, openWeeklyReview, openAllProjects } from './helpers';
+import { expandSettings, goTab, noSideways, openWeeklyReview, openAllProjects, openMenu } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
@@ -256,9 +256,9 @@ test('with an AI: the review of a goal is a proposal; flip one answer, skip one,
   await expect(line(page, 'Thesis')).toHaveText('3 of 10 pages');
   await expect(card(page, 'Thesis')).toContainText('Hand in ten pages of the draft by 15 December');
   await expect(line(page, 'Flat move')).toHaveText('0 of 2 milestones');
-  // The change-set joined Home's receipt, with its Undo.
-  await goTab(page, 'home');
-  await expect(page.getByTestId('receipt')).toBeVisible();
+  // The change-set is an exchange in History, with its Undo.
+  await openMenu(page, 'history');
+  await expect(page.getByTestId('history-undo').first()).toBeVisible();
 });
 
 test('a proposal never writes without the yes: cancelling the review leaves the list as it was', async ({ page }) => {

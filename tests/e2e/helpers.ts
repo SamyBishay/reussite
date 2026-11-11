@@ -67,7 +67,21 @@ export async function openMenu(page: Page, item: 'settings' | 'places' | 'memory
   if (item === 'settings') await expandSettings(page);
 }
 
+/** Undo the newest exchange from History (Home has no Undo: its line only says what happened and opens the card), and come back to Home. */
+export async function undoLast(page: Page) {
+  await openMenu(page, 'history');
+  await page.getByTestId('history-undo').first().click();
+  await page.getByTestId('tab-home').click();
+}
+
 /** A tab of the bottom bar, or what lives behind one: the Log is a mode of Calendar, Settings is in Home's menu. */
+/** The Notifications page, from the bell on Home: Plan the day, the missed step, Next steps and the banners wait there (Home itself is only the greeting and the input). */
+export async function goNotifications(page: Page) {
+  await page.getByTestId('tab-home').click();
+  await page.getByTestId('home-bell').click();
+  await expect(page.getByTestId('notifications')).toBeVisible();
+}
+
 export async function goTab(page: Page, tab: 'home' | 'today' | 'matrix' | 'projects' | 'calendar' | 'log' | 'settings') {
   if (tab === 'settings') return openMenu(page, 'settings');
   if (tab === 'log') {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { expandSettings, goTab, noSideways } from './helpers';
+import { expandSettings, goTab, goNotifications, noSideways } from './helpers';
 
 // "Plan it in your AI chat" (S9 follow-up): with no AI key on the device but the connector on, Plan the day and the Sunday review banner also
 // offer to do it in the person's AI chat app, with a sentence to copy. No vendor is named or linked. No AI call is made from the app. The relay on :8787 (playwright.config.ts) has the connector's throwaway wrap key.
@@ -25,12 +25,12 @@ test('connector on, no key: Plan the day and the review banner offer the chat, a
   const calls: string[] = [];
   page.on('request', r => { if (/openrouter|anthropic/.test(r.url())) calls.push(r.url()); });
   await page.goto('/');
-  await goTab(page, 'home');
+  await goNotifications(page);
   await expect(page.getByTestId('home-plan')).toBeVisible();
   await expect(page.getByTestId('home-plan-chat')).toHaveCount(0); // the connector is off: only the ritual
   await connectorOn(page);
 
-  await goTab(page, 'home');
+  await goNotifications(page);
   await expect(page.getByTestId('home-plan')).toBeVisible();
   const offer = page.getByTestId('home-plan-chat');
   await expect(offer).toBeVisible();
@@ -57,7 +57,7 @@ test('connector on, no key: Plan the day and the review banner offer the chat, a
 
   // A restart: the relay is not asked first, the app remembers.
   await page.reload();
-  await goTab(page, 'home');
+  await goNotifications(page);
   await expect(page.getByTestId('home-plan-chat')).toBeVisible();
   expect(calls).toEqual([]);
 });
@@ -70,7 +70,7 @@ test('with a key on the device, or with the connector off, the offer is not show
   await page.getByTestId('ai-key').fill('sk-or-test');
   await page.getByTestId('ai-key-save').click();
   await expect(page.getByTestId('ai-settings')).toContainText('A key is saved.');
-  await goTab(page, 'home');
+  await goNotifications(page);
   await expect(page.getByTestId('home-plan')).toBeVisible();
   await expect(page.getByTestId('home-plan-chat')).toHaveCount(0);
   await goTab(page, 'today');
@@ -85,7 +85,7 @@ test('in French the offer and its sentence are French, and fit at 320px', async 
   await connectorOn(page);
   await page.getByRole('button', { name: 'Français' }).click();
   await expect(page.getByTestId('settings')).toContainText('Réglages');
-  await goTab(page, 'home');
+  await goNotifications(page);
   const offer = page.getByTestId('home-plan-chat');
   await expect(offer).toHaveText('La planifier dans votre chat IA');
   await offer.click();

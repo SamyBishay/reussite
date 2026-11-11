@@ -20,7 +20,7 @@ import { onPage, zoneOfPlace } from '../domain/places';
 import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
-import { outcomeOf, progressOf } from '../domain/goal';
+import { outcomeOf } from '../domain/goal';
 
 export type T = WithId<Task>;
 
@@ -46,7 +46,6 @@ export const chainOfHead = (id: string) => chains.value.chains.get(id);
 /** A step that waits for another in a chain: shown inside its head's card, not on its own. */
 export const isWaiting = (id: string) => C.isWaiting(chains.value, id);
 
-export const listOf = L.listOf;
 export const waitingOn = (t: T): T[] => L.waitingOn(t, tasks.value);
 export const blocked = (t: T) => isWaiting(t.id);
 
@@ -117,11 +116,8 @@ export function lastDoneOf(templateId: string): string | null {
   for (const t of tasks.value.values()) if (t.from === templateId && t.status === 'done' && t.doneDay && (!last || t.doneDay > last)) last = t.doneDay;
   return last;
 }
-/** Fixed-time items on a day: commitments and timed steps due that day, and timed steps on its list with no due date. */
-export const fixedOn = (k: string): T[] => L.fixedOn({ days: days.value, tasks: tasks.value }, k);
 /** Decisions whose check date has come. */
 export const decisionsToCheck = (k = today.value) => L.decisionsToCheck(decisions.value.values(), k);
-export const hereNow = () => here.value;
 
 export const yesterdayOpen = (k = today.value) => L.yesterdayOpen({ days: days.value, tasks: tasks.value }, k, addDays(k, -1));
 
@@ -235,14 +231,6 @@ export const greetingNow = computed(() => {
     closed: !!dayDoc(k)?.closed, planned, running: !!running(), hasFirst: !!first,
   });
 });
-
-/** A step's title in a sentence: cut at a word within 40 characters. */
-const nameOf = (x: Pick<T, 'title'>): string => {
-  const s = x.title.trim();
-  if (s.length <= 40) return s;
-  const cut = s.slice(0, 39), i = cut.lastIndexOf(' ');
-  return (i > 20 ? cut.slice(0, i) : cut).trimEnd() + '…';
-};
 
 /** The clock reading where the person is, HH:MM (the signal moves with the clock, so what reads it re-renders). */
 export const clockHHMM = (): string => wallOf(clockNow.value, hereZone.value);

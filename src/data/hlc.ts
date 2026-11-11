@@ -46,7 +46,6 @@ export function receive(clock: Clock, remote: Hlc, now = Date.now()): void {
   clock.wall = wall;
 }
 
-export const compare = (a: Hlc, b: Hlc): number => (a < b ? -1 : a > b ? 1 : 0);
 export const max = (a: Hlc | undefined, b: Hlc | undefined): Hlc | undefined =>
   a === undefined ? b : b === undefined ? a : a >= b ? a : b;
 

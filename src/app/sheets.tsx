@@ -2,11 +2,11 @@
 // moving a step, pause, swap, pick, suit piles.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { signal } from '@preact/signals';
-import { settings, projects, today, places, toast, stays, clockNow, update, hereZone, here } from './store';
+import { settings, projects, today, places, toast, stays, clockNow, hereZone, here } from './store';
 import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, planOf, cardsOn, candidates, whereOf, minutesOnFor, spentOf, byOrder, inPlace, sessionsOf, personal, isOpen, isEvent, quad, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
 import {
-  patchTask, finishTask, stopTimer, addToday, addByHand, removeToday, movePlan, cloneTemplate, dropTask, droppedLine, reopen, setFirst, startTask, addSession, editSession,
+  patchTask, finishTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, setFirst, startTask, addSession, editSession,
   deleteSession, skipThisTime, stopRepeating, addPlace, planOn, dueOn, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists, type Finished,
 } from './actions';
 import { openHappened } from './EventUi';
@@ -20,7 +20,7 @@ import { More, countSet } from './More';
 import { bigMoment, celebrate } from './celebrate';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
 import { durationButtons, splitWheel, WHEEL_HOURS, WHEEL_MINUTES } from '../domain/duration';
-import { addDays, daysBetween } from '../domain/dates';
+import { addDays } from '../domain/dates';
 import { ended } from '../domain/standing';
 import { isAllowedLink } from '../domain/links';
 import { moveTo } from '../domain/moves';
@@ -35,7 +35,7 @@ import { dueBeforeEnd, isArea } from '../domain/places';
 import { placePath, placeRows } from '../domain/areas';
 import { SUIT_ORDER } from '../data/settings';
 import { OfferChips, offerFieldsFor, type OfferChoice } from './OfferChips';
-import type { Project, Repeat, Session, Task } from '../data/schema';
+import type { Repeat, Session, Task } from '../data/schema';
 import type { Quadrant } from '../domain/tasks';
 
 const rankOf = (n: number) => (n <= 0 ? '' : n <= 13 ? ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][n]! : 'K+');
@@ -101,7 +101,7 @@ function StillOnSheet({ id, then }: { id: string; then: 'ask' | 'pause' | 'done'
     const min = Math.max(1, Math.min(elapsed, Math.round(m)));
     if (then === 'done') { closeSheet(); void complete(tk, null, today.value, min); }
     else if (then === 'pause') pauseTimer(id, min);
-    else { closeSheet(); void stopTimer(tk, 'later', null, min); toast(t('timeFixed', { t: fmtMin(min) })); }
+    else { closeSheet(); void stopTimer(tk, 'later', min); toast(t('timeFixed', { t: fmtMin(min) })); }
   };
   const going = () => {
     if (then === 'done') { closeSheet(); void complete(tk, null); }
@@ -546,7 +546,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         else delete (p as Record<string, unknown>)[k];
       }
       setIf('nudge', v('nudge') || null, tk.nudge);
-      if (!wasEvent && !draft) { if (tk.started) void stopTimer(tk, 'later', null); void leaveLists(id); }
+      if (!wasEvent && !draft) { if (tk.started) void stopTimer(tk, 'later'); void leaveLists(id); }
     }
     const est = Number(v('est')) || null;
     if (est !== (tk.est || null)) {
@@ -831,7 +831,7 @@ export function pauseTimer(id: string, minutes?: number, checked = false) {
   if (!tk) return;
   if (tk.started && minutes == null && !checked && isLong(tk)) return openStillOn(id, 'pause');
   closeSheet();
-  if (tk.started) { void stopTimer(tk, null, null, minutes); toast(minutes != null ? t('pausedWith', { t: fmtMin(minutes) }) : t('paused')); }
+  if (tk.started) { void stopTimer(tk, null, minutes); toast(minutes != null ? t('pausedWith', { t: fmtMin(minutes) }) : t('paused')); }
 }
 
 // ---------- swap the first step ----------
@@ -912,6 +912,4 @@ function PileSheet({ suit }: { suit: Task['suit'] }) {
   );
 }
 
-/** A project's linked steps left, for "2 steps left" (goal gradient, brief §5). */
-export const stepsLeft = (p: Project & { id: string }) => [...tasks.value.values()].filter(x => x.project === p.id && x.status === 'open' && !x.template && !isEvent(x)).length;
 

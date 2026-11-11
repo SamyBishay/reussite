@@ -2,7 +2,6 @@
 // The relay only ever sees the outer JSON below; the inner `ChangeBatch` and `Snapshot`
 // are what gets encrypted into `blob`.
 import type { Stored } from '../data/doc';
-import type { Hlc } from '../data/hlc';
 import type { Collection } from '../data/schema';
 
 export type StoredDoc = Stored<Record<string, unknown>>;

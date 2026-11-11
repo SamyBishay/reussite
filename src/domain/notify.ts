@@ -90,7 +90,7 @@ function textOf(e: AgendaEvent, events: readonly AgendaEvent[], s: NotifySetting
  */
 export function buildSchedule(data: NotifyState, now: number, s: NotifySettings, tr: Translate): ScheduleItem[] {
   const zoneOf = (id: string) => zoneOfPlace(data.places, id);
-  const { today, here } = whereNow(new Date(now), s, zoneOf, data.stays.values());
+  const { today } = whereNow(new Date(now), s, zoneOf, data.stays.values());
   const titles = s.notifyText === 'titles';
   const events = agenda(data, s, addDays(today, -1), addDays(today, WINDOW_DAYS + 1));
   const items: ScheduleItem[] = [];

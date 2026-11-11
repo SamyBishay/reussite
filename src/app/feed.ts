@@ -7,14 +7,14 @@
 import { computed, effect, signal } from '@preact/signals';
 import { getLocal, setLocal } from '../data/db';
 import type { CalData } from '../domain/calItems';
-import { FEED_AHEAD_DAYS, FEED_PAST_DAYS, FEED_REFRESH_HINT, feedText } from '../domain/feedText';
+import { feedText } from '../domain/feedText';
 import { b64uEncode } from '../sync/bytes';
 import { aliasPath, feedPath, feedUrl, FEED_ID, MAX_FEED_BYTES, sharedFeed, type SharedFeed } from '../feed/protocol';
 import { t } from '../i18n';
 import { addresses, days, db, decisions, places, projects, readOnly, saveSettings, settings, stays, tasks, today } from './store';
 import { lastSyncAt, relayBase, syncBehind, syncError } from './sync';
 
-export { FEED_AHEAD_DAYS, FEED_PAST_DAYS, FEED_REFRESH_HINT, feedText };
+export { feedText };
 /** The wait after a change before uploading, so a burst of edits is one upload. */
 export const FEED_DEBOUNCE_MS = 4000;
 /** An unchanged feed is still written this often, so the relay's 60-day clock (tick.ts) never runs out on a feed in use. */

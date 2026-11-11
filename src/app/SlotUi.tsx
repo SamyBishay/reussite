@@ -6,7 +6,6 @@ import { openSheet, closeSheet } from './sheet';
 import { setSlot } from './actions';
 import { T, dayOrderOf, slotStateOf, isOpen } from './model';
 import { t, fmtDate } from '../i18n';
-import { addDays } from '../domain/dates';
 import { wallOf } from '../domain/zone';
 import { readSlot, slotEnd, MIN_SLOT } from '../domain/slots';
 import type { Slot, SlotLogEntry, Task } from '../data/schema';

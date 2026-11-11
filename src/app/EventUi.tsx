@@ -5,7 +5,7 @@
 import { useState } from 'preact/hooks';
 import { today, toast } from './store';
 import { T, type T as Tk } from './model';
-import { finishTask, dropTask, droppedLine, snoozeEvent } from './actions';
+import { finishTask, snoozeEvent } from './actions';
 import { closeSheet, openSheet, Title } from './ui';
 import { DropButton } from './ConfirmButton';
 import { nudgeAfter, snoozeNudge } from '../domain/events';

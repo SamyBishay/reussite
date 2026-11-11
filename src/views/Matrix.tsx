@@ -13,7 +13,7 @@ import { openTask, openMove, moveToQuadrant } from '../app/sheets';
 import { Title, Suit, quadName, DueChip, dueText, suitName, openSheet } from '../app/ui';
 import { daysBetween } from '../domain/dates';
 import { Fold } from '../app/More';
-import { t, fmtDate, type Key } from '../i18n';
+import { t, type Key } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import type { Quadrant } from '../domain/tasks';
 import { CommandBox } from '../ai/ui';

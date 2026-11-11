@@ -12,7 +12,6 @@ type WithId<T> = T & { id: string };
 /** How much a calendar export says: only times and generic words, the steps' short names, or short names with places and notes. */
 export type FeedDetail = 'times' | 'labels' | 'full';
 export const FEED_DETAILS: readonly FeedDetail[] = ['times', 'labels', 'full'];
-export const isFeedDetail = (v: unknown): v is FeedDetail => FEED_DETAILS.includes(v as FeedDetail);
 
 /** The documents the exports read: the agenda's, and the addresses and projects (a step's place can come from its project). */
 export interface CalData extends AgendaData {

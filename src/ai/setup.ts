@@ -77,8 +77,6 @@ export function onlySetup(cs: ChangeSet): ChangeSet | null {
   return changes.length ? { ...cs, changes } : null;
 }
 
-/** The first thing the AI says is the app's own, so nothing is sent until the person has written. */
-export const FIRST_MESSAGE_KEY = 'obChatFirst' as const;
 
 const FIND_PACK = `Find out three things from me, by talking, so that Réussite fits my life.
 1. My four pillars: the four parts of my days that matter to me, the ones I would like each day to touch even on a hard day. Start from the four general kinds of time every day holds: Work (job or studies, bureaucracy, paperwork), Leisure (fun, relaxation, consumption, hobbies, outings), Personal projects (side projects, chores, research) and Interpersonal obligations (functions and services for family and friends). Keep them as they are unless I say another name fits my life better; then use my own words in at most four words. Always four: if I name more than four, ask which four matter most; if fewer, ask one question about the missing part and let me decide. Order them as they matter to me, the one I would miss most first.

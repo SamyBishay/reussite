@@ -52,4 +52,3 @@ export async function saveFile(name: string, text: string, type = 'application/j
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export const readFileText = (f: File) => f.text();

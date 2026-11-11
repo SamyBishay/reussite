@@ -3,7 +3,7 @@
 // AI is asked for estimates.
 import { projects, tasks, places, settings, today, here, type WithId } from '../app/store';
 import { T, dayDoc, byOrder, spentOf } from '../app/model';
-import { header, projectLines, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
+import { header, systemPrompt, stepLine, stepLines, STEP_HEADER, calibrationLine, scopeLines, memoryFor, MAX_STEPS } from './context';
 import { PILLARS, type Plan, type PlanInput } from '../domain/planner';
 import type { Proposal } from '../domain/propose';
 import { lang, fmtMin } from '../i18n';

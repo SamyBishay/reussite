@@ -14,7 +14,7 @@ import { pickNotes, noteBlock, type Note } from '../domain/memory';
 import { preferencesPack, preferencesSystem } from '../domain/preferences';
 import { lang } from '../i18n';
 import { DEFAULT_SETTINGS } from '../data/settings';
-import type { Decision, ExchangeTurn, Project } from '../data/schema';
+import type { ExchangeTurn, Project } from '../data/schema';
 import { goalLines, outcomeOf } from '../domain/goal';
 
 export const MAX_STEPS = 25;

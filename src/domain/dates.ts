@@ -47,4 +47,3 @@ export function daysBetween(today: DayKey, k: DayKey | null | undefined): number
   return Math.round((t(k) - t(today)) / 86400000);
 }
 
-export const isDayKey = (s: unknown): s is DayKey => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);

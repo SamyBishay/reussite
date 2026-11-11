@@ -1,7 +1,7 @@
 // Writes to Memory (brief §10): the person's own edits to their notes, and the import. Every write goes
 // through store.ts. Forget empties a note's text before the tombstone and is never recorded for Undo
 // (`recordWrites` keeps the text it replaced: "Forget deletes, it never softens").
-import { db, memory, createDoc, update, removeDoc, newId } from './store';
+import { db, createDoc, update, removeDoc, newId } from './store';
 import { fieldsOf } from '../data/doc';
 import { normExchange, normNote } from '../data/normalize';
 import type { Exchange, MemoryKind, MemoryLine, MemoryNote } from '../data/schema';
@@ -99,4 +99,3 @@ export async function applyImport(plan: MergePlan): Promise<void> {
   for (const c of plan.creates) await createDoc('memory', c);
 }
 
-export const liveNotes = () => [...memory.value.values()];

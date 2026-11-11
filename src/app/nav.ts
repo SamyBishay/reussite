@@ -8,7 +8,6 @@ const VIEWS: View[] = [...TABS, 'settings', 'memory', 'history', 'addresses', 'n
 
 /** Day, Week, Month and the Agenda list are remembered; the Log is a mode of the Calendar that you open on purpose. */
 export type CalMode = 'day' | 'week' | 'month' | 'agenda' | 'log';
-export const CAL_MODES: CalMode[] = ['day', 'week', 'month', 'agenda', 'log'];
 /** Below this width (px) the Calendar is a phone's: Day and the Agenda by default, and a week is three days. */
 export const PHONE_WIDTH = 768;
 /** Days a phone's "week" shows, starting on the date shown. */

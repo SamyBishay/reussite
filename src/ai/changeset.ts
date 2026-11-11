@@ -4,7 +4,6 @@
 import { z } from 'zod';
 import { extractJson } from './json';
 
-export const CHANGESET_VERSION = 1;
 /** The longest `note` (the AI's one line for the person) kept. */
 export const NOTE_MAX = 1000;
 

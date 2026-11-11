@@ -291,7 +291,6 @@ function Checkin() {
     fixed: fixedIn, optional: new Set(items.filter(i => i.role === 'optional').map(i => i.id)),
   };
   const ord = dayOrder(layoutIn), load = dayLoad(layoutIn);
-  const when = new Map(ord.order.map(o => [o.id, o]));
 
   const picker = swapping && (
     <>

@@ -4,7 +4,7 @@
 // exported: planned cards, due steps, launch points, the check-in, the close and the review are not (the calendar is
 // for what is at a time; reminders are the notifications' job).
 import type { AgendaEvent } from './agenda';
-import { addDays, partsIn } from './dates';
+import { partsIn } from './dates';
 import { offsetAt } from './zone';
 
 const MIN = 60_000;

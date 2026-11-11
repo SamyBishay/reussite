@@ -29,8 +29,6 @@ let loading: Promise<boolean> | null = null;
 let ready = false;
 const kept: HTMLImageElement[] = []; // decoded pictures stay in memory while the app is open
 
-/** Are the pictures in (decoded), so the next celebration shows the figures? */
-export const stGeorgeReady = () => ready;
 
 /**
  * Fetch and decode the pictures, once (a failure lets a later call try again). Called when a big moment is
@@ -120,8 +118,6 @@ function ringMask(from: number, to: number): string {
 
 let current: { el: HTMLElement; end: () => void } | null = null;
 
-/** Is the celebration on screen? */
-export const celebrating = () => !!current;
 
 /**
  * Play the celebration with these words. When one is already playing, its words change and it goes on.
@@ -172,8 +168,6 @@ export function playStGeorge(words: Words, mode: Mode): boolean {
   return true;
 }
 
-/** Stop it now (a test, or the app leaving the screen). */
-export function stopStGeorge() { current?.end(); }
 
 function setWords(el: HTMLElement, w: Words) {
   el.querySelector('.sg-words b')!.textContent = w.title;

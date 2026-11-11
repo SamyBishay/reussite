@@ -87,9 +87,6 @@ export function pillarsOf(items: readonly PlanItem[], suitOf: (id: string) => Su
 export const HOUR_BUDGET = 60;
 export const BREAK_DOWN_OVER = 30;
 
-const hm = (m: number) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-const mins = (t: string) => { const [h, m] = t.split(':').map(Number); return (h ?? 0) * 60 + (m ?? 0); };
-
 /** Over 30 minutes, or without a starter: break it down first. */
 export const needsBreakDown = (s: Pick<PStep, 'est' | 'starter'>) => (s.est ?? 0) > BREAK_DOWN_OVER || !s.starter?.trim();
 

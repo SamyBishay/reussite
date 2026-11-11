@@ -1,6 +1,6 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
-import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId, type WithId } from './store';
-import { T, slotsOfDay, rawPlan, dayDoc, whereOf, elapsedSec, running, isOpen, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
+import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId } from './store';
+import { T, slotsOfDay, rawPlan, dayDoc, whereOf, elapsedSec, running, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects, decisions } from './store';
 import type { Address, By, Day, Person, Place, Project, Session, SessionSource, Slot, SlotLogEntry, Stay, Task, Verdict, Visit } from '../data/schema';
 import { writeSlot } from '../domain/slots';
@@ -52,17 +52,17 @@ export async function startTask(id: string, startedAt?: Date) {
   const cur = running();
   const tk = T(id);
   if (isEvent(tk)) return; // something waited for has no timer
-  if (cur && cur.id !== id) await stopTimer(cur, 'switched', null);
+  if (cur && cur.id !== id) await stopTimer(cur, 'switched');
   // The first session freezes the estimate the learning uses (brief §5).
   const freeze = tk && tk.est0 == null && tk.est ? { est0: tk.est } : {};
   await patchTask(id, { started: (startedAt ?? new Date()).toISOString(), stillAt: null, ...freeze });
 }
 
 /** Stop the timer. `minutes` overrides the clock ("I stopped at…") and saves the session as corrected. */
-export async function stopTimer(tk: Tk, why: string | null, resume: string | null, minutes?: number) {
+export async function stopTimer(tk: Tk, why: string | null, minutes?: number) {
   const m = minutes ?? Math.max(1, Math.round(elapsedSec(tk) / 60));
   await addSession(tk.id, m, why, minutes != null ? 'corrected' : 'timer', sessionDay(tk));
-  await patchTask(tk.id, { started: null, stillAt: null, resume: resume == null ? tk.resume ?? null : resume || null });
+  await patchTask(tk.id, { started: null, stillAt: null }); // the card keeps any resume note it already has
 }
 /** A timer started yesterday and stopped today belongs to the day it started. */
 const sessionDay = (tk: Tk) => (tk.started && tk.started.slice(0, 10) < today.value && Date.now() - Date.parse(tk.started) < 36e5 * 30 ? addDays(today.value, -1) : today.value);
@@ -329,7 +329,7 @@ export async function setFirst(id: string, k = today.value) {
 export async function closeDay(firstId: string | null, newTitle: string) {
   const k = today.value;
   const r = running();
-  if (r) await stopTimer(r, 'close', null);
+  if (r) await stopTimer(r, 'close');
   let id = firstId, title = firstId ? T(firstId)?.title ?? '' : '';
   if (!id && newTitle.trim()) {
     title = newTitle.trim();

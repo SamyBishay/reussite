@@ -12,7 +12,7 @@ import { shiftTime } from '../domain/calendar';
 import { resolveLink, detectPlatform } from '../domain/links';
 import type { SuitId } from '../data/schema';
 
-export { sheet, openSheet, closeSheet, SheetHost } from './sheet';
+export { openSheet, closeSheet, SheetHost } from './sheet';
 
 // ---------- text ----------
 /** The step's verb ("Open Mail") in bold, as in v1. */

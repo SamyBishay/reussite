@@ -7,8 +7,6 @@ import { b64uDecode, b64uEncode, fromUtf8, isB64u, utf8 } from './bytes';
 import { deflateRaw, inflateRaw, MAX_UNPACKED } from './inbox';
 import { SPACE_ID } from './protocol';
 
-/** Over this many characters of fragment the AI should give the fenced block instead. */
-export const DROP_MAX_FRAGMENT = 8000;
 /** The page reads up to this much (so a slightly long link still works) and no more. */
 const PARSE_MAX = 64 * 1024;
 const PUB = /^[A-Za-z0-9_-]{43}$/;

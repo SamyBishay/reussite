@@ -1,7 +1,6 @@
 // UI strings (brief §7). Every string lives in en.ts / fr.ts; nothing is hard-coded in views.
 // Placeholders: {name}. Plurals: a key whose value is an object of Intl.PluralRules categories.
 import { signal, computed } from '@preact/signals';
-import { en } from './en';
 import { translate, type Key, type Lang } from './core';
 
 export { frTypo, translate, type Key, type Lang } from './core';

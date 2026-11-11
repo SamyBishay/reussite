@@ -133,8 +133,6 @@ export function dayOrder(i: DayOrderInput): DayOrder {
   return { order, missed, over: Math.round(over) };
 }
 
-/** The projected start of each step in an order, by id (fixed items keep their own time). */
-export const startsOf = (o: DayOrder): Map<string, number> => new Map(o.order.filter(x => x.kind === 'step').map(x => [x.id, x.start]));
 
 /**
  * The day's load against the time it has (the morning ritual's "3 h 10 of 4 h 30 free"): `planned` is the minutes of the cards

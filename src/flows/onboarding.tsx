@@ -23,12 +23,11 @@ import { ask, draftProvider } from '../ai/ask';
 import { ReviewList, prepareReview } from '../ai/Review';
 import { setupPack, setupPrompt, SetupReply, readSetup, onlySetup, type Turn } from '../ai/setup';
 import { shortName, type Plan } from '../ai/apply';
-import { openCheckin } from './checkin';
 import { lang, t, type Key } from '../i18n';
 import { SUIT_ORDER, NEW_USER_SUITS, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
 import type { Place, SuitId } from '../data/schema';
 import type { ChangeSet } from '../ai/changeset';
-import { ZONES, deviceZone } from '../domain/zones';
+import { deviceZone } from '../domain/zones';
 import type { ComponentChildren } from 'preact';
 
 type Id = 'language' | 'pillars' | 'ways' | 'link' | 'key' | 'chat' | 'paste' | 'pair';
@@ -107,7 +106,6 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   const [id, setId] = useState<Id>(entry === 'ways' ? 'ways' : entry === 'key' ? 'key' : entry === 'connector' ? 'link' : entry === 'other' ? 'paste' : 'language');
   const [trail, setTrail] = useState<Id[]>([]);
   const [draft, setDraft] = useState<Draft>({ s: guided ? {} : { suits: NEW_USER_SUITS }, places: [] });
-  const [skipped, setSkipped] = useState(false);
   const [busy, setBusy] = useState(false);
   const [path, setPath] = useState<Path>(entry && entry !== 'ways' ? entry : 'hand');
   const [provider, setProvider] = useState<Provider>('openai');

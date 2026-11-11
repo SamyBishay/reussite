@@ -37,8 +37,6 @@ export const isWaiting = (ix: ChainIndex, id: string): boolean => {
   const c = ix.of.get(id);
   return c !== undefined && c !== id;
 };
-/** The chain a step heads. */
-export const headOfChain = (ix: ChainIndex, id: string): Chain | undefined => ix.chains.get(id);
 /** The chain a step is in, as head or as a waiting member. */
 export const chainOf = (ix: ChainIndex, id: string): Chain | undefined => {
   const c = ix.of.get(id);

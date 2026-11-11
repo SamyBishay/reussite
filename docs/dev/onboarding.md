@@ -1,5 +1,7 @@
 # First-run onboarding and the AI preferences
 
+> **11 Nov 2026: first-run is two screens** (the language, then the four kinds of time: `NEW_USER_SUITS` in `src/data/settings.ts`, a prefilled editable draft, Start goes Home). Places, AI, sync, reminders and the calendar are Later: Settings and the Notifications page's Next steps. The AI screens below (`KeyStep`, `Chat`, `PasteStep`, `ConnectStep`) are unchanged but open from Settings in a sheet: `openGuidedAi` (`src/flows/guidedAi.tsx`) renders `Onboarding` with `entry` (`ways`, `key`, `connector`, `other`), which skips the first-run record and the starting categories and closes the sheet when done. "Restore with a recovery key" (the pairing screen, `JoinPanel`) is on the first screen. Read the rest of this page with that in mind; DECISIONS.md 2026-11-11 is the record.
+
 ## When it shows
 
 `src/app/onboarding.ts`, run once in `App` after `start()` and before the first screen. It shows only when `onboardingWhy` says `new`:

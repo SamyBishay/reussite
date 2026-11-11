@@ -18,7 +18,11 @@ describe('the Next steps card', () => {
     expect(nextSteps(facts({ wantsConnector: true }))).toEqual(['sync', 'notify', 'addresses', 'connector']);
     expect(nextSteps(facts({ wantsConnector: true, connectorOn: true }))).toEqual(['sync', 'notify', 'addresses']);
   });
+  it('offers an AI and the calendar feed later, with the rest, until they are set up', () => {
+    expect(nextSteps(facts({ aiOff: true, feedOff: true }))).toEqual(['sync', 'ai', 'notify', 'calendar', 'addresses']);
+    expect(nextSteps(facts({ aiOff: false, feedOff: false }))).toEqual(['sync', 'notify', 'addresses']);
+  });
   it('opens a Settings section for every line', () => {
-    for (const l of ['key', 'sync', 'notify', 'addresses', 'connector'] as const) expect(SECTION[l]).toBeTruthy();
+    for (const l of ['key', 'sync', 'ai', 'notify', 'calendar', 'addresses', 'connector'] as const) expect(SECTION[l]).toBeTruthy();
   });
 });

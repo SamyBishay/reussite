@@ -1,9 +1,10 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type Route, type TestInfo } from '@playwright/test';
-import { importSample, noSideways, goTab, expandSettings } from './helpers';
+import { importSample, noSideways, goTab, goNotifications, expandSettings, setLanguage } from './helpers';
 
-// First-run setup (S9 and its follow-up): language, then three explicit choices (AI inside the app with a key, your AI chat app through the connector,
-// no AI) and a link for another chatbot, by copy and paste. A new device is one that has no data and no
-// record of having finished. Every other test runs as a device that has (playwright.config.ts puts the record in localStorage); these ask for a new one.
+// First-run setup (S9 and its follow-ups): two screens, the language and the four kinds of time in the person's days (prefilled, editable), then Home.
+// An AI (a key and a conversation, the AI chat app through the connector, any chatbot by copy and paste) is "Later": the same screens open from Settings in a sheet.
+// A new device is one that has no data and no record of having finished. Every other test runs as a device that has (playwright.config.ts puts the record in
+// localStorage); these ask for a new one.
 const NEW_DEVICE = { cookies: [], origins: [] };
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
@@ -45,156 +46,222 @@ const SETUP = [
 const ASKING = { say: 'What does a usual week look like for you?', changes: [] };
 const PROPOSAL = { say: 'You are finishing a thesis, you have two kids, and you want time for your sister. Here are four pillars and two places.', changes: SETUP };
 
-/** The first screen's choice, with the language left as it is. `chatbot` is the link under the three. */
-const choose = (page: Page, how: 'key' | 'connector' | 'myself' | 'chatbot') =>
-  page.getByTestId({ key: 'ob-way-key', connector: 'ob-way-connector', myself: 'ob-way-none', chatbot: 'ob-copypaste-link' }[how]).click();
+const placeCount = (page: Page) => page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }));
 
-/** Finish the by-hand way: keep the pillars, one place. */
-async function byMyself(page: Page, place = 'Home') {
+/** Finish the by-hand way: keep the four categories. */
+async function byMyself(page: Page) {
   await page.goto('/');
-  await choose(page, 'myself');
   await next(page);
-  await page.getByTestId('ob-place-name').first().fill(place);
+  await expect(page.getByTestId('ob-pillars')).toBeVisible();
   await next(page);
+  await expect(page.getByTestId('home')).toBeVisible();
+}
+
+/** A device that finished set-up (the default one here), in Settings with the AI section open. */
+async function settingsAi(page: Page) {
+  await page.goto('/#settings');
+  await expandSettings(page);
 }
 
 test.describe('on a new device', () => {
   test.use({ storageState: NEW_DEVICE });
 
-  test('the first screen is the language and three explicit choices, each saying what it gives, with the copy-and-paste link and the pairing link, and no tabs, look or cards', async ({ page }) => {
+  test('the first screen is the language, Continue, Restore with a recovery key and Skip; nothing about AI, places or cards', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('ob-language')).toBeVisible();
     await expect(page.getByTestId('ob-not-therapy')).toContainText('doesn’t replace therapy');
-    await expect(page.getByTestId('ob-pair-link')).toBeVisible();
+    await expect(page.getByTestId('ob-pair-link')).toContainText('Restore with a recovery key');
     await expect(page.getByTestId('ob-skip')).toBeVisible();
-    await expect(page.getByTestId('ob-way-key')).toContainText('AI inside the app (a key)');
-    await expect(page.getByTestId('ob-way-key')).toContainText('conversation inside the app');
-    await expect(page.getByTestId('ob-way-key')).toContainText('few cents a month');
-    await expect(page.getByTestId('ob-way-connector')).toContainText('Your AI chat app, through the connector');
-    await expect(page.getByTestId('ob-way-connector')).toContainText('talking to your AI chat app');
-    await expect(page.getByTestId('ob-way-connector')).toContainText('with your yes');
-    await expect(page.getByTestId('ob-way-none')).toContainText('No AI');
-    await expect(page.getByTestId('ob-way-none')).toContainText('a few questions, one at a time');
-    await expect(page.getByTestId('ob-way-none')).toContainText('without AI');
-    await expect(page.getByTestId('ob-copypaste-link')).toContainText('Any chatbot');
+    await expect(page.getByTestId('ob-next')).toBeVisible();
+    await expect(page.getByTestId('ob-later')).toContainText('come later');
+    for (const gone of ['ob-way-key', 'ob-way-connector', 'ob-way-none', 'ob-copypaste-link']) await expect(page.getByTestId(gone)).toHaveCount(0);
     await expect(page.locator('.tabbar')).toHaveCount(0);
     await noJargon(page, 'first screen');
     // The language switches the UI at once.
     await page.getByTestId('ob-lang-fr').click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-    await expect(page.getByTestId('ob-way-connector')).toContainText('Votre appli de chat IA, par le connecteur');
+    await expect(page.getByTestId('ob-pair-link')).toContainText('Restaurer avec une clé de récupération');
     await page.getByTestId('ob-lang-en').click();
-    await expect(page.getByTestId('ob-way-none')).toContainText('No AI');
+    await expect(page.getByTestId('ob-pair-link')).toContainText('Restore with a recovery key');
   });
 
-  test('by myself: four plain questions, a place, done; every answer is an ordinary setting afterwards, in the default look', async ({ page }) => {
+  test('two screens: the four kinds of time are prefilled and editable, Start goes Home, and every answer is an ordinary setting afterwards', async ({ page }) => {
     await page.goto('/');
-    await choose(page, 'myself');
-    // The four pillars as plain questions with examples, each with a name to keep or change.
+    await next(page);
     await expect(page.getByTestId('ob-pillars')).toBeVisible();
-    await expect(page.getByTestId('ob-pillars')).toContainText('What matters in your days?');
-    await expect(page.getByTestId('ob-pillars')).toContainText('For example: Work & studies');
-    await expect(page.getByTestId('ob-pillar-S')).toHaveValue('Work & studies');
-    await noJargon(page, 'pillars');
+    await expect(page.getByTestId('ob-pillars')).toContainText('Four kinds of time in your days');
+    for (const [k, name, desc] of [['S', 'Work', 'Job or studies, bureaucracy, administrative paperwork'], ['D', 'Leisure', 'Fun, relaxation, consumption, hobbies, outings'], ['C', 'Personal projects', 'Side projects, chores, research'], ['H', 'Interpersonal obligations', 'Functions and services for family and friends']] as const) {
+      await expect(page.getByTestId('ob-pillar-' + k)).toHaveValue(name);
+      await expect(page.getByTestId('ob-pillar-desc-' + k)).toHaveValue(desc);
+    }
+    await noJargon(page, 'categories');
     await page.getByTestId('ob-pillar-S').fill('Study');
-    await page.getByTestId('ob-pillar-C').fill('My kids and the flat');
+    await page.getByTestId('ob-pillar-desc-C').fill('The shop, the garden');
+    // Nothing is written until Start.
+    expect(await placeCount(page)).toBe(0);
+    await expect(page.getByTestId('ob-next')).toContainText('Start');
     await next(page);
-
-    // Places: at least one, with this device's time zone already chosen.
-    await expect(page.getByTestId('ob-places')).toBeVisible();
-    await expect(NEXT(page)).toBeDisabled();
-    const zone = await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-    await expect(page.getByTestId('ob-place').first().locator('select')).toHaveValue(zone);
-    await page.getByTestId('ob-place-name').first().fill('Home');
-    await expect(NEXT(page)).toBeEnabled();
-    await page.getByTestId('ob-place-add').click();
-    await page.getByTestId('ob-place-name').nth(1).fill('Work');
-    await noJargon(page, 'places');
-    await next(page);
-
-    // Done: nothing is written until here; the rest is on Home.
-    await expect(page.getByTestId('ob-done')).toBeVisible();
-    await expect(page.getByTestId('ob-not-therapy')).toBeVisible();
-    await expect(page.getByTestId('ob-done-next')).toContainText('Next steps');
-    await noJargon(page, 'done');
-    expect(await page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }))).toBe(0);
-    await page.getByTestId('ob-plan').click();
-    await expect(page.getByTestId('ci-shape')).toBeVisible();
-    await expect(page.getByTestId('ob-done')).toBeHidden();
-    await page.getByTestId('sheet').getByRole('button', { name: 'Close' }).click();
-
-    // Home carries the Next steps card, and onboarding never comes back.
-    await expect(page.getByTestId('home')).toBeVisible();
+    await expect(page.getByTestId('home')).toBeVisible(); // no third screen
+    await expect(page.getByTestId('ob-language')).toHaveCount(0);
+    // Home is bare; what is left for later waits behind the bell.
+    await expect(page.getByTestId('next-steps')).toHaveCount(0);
+    await expect(page.getByTestId('bell-dot')).toBeVisible();
+    await page.getByTestId('home-bell').click();
     await expect(page.getByTestId('next-steps')).toBeVisible();
     await page.reload();
+    await page.getByTestId('tab-home').click();
     await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.getByTestId('ob-language')).toHaveCount(0);
-    await page.getByTestId('home-menu').click();
-    await page.getByTestId('menu-places').click();
-    await expect(page.getByTestId('places-sheet')).toContainText('Home');
-    await expect(page.getByTestId('places-sheet')).toContainText('Work');
-    await page.keyboard.press('Escape');
+    expect(await placeCount(page)).toBe(0); // places are for later: Anywhere stands
     await goTab(page, 'settings');
     // St George and the system's light or dark: the look screen is gone, the look stays in Settings.
     await expect(page.getByTestId('appearance').locator('select')).toHaveValue('st-george');
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /Study/);
-    await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /My kids and the flat/);
+    await expect(page.locator('.pile[data-suit=H]')).toHaveAttribute('aria-label', /Interpersonal obligations/);
     await goTab(page, 'settings');
+    await expect(page.getByTestId('suit-desc-C')).toHaveValue('The shop, the garden');
+    await expect(page.getByTestId('suit-desc-S')).toHaveValue(/Job or studies/);
     await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true');
     await expandSettings(page);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/One question at a time/);
   });
 
-  test('Back returns to the earlier answers, which are still there', async ({ page }) => {
+  test('in French the categories come in French', async ({ page }) => {
     await page.goto('/');
-    await choose(page, 'myself');
-    await page.getByTestId('ob-pillar-D').fill('Admin');
+    await page.getByTestId('ob-lang-fr').click();
     await next(page);
-    await page.getByTestId('ob-place-name').first().fill('Home');
-    await page.getByTestId('ob-back').click();
-    await expect(page.getByTestId('ob-pillar-D')).toHaveValue('Admin');
-    await page.getByTestId('ob-back').click();
-    await expect(page.getByTestId('ob-language')).toBeVisible();
-    await expect(page.getByTestId('ob-back')).toHaveCount(0);
+    await expect(page.getByTestId('ob-pillar-S')).toHaveValue('Travail');
+    await expect(page.getByTestId('ob-pillar-desc-H')).toHaveValue(/famille et les amis/);
+    await next(page);
+    await expect(page.getByTestId('home')).toBeVisible();
+    await goTab(page, 'today');
+    await expect(page.locator('.pile[data-suit=D]')).toHaveAttribute('aria-label', /Loisirs/);
   });
 
-  test('"Skip, use defaults" leaves everything as it was and goes to the end', async ({ page }) => {
+  test('Back returns to the earlier answers, which are still there', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('ob-lang-fr').click();
+    await next(page);
+    await page.getByTestId('ob-pillar-D').fill('Admin');
+    await page.getByTestId('ob-back').click();
+    await expect(page.getByTestId('ob-language')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    await expect(page.getByTestId('ob-back')).toHaveCount(0);
+    await next(page);
+    await expect(page.getByTestId('ob-pillar-D')).toHaveValue('Admin');
+  });
+
+  test('"Skip, use defaults" goes straight Home, with the same four kinds of time and no place', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('ob-skip').click();
-    await expect(page.getByTestId('ob-done')).toContainText('Defaults are on');
-    await expect(page.getByTestId('ob-not-therapy')).toBeVisible();
-    await page.getByTestId('ob-home').click();
     await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.locator('.tabbar .tab')).toHaveCount(5);
     await page.reload();
     await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.getByTestId('ob-language')).toHaveCount(0);
+    await goTab(page, 'today');
+    await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /Personal projects/);
     await goTab(page, 'settings');
     await expect(page.getByTestId('places').locator('input')).toHaveCount(1); // only the "add a place" field: no place was made
     await expect(page.getByTestId('addresses-switch')).toBeChecked();
     await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true');
-    await expandSettings(page);
-    await expect(page.getByTestId('ai-prefs')).toHaveValue(/One question at a time/);
   });
 
   test('skipping after some answers keeps them', async ({ page }) => {
     await page.goto('/');
-    await choose(page, 'myself');
+    await next(page);
     await page.getByTestId('ob-pillar-H').fill('Rest');
     await page.getByTestId('ob-skip').click();
-    await expect(page.getByTestId('ob-done')).toBeVisible();
-    await page.getByTestId('ob-home').click();
+    await expect(page.getByTestId('home')).toBeVisible();
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=H]')).toHaveAttribute('aria-label', /Rest/);
   });
 
-  // ---- With an AI
+  test('the Next steps are on the bell page: each line opens its Settings section, a line that is done goes, and the list can be hidden for good', async ({ page }) => {
+    await byMyself(page);
+    await page.getByTestId('home-bell').click();
+    await expect(page.getByTestId('next-steps')).toBeVisible();
+    await noSideways(page, 'next steps');
+    for (const l of ['sync', 'ai', 'calendar', 'addresses']) await expect(page.getByTestId('next-' + l)).toBeVisible();
+    await page.getByTestId('next-addresses').click();
+    await expect(page.getByTestId('settings')).toBeVisible();
+    await expect(page.getByTestId('addresses-settings')).toBeVisible(); // its folds opened
+    await expect(page.getByTestId('addresses-switch')).toBeVisible();
+    await goNotifications(page);
+    await page.getByTestId('next-sync').click();
+    await expect(page.getByTestId('sync')).toHaveJSProperty('open', true);
+    await goNotifications(page);
+    await page.getByTestId('next-calendar').click();
+    await expect(page.getByTestId('calendar-feed')).toBeVisible();
+    await goNotifications(page);
+    // A line that is done goes by itself.
+    await page.getByTestId('next-addresses').click();
+    await page.getByTestId('addresses-switch').uncheck();
+    await goNotifications(page);
+    await expect(page.getByTestId('next-addresses')).toHaveCount(0);
+    await expect(page.getByTestId('next-sync')).toBeVisible();
+    await page.getByTestId('next-dismiss').click();
+    await expect(page.getByTestId('next-steps')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByTestId('next-steps')).toHaveCount(0);
+  });
 
-  test('with a key in the app: the tutorial, then a conversation that ends on the review screen, then Home with the Next steps', async ({ page }) => {
+  for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
+    test(`both screens and the pairing screen fit at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 700 });
+      await page.goto('/');
+      if (french) {
+        await page.getByTestId('ob-lang-fr').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+      }
+      await checkFits(page, 'ob-language');
+      await next(page);
+      await checkFits(page, 'ob-pillars');
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-pair-link').click();
+      await checkFits(page, 'ob-pair');
+    });
+  }
+});
+
+/** Nothing scrolls sideways and every target is at least 44px, on the screen named. */
+async function checkFits(page: Page, id: string) {
+  await expect(page.getByTestId(id)).toBeVisible();
+  await noSideways(page, id);
+  const small = await page.evaluate(() => [...document.querySelectorAll('.ob button, .ob a, .ob input, .ob select, .ob textarea, .ob summary')]
+    .filter(el => !(el instanceof HTMLInputElement && (el.type === 'hidden' || el.type === 'checkbox')) && !(el instanceof HTMLAnchorElement && el.closest('.obsteps'))) // a link inside a sentence of the steps is text
+    .map(el => { const r = el.getBoundingClientRect(); return { n: el.tagName + '.' + el.className + ' ' + (el.textContent ?? '').slice(0, 20), w: r.width, h: r.height }; })
+    .filter(x => x.w > 0 && (x.h < 43.5 || x.w < 43.5)));
+  expect(small, id + ': small targets').toEqual([]);
+}
+
+// ---- An AI, later: the guided screens open from Settings in a sheet (on a device that finished set-up)
+
+/** Settings → AI → Set up with an AI…, then one of the ways. */
+async function guided(page: Page, how: 'key' | 'connector' | 'chatbot') {
+  await settingsAi(page);
+  if (how === 'connector') {
+    await page.getByTestId('connector-guided').click();
+    return;
+  }
+  await page.getByTestId('ai-guided').click();
+  await expect(page.getByTestId('ob-ways')).toBeVisible();
+  await page.getByTestId(how === 'key' ? 'ob-way-key' : 'ob-copypaste-link').click();
+}
+const sheet = (page: Page) => page.getByTestId('sheet');
+
+test.describe('with an AI, from Settings', () => {
+  test('with a key in the app: the tutorial, then a conversation that ends on the review screen, then Settings holds what was ticked', async ({ page }) => {
     const seen = await stub(page, ASKING, PROPOSAL);
-    await page.goto('/');
-    await choose(page, 'key');
+    await settingsAi(page);
+    await page.getByTestId('ai-guided').click();
+    // The ways: a key, the AI chat app, or any chatbot.
+    await expect(page.getByTestId('ob-way-key')).toContainText('AI inside the app (a key)');
+    await expect(page.getByTestId('ob-way-key')).toContainText('few cents a month');
+    await expect(page.getByTestId('ob-way-connector')).toContainText('Your AI chat app, through the connector');
+    await expect(page.getByTestId('ob-copypaste-link')).toContainText('Any chatbot');
+    await page.getByTestId('ob-way-key').click();
     // The tutorial: get a key, test it.
     await expect(page.getByTestId('ob-key')).toBeVisible();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', 'https://openrouter.ai/keys');
@@ -204,8 +271,8 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', /anthropic\.com/);
     await page.getByTestId('ob-ai-openai').click();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', 'https://openrouter.ai/keys'); // the switch has rendered
-    await page.getByTestId('ai-key').fill('sk-or-test');
-    await page.getByTestId('ai-key-save').click();
+    await sheet(page).getByTestId('ai-key').fill('sk-or-test');
+    await sheet(page).getByTestId('ai-key-save').click();
     await expect(page.getByTestId('ob-next')).toBeEnabled();
     await page.getByTestId('ob-key-test').click();
     await expect(page.getByTestId('ob-key-test-result')).toBeVisible();
@@ -225,6 +292,7 @@ test.describe('on a new device', () => {
     expect(first).toContain('four pillars');
     expect(first).toContain('I am finishing a thesis');
     expect(first).toContain('Never say "card", "suit"');
+    expect(first).toContain('Interpersonal obligations'); // it starts from the four kinds of time
     await page.getByTestId('ob-chat-say').fill('Mostly at home, and the library on weekdays.');
     await page.getByTestId('ob-chat-send').click();
     // The proposal: its words, then every change with a tick.
@@ -240,13 +308,8 @@ test.describe('on a new device', () => {
     // One tick off: the library is not made.
     await page.getByTestId('chg').nth(2).locator('input').uncheck();
     await page.getByTestId('apply-changes').click();
-    await expect(page.getByTestId('ob-done')).toBeVisible();
-    await expect(page.getByTestId('ob-done')).toContainText('Your set-up is done');
-    await page.getByTestId('ob-home').click();
+    await expect(sheet(page)).toBeHidden(); // done: back in Settings
 
-    await expect(page.getByTestId('home')).toBeVisible();
-    await expect(page.getByTestId('next-steps')).toBeVisible();
-    await expect(page.getByTestId('next-connector')).toHaveCount(0); // a key was chosen: no connector to connect
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
     await expect(page.locator('.pile[data-suit=D]')).toHaveAttribute('aria-label', /Papers|Paperwork/);
@@ -259,16 +322,13 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Level of detail: very short\./);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Things to know about how I work: I start better with a time/);
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Things never to do: no emojis/);
-    await page.reload();
-    await expect(page.getByTestId('ob-language')).toHaveCount(0);
   });
 
-  test('with an AI: unticking everything goes back to the conversation, and an AI that is down offers a chatbot instead', async ({ page }) => {
+  test('unticking everything goes back to the conversation, and an AI that is down offers a chatbot instead', async ({ page }) => {
     await stub(page, PROPOSAL, 500);
-    await page.goto('/');
-    await choose(page, 'key');
-    await page.getByTestId('ai-key').fill('sk-or-test');
-    await page.getByTestId('ai-key-save').click();
+    await guided(page, 'key');
+    await sheet(page).getByTestId('ai-key').fill('sk-or-test');
+    await sheet(page).getByTestId('ai-key-save').click();
     await next(page);
     await page.getByTestId('ob-chat-say').fill('Thesis, kids, sister.');
     await page.getByTestId('ob-chat-send').click();
@@ -276,7 +336,7 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('review')).toBeVisible();
     await page.getByTestId('review').getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByTestId('ob-chat-say')).toBeVisible(); // back to talking, nothing written
-    expect(await page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }))).toBe(0);
+    expect(await placeCount(page)).toBe(0);
     await page.getByTestId('ob-chat-say').fill('Change the second one.');
     await page.getByTestId('ob-chat-send').click();
     await expect(page.getByTestId('ai-error')).toBeVisible();
@@ -284,9 +344,8 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-paste')).toBeVisible();
   });
 
-  test('any chatbot: the link under the choices, copy the message in, paste the reply back, and the same review; no connector', async ({ page }) => {
-    await page.goto('/');
-    await choose(page, 'chatbot');
+  test('any chatbot: copy the message in, paste the reply back, and the same review; no connector', async ({ page }) => {
+    await guided(page, 'chatbot');
     await expect(page.getByTestId('ob-paste')).toBeVisible();
     await expect(page.getByTestId('ob-paste')).toContainText('any chatbot');
     await expect(page.getByTestId('ob-paste').locator('.eyebrow')).toHaveCount(0); // one screen: no "n of N"
@@ -312,10 +371,7 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('review')).toBeVisible();
     await expect(page.getByTestId('chg')).toHaveCount(3);
     await page.getByTestId('apply-changes').click();
-    await expect(page.getByTestId('ob-done')).toBeVisible();
-    await page.getByTestId('ob-home').click();
-    await expect(page.getByTestId('home')).toBeVisible();
-    await expect(page.getByTestId('next-connector')).toHaveCount(0);
+    await expect(sheet(page)).toBeHidden();
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /My kids/);
     await goTab(page, 'settings');
@@ -326,7 +382,7 @@ test.describe('on a new device', () => {
 
   // ---- The AI chat app through the connector (needs the relay on :8787, which has a throwaway wrap key)
 
-  /** From "Connect your AI chat app" to the steps in the app: the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
+  /** From "Connect my AI chat app" to the steps in the app: the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
   async function connectApp(page: Page) {
     await expect(page.getByTestId('ob-link')).toBeVisible();
     await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole list');
@@ -334,6 +390,9 @@ test.describe('on a new device', () => {
     await page.getByTestId('ob-link-on').click();
     await expect(page.getByTestId('recovery-key')).toBeVisible(); // sync is on, its key to keep
     await expect(page.locator('svg.qr')).toBeVisible();
+    await expect(page.getByTestId('key-copy')).toBeVisible();
+    await expect(page.getByTestId('key-save-file')).toBeVisible();
+    await expect(page.getByTestId('ob-link-key-later')).toHaveCount(0); // one tap, "I've saved it", before moving on
     await noJargon(page, 'recovery key');
     await page.getByTestId('ob-link-key-saved').click();
     await expect(page.getByTestId('ob-link-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
@@ -345,21 +404,9 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-link-state')).toContainText('Waiting for your app');
   }
 
-  test('through the connector, the pillars and places by a copy and paste in the app, then Connect your AI chat app: sync and its key, the address and code, a check; the Next steps drop the connector', async ({ page }) => {
+  test('through the connector: Connect my AI chat app, step by step: sync and its key, the address and code, a check', async ({ page }) => {
     test.slow();
-    await page.goto('/');
-    await choose(page, 'connector');
-    // First the basics: the connector cannot write settings.
-    await expect(page.getByTestId('ob-basics')).toBeVisible();
-    await expect(page.getByTestId('ob-basics')).toContainText('cannot change your settings');
-    await noJargon(page, 'basics');
-    await page.getByTestId('ob-basics-chat').click();
-    await expect(page.getByTestId('ob-paste')).toContainText('Set up in your AI chat app');
-    await expect(page.getByTestId('ob-connector-note')).toContainText('can’t change your settings');
-    await page.getByTestId('ob-paste-text').fill('```reussite\n' + JSON.stringify({ v: 1, note: 'Your set-up', changes: SETUP }) + '\n```');
-    await page.getByTestId('ob-paste-go').click();
-    await page.getByTestId('apply-changes').click();
-    // Then connect the app, in set-up.
+    await guided(page, 'connector');
     await connectApp(page);
     await expect(page.getByTestId('ob-link-error')).toHaveCount(0);
     await noSideways(page, 'connect the app, steps');
@@ -375,162 +422,62 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-link-state')).toContainText('Your app is connected');
     await expect(page.getByTestId('ob-link-state')).toContainText('Plan my day with Réussite');
     await page.getByTestId('ob-link-continue').click();
-    await expect(page.getByTestId('ob-done-text')).toContainText('AI chat app is connected');
-    await page.getByTestId('ob-home').click();
-    await expect(page.getByTestId('home')).toBeVisible();
-    // Everything it set is there; the connector is on, so it is not on the Next steps (the recovery key was saved, sync is on).
-    await expect(page.getByTestId('next-connector')).toHaveCount(0);
-    await expect(page.getByTestId('next-sync')).toHaveCount(0);
-    await expect(page.getByTestId('next-key')).toHaveCount(0);
-    await goTab(page, 'today');
-    await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
-    await goTab(page, 'settings');
-    await expect(page.getByTestId('places')).toContainText('Flat');
+    await expect(sheet(page)).toBeHidden();
     await expandSettings(page);
     await expect(page.getByTestId('connector-state')).toContainText('The connector is on');
     await expect(page.getByTestId('sync-status')).toBeVisible();
-    // After a restart it is still on the connector's side.
-    await page.reload();
-    await expect(page.getByTestId('ob-language')).toHaveCount(0);
-    await expect(page.getByTestId('next-connector')).toHaveCount(0);
+    // The recovery key was saved, sync is on: neither is on the bell page any more.
+    await goNotifications(page);
+    await expect(page.getByTestId('next-sync')).toHaveCount(0);
+    await expect(page.getByTestId('next-key')).toHaveCount(0);
+    await expect(page.getByTestId('key-card')).toHaveCount(0);
   });
 
-  test('through the connector, by hand: pillars, places, then connect the app; "Not now" leaves it on the Next steps, and the Next steps line opens the connector', async ({ page }) => {
-    test.slow();
-    await page.goto('/');
-    await choose(page, 'connector');
-    await page.getByTestId('ob-basics-hand').click();
-    await page.getByTestId('ob-pillar-S').fill('The thesis');
-    await next(page);
-    await page.getByTestId('ob-place-name').first().fill('Flat');
-    await next(page);
-    // The answers are written before connecting (sync would make a restart look like an existing install).
-    await expect(page.getByTestId('ob-link')).toBeVisible();
-    await expect(page.getByTestId('ob-link').locator('.eyebrow')).toContainText('4 of 4');
-    expect(await page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }))).toBe(1);
-    await page.getByTestId('ob-back').click(); // back to the places, nothing lost
-    await expect(page.getByTestId('ob-place-name').first()).toHaveValue('Flat');
-    await next(page);
-    await page.getByTestId('ob-link-later').click();
-    await expect(page.getByTestId('ob-done-text')).not.toContainText('is connected');
-    await page.getByTestId('ob-home').click();
-    await expect(page.getByTestId('next-connector')).toBeVisible();
-    await expect(page.getByTestId('next-connector')).toContainText('Connect your AI chat app');
-    await page.getByTestId('next-connector').click();
-    await expect(page.getByTestId('connector')).toHaveJSProperty('open', true);
-    await goTab(page, 'today');
-    await expect(page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /The thesis/);
-  });
-
-  test('through the connector, by hand, connected without a copy and paste; a relay without the connector says so and "Not now" still finishes', async ({ page }) => {
+  test('a relay without the connector says so, and "Not now" still finishes; the key is not saved yet', async ({ page }) => {
     test.slow();
     await page.route('**/v1/spaces/*/connector', async route => {
       if (route.request().method() !== 'POST') return route.fallback();
       await route.fulfill({ status: 503, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: 'connector_unavailable' }) });
     });
-    await page.goto('/');
-    await choose(page, 'connector');
-    await page.getByTestId('ob-basics-hand').click();
-    await next(page);
-    await page.getByTestId('ob-place-name').first().fill('Flat');
-    await next(page);
+    await guided(page, 'connector');
     await page.getByTestId('ob-link-on').click();
-    await page.getByTestId('ob-link-key-later').click();
+    await page.getByTestId('sheet').getByTestId('ob-link-key-saved').click();
     // The relay has no connector: plain words, and a way on. Sync is on by now, so the button says what is left to do.
     await expect(page.getByTestId('ob-link-error')).toContainText('no connector set up');
     await expect(page.getByTestId('ob-link-on')).toContainText('Switch on the connector');
     await page.getByTestId('ob-link-later').click();
-    await page.getByTestId('ob-home').click();
-    await expect(page.getByTestId('next-connector')).toBeVisible();
-    await expect(page.getByTestId('next-key')).toBeVisible(); // "I'll do it later": the key is still to save
-  });
-
-  test('the Next steps: each line opens its Settings section, a line that is done goes, and the card can be hidden for good', async ({ page }) => {
-    await byMyself(page);
-    await page.getByTestId('ob-home').click();
-    await expect(page.getByTestId('next-steps')).toBeVisible();
-    await noSideways(page, 'next steps');
-    await expect(page.getByTestId('next-sync')).toBeVisible();
-    await expect(page.getByTestId('next-addresses')).toBeVisible();
-    await page.getByTestId('next-addresses').click();
-    await expect(page.getByTestId('settings')).toBeVisible();
-    await expect(page.getByTestId('addresses-settings')).toBeVisible(); // its folds opened
-    await expect(page.getByTestId('addresses-switch')).toBeVisible();
-    await page.getByTestId('tab-home').click();
-    await page.getByTestId('next-sync').click();
-    await expect(page.getByTestId('sync')).toHaveJSProperty('open', true);
-    await page.getByTestId('tab-home').click();
-    await page.getByTestId('next-dismiss').click();
-    await expect(page.getByTestId('next-steps')).toHaveCount(0);
-    await page.reload();
-    await expect(page.getByTestId('home')).toBeVisible();
-    await expect(page.getByTestId('next-steps')).toHaveCount(0);
-  });
-
-  test('a line that is done goes by itself: Addresses & people switched off', async ({ page }) => {
-    await byMyself(page);
-    await page.getByTestId('ob-home').click();
-    await page.getByTestId('next-addresses').click();
-    await page.getByTestId('addresses-switch').uncheck();
-    await page.getByTestId('tab-home').click();
-    await expect(page.getByTestId('next-addresses')).toHaveCount(0);
-    await expect(page.getByTestId('next-sync')).toBeVisible();
+    await expect(sheet(page)).toBeHidden();
   });
 
   for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
-    test(`every screen fits at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
+    test(`the guided AI screens fit at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
+      test.slow();
       await stub(page, ASKING, PROPOSAL);
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/');
       if (french) {
-        await page.getByTestId('ob-lang-fr').click();
+        await setLanguage(page, 'fr');
         await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-      }
-      const check = async (id: string) => {
-        await expect(page.getByTestId(id)).toBeVisible();
-        await noSideways(page, id);
-        const small = await page.evaluate(() => [...document.querySelectorAll('.ob button, .ob input, .ob select, .ob textarea, .ob summary')]
-          .filter(el => !(el instanceof HTMLInputElement && (el.type === 'hidden' || el.type === 'checkbox')))
-          .map(el => { const r = el.getBoundingClientRect(); return { n: el.tagName + '.' + el.className + ' ' + (el.textContent ?? '').slice(0, 20), w: r.width, h: r.height }; })
-          .filter(x => x.w > 0 && (x.h < 43.5 || x.w < 43.5)));
-        expect(small, id + ': small targets').toEqual([]);
-      };
-      await check('ob-language');
-      // By myself.
-      await choose(page, 'myself');
-      await check('ob-pillars');
-      await next(page);
-      await page.getByTestId('ob-place-name').first().fill('Home');
-      await page.getByTestId('ob-place-add').click();
-      await check('ob-places');
-      await next(page);
-      await check('ob-done');
-      await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-back').click();
-      // Any chatbot: the link under the choices.
-      await choose(page, 'chatbot');
-      await check('ob-paste');
+      } else await goTab(page, 'settings');
+      await expandSettings(page);
+      await page.getByTestId('ai-guided').click();
+      await checkFits(page, 'ob-ways');
+      // Any chatbot.
+      await page.getByTestId('ob-copypaste-link').click();
+      await checkFits(page, 'ob-paste');
       await page.getByTestId('ob-paste').locator('details summary').click();
-      await check('ob-paste');
-      await page.getByTestId('ob-back').click();
-      // The connector: the basics, the message to the app, and Connect the app with each of its stages.
-      await choose(page, 'connector');
-      await check('ob-basics');
-      await page.getByTestId('ob-basics-chat').click();
-      await check('ob-paste');
-      await page.getByTestId('ob-back').click();
+      await checkFits(page, 'ob-paste');
       await page.getByTestId('ob-back').click();
       // With a key, every screen of the tutorial and the conversation.
-      await choose(page, 'key');
-      await check('ob-key');
-      await page.getByTestId('ai-key').fill('sk-or-test');
-      await page.getByTestId('ai-key-save').click();
+      await page.getByTestId('ob-way-key').click();
+      await checkFits(page, 'ob-key');
+      await sheet(page).getByTestId('ai-key').fill('sk-or-test');
+      await sheet(page).getByTestId('ai-key-save').click();
       await page.getByTestId('ob-key-test').click();
       await expect(page.getByTestId('ob-key-test-result')).toBeVisible();
-      await check('ob-key');
+      await checkFits(page, 'ob-key');
       await next(page);
-      await check('ob-chat');
+      await checkFits(page, 'ob-chat');
       await page.getByTestId('ob-chat-say').fill('A long first message about my days, '.repeat(6));
       await page.getByTestId('ob-chat-send').click();
       await page.getByTestId('ai-send').click();
@@ -538,9 +485,7 @@ test.describe('on a new device', () => {
       await page.getByTestId('ob-chat-say').fill('Mostly at home.');
       await page.getByTestId('ob-chat-send').click();
       await expect(page.getByTestId('review')).toBeVisible();
-      await check('ob-chat');
-      // The pairing screen.
-      await page.getByTestId('ob-back').click();
+      await checkFits(page, 'ob-chat');
     });
 
     test(`Connecting the app fits at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
@@ -548,34 +493,22 @@ test.describe('on a new device', () => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/');
       if (french) {
-        await page.getByTestId('ob-lang-fr').click();
+        await setLanguage(page, 'fr');
         await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-      }
-      const check = async (id: string) => {
-        await expect(page.getByTestId(id)).toBeVisible();
-        await noSideways(page, id);
-        const small = await page.evaluate(() => [...document.querySelectorAll('.ob button, .ob a, .ob input, .ob select, .ob textarea, .ob summary')]
-          .filter(el => !(el instanceof HTMLInputElement && (el.type === 'hidden' || el.type === 'checkbox')))
-          .map(el => { const r = el.getBoundingClientRect(); return { n: el.tagName + '.' + el.className + ' ' + (el.textContent ?? '').slice(0, 20), w: r.width, h: r.height }; })
-          .filter(x => x.w > 0 && (x.h < 43.5 || x.w < 43.5)));
-        expect(small, id + ': small targets').toEqual([]);
-      };
-      await choose(page, 'connector');
-      await page.getByTestId('ob-basics-hand').click();
-      await next(page);
-      await page.getByTestId('ob-place-name').first().fill(french ? 'Maison' : 'Home');
-      await next(page);
-      await check('ob-link');
+      } else await goTab(page, 'settings');
+      await expandSettings(page);
+      await page.getByTestId('connector-guided').click();
+      await checkFits(page, 'ob-link');
       await page.getByTestId('ob-link-on').click();
-      await check('ob-link');
+      await checkFits(page, 'ob-link');
       await expect(page.getByTestId('recovery-key')).toBeVisible();
       await page.getByTestId('ob-link-key-saved').click();
       await expect(page.getByTestId('ob-link-url')).toBeVisible();
-      await check('ob-link');
+      await checkFits(page, 'ob-link');
       await page.getByTestId('ob-link-check').click();
-      await check('ob-link');
+      await checkFits(page, 'ob-link');
       await page.getByTestId('ob-link-continue').click();
-      await check('ob-done');
+      await expect(sheet(page)).toBeHidden();
     });
   }
 });
@@ -589,7 +522,7 @@ async function device(browser: Browser, info: TestInfo, newDevice: boolean) {
 }
 const nudge = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
 
-test('"I already use Réussite on another device" goes to pairing, then straight to the end; nothing is pushed over the space', async ({ browser }, info) => {
+test('"Restore with a recovery key" goes to pairing, then straight Home; nothing is pushed over the space', async ({ browser }, info) => {
   test.slow();
   const a = await device(browser, info, false);
   await a.page.goto('/#settings'); await expandSettings(a.page);
@@ -614,13 +547,9 @@ test('"I already use Réussite on another device" goes to pairing, then straight
   await expect(b.page.getByTestId('sync-join-error')).toBeVisible();
   await b.page.getByTestId('sync-join-key').fill(key);
   await b.page.getByTestId('sync-join-go').click();
-  // Straight to the end: no pillars, places, tutorial or conversation, no recovery key to save.
-  await expect(b.page.getByTestId('ob-done')).toBeVisible();
-  await expect(b.page.getByTestId('ob-pillars')).toHaveCount(0);
-  await expect(b.page.getByTestId('ob-places')).toHaveCount(0);
-  await expect(b.page.getByTestId('ob-done')).toContainText('coming from your other device');
-  await b.page.getByTestId('ob-home').click();
+  // Straight Home: no categories, tutorial or conversation, no recovery key to save.
   await expect(b.page.getByTestId('home')).toBeVisible();
+  await expect(b.page.getByTestId('ob-pillars')).toHaveCount(0);
   // The space's own places and pillar names arrive; nothing from this device's defaults was pushed over them.
   await expect(async () => {
     await nudge(b.page);
@@ -629,7 +558,6 @@ test('"I already use Réussite on another device" goes to pairing, then straight
   }).toPass({ timeout: 25_000, intervals: [700, 1000, 1500] });
   await goTab(b.page, 'today');
   await expect(b.page.locator('.pile[data-suit=S]')).toHaveAttribute('aria-label', /Studio/);
-  // It was told of notifications and the rest on Home, not in a wizard.
   await goTab(b.page, 'home');
   await b.page.reload();
   await expect(b.page.getByTestId('ob-language')).toHaveCount(0);
@@ -649,7 +577,7 @@ test('a device that pairs by the usual way never sees onboarding, even before an
   await b.page.getByTestId('ob-pair-link').click();
   await b.page.getByTestId('sync-join-key').fill(key);
   await b.page.getByTestId('sync-join-go').click();
-  await expect(b.page.getByTestId('ob-done')).toBeVisible();
+  await expect(b.page.getByTestId('home')).toBeVisible();
   await b.page.reload(); // closed before finishing
   await expect(b.page.getByTestId('home')).toBeVisible();
   await expect(b.page.getByTestId('ob-language')).toHaveCount(0);

@@ -1,6 +1,7 @@
 // Settings → Connector (brief §10): let an AI app read and edit the list through the relay.
 // Off by default. Switching on hands the relay the list's key, so the privacy cost is said first,
 // plainly, and again in the confirmation.
+import { openGuidedAi } from '../flows/guidedAi';
 import { useEffect, useState } from 'preact/hooks';
 import { toast, readOnly } from './store';
 import { openSheet, closeSheet } from './sheet';
@@ -104,6 +105,7 @@ export function ConnectorSettings() {
     <Fold title={t('connectorSection')} testid="connector">
       <p class="hint">{t('connectorSyncFirst')}</p>
       <div class="actions">
+        <button class="btn primary" type="button" data-testid="connector-guided" onClick={() => void openGuidedAi('connector')}>{t('connectorGuided')}</button>
         <button class="btn" type="button" data-testid="connector-to-sync" onClick={() => {
           const el = document.querySelector<HTMLElement>('[data-testid="sync"]');
           openFold(el);

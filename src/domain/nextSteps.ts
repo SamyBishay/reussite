@@ -1,7 +1,7 @@
 // The "Next steps" card on Home (S9): what first-run setup no longer asks, one line each, each opening its Settings section.
 // Pure: the app reads its state and passes the facts in. A line that is done is not listed; with none left the card is not shown.
 
-export type NextStep = 'key' | 'sync' | 'notify' | 'addresses' | 'connector';
+export type NextStep = 'key' | 'sync' | 'ai' | 'notify' | 'calendar' | 'addresses' | 'connector';
 
 export interface NextFacts {
   /** The build has a relay address, so sync can be switched on. */
@@ -15,6 +15,10 @@ export interface NextFacts {
   /** The person chose the connector path in setup (their AI chat app), to be connected for good. */
   wantsConnector: boolean;
   connectorOn: boolean;
+  /** No AI is set up on this device (no provider, no connector): the guided AI set-up is offered. */
+  aiOff?: boolean;
+  /** The calendar feed can be switched on (a relay) and is off. */
+  feedOff?: boolean;
 }
 
 /** The lines to show, in order. The recovery key comes first when there is one to save, and replaces the offer of sync. */
@@ -22,11 +26,13 @@ export function nextSteps(f: NextFacts): NextStep[] {
   const out: NextStep[] = [];
   if (f.syncOn && f.keyUnsaved) out.push('key');
   else if (!f.syncOn && f.relay) out.push('sync');
+  if (f.aiOff) out.push('ai');
   if (f.canNotify) out.push('notify');
+  if (f.feedOff) out.push('calendar');
   if (f.addressesOn) out.push('addresses');
   if (f.wantsConnector && !f.connectorOn) out.push('connector');
   return out;
 }
 
 /** The Settings section (its `data-testid`) each line opens. */
-export const SECTION: Record<NextStep, string> = { key: 'sync', sync: 'sync', notify: 'notify', addresses: 'addresses-settings', connector: 'connector' };
+export const SECTION: Record<NextStep, string> = { key: 'sync', sync: 'sync', ai: 'ai-settings', calendar: 'calendar-feed', notify: 'notify', addresses: 'addresses-settings', connector: 'connector' };

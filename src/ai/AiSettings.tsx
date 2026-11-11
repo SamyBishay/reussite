@@ -1,5 +1,6 @@
 // Settings → AI (brief §10): provider, base URL, the two model slots, the key (device-local
 // only), "Test the connection" and "Always show what's sent".
+import { openGuidedAi } from '../flows/guidedAi';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
 import { settings, saveSettings, toast } from '../app/store';
@@ -127,6 +128,7 @@ export function AiSettings() {
   return (
     <Fold title={t('aiSection')} testid="ai-settings">
       <p class="hint">{t('aiIntro')}</p>
+      <div class="actions"><button class="btn" type="button" onClick={() => void openGuidedAi()} data-testid="ai-guided">{t('aiGuided')}</button></div>
       <div class="field"><span>{t('aiProvider')}</span>
         <div class="seg" role="group" aria-label={t('aiProvider')} style="flex-wrap:wrap">
           {([['none', 'aiNone'], ['openai', 'aiOpenAI'], ['anthropic', 'aiAnthropic']] as const).map(([v, k]) =>

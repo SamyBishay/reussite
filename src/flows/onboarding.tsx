@@ -1,18 +1,16 @@
-// First-run setup (S9), short and friendly: language, then three explicit choices, each saying what it gives day to day: AI inside the
-// app (a key), the person's AI chat app through the connector, or no AI. No AI is the four pillars of the person's days as plain questions, then their
-// places, then done. A key is a short tutorial, then a conversation that ends in a change-set (the pillars, the places, how they want
-// an AI to work with them) on the review screen. The connector sets the pillars and places first (by one copy and paste in a chat
-// with that app, or by hand: the connector cannot write settings), then connects the app right there (`ConnectStep`: sync and its recovery key,
-// the connector, the address and pairing code, a check). Another chatbot is a link under the choices: the same copy and paste. No look screen (St George and
-// the system's light or dark; the look stays in Settings), and no cards or suits in the words. Sync, notifications, Addresses &
-// people and the recovery key are Home's Next steps card (src/app/NextSteps.tsx).
-// Every answer by hand waits in a draft and is written once, at the end: a device that pairs with an existing space must not push
-// defaults that would win over the settings already there. What the AI path applies is what the person ticked on the review screen.
+// First-run setup (S9), two screens: the language (taken from the phone), then the four kinds of time in the person's days, prefilled and editable (name and
+// description), and Home. Nothing else is asked: places, AI, sync, the calendar and reminders are "Later" (Settings and the Notifications page), with defaults
+// (Anywhere, no AI, sync and reminders off). "Restore with a recovery key" is on the first screen. The AI ways, which used to be the first screen's choices, are the same screens
+// opened from Settings (`entry`): a key (a short tutorial, then a conversation that ends in a change-set on the review screen), the person's AI chat app through the connector
+// (`ConnectStep`: sync and its recovery key, the connector, the address and pairing code, a check), or any chatbot by copy and paste.
+// Every answer waits in a draft and is written once, at the end: a device that pairs with an existing space must not push defaults that would win over the settings
+// already there. What the AI path applies is what the person ticked on the review screen.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
 import { settings, saveSettings, createDoc, places, toast } from '../app/store';
 import { applyTheme } from '../app/theme';
 import { go } from '../app/nav';
+import { closeSheet } from '../app/sheet';
 import { syncOn, connector, relayBase, setupSync, connectorOn, connectorNewCode, refreshConnector, confirmKeySaved } from '../app/sync';
 import { Privacy, PairingCode, failure, type Code } from '../app/ConnectorSettings';
 import { chatPrompt } from '../app/ChatOffer';
@@ -27,26 +25,28 @@ import { setupPack, setupPrompt, SetupReply, readSetup, onlySetup, type Turn } f
 import { shortName, type Plan } from '../ai/apply';
 import { openCheckin } from './checkin';
 import { lang, t, type Key } from '../i18n';
-import { SUIT_ORDER, type AiProvider, type Settings } from '../data/settings';
+import { SUIT_ORDER, NEW_USER_SUITS, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
 import type { Place, SuitId } from '../data/schema';
 import type { ChangeSet } from '../ai/changeset';
 import { ZONES, deviceZone } from '../domain/zones';
 import type { ComponentChildren } from 'preact';
 
-type Id = 'language' | 'pillars' | 'places' | 'basics' | 'link' | 'key' | 'chat' | 'paste' | 'pair' | 'done';
+type Id = 'language' | 'pillars' | 'ways' | 'link' | 'key' | 'chat' | 'paste' | 'pair';
 /** The three choices of the first screen, and the link under them: `other` is any chatbot, by copy and paste. */
 type Path = 'hand' | 'key' | 'connector' | 'other';
+/** Where the guided AI set-up opens from Settings: the choice of ways, or one way at once. */
+export type Entry = 'ways' | Exclude<Path, 'hand'>;
 interface PlaceRow { name: string; timeZone: string }
 interface Draft { s: Partial<Settings>; places: PlaceRow[] }
 interface AiChoice { want: boolean; provider: Exclude<AiProvider, 'none'>; has: boolean }
 type Provider = Exclude<AiProvider, 'none'>;
 
-/** The screens of each path, for "Set-up · n of N". The connector sets the pillars and places first (by a chat with the person's AI chat app, or by hand), then connects. */
-const screens = (path: Path, basics: 'chat' | 'hand'): Id[] =>
-  path === 'hand' ? ['pillars', 'places']
+/** The screens of each path, for "Set-up · n of N". */
+const screens = (path: Path): Id[] =>
+  path === 'hand' ? ['language', 'pillars']
     : path === 'key' ? ['key', 'chat']
       : path === 'other' ? ['paste']
-        : basics === 'chat' ? ['basics', 'paste', 'link'] : ['basics', 'pillars', 'places', 'link'];
+        : ['link'];
 
 /** What the draft turns into: places first (so the first can be where the person is), then one settings write. */
 export async function applyDraft(d: Draft, l: Settings['language'], choice: AiChoice, here?: string): Promise<void> {
@@ -89,14 +89,6 @@ const Choice = ({ on, onClick, title, hint, testid, primary }: { on?: boolean; o
   <button type="button" class={'btn' + (primary ? ' primary' : '')} aria-pressed={on} onClick={onClick} data-testid={testid}><b>{title}</b>{hint && <small>{hint}</small>}</button>
 );
 
-/** The four questions of the by-myself way: what each pillar is about, and examples of a name for it. */
-const PILLAR_Q: Record<SuitId, [Key, Key]> = {
-  S: ['obPillarQ_S', 'obPillarEx_S'],
-  D: ['obPillarQ_D', 'obPillarEx_D'],
-  C: ['obPillarQ_C', 'obPillarEx_C'],
-  H: ['obPillarQ_H', 'obPillarEx_H'],
-};
-
 const KEY_LINKS: Record<Provider, { href: string; label: string; steps: [Key, Key, Key] }> = {
   openai: { href: 'https://openrouter.ai/keys', label: 'openrouter.ai/keys', steps: ['obKeyStepsOpenrouter1', 'obKeyStepsOpenrouter2', 'obKeyStepsOpenrouter3'] },
   anthropic: { href: 'https://console.anthropic.com/settings/keys', label: 'console.anthropic.com', steps: ['obKeyStepsAnthropic1', 'obKeyStepsAnthropic2', 'obKeyStepsAnthropic3'] },
@@ -106,86 +98,76 @@ async function copyText(text: string): Promise<boolean> {
   try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 }
 
-export function Onboarding() {
-  const [id, setId] = useState<Id>('language');
+/**
+ * `entry`: opened from Settings as a guided AI set-up (a sheet), not as first-run: it starts at that way, never writes the first-run record or the starting
+ * categories, and `onExit` runs when it ends.
+ */
+export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => void } = {}) {
+  const guided = !!entry;
+  const [id, setId] = useState<Id>(entry === 'ways' ? 'ways' : entry === 'key' ? 'key' : entry === 'connector' ? 'link' : entry === 'other' ? 'paste' : 'language');
   const [trail, setTrail] = useState<Id[]>([]);
-  const [draft, setDraft] = useState<Draft>({ s: {}, places: [{ name: '', timeZone: deviceZone() }] });
+  const [draft, setDraft] = useState<Draft>({ s: guided ? {} : { suits: NEW_USER_SUITS }, places: [] });
   const [skipped, setSkipped] = useState(false);
-  const [paired, setPaired] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [path, setPath] = useState<Path>('hand');
-  const [basics, setBasics] = useState<'chat' | 'hand'>('chat');
+  const [path, setPath] = useState<Path>(entry && entry !== 'ways' ? entry : 'hand');
   const [provider, setProvider] = useState<Provider>('openai');
   const [hasKey, setHasKey] = useState(false);
-  /** The AI's change-set was ticked and applied: the places and settings are written already. */
-  const [applied, setApplied] = useState(false);
   const s = settings.value;
   const merged: Settings = { ...s, ...draft.s, language: lang.value };
 
   // A French phone starts in French (the person can switch on the first screen).
   useEffect(() => {
-    if (/^fr\b/i.test(navigator.language ?? '') && lang.value !== 'fr') { lang.value = 'fr'; set({ language: 'fr' }); }
+    if (!guided && /^fr\b/i.test(navigator.language ?? '') && lang.value !== 'fr') { lang.value = 'fr'; set({ language: 'fr' }); }
   }, []);
   // The language shows as it is chosen (and the default look: St George, light or dark as the system has it); nothing is saved until the end.
-  useEffect(() => { applyTheme(merged); });
+  useEffect(() => { if (!guided) applyTheme(merged); });
   // The key tutorial's provider is used by the conversation at once; it is saved with the rest at the end.
   useEffect(() => { draftProvider.value = id === 'key' || id === 'chat' ? provider : null; return () => { draftProvider.value = null; }; }, [id, provider]);
 
   const set = (p: Partial<Settings>) => setDraft(d => ({ ...d, s: { ...d.s, ...p } }));
   const goTo = (to: Id) => { setTrail([...trail, id]); setId(to); window.scrollTo({ top: 0 }); };
-  const back = trail.length ? () => { setId(trail[trail.length - 1]!); setTrail(trail.slice(0, -1)); } : undefined;
-  const skip = () => { setSkipped(true); goTo('done'); };
+  /** Leaving a guided AI set-up: the sheet closes, back in Settings. */
+  const leave = () => { draftProvider.value = null; if (onExit) onExit(); else closeSheet(); };
+  const back = trail.length ? () => { setId(trail[trail.length - 1]!); setTrail(trail.slice(0, -1)); } : guided ? leave : undefined;
 
-  const seq = screens(path, basics);
+  const seq = screens(path);
   const pos = { n: Math.max(1, seq.indexOf(id) + 1), of: seq.length };
   const frame = { id, ...pos, back };
 
-  /** The AI path writes the rest of the draft (the language, the key's provider, where the person is) right after the ticks. */
+  /** The AI path writes the rest of the draft (the language, the key's provider) right after the ticks. */
   const settle = async () => {
-    const first = [...places.value.values()].sort((a, b) => a.order - b.order)[0]?.id;
-    await applyDraft(draft, lang.value, { want: path === 'key', provider, has: hasKey }, first);
+    // The AI may have named the pillars already (its ticks are written): the starting categories only fill in when it did not.
+    const named = JSON.stringify(settings.value.suits) !== JSON.stringify(DEFAULT_SETTINGS.suits);
+    const { suits: _s, ...rest } = draft.s;
+    await applyDraft(named ? { ...draft, s: rest } : draft, lang.value, { want: path === 'key', provider, has: hasKey });
   };
 
-  /** Write what was drafted (unless the space on another device is the source of truth, or the AI's ticks already settled it), then leave. */
-  const finish = async (then: 'home' | 'checkin') => {
+  /** Write what was drafted (unless the space on another device is the source of truth), record that set-up is over, and go Home. */
+  const finish = async (how: 'done' | 'skipped' | 'paired' = 'done') => {
     setBusy(true);
-    if (!paired && !applied) await applyDraft(draft, lang.value, { want: path === 'key', provider, has: hasKey });
-    // The connector stays on the Next steps for someone who chose it and did not connect it here (it goes by itself once it is on).
-    await finishedOnboarding(skipped ? 'skipped' : 'done', { connector: path === 'connector' });
+    if (how !== 'paired') await applyDraft(draft, lang.value, { want: false, provider, has: false });
+    await finishedOnboarding(how === 'skipped' ? 'skipped' : 'done');
     draftProvider.value = null;
     go('home');
-    if (then === 'checkin') openCheckin();
   };
 
-  const pairedNow = () => {
-    // The space has the settings and places; what was drafted here is dropped.
-    setPaired(true);
-    setDraft({ s: {}, places: [] });
-    setTrail([]);
-    setId('done');
-  };
+  const pairedNow = () => void finish('paired');
 
   /** The review of the AI's change-set was answered: ticked and applied (n > 0), or put aside to go on talking. */
   const reviewed = async (n: number) => {
     if (n <= 0) return;
     await settle();
-    setApplied(true); setTrail([...trail, id]); setId(path === 'connector' ? 'link' : 'done'); window.scrollTo({ top: 0 });
-  };
-
-  /** By hand, before connecting: the answers are written now (sync, once on, would make a restart look like an existing install and lose a draft). */
-  const toLink = async () => {
-    setBusy(true);
-    await applyDraft(draft, lang.value, { want: false, provider, has: false });
-    setApplied(true); setBusy(false);
-    goTo('link');
+    toast(t('obAiDone'));
+    leave();
   };
 
   const notTherapy = <p class="hint ob-notherapy" data-testid="ob-not-therapy">{t('notTherapy')}</p>;
 
   if (id === 'language') return (
-    <Frame {...frame} n={undefined} of={undefined} mark title={t('obWelcome')} hint={t('obLanguageHint')} skip={skip}
+    <Frame {...frame} n={undefined} of={undefined} mark title={t('obWelcome')} hint={t('obLanguageHint')} next={() => goTo('pillars')} skip={() => void finish('skipped')}
       extra={<>
-        <button class="btn wide ob-pair-link" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obHaveDevice')}</button>
+        <button class="btn wide ob-pair-link" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obRestore')}</button>
+        <p class="hint" data-testid="ob-later">{t('obLater')}</p>
         {notTherapy}
       </>}>
       <div class="bigchoices" role="group" aria-label={t('language')}>
@@ -193,65 +175,40 @@ export function Onboarding() {
           <button type="button" class="btn" lang={l} aria-pressed={lang.value === l} data-testid={'ob-lang-' + l} onClick={() => { lang.value = l; set({ language: l }); }}><b>{name}</b></button>
         ))}
       </div>
-      <p class="field-label ob-how">{t('obHow')}</p>
-      <div class="bigchoices">
-        <Choice onClick={() => { setPath('key'); goTo('key'); }} title={t('obWayKey')} hint={t('obWayKeyHint')} testid="ob-way-key" />
-        <Choice onClick={() => { setPath('connector'); goTo('basics'); }} title={t('obWayConnector')} hint={t('obWayConnectorHint')} testid="ob-way-connector" />
-        <Choice onClick={() => { setPath('hand'); goTo('pillars'); }} title={t('obWayNone')} hint={t('obWayNoneHint')} testid="ob-way-none" />
-      </div>
-      <button class="linklike ob-skip" type="button" onClick={() => { setPath('other'); goTo('paste'); }} data-testid="ob-copypaste-link">{t('obCopyPaste')}</button>
     </Frame>
   );
 
   if (id === 'pillars') {
     const suits = merged.suits;
-    const save = (k: SuitId, v: string) => {
-      const cur = suits[k], name = v.trim() || cur.name[lang.value];
-      set({ suits: { ...suits, [k]: { ...cur, name: { ...cur.name, [lang.value]: name }, short: { ...cur.short, [lang.value]: shortName(name) } } } });
+    const save = (k: SuitId, field: 'name' | 'desc', v: string) => {
+      const cur = suits[k], l = lang.value;
+      if (field === 'desc') { set({ suits: { ...suits, [k]: { ...cur, desc: { en: cur.desc?.en ?? '', fr: cur.desc?.fr ?? '', [l]: v.trim() } } } }); return; }
+      const name = v.trim() || cur.name[l];
+      set({ suits: { ...suits, [k]: { ...cur, name: { ...cur.name, [l]: name }, short: { ...cur.short, [l]: name === cur.name[l] ? cur.short[l] : shortName(name) } } } });
     };
     return (
-      <Frame {...frame} title={t('obPillarsQ')} hint={t('obPillarsHint')} next={() => goTo('places')} nextLabel="obKeepThese" skip={skip}>
+      <Frame {...frame} title={t('obCatsQ')} hint={t('obCatsHint')} next={() => void finish()} nextLabel="obStart" nextDisabled={busy} skip={() => void finish('skipped')}>
         {SUIT_ORDER.map(k => (
-          <label class="field obpillar" key={k + lang.value}><span>{t(PILLAR_Q[k][0])}</span>
-            <input type="text" defaultValue={suits[k].name[lang.value]} aria-label={t(PILLAR_Q[k][0])} autocomplete="off" data-testid={'ob-pillar-' + k} onChange={e => save(k, (e.target as HTMLInputElement).value)} />
-            <small class="hint">{t(PILLAR_Q[k][1])}</small>
-          </label>
-        ))}
-      </Frame>
-    );
-  }
-
-  if (id === 'places') {
-    const rows = draft.places;
-    const setRows = (r: PlaceRow[]) => setDraft(d => ({ ...d, places: r }));
-    const edit = (i: number, p: Partial<PlaceRow>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...p } : r)));
-    const zones = (z: string) => (ZONES.includes(z) ? ZONES : [z, ...ZONES]);
-    return (
-      <Frame {...frame} title={t('obPlacesQ')} hint={t('obPlacesHint')} next={() => (path === 'connector' ? void toLink() : goTo('done'))} nextLabel={path === 'connector' ? 'next_' : 'obFinish'} nextDisabled={busy || !rows.some(r => r.name.trim())} skip={skip}>
-        {rows.map((r, i) => (
-          <div class="obplace" data-testid="ob-place">
-            <input type="text" value={r.name} placeholder={t('obPlacePh')} aria-label={t('placeName')} autocomplete="off" data-testid="ob-place-name" onInput={e => edit(i, { name: (e.target as HTMLInputElement).value })} />
-            {rows.length > 1 && <button class="btn ghost" type="button" aria-label={t('remove', { what: r.name.trim() || t('placeName') })} onClick={() => setRows(rows.filter((_, j) => j !== i))}>×</button>}
-            <select aria-label={t('timeZone')} value={r.timeZone} onChange={e => edit(i, { timeZone: (e.target as HTMLSelectElement).value })}>
-              {zones(r.timeZone).map(z => <option value={z}>{z.replace(/_/g, ' ')}</option>)}
-            </select>
+          <div class="field obpillar" key={k + lang.value}>
+            <input type="text" defaultValue={suits[k].name[lang.value]} aria-label={t('suitName')} autocomplete="off" data-testid={'ob-pillar-' + k} onChange={e => save(k, 'name', (e.target as HTMLInputElement).value)} />
+            <input type="text" defaultValue={suits[k].desc?.[lang.value] ?? ''} aria-label={t('suitDesc')} autocomplete="off" data-testid={'ob-pillar-desc-' + k} onChange={e => save(k, 'desc', (e.target as HTMLInputElement).value)} />
           </div>
         ))}
-        <div class="actions"><button class="btn" type="button" onClick={() => setRows([...rows, { name: '', timeZone: rows[rows.length - 1]?.timeZone ?? deviceZone() }])} data-testid="ob-place-add">{t('addPlaceBtn')}</button></div>
       </Frame>
     );
   }
 
-  if (id === 'basics') return (
-    <Frame {...frame} title={t('obBasicsQ')} hint={t('obBasicsHint')} skip={skip}>
+  if (id === 'ways') return (
+    <Frame {...frame} n={undefined} of={undefined} title={t('obHow')} hint={t('obWaysHint')}>
       <div class="bigchoices">
-        <Choice onClick={() => { setBasics('chat'); goTo('paste'); }} title={t('obBasicsChat')} hint={t('obBasicsChatHint')} testid="ob-basics-chat" />
-        <Choice onClick={() => { setBasics('hand'); goTo('pillars'); }} title={t('obBasicsHand')} hint={t('obBasicsHandHint')} testid="ob-basics-hand" />
+        <Choice onClick={() => { setPath('key'); goTo('key'); }} title={t('obWayKey')} hint={t('obWayKeyHint')} testid="ob-way-key" />
+        <Choice onClick={() => { setPath('connector'); goTo('link'); }} title={t('obWayConnector')} hint={t('obWayConnectorHint')} testid="ob-way-connector" />
       </div>
+      <button class="linklike ob-skip" type="button" onClick={() => { setPath('other'); goTo('paste'); }} data-testid="ob-copypaste-link">{t('obCopyPaste')}</button>
     </Frame>
   );
 
-  if (id === 'link') return <ConnectStep {...frame} back={basics === 'hand' ? back : undefined} done={() => goTo('done')} />;
+  if (id === 'link') return <ConnectStep {...frame} done={leave} />;
 
   if (id === 'key') return <KeyStep {...frame} provider={provider} setProvider={setProvider} has={hasKey} setHas={setHasKey} next={() => goTo('chat')} usePaste={() => { setPath('other'); goTo('paste'); }} />;
 
@@ -259,25 +216,11 @@ export function Onboarding() {
 
   if (id === 'paste') return <PasteStep {...frame} way={path === 'connector' ? 'app' : 'other'} reviewed={reviewed} />;
 
-  if (id === 'pair') return (
+  return (
     <div class="flow ob" data-testid="ob-pair">
       <JoinPanel onJoined={pairedNow} />
       <div class="actions ob-actions">{back && <button class="btn ghost" type="button" onClick={back} data-testid="ob-back">{t('back')}</button>}</div>
       <p class="hint">{t('obPairSkips')}</p>
-    </div>
-  );
-
-  return (
-    <div class="flow ob" data-testid="ob-done">
-      <h3>{skipped ? t('obDoneSkipped') : t('obDone')}</h3>
-      <p data-testid="ob-done-text">{paired ? t('obDonePaired') : path === 'connector' && connector.value?.on ? t('obDoneConnected', { say: chatPrompt('day') }) : applied ? t('obDoneAi') : t('obDoneHint')}</p>
-      {!paired && <p class="hint" data-testid="ob-done-next">{t('obDoneNext')}</p>}
-      <div class="bigchoices">
-        <button type="button" class="btn primary" disabled={busy} onClick={() => void finish('checkin')} data-testid="ob-plan"><b>{t('obPlanFirst')}</b><small>{t('obPlanFirstHint')}</small></button>
-        <button type="button" class="btn" disabled={busy} onClick={() => void finish('home')} data-testid="ob-home"><b>{t('obGoHome')}</b></button>
-      </div>
-      <div class="actions ob-actions">{back && !applied && <button class="btn ghost" type="button" onClick={back} disabled={busy} data-testid="ob-back">{t('back')}</button>}</div>
-      {notTherapy}
     </div>
   );
 }
@@ -498,7 +441,6 @@ function ConnectStep({ back, done, ...pos }: { id: Id; n: number; of: number; ba
       {err && <p class="err" role="alert" data-testid="ob-link-error">{err}</p>}
       <div class="actions ob-actions">
         <button class="btn primary" type="button" disabled={busy} onClick={async () => { await confirmKeySaved(); await connect(); }} data-testid="ob-link-key-saved">{t('syncKeySavedBtn')}</button>
-        <button class="btn" type="button" disabled={busy} onClick={() => void connect()} data-testid="ob-link-key-later">{t('syncKeyLater')}</button>
       </div>
     </div>
   );

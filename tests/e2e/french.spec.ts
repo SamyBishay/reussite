@@ -8,11 +8,12 @@ const ENGLISH = /(?<![\p{L}’'])(the|and|your|you|you’ll|with|this|that|these
 const OK_WORDS = new Set(['no', 'a', 'start', 'open', 'add', 'back', 'close', 'next', 'for', 'not', 'done', 'none', 'error']);
 const SAMPLE_TEXT = /write the second|park for|café near|Open |Doctolib|Maps|Mail|Messages|Files|thesis|lease|landlord|dentist|bank|statement|Claude|supervisor|receipts|Alex|tax form|Sunday|Housing papers|Thesis|Friends & outings|Inbox|Stay in the flat|Rent goes up|Cheaper overall|Lease signed|See a friend|Walk to the park|Weekly review|Choir/i;
 
-async function english(page: Page): Promise<string[]> {
-  const text = await page.evaluate(() => {
+/** `only`: a selector to read instead of the whole page (the guided AI sheet over Settings, which holds the one-tap link's sentence for any AI, English on purpose). */
+async function english(page: Page, only = ''): Promise<string[]> {
+  const text = await page.evaluate((only) => {
     // Every visible text node, one per line (inputs' values and placeholders are what the person typed or the app suggests).
     const out: string[] = [];
-    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const w = document.createTreeWalker(only ? document.querySelector(only) ?? document.body : document.body, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) {
       const el = n.parentElement;
       if (!el || el.closest('script,style,noscript,[hidden],[aria-hidden=true],.toast,.help-ex')) continue;
@@ -26,7 +27,7 @@ async function english(page: Page): Promise<string[]> {
       for (const a of ['placeholder', 'aria-label', 'title']) { const v = e.getAttribute(a); if (v) out.push(v); }
     });
     return out;
-  });
+  }, only);
   const hits: string[] = [];
   for (const line of text) {
     if (SAMPLE_TEXT.test(line)) continue;
@@ -49,7 +50,7 @@ test('the app in French has no English left: the tabs, the menu pages, the sheet
   await importSample(page);
   await inFrench(page);
   const seen: Record<string, string[]> = {};
-  const scan = async (where: string) => { const h = await english(page); if (h.length) seen[where] = h; };
+  const scan = async (where: string, only = '') => { const h = await english(page, only); if (h.length) seen[where] = h; };
 
   await goTab(page, 'home'); await scan('home');
   await page.getByTestId('home-help').click(); await scan('home help'); await page.keyboard.press('Escape');
@@ -97,44 +98,36 @@ test('the first run in French has no English left, by myself and with an AI', as
     await page.goto('/');
     await page.getByTestId('ob-lang-fr').click();
     const seen: Record<string, string[]> = {};
-    const scan = async (where: string) => { const h = await english(page); if (h.length) seen[how + ': ' + where] = h; };
+    const scan = async (where: string, only = '') => { const h = await english(page, only); if (h.length) seen[how + ': ' + where] = h; };
     await scan('first screen');
-    if (how === 'myself') {
-      await page.getByTestId('ob-way-none').click();
-      await scan('pillars');
-      await noSideways(page, 'pillars in French');
-      await page.getByTestId('ob-next').click();
-      await scan('places');
-      await page.getByTestId('ob-place-name').first().fill('Maison');
-      await page.getByTestId('ob-next').click();
-      await scan('done');
-    } else {
-      await scan('ways');
+    await page.getByTestId('ob-next').click();
+    await scan('categories');
+    await noSideways(page, 'categories in French');
+    await page.getByTestId('ob-next').click();
+    await expect(page.getByTestId('home')).toBeVisible();
+    await scan('home');
+    if (how === 'ai') {
+      // An AI, later: the same screens in a sheet, from the Réglages.
+      await goTab(page, 'settings');
+      await expandSettings(page);
+      await page.getByTestId('ai-guided').click();
+      await scan('ways', '[data-testid=sheet]');
       await page.getByTestId('ob-way-key').click();
-      await scan('key');
+      await scan('key', '[data-testid=sheet]');
       await noSideways(page, 'key in French');
       await page.getByTestId('ob-key-paste').click();
-      await scan('paste');
+      await scan('paste', '[data-testid=sheet]');
       await noSideways(page, 'paste in French');
-      // The connector: the basics, then by hand to Connect Claude and its steps.
       await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-way-connector').click();
-      await scan('basics');
-      await page.getByTestId('ob-basics-chat').click();
-      await scan('paste for Claude');
-      await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-basics-hand').click();
-      await page.getByTestId('ob-next').click();
-      await page.getByTestId('ob-place-name').first().fill('Maison');
-      await page.getByTestId('ob-next').click();
-      await scan('connect Claude');
+      await scan('connect Claude', '[data-testid=sheet]');
       await noSideways(page, 'connect Claude in French');
       await page.getByTestId('ob-link-on').click();
-      await scan('recovery key');
+      await scan('recovery key', '[data-testid=sheet]');
       await page.getByTestId('ob-link-key-saved').click();
       await expect(page.getByTestId('ob-link-url')).toBeVisible();
-      await scan('connect Claude, steps');
+      await scan('connect Claude, steps', '[data-testid=sheet]');
       await noSideways(page, 'connect Claude steps in French');
     }
     expect(seen, JSON.stringify(seen, null, 1)).toEqual({});

@@ -1,4 +1,4 @@
-// First-run setup layout (request of 10 Nov): every setup page starts right under the top padding (and the status-bar inset), scrolls when it is
+// First-run setup layout (request of 10 Nov; the pages are the language and the four kinds of time, and the pairing page; the AI screens are a sheet in Settings): every setup page starts right under the top padding (and the status-bar inset), scrolls when it is
 // taller than the screen (by wheel and touch-scroll, as a person does, not by script), and its last button can be brought into view.
 import { test, expect, type Page } from '@playwright/test';
 import { noSideways, PHONES, LANGS } from './helpers';
@@ -78,45 +78,23 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     if (lang === 'fr') await page.getByTestId('ob-lang-fr').click();
     await checkPage(page, 'first page');
 
-    // The AI option page (a key): the last option, then the next page.
-    await page.getByTestId('ob-way-none').scrollIntoViewIfNeeded();
-    await page.getByTestId('ob-way-key').click();
-    await expect(page.getByTestId('ob-key')).toBeVisible();
-    await checkPage(page, 'key page');
-    await page.getByTestId('ob-back').click();
-    await expect(page.getByTestId('ob-language')).toBeVisible();
-
-    // The connector path.
-    await page.getByTestId('ob-way-connector').click();
-    await expect(page.getByTestId('ob-basics')).toBeVisible();
-    await checkPage(page, 'basics page');
-    await page.getByTestId('ob-back').click();
-
-    // Any chatbot.
-    await page.getByTestId('ob-copypaste-link').click();
-    await expect(page.getByTestId('ob-paste')).toBeVisible();
-    await checkPage(page, 'paste page');
-    await page.getByTestId('ob-back').click();
-
     // The pairing page.
+    await page.getByTestId('ob-pair-link').scrollIntoViewIfNeeded();
     await page.getByTestId('ob-pair-link').click();
     await expect(page.getByTestId('ob-pair')).toBeVisible();
     await checkPage(page, 'pair page');
     await page.getByTestId('ob-back').click();
+    await expect(page.getByTestId('ob-language')).toBeVisible();
 
-    // By myself: pillars, places, done. After scrolling to the bottom of one page, the next starts at the top.
-    await page.getByTestId('ob-way-none').click();
+    // The four kinds of time. After scrolling to the bottom of one page, the next starts at the top.
+    await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
+    await page.getByTestId('ob-next').click();
     await expect(page.getByTestId('ob-pillars')).toBeVisible();
-    await checkPage(page, 'pillars page');
+    await checkPage(page, 'categories page');
     await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
     await page.getByTestId('ob-next').click();
-    await expect(page.getByTestId('ob-places')).toBeVisible();
-    await checkPage(page, 'places page');
-    await page.getByTestId('ob-place-name').first().fill('Home');
-    await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
-    await page.getByTestId('ob-next').click();
-    await expect(page.locator('.ob').first()).toBeVisible();
-    await checkPage(page, 'page after places');
+    // Start goes Home: no third page, and Home locks the page again as it always did.
+    await expect(page.getByTestId('home')).toBeVisible();
   });
 }
 
@@ -130,8 +108,9 @@ for (const [w, h] of PHONES) {
     await checkPage(page, 'first page, ios-app');
     const top = await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top);
     expect(top).toBeGreaterThanOrEqual(62);
-    await page.getByTestId('ob-way-key').click();
-    await checkPage(page, 'key page, ios-app');
+    await page.getByTestId('ob-next').click();
+    await expect(page.getByTestId('ob-pillars')).toBeVisible();
+    await checkPage(page, 'categories page, ios-app');
     expect(await page.locator('.ob').first().evaluate(e => e.getBoundingClientRect().top)).toBeGreaterThanOrEqual(62);
   });
 }

@@ -6,13 +6,18 @@ import { nextSteps, dismissNextSteps } from './onboarding';
 import { syncOn, keySaved, relayBase, connector } from './sync';
 import { pushState, pushOn, refreshPushState } from './push';
 import { addressesOn } from './model';
+import { settings } from './store';
+import { feedId } from './feed';
+import { openGuidedAi } from '../flows/guidedAi';
 import { nextSteps as linesOf, SECTION, type NextStep } from '../domain/nextSteps';
 import { t, type Key } from '../i18n';
 
 const TEXT: Record<NextStep, [Key, Key]> = {
   key: ['nextKey', 'nextKeyHint'],
   sync: ['nextSync', 'nextSyncHint'],
+  ai: ['nextAi', 'nextAiHint'],
   notify: ['nextNotify', 'nextNotifyHint'],
+  calendar: ['nextCalendar', 'nextCalendarHint'],
   addresses: ['nextAddresses', 'nextAddressesHint'],
   connector: ['nextConnector', 'nextConnectorHint'],
 };
@@ -30,12 +35,12 @@ export function openSettingsSection(testid: string): void {
   requestAnimationFrame(find);
 }
 
-export function NextStepsCard() {
+/** The lines still to show (none when set-up left no record on this device, or the card was hidden). */
+export function nextLinesNow(): NextStep[] {
   const n = nextSteps.value;
-  useEffect(() => { if (n.on) refreshPushState(); }, [n.on]);
-  if (!n.on) return null;
+  if (!n.on) return [];
   const st = pushState.value;
-  const lines = linesOf({
+  return linesOf({
     relay: !!relayBase(),
     syncOn: syncOn.value,
     keyUnsaved: syncOn.value && !keySaved.value,
@@ -43,7 +48,16 @@ export function NextStepsCard() {
     addressesOn: addressesOn(),
     wantsConnector: n.connector,
     connectorOn: !!connector.value?.on,
+    aiOff: settings.value.aiProvider === 'none' && !connector.value?.on,
+    feedOff: !!relayBase() && !feedId.value,
   });
+}
+
+/** Next steps, an entry of the Notifications page (it was a card on Home). */
+export function NextStepsCard() {
+  const n = nextSteps.value;
+  useEffect(() => { if (n.on) refreshPushState(); }, [n.on]);
+  const lines = nextLinesNow();
   if (!lines.length) return null;
   return (
     <section class="nextsteps" data-testid="next-steps" aria-labelledby="next-steps-h">
@@ -51,7 +65,7 @@ export function NextStepsCard() {
       <p class="hint">{t('nextHint')}</p>
       <ul class="picklist menu">
         {lines.map(l => (
-          <li><button type="button" class="linklike" onClick={() => openSettingsSection(SECTION[l])} data-testid={'next-' + l}><b>{t(TEXT[l][0])}</b><small>{t(TEXT[l][1])}</small></button></li>
+          <li><button type="button" class="linklike" onClick={() => (l === 'ai' ? void openGuidedAi() : openSettingsSection(SECTION[l]))} data-testid={'next-' + l}><b>{t(TEXT[l][0])}</b><small>{t(TEXT[l][1])}</small></button></li>
         ))}
       </ul>
       <div class="actions"><button class="btn small ghost" type="button" onClick={() => void dismissNextSteps()} data-testid="next-dismiss">{t('nextDismiss')}</button></div>

@@ -26,6 +26,8 @@ export interface SuitSetting {
   name: { en: string; fr: string };
   short: { en: string; fr: string };
   glyph: string;
+  /** What belongs under it, in the person's words; shown in set-up and Settings. Absent means none (an optional field: no migration). */
+  desc?: { en: string; fr: string };
 }
 
 export interface Settings {
@@ -108,6 +110,17 @@ export interface Settings {
 }
 
 export const SUIT_ORDER: SuitId[] = ['S', 'D', 'C', 'H'];
+
+/**
+ * The four general categories of time a new person starts with (set-up's draft, written at its end; also for "Skip, use defaults"). They are not
+ * `DEFAULT_SETTINGS.suits`, which stays what installs from before read when they stored nothing. Symbols and colours are the app's.
+ */
+export const NEW_USER_SUITS: Record<SuitId, SuitSetting> = {
+  S: { name: { en: 'Work', fr: 'Travail' }, short: { en: 'Work', fr: 'Travail' }, glyph: '♠', desc: { en: 'Job or studies, bureaucracy, administrative paperwork', fr: 'Emploi ou études, bureaucratie, papiers administratifs' } },
+  D: { name: { en: 'Leisure', fr: 'Loisirs' }, short: { en: 'Leisure', fr: 'Loisirs' }, glyph: '♦', desc: { en: 'Fun, relaxation, consumption, hobbies, outings', fr: 'Amusement, détente, consommation, passe-temps, sorties' } },
+  C: { name: { en: 'Personal projects', fr: 'Projets personnels' }, short: { en: 'Projects', fr: 'Projets' }, glyph: '♣', desc: { en: 'Side projects, chores, research', fr: 'Projets perso, corvées, recherches' } },
+  H: { name: { en: 'Interpersonal obligations', fr: 'Obligations envers les autres' }, short: { en: 'Others', fr: 'Autres' }, glyph: '♥', desc: { en: 'Functions and services for family and friends', fr: 'Fonctions et services pour la famille et les amis' } },
+};
 
 /** Ids stay fixed (addresses keep them); the names come from the strings `addressCat_<id>` until the person edits them. */
 export const DEFAULT_ADDRESS_CATEGORIES: AddressCategory[] = ['food', 'cafe', 'shopping', 'sight', 'museum', 'park', 'outing', 'other'].map(id => ({ id, name: '' }));

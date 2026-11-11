@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { withDefaults, DEFAULT_SETTINGS, ST_GEORGE_FROM, firstWritten } from './settings';
+import { withDefaults, DEFAULT_SETTINGS, ST_GEORGE_FROM, firstWritten, NEW_USER_SUITS, SUIT_ORDER } from './settings';
 
 describe('settings defaults', () => {
   it('adds new keys without overwriting chosen ones', () => {
@@ -43,5 +43,23 @@ describe('settings defaults', () => {
   it('firstWritten is the oldest field clock', () => {
     expect(firstWritten({ a: '1760000000000:0000:x', b: '1750000000000:0003:y' })).toBe(1750000000000);
     expect(firstWritten({})).toBe(Infinity);
+  });
+});
+
+describe('the four categories a new person starts with', () => {
+  it('are four, each named and described in both languages, with the app\'s own symbols', () => {
+    expect(SUIT_ORDER.map(k => NEW_USER_SUITS[k].name.en)).toEqual(['Work', 'Leisure', 'Personal projects', 'Interpersonal obligations']);
+    for (const k of SUIT_ORDER) {
+      const v = NEW_USER_SUITS[k];
+      expect(v.glyph).toBe(DEFAULT_SETTINGS.suits[k].glyph);
+      for (const l of ['en', 'fr'] as const) { expect(v.name[l].trim()).not.toBe(''); expect(v.short[l].trim()).not.toBe(''); expect(v.desc?.[l]?.trim()).toBeTruthy(); }
+    }
+  });
+  it('do not touch what an install from before reads: with nothing stored it still has its own pillars, and a stored description is kept', () => {
+    const before = withDefaults(undefined);
+    expect(before.suits).toEqual(DEFAULT_SETTINGS.suits);
+    expect(before.suits.S.desc).toBeUndefined();
+    const stored = withDefaults({ suits: NEW_USER_SUITS });
+    expect(stored.suits.H.desc?.en).toContain('family and friends');
   });
 });

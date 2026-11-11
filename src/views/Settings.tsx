@@ -263,9 +263,9 @@ function AddressesSettings() {
 
 function Method() {
   const s = settings.value;
-  const saveSuit = (k: SuitId, field: 'name' | 'short' | 'glyph', v: string) => {
+  const saveSuit = (k: SuitId, field: 'name' | 'short' | 'glyph' | 'desc', v: string) => {
     const cur = s.suits[k];
-    const next = field === 'glyph' ? { ...cur, glyph: v || cur.glyph } : { ...cur, [field]: { ...cur[field], [lang.value]: v || cur[field][lang.value] } };
+    const next = field === 'glyph' ? { ...cur, glyph: v || cur.glyph } : field === 'desc' ? { ...cur, desc: { en: cur.desc?.en ?? '', fr: cur.desc?.fr ?? '', [lang.value]: v } } : { ...cur, [field]: { ...cur[field], [lang.value]: v || cur[field][lang.value] } };
     set({ suits: { ...s.suits, [k]: next } });
   };
   const placeCount = placeRows(places.value).filter(r => !r.area).length;
@@ -304,6 +304,7 @@ function Method() {
               <label class="field" style="margin:0"><span>{t('suitGlyph')}</span><input type="text" maxLength={2} defaultValue={s.suits[k].glyph} onChange={e => saveSuit(k, 'glyph', (e.target as HTMLInputElement).value.trim())} /></label>
               <label class="field" style="margin:0"><span>{t('suitName')}</span><input type="text" defaultValue={s.suits[k].name[lang.value]} onChange={e => saveSuit(k, 'name', (e.target as HTMLInputElement).value.trim())} /></label>
               <label class="field" style="margin:0"><span>{t('suitShort')}</span><input type="text" defaultValue={s.suits[k].short[lang.value]} onChange={e => saveSuit(k, 'short', (e.target as HTMLInputElement).value.trim())} /></label>
+              <label class="field suitdesc" style="margin:0"><span>{t('suitDesc')}</span><input type="text" defaultValue={s.suits[k].desc?.[lang.value] ?? ''} data-testid={'suit-desc-' + k} onChange={e => saveSuit(k, 'desc', (e.target as HTMLInputElement).value.trim())} /></label>
             </div>
           ))}
         </div>

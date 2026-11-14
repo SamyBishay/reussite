@@ -548,6 +548,7 @@ export const enSteps = {
   manualSiteNext: 'Next',
   manualSiteLang: 'Français',
   manualSiteLangLabel: 'This manual in French',
+  helloLangLabel: 'This page in French',
   manualSiteSkip: 'Skip to the text',
   manualLoading: 'Loading…',
   manualMissing: 'This page could not be loaded.',

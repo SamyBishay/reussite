@@ -16,6 +16,7 @@
 - [docs/dev/push.md](docs/dev/push.md): Web Push: the schedule, encryption, the reconciler, what the relay sees.
 - [docs/dev/feed.md](docs/dev/feed.md): the calendar feed: ids, limits and the text.
 - [docs/manual/en/index.md](docs/manual/en/index.md): the manual for friends, one short page per topic, in English and French (`docs/manual/fr/`); shown in the app under Settings → About.
+- [docs/dev/hello.md](docs/dev/hello.md): the hello page for friends (`/hello/`, from `docs/hello/en.md` and `fr.md`) and the link preview's tags and picture.
 - [docs/dev/manual.md](docs/dev/manual.md): the manual: the pages, the viewer, and how the screenshots are made (`npm run manual:shots`).
 - [docs/dev/infra.md](docs/dev/infra.md): names, ids and URLs of the hosting, the relay, its database and its stores (no secrets).
 - [README.md](README.md): for friends: what Réussite is, how to install it, the not-therapy line.

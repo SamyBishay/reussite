@@ -19,12 +19,14 @@ function csp(relayUrl: string): string {
 }
 
 export default defineConfig(({ mode }) => {
-  const CSP = csp(loadEnv(mode, process.cwd(), 'VITE_').VITE_RELAY_URL ?? '');
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const CSP = csp(env.VITE_RELAY_URL ?? '');
   return {
     base: './',
     plugins: [
       preact(),
-      manualSite(),
+      // VITE_APP_URL: the address the app is served at, for the link preview's picture (an absolute address is required there).
+      manualSite(env.VITE_APP_URL ?? ''),
       { name: 'csp', apply: 'build', transformIndexHtml: (html: string) => html.replace('<meta charset="utf-8" />', `$&\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`) },
       VitePWA({
         registerType: 'prompt',
@@ -54,7 +56,7 @@ export default defineConfig(({ mode }) => {
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,woff,woff2,png,svg,ico}'],
           // The public manual's pages and fonts (src/manual/site.ts) are plain pages, not part of the app. The manual's screenshots (public/manual/shots) are fetched when a page shows one and kept by the worker's own runtime cache (src/sw.ts).
-          globIgnores: ['manual/**'],
+          globIgnores: ['manual/**', 'hello/**'],
           rollupFormat: 'iife',
         },
       }),

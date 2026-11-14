@@ -490,6 +490,7 @@ export const frSteps: Partial<Strings> = {
   manualSiteNext: 'Suivant',
   manualSiteLang: 'English',
   manualSiteLangLabel: 'Ce manuel en anglais',
+  helloLangLabel: 'Cette page en anglais',
   manualSiteSkip: 'Aller au texte',
   manualLoading: 'Chargement…',
   manualMissing: 'Cette page n’a pas pu être chargée.',

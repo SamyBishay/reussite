@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { translate, type Lang } from '../i18n';
-import { classifyHref, parseMarkdown, shotName, titleOf, type Block, type Inline } from './markdown';
+import { classifyHref, parseMarkdown, plain, shotName, titleOf, type Block, type Inline } from './markdown';
 import { PAGES, isPage, type PageSlug } from './pages';
 
 const LANGS: Lang[] = ['en', 'fr'];
@@ -19,35 +19,39 @@ const pageHref = (slug: PageSlug) => (slug === 'index' ? './' : `${slug}.html`);
 /** The folder the pictures are in, from a page of this language. */
 const shotsDir = (l: Lang) => (l === 'fr' ? '../shots' : 'shots');
 
-function inline(c: Inline[], l: Lang): string {
+/** Where a page's pictures and the manual's pages are, from that page. The manual's own pages sit beside one another; the hello page is a folder away. */
+interface Where { shots: string; page: (slug: PageSlug) => string }
+const inManual = (l: Lang): Where => ({ shots: shotsDir(l), page: pageHref });
+
+function inline(c: Inline[], l: Lang, w: Where = inManual(l)): string {
   return c.map(x => {
     if (x.t === 'text') return esc(x.v);
     if (x.t === 'code') return `<code>${esc(x.v)}</code>`;
-    if (x.t === 'b') return `<strong>${inline(x.c, l)}</strong>`;
-    if (x.t === 'i') return `<em>${inline(x.c, l)}</em>`;
+    if (x.t === 'b') return `<strong>${inline(x.c, l, w)}</strong>`;
+    if (x.t === 'i') return `<em>${inline(x.c, l, w)}</em>`;
     if (x.t === 'img') {
       const name = shotName(x.src);
       if (!name) return esc(x.alt);
-      const src = (theme: string) => `${shotsDir(l)}/${l}-${theme}/${name}.png`;
+      const src = (theme: string) => `${w.shots}/${l}-${theme}/${name}.png`;
       return `<picture><source media="(prefers-color-scheme: dark)" srcset="${src('dark')}"><img class="shot" src="${src('light')}" alt="${esc(x.alt)}" width="375" loading="lazy"></picture>`;
     }
     const to = classifyHref(x.href);
-    const inner = inline(x.c, l);
-    if (to.kind === 'page' && isPage(to.slug)) return `<a href="${pageHref(to.slug)}">${inner}</a>`;
+    const inner = inline(x.c, l, w);
+    if (to.kind === 'page' && isPage(to.slug)) return `<a href="${w.page(to.slug)}">${inner}</a>`;
     if (to.kind === 'out') return `<a href="${esc(to.href)}" rel="noopener noreferrer">${inner}</a>`;
     return inner;
   }).join('');
 }
 
-function blocks(bs: Block[], l: Lang): string {
+function blocks(bs: Block[], l: Lang, w: Where = inManual(l)): string {
   return bs.map(b => {
-    if (b.t === 'h') return `<h${b.n}>${inline(b.c, l)}</h${b.n}>`;
-    if (b.t === 'ul') return `<ul>${b.items.map(i => `<li>${inline(i, l)}</li>`).join('')}</ul>`;
-    if (b.t === 'ol') return `<ol>${b.items.map(i => `<li>${inline(i, l)}</li>`).join('')}</ol>`;
-    if (b.t === 'quote') return `<blockquote>${inline(b.c, l)}</blockquote>`;
+    if (b.t === 'h') return `<h${b.n}>${inline(b.c, l, w)}</h${b.n}>`;
+    if (b.t === 'ul') return `<ul>${b.items.map(i => `<li>${inline(i, l, w)}</li>`).join('')}</ul>`;
+    if (b.t === 'ol') return `<ol>${b.items.map(i => `<li>${inline(i, l, w)}</li>`).join('')}</ol>`;
+    if (b.t === 'quote') return `<blockquote>${inline(b.c, l, w)}</blockquote>`;
     if (b.t === 'pre') return `<pre>${esc(b.v)}</pre>`;
     if (b.t === 'hr') return '<hr>';
-    return b.c.length === 1 && b.c[0]!.t === 'img' ? `<figure>${inline(b.c, l)}</figure>` : `<p>${inline(b.c, l)}</p>`;
+    return b.c.length === 1 && b.c[0]!.t === 'img' ? `<figure>${inline(b.c, l, w)}</figure>` : `<p>${inline(b.c, l, w)}</p>`;
   }).join('\n');
 }
 
@@ -141,16 +145,121 @@ ${slug === 'index' ? '' : `<p><a href="${pageHref('index')}">← ${esc(tr('manua
 `;
 }
 
+// ---------- the hello page ----------
+// What Réussite is, for someone who was sent the link (docs/dev/hello.md): /hello/ in English and /hello/fr/ in French, written from
+// docs/hello/<language>.md with the manual's reader and stylesheet. It carries the tags a chat app reads to show a preview of the link.
+
+/** Where the hello page of a language lives, from the site root. */
+export const helloPath = (l: Lang) => `hello/${l === 'fr' ? 'fr/' : ''}index.html`;
+const HELLO_CSS = `
+.hero{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px;padding:24px 0 8px}
+.hero img{width:112px;height:auto;flex:none}
+.hero .mark-d{display:none}
+@media (prefers-color-scheme:dark){.hero .mark-l{display:none}.hero .mark-d{display:block}}
+.hero div{flex:1 1 260px;min-width:0}
+.hero h1{margin:0 0 8px}
+.hero p{margin:0 0 16px;font-size:19px;line-height:1.45}
+main h2{margin-top:48px}
+.shot{max-width:min(100%,300px)}
+`.trim();
+
+/**
+ * The hello page, whole. `appUrl` is the address the app is served at (`VITE_APP_URL`, no trailing slash): with it the preview tags
+ * carry a picture and the page's own address, which must be absolute; without it they carry the words only.
+ */
+export function renderHello(l: Lang, md: string, appUrl = ''): string {
+  const tr = (k: Parameters<typeof translate>[1]) => translate(l, k);
+  const bs = parseMarkdown(md);
+  // The first heading and the paragraph under it are the hero; the rest is the page.
+  const lead = bs[1]?.t === 'p' ? bs[1] : null;
+  const rest = bs.slice(lead ? 2 : 1);
+  const up = l === 'fr' ? '../../' : '../';
+  const where: Where = { shots: `${up}manual/shots`, page: slug => `${up}manual/${l === 'fr' ? 'fr/' : ''}${slug === 'index' ? '' : slug + '.html'}` };
+  const other: Lang = l === 'en' ? 'fr' : 'en';
+  const title = esc(titleOf(bs));
+  const desc = esc(lead ? plain(lead.c) : '');
+  const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'";
+  const css = CSS.replace(/FONTDIR/g, `${up}manual/fonts`) + '\n' + HELLO_CSS;
+  const base = appUrl.replace(/\/+$/, '');
+  const og = [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="${esc(translate(l, 'appName'))}">`,
+    `<meta property="og:title" content="${title}">`,
+    `<meta property="og:description" content="${desc}">`,
+    `<meta property="og:locale" content="${l === 'fr' ? 'fr_FR' : 'en_GB'}">`,
+    ...(base ? [`<meta property="og:url" content="${esc(base)}/hello/${l === 'fr' ? 'fr/' : ''}">`, `<meta property="og:image" content="${esc(base)}/hello/og.png">`, `<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`, `<meta name="twitter:card" content="summary_large_image">`] : []),
+  ].join('\n');
+  return `<!doctype html>
+<html lang="${l}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#2D6A67">
+<title>${title}</title>
+<meta name="description" content="${desc}">
+${og}
+<link rel="icon" href="${up}icons/icon.svg" type="image/svg+xml">
+<style>${css}</style>
+</head>
+<body>
+<a class="skip" href="#text">${esc(tr('manualSiteSkip'))}</a>
+<div class="wrap">
+<header class="top">
+<a class="name" href="./">${esc(translate(l, 'appName'))}</a>
+<nav>
+<a href="${l === 'en' ? 'fr/' : '../'}" hreflang="${other}" lang="${other}" aria-label="${esc(tr('helloLangLabel'))}">${esc(tr('manualSiteLang'))}</a>
+<a class="open" href="/">${esc(tr('manualSiteOpen'))}</a>
+</nav>
+</header>
+<main id="text">
+<div class="hero">
+<img class="mark-l" src="${l === 'fr' ? '../' : ''}mark-light.webp" alt="" width="112">
+<img class="mark-d" src="${l === 'fr' ? '../' : ''}mark-dark.webp" alt="" width="112">
+<div>
+<h1>${title}</h1>
+${lead ? `<p>${inline(lead.c, l, where)}</p>` : ''}
+<a class="open" href="/">${esc(tr('manualSiteOpen'))}</a>
+</div>
+</div>
+${blocks(rest, l, where)}
+</main>
+<footer><a class="open" href="/">${esc(tr('manualSiteOpen'))}</a></footer>
+</div>
+</body>
+</html>
+`;
+}
+
+/** The words a chat app shows for the app's own address: added to the built index.html (the app itself never reads them). */
+export function previewTags(md: string, appUrl = ''): string {
+  const bs = parseMarkdown(md);
+  const lead = bs[1]?.t === 'p' ? bs[1] : null;
+  const desc = esc(lead ? plain(lead.c) : ''), title = esc(titleOf(bs)), base = appUrl.replace(/\/+$/, '');
+  return [
+    `<meta name="description" content="${desc}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:title" content="${title}" />`,
+    `<meta property="og:description" content="${desc}" />`,
+    ...(base ? [`<meta property="og:url" content="${esc(base)}/" />`, `<meta property="og:image" content="${esc(base)}/hello/og.png" />`, `<meta property="og:image:width" content="1200" />`, `<meta property="og:image:height" content="630" />`, `<meta name="twitter:card" content="summary_large_image" />`] : []),
+  ].join('\n    ');
+}
+
 let root = process.cwd();
+const readHello = (l: Lang) => readFileSync(join(root, 'docs/hello', l + '.md'), 'utf8');
 const readMd = (l: Lang, slug: PageSlug) => readFileSync(join(root, 'docs/manual', l, slug + '.md'), 'utf8');
 
 /** Writes the pages and their fonts into the build (dist/manual/…). */
-export function manualSite(): Plugin {
+export function manualSite(appUrl = ''): Plugin {
   return {
     name: 'manual-site',
     apply: 'build',
     configResolved(c) { root = c.root; },
+    transformIndexHtml: (html: string) => html.replace('<title>', previewTags(readHello('en'), appUrl) + '\n    <title>'),
     generateBundle() {
+      for (const l of LANGS) this.emitFile({ type: 'asset', fileName: helloPath(l), source: renderHello(l, readHello(l), appUrl) });
+      for (const th of ['light', 'dark']) this.emitFile({ type: 'asset', fileName: `hello/mark-${th}.webp`, source: readFileSync(join(root, 'src/assets/dove', `mark-${th}.webp`)) });
       const fonts = join(root, 'node_modules/@fontsource/atkinson-hyperlegible-next/files');
       for (const [w] of FONTS) this.emitFile({ type: 'asset', fileName: `manual/fonts/${fontFile(w)}`, source: readFileSync(join(fonts, fontFile(w))) });
       for (const l of LANGS) {

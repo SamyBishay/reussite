@@ -63,9 +63,10 @@ In `.env.production` at the root:
 ```
 VITE_RELAY_URL=https://<your relay's address>
 VITE_VAPID_PUBLIC_KEY=<the public key from step 4>
+VITE_APP_URL=https://<your app's address>
 ```
 
-Neither is a secret. Rebuild with `npm run build`.
+None is a secret. `VITE_APP_URL` is only for the link preview: a chat app that shows a preview of your address needs the full address of the picture (`/hello/og.png`). Leave it out and the preview has words and no picture. Rebuild with `npm run build`.
 
 ## 6. Your own app Worker
 

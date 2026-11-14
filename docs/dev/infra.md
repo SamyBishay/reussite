@@ -40,3 +40,4 @@ Not secrets. Names only here; values in the file.
 - Non-production branch deploy command: `npx wrangler versions upload`
 - Root directory: `/`
 - The app finds the relay through `VITE_RELAY_URL`, set in `.env.production`.
+- `VITE_APP_URL` in `.env.production` is the app's own address, used only in the link-preview tags of `index.html` and `/hello/` (`docs/dev/hello.md`).

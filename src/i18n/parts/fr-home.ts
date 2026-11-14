@@ -737,7 +737,7 @@ export const frHome: Partial<Strings> = {
   obMoveLabel: 'Premier geste',
   obMoveSuit: 'Sa couleur',
   obMoveGo: 'La distribuer',
-  firstCoach: 'Voici votre première carte. Faites son premier geste, puis lancez le minuteur.',
+  firstCoach: 'Voici votre première carte. Faites son premier geste, puis lancez le chrono.',
   firstPlayedTitle: 'Première carte jouée',
   firstPlayedBody: 'Elle est sur sa pile. Demain, vous vous distribuez une petite main et vous la jouez carte après carte.',
   firstRemindQ: 'Un rappel demain matin pour distribuer votre main ?',

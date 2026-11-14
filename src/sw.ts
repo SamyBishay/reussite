@@ -80,5 +80,5 @@ registerRoute(
 
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
-// /manual/… are the public manual's own pages (src/manual/site.ts), not the app: they go to the network.
-registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/manual(\/|$)/] }));
+// /manual/… and /hello/… are the public manual's and the hello page's own pages (src/manual/site.ts), not the app: they go to the network.
+registerRoute(new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/manual(\/|$)/, /^\/hello(\/|$)/] }));

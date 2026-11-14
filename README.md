@@ -2,13 +2,15 @@
 
 Réussite is a planner for adults with ADHD. It is built on a cognitive behavioural therapy (CBT) method. It helps with the hard part: starting.
 
-Each day you get a short list, each step has a small first action, and you see your progress as you go. It works offline, on your phone or your computer. It can also work with an AI you already use, if you want that.
+Everything you have to do is a card. Each day you deal yourself a short hand, each card names its small first move, and each card you play lands on one of four piles, so you see your progress as you go. (Réussite is the French name of the card game patience.) It works offline, on your phone or your computer. It can also work with an AI you already use, if you want that.
 
 Réussite helps you apply a method. It doesn't replace therapy or care from a professional.
 
 ## For friends: start here
 
-Read the manual first, no install needed: **https://reussite.rudolphem.workers.dev/manual/getting-started** (in French: [/manual/fr/getting-started](https://reussite.rudolphem.workers.dev/manual/fr/getting-started)). The [contents](https://reussite.rudolphem.workers.dev/manual/) lists every page.
+**https://reussite.rudolphem.workers.dev/hello/** says what Réussite is, with pictures (in French: [/hello/fr/](https://reussite.rudolphem.workers.dev/hello/fr/)). Then open the app: it asks for the one thing you have been putting off, and you play your first card in about two minutes. Nothing to install first, and no account.
+
+The [manual](https://reussite.rudolphem.workers.dev/manual/) has one short page per topic, for later.
 
 ## Open it
 

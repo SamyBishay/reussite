@@ -104,6 +104,12 @@ test('the first run in French has no English left, by myself and with an AI', as
     await scan('categories');
     await noSideways(page, 'categories in French');
     await page.getByTestId('ob-next').click();
+    await scan('first card');
+    await page.getByTestId('ob-first-input').fill('appeler la banque');
+    await page.getByTestId('ob-next').click();
+    await scan('first move');
+    await page.getByTestId('ob-back').click();
+    await page.getByTestId('ob-first-skip').click();
     await expect(page.getByTestId('home')).toBeVisible();
     await scan('home');
     if (how === 'ai') {

@@ -30,7 +30,7 @@ export const enSteps = {
   // phase 1: the task sheet
   labelField: 'Short name',
   labelHint: 'What calendars show for this step. Leave it empty to use the one made from the title.',
-  starterField: 'Starter: the smallest first action',
+  starterField: 'First move: the smallest first action',
   starterPh: 'Open the app on the right screen…',
   moreLabel: 'More',
   moreSet: { one: '{n} set', other: '{n} set' } as P,
@@ -164,7 +164,7 @@ export const enSteps = {
   projectComplete: 'Project complete',
   decisionMade: 'Decision made',
   imStuck: 'I’m stuck',
-  starterIs: 'Starter: {s}',
+  starterIs: 'First move: {s}',
   // phase 1: today and days
   ifRoom: 'If there’s room',
   takeOff: 'Take it off this day',

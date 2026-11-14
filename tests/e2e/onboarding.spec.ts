@@ -1,7 +1,8 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type Route, type TestInfo } from '@playwright/test';
 import { importSample, noSideways, goTab, goNotifications, expandSettings, setLanguage } from './helpers';
 
-// First-run setup (S9 and its follow-ups): two screens, the language and the four kinds of time in the person's days (prefilled, editable), then Home.
+// First-run setup (S9 and its follow-ups; 14 Nov): the welcome (what Réussite is, in the solitaire's words, with the language as a small switch), the four suits
+// (prefilled, editable), then the first card (tests/e2e/firstcard.spec.ts), which "Not now" passes on the way Home.
 // An AI (a key and a conversation, the AI chat app through the connector, any chatbot by copy and paste) is "Later": the same screens open from Settings in a sheet.
 // A new device is one that has no data and no record of having finished. Every other test runs as a device that has (playwright.config.ts puts the record in
 // localStorage); these ask for a new one.
@@ -10,7 +11,9 @@ const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
 const NEXT = (page: Page) => page.getByTestId('ob-next');
 const next = (page: Page) => NEXT(page).click();
-/** No cards, suits or Matrix vocabulary during set-up: the pillars are "what matters in your days". */
+/** The first card's screen, passed without making one. */
+const notNow = async (page: Page) => { await expect(page.getByTestId('ob-first')).toBeVisible(); await page.getByTestId('ob-first-skip').click(); };
+/** The AI screens opened from Settings still speak of pillars, with no cards, suits or Matrix vocabulary (the welcome and the suits say the solitaire up front: 14 Nov). */
 const noJargon = async (page: Page, where: string) => {
   const text = await page.locator('.ob').innerText();
   expect(text, where).not.toMatch(/\b(cards?|suits?|matrix|quadrants?)\b/i);
@@ -54,6 +57,7 @@ async function byMyself(page: Page) {
   await next(page);
   await expect(page.getByTestId('ob-pillars')).toBeVisible();
   await next(page);
+  await notNow(page);
   await expect(page.getByTestId('home')).toBeVisible();
 }
 
@@ -66,17 +70,18 @@ async function settingsAi(page: Page) {
 test.describe('on a new device', () => {
   test.use({ storageState: NEW_DEVICE });
 
-  test('the first screen is the language, Continue, Restore with a recovery key and Skip; nothing about AI, places or cards', async ({ page }) => {
+  test('the first screen says what Réussite is, with one button, the language, Restore with a recovery key and Skip; nothing about AI or places', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('ob-language')).toBeVisible();
     await expect(page.getByTestId('ob-not-therapy')).toContainText('doesn’t replace therapy');
     await expect(page.getByTestId('ob-pair-link')).toContainText('Restore with a recovery key');
     await expect(page.getByTestId('ob-skip')).toBeVisible();
     await expect(page.getByTestId('ob-next')).toBeVisible();
-    await expect(page.getByTestId('ob-later')).toContainText('come later');
+    await expect(page.getByTestId('ob-later')).toHaveCount(0);
+    await expect(page.getByTestId('ob-pitch')).toContainText('Everything you have to do is a card');
+    await expect(page.getByTestId('ob-language')).not.toContainText(/\b(AI|sync|reminders|places)\b/i);
     for (const gone of ['ob-way-key', 'ob-way-connector', 'ob-way-none', 'ob-copypaste-link']) await expect(page.getByTestId(gone)).toHaveCount(0);
     await expect(page.locator('.tabbar')).toHaveCount(0);
-    await noJargon(page, 'first screen');
     // The language switches the UI at once.
     await page.getByTestId('ob-lang-fr').click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
@@ -85,23 +90,22 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-pair-link')).toContainText('Restore with a recovery key');
   });
 
-  test('two screens: the four kinds of time are prefilled and editable, Start goes Home, and every answer is an ordinary setting afterwards', async ({ page }) => {
+  test('the four suits are prefilled and editable, the first card can be passed, and every answer is an ordinary setting afterwards', async ({ page }) => {
     await page.goto('/');
     await next(page);
     await expect(page.getByTestId('ob-pillars')).toBeVisible();
-    await expect(page.getByTestId('ob-pillars')).toContainText('Four kinds of time in your days');
+    await expect(page.getByTestId('ob-pillars')).toContainText('The four suits');
     for (const [k, name, desc] of [['S', 'Work', 'Job or studies, bureaucracy, administrative paperwork'], ['D', 'Leisure', 'Fun, relaxation, consumption, hobbies, outings'], ['C', 'Personal projects', 'Side projects, chores, research'], ['H', 'Interpersonal obligations', 'Functions and services for family and friends']] as const) {
       await expect(page.getByTestId('ob-pillar-' + k)).toHaveValue(name);
       await expect(page.getByTestId('ob-pillar-desc-' + k)).toHaveValue(desc);
     }
-    await noJargon(page, 'categories');
     await page.getByTestId('ob-pillar-S').fill('Study');
     await page.getByTestId('ob-pillar-desc-C').fill('The shop, the garden');
-    // Nothing is written until Start.
+    // Nothing is written until the end.
     expect(await placeCount(page)).toBe(0);
-    await expect(page.getByTestId('ob-next')).toContainText('Start');
     await next(page);
-    await expect(page.getByTestId('home')).toBeVisible(); // no third screen
+    await notNow(page);
+    await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.getByTestId('ob-language')).toHaveCount(0);
     // Home is bare; what is left for later waits behind the bell.
     await expect(page.getByTestId('next-steps')).toHaveCount(0);
@@ -134,6 +138,7 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-pillar-S')).toHaveValue('Travail');
     await expect(page.getByTestId('ob-pillar-desc-H')).toHaveValue(/famille et les amis/);
     await next(page);
+    await notNow(page);
     await expect(page.getByTestId('home')).toBeVisible();
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=D]')).toHaveAttribute('aria-label', /Loisirs/);
@@ -152,7 +157,7 @@ test.describe('on a new device', () => {
     await expect(page.getByTestId('ob-pillar-D')).toHaveValue('Admin');
   });
 
-  test('"Skip, use defaults" goes straight Home, with the same four kinds of time and no place', async ({ page }) => {
+  test('"Skip, use defaults" goes straight Home, with the same four suits and no place', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('ob-skip').click();
     await expect(page.getByTestId('home')).toBeVisible();
@@ -208,7 +213,7 @@ test.describe('on a new device', () => {
   });
 
   for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
-    test(`both screens and the pairing screen fit at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
+    test(`the welcome, the suits, the first card and the pairing screen fit at ${width}px, with 44px targets${french ? ', in French' : ''}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 700 });
       await page.goto('/');
       if (french) {
@@ -218,6 +223,13 @@ test.describe('on a new device', () => {
       await checkFits(page, 'ob-language');
       await next(page);
       await checkFits(page, 'ob-pillars');
+      await next(page);
+      await checkFits(page, 'ob-first');
+      await page.getByTestId('ob-first-input').fill(french ? 'prendre rendez-vous chez le dentiste vendredi' : 'book the dentist on Friday');
+      await next(page);
+      await checkFits(page, 'ob-move');
+      await page.getByTestId('ob-back').click();
+      await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-back').click();
       await page.getByTestId('ob-pair-link').click();
       await checkFits(page, 'ob-pair');

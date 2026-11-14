@@ -20,11 +20,12 @@ const liveTitles = (page: Page) => page.evaluate(() => new Promise<string[]>((re
 }));
 const nudge = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
 
-/** Set-up in two taps, then one line on Home. */
+/** Set-up in three taps (the welcome, the suits, "Not now" on the first card), then one line on Home. */
 async function setUpWithACard(page: Page, line: string) {
   await page.goto('/');
   await page.getByTestId('ob-next').click();
   await page.getByTestId('ob-next').click();
+  await page.getByTestId('ob-first-skip').click();
   await expect(page.getByTestId('home')).toBeVisible();
   await page.getByTestId('home-input').fill(line);
   await page.getByTestId('home-input').press('Enter');

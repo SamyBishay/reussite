@@ -76,3 +76,21 @@ body > .row,body > li{list-style:none}
 .chain-list li{color:var(--ink-3);overflow-wrap:anywhere}
 .chain-list .linklike{color:var(--ink-3);text-align:left}
 .proj li.waiting .stept{color:var(--ink-3)}
+
+/* The welcome and the first card (14 Nov): the pitch, one button, the language as a small switch; then a card, its first move and its suit. */
+.ob-lang{display:flex;width:max-content;max-width:100%;margin-left:auto}
+.seg.ob-lang button{min-height:44px;min-width:44px;padding:8px 14px}
+.ob-welcome .ob-mark{display:block;margin:var(--s2) 0 var(--s4)}
+.ob-pitch p{margin:0 0 var(--s3);font-size:17px;line-height:1.5;color:var(--ink)}
+.ob-links{display:grid;margin-top:var(--s4)}
+.ob-links .linklike{display:flex;align-items:center;justify-self:start;min-height:44px;min-width:44px;padding:8px 0;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-align:left}
+.obpillar{display:grid;grid-template-columns:28px minmax(0,1fr);gap:var(--s2);align-items:center}
+.obpillar .obglyph{font-size:22px;line-height:1;text-align:center}
+.obpillar .obglyph.suit-S{color:var(--suit-S)}.obpillar .obglyph.suit-D{color:var(--suit-D)}.obpillar .obglyph.suit-C{color:var(--suit-C)}.obpillar .obglyph.suit-H{color:var(--suit-H)}
+.obpillar input+input{grid-column:2}
+.ob-card{margin:var(--s3) 0 var(--s4);padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:14px;font:600 18px/1.35 var(--sans);overflow-wrap:anywhere}
+.obsuits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+.obsuits .btn{min-height:44px;display:flex;align-items:center;justify-content:flex-start;gap:var(--s2);min-width:0;text-align:left;overflow-wrap:anywhere;white-space:normal}
+.coach{margin:0;padding:10px 14px;border-radius:12px;background:var(--accent-soft);font-size:15px;line-height:1.4}
+.firstplayed p{margin:0}
+.ob .help-ex{gap:var(--s2)}.ob .help-ex .chip{min-height:44px;padding:8px 14px}

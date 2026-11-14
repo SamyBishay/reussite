@@ -1,4 +1,4 @@
-// First-run setup layout (request of 10 Nov; the pages are the language and the four kinds of time, and the pairing page; the AI screens are a sheet in Settings): every setup page starts right under the top padding (and the status-bar inset), scrolls when it is
+// First-run setup layout (request of 10 Nov; the pages are the welcome, the four suits, the first card and its first move, and the pairing page; the AI screens are a sheet in Settings): every setup page starts right under the top padding (and the status-bar inset), scrolls when it is
 // taller than the screen (by wheel and touch-scroll, as a person does, not by script), and its last button can be brought into view.
 import { test, expect, type Page } from '@playwright/test';
 import { noSideways, PHONES, LANGS } from './helpers';
@@ -86,14 +86,25 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await page.getByTestId('ob-back').click();
     await expect(page.getByTestId('ob-language')).toBeVisible();
 
-    // The four kinds of time. After scrolling to the bottom of one page, the next starts at the top.
+    // The four suits. After scrolling to the bottom of one page, the next starts at the top.
     await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
     await page.getByTestId('ob-next').click();
     await expect(page.getByTestId('ob-pillars')).toBeVisible();
-    await checkPage(page, 'categories page');
+    await checkPage(page, 'suits page');
     await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
     await page.getByTestId('ob-next').click();
-    // Start goes Home: no third page, and Home locks the page again as it always did.
+    // The first card, then its first move.
+    await expect(page.getByTestId('ob-first')).toBeVisible();
+    await checkPage(page, 'first card page');
+    await page.getByTestId('ob-first-input').fill(lang === 'fr' ? 'prendre rendez-vous chez le dentiste vendredi' : 'book the dentist on Friday');
+    await page.getByTestId('ob-next').scrollIntoViewIfNeeded();
+    await page.getByTestId('ob-next').click();
+    await expect(page.getByTestId('ob-move')).toBeVisible();
+    await checkPage(page, 'first move page');
+    await page.getByTestId('ob-back').click();
+    // "Not now" goes Home, which locks the page again as it always did.
+    await page.getByTestId('ob-first-skip').scrollIntoViewIfNeeded();
+    await page.getByTestId('ob-first-skip').click();
     await expect(page.getByTestId('home')).toBeVisible();
   });
 }

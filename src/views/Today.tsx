@@ -29,6 +29,7 @@ import { useSortable, GRIP } from '../app/sortable';
 import { CommandBox } from '../ai/ui';
 import { SyncCards } from '../app/SyncSettings';
 import { HomeCardNow } from '../app/HomeCards';
+import { FirstCoach, FirstPlayed } from '../app/FirstCardUi';
 
 export { openClose };
 
@@ -287,6 +288,7 @@ export function Today() {
       <Navigator k={k} />
       <StayNotice />
       <HomeCardNow />
+      <FirstCoach first={fid} />
       {fid && fo ? (fo.kind === 'fixed' && !T(fid)!.started ? <FixedFirst tk={T(fid)!} time={wallOf(fo.at!, zone)} leave={wallOf(fo.start, zone)} /> : <FirstCard tk={T(fid)!} />) : af && every.length && !plan.length ? (
         <section class="first" data-testid="area-nothing"><p class="t">{t('areaNothing', { area: areaName(af) })}</p></section>
       ) : s ? <SuggestCard tk={s} played={live.length > 0} /> : !live.length ? (
@@ -299,6 +301,7 @@ export function Today() {
       ) : (
         <section class="first"><Rings /><p class="eyebrow">{t('listPlayed')}</p><p class="t">{t('allDone')}</p><p class="hint">{t('addOneOrClose')}</p></section>
       )}
+      <FirstPlayed />
       <SyncCards />
       {checks.map(dc => (
         <div class="banner" data-testid="decision-check"><p>{t('checkDecision', { title: dc.title })}</p><button class="btn small" type="button" onClick={() => openDecisionPage(dc.id, true)}>{t('checkNow')}</button></div>

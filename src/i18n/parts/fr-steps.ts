@@ -28,7 +28,7 @@ export const frSteps: Partial<Strings> = {
   basisAll: 'Toutes vos étapes',
   learningPace: 'J’apprends votre rythme : {n} sur {of} chronométrées.',
   // phase 1: the task sheet
-  starterField: 'Démarreur : la plus petite première action',
+  starterField: 'Premier geste : la plus petite première action',
   starterPh: 'Ouvrir l’appli au bon écran…',
   moreLabel: 'Plus',
   moreSet: { one: '{n} renseigné', other: '{n} renseignés' },
@@ -151,7 +151,7 @@ export const frSteps: Partial<Strings> = {
   projectComplete: 'Projet terminé',
   decisionMade: 'Décision prise',
   imStuck: 'Je bloque',
-  starterIs: 'Démarreur : {s}',
+  starterIs: 'Premier geste : {s}',
   // phase 1: today and days
   ifRoom: 'S’il reste de la place',
   takeOff: 'L’enlever de ce jour',

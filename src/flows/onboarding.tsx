@@ -7,9 +7,13 @@
 // already there. What the AI path applies is what the person ticked on the review screen.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { z } from 'zod';
-import { settings, saveSettings, createDoc, places, toast } from '../app/store';
+import { settings, saveSettings, createDoc, places, toast, today, hereZone } from '../app/store';
 import { applyTheme } from '../app/theme';
 import { go } from '../app/nav';
+import { createTask, newTaskDoc, addToday } from '../app/actions';
+import { setFirstCard } from '../app/firstCard';
+import { suggestFirstMove } from '../domain/firstMove';
+import { parseHome } from '../domain/parse';
 import { closeSheet } from '../app/sheet';
 import { syncOn, connector, relayBase, setupSync, connectorOn, connectorNewCode, refreshConnector, confirmKeySaved } from '../app/sync';
 import { Privacy, PairingCode, failure, type Code } from '../app/ConnectorSettings';
@@ -25,12 +29,12 @@ import { setupPack, setupPrompt, SetupReply, readSetup, onlySetup, type Turn } f
 import { shortName, type Plan } from '../ai/apply';
 import { lang, t, type Key } from '../i18n';
 import { SUIT_ORDER, NEW_USER_SUITS, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
-import type { Place, SuitId } from '../data/schema';
+import type { Place, SuitId, Task } from '../data/schema';
 import type { ChangeSet } from '../ai/changeset';
 import { deviceZone } from '../domain/zones';
 import type { ComponentChildren } from 'preact';
 
-type Id = 'language' | 'pillars' | 'ways' | 'link' | 'key' | 'chat' | 'paste' | 'pair';
+type Id = 'language' | 'pillars' | 'first' | 'move' | 'ways' | 'link' | 'key' | 'chat' | 'paste' | 'pair';
 /** The three choices of the first screen, and the link under them: `other` is any chatbot, by copy and paste. */
 type Path = 'hand' | 'key' | 'connector' | 'other';
 /** Where the guided AI set-up opens from Settings: the choice of ways, or one way at once. */
@@ -42,7 +46,7 @@ type Provider = Exclude<AiProvider, 'none'>;
 
 /** The screens of each path, for "Set-up · n of N". */
 const screens = (path: Path): Id[] =>
-  path === 'hand' ? ['language', 'pillars']
+  path === 'hand' ? ['language', 'pillars', 'first', 'move']
     : path === 'key' ? ['key', 'chat']
       : path === 'other' ? ['paste']
         : ['link'];
@@ -110,6 +114,10 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   const [path, setPath] = useState<Path>(entry && entry !== 'ways' ? entry : 'hand');
   const [provider, setProvider] = useState<Provider>('openai');
   const [hasKey, setHasKey] = useState(false);
+  // The first card: what the person has been putting off, its first move (suggested from the verb until they type one) and its suit.
+  const [what, setWhat] = useState('');
+  const [move, setMove] = useState<string | null>(null);
+  const [suit, setSuit] = useState<SuitId>('S');
   const s = settings.value;
   const merged: Settings = { ...s, ...draft.s, language: lang.value };
 
@@ -141,13 +149,34 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   };
 
   /** Write what was drafted (unless the space on another device is the source of truth), record that set-up is over, and go Home. */
-  const finish = async (how: 'done' | 'skipped' | 'paired' = 'done') => {
+  const finish = async (how: 'done' | 'skipped' | 'paired' = 'done', card?: { title: string; starter: string; suit: SuitId; fields: Partial<Task> }) => {
     setBusy(true);
     if (how !== 'paired') await applyDraft(draft, lang.value, { want: false, provider, has: false });
     await finishedOnboarding(how === 'skipped' ? 'skipped' : 'done');
     draftProvider.value = null;
+    // The first card is dealt into today's hand, and Today shows it under Start here.
+    if (card) {
+      const id = await createTask(newTaskDoc(card.title, card.suit, 'inbox', { ...card.fields, ...(card.starter ? { starter: card.starter } : {}), src: 'setup' }));
+      await addToday(id, true);
+      setFirstCard(id);
+      go('today');
+      return;
+    }
     go('home');
   };
+
+  /** What the line says, read by Home's parser (a day, a time, a length); anything it cannot read is the title as typed. */
+  const readFirst = (): { title: string; fields: Partial<Task> } => {
+    const text = what.trim();
+    const p = parseHome(text, { today: today.value, now: Date.now(), dayStart: merged.dayStart, zone: hereZone.value, places: [], tasks: [] });
+    const c = p.kind === 'changes' && p.intent === 'add' ? p.cs.changes[0] : null;
+    if (!c || c.op !== 'task.create') return { title: text, fields: {} };
+    const { title, ...fields } = c.set as { title: string } & Partial<Task>;
+    return { title, fields };
+  };
+  const firstTitle = id === 'move' ? readFirst().title : '';
+  const suggested = id === 'move' ? suggestFirstMove(firstTitle) : null;
+  const moveNow = move ?? (suggested ? t(suggested) : '');
 
   const pairedNow = () => void finish('paired');
 
@@ -162,18 +191,29 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   const notTherapy = <p class="hint ob-notherapy" data-testid="ob-not-therapy">{t('notTherapy')}</p>;
 
   if (id === 'language') return (
-    <Frame {...frame} n={undefined} of={undefined} mark title={t('obWelcome')} hint={t('obLanguageHint')} next={() => goTo('pillars')} skip={() => void finish('skipped')}
-      extra={<>
-        <button class="btn wide ob-pair-link" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obRestore')}</button>
-        <p class="hint" data-testid="ob-later">{t('obLater')}</p>
-        {notTherapy}
-      </>}>
-      <div class="bigchoices" role="group" aria-label={t('language')}>
+    <div class="flow ob ob-welcome" data-testid="ob-language">
+      <div class="seg small ob-lang" role="group" aria-label={t('language')}>
         {([['en', 'English'], ['fr', 'Français']] as const).map(([l, name]) => (
-          <button type="button" class="btn" lang={l} aria-pressed={lang.value === l} data-testid={'ob-lang-' + l} onClick={() => { lang.value = l; set({ language: l }); }}><b>{name}</b></button>
+          <button type="button" lang={l} aria-pressed={lang.value === l} data-testid={'ob-lang-' + l} onClick={() => { lang.value = l; set({ language: l }); }}>{name}</button>
         ))}
       </div>
-    </Frame>
+      <Mark size={96} class="ob-mark" />
+      <h3>{t('obWelcome')}</h3>
+      <div class="ob-pitch" data-testid="ob-pitch">
+        <p>{t('obPitch1')}</p>
+        <p>{t('obPitch2')}</p>
+        <p>{t('obPitch3')}</p>
+      </div>
+      <div class="actions ob-actions">
+        <button class="btn primary" type="button" onClick={() => goTo('pillars')} data-testid="ob-next">{t('obPlayFirst')}</button>
+      </div>
+      <div class="ob-links">
+        <a class="linklike" href={lang.value === 'fr' ? '/hello/fr/' : '/hello/'} target="_blank" rel="noopener" data-testid="ob-more">{t('obMore')}</a>
+        <button class="linklike" type="button" onClick={() => goTo('pair')} data-testid="ob-pair-link">{t('obRestore')}</button>
+        <button class="linklike" type="button" onClick={() => void finish('skipped')} data-testid="ob-skip">{t('obSkip')}</button>
+      </div>
+      {notTherapy}
+    </div>
   );
 
   if (id === 'pillars') {
@@ -185,13 +225,49 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
       set({ suits: { ...suits, [k]: { ...cur, name: { ...cur.name, [l]: name }, short: { ...cur.short, [l]: name === cur.name[l] ? cur.short[l] : shortName(name) } } } });
     };
     return (
-      <Frame {...frame} title={t('obCatsQ')} hint={t('obCatsHint')} next={() => void finish()} nextLabel="obStart" nextDisabled={busy} skip={() => void finish('skipped')}>
+      <Frame {...frame} title={t('obSuitsQ')} hint={t('obSuitsHint')} next={() => goTo('first')} skip={() => void finish('skipped')}>
         {SUIT_ORDER.map(k => (
           <div class="field obpillar" key={k + lang.value}>
+            <span class={'obglyph suit-' + k} aria-hidden="true">{suits[k].glyph}</span>
             <input type="text" defaultValue={suits[k].name[lang.value]} aria-label={t('suitName')} autocomplete="off" data-testid={'ob-pillar-' + k} onChange={e => save(k, 'name', (e.target as HTMLInputElement).value)} />
             <input type="text" defaultValue={suits[k].desc?.[lang.value] ?? ''} aria-label={t('suitDesc')} autocomplete="off" data-testid={'ob-pillar-desc-' + k} onChange={e => save(k, 'desc', (e.target as HTMLInputElement).value)} />
           </div>
         ))}
+      </Frame>
+    );
+  }
+
+  if (id === 'first') {
+    const ex = [t('obFirstEx1'), t('obFirstEx2'), t('obFirstEx3'), t('obFirstEx4')];
+    const on = () => { if (what.trim()) { setMove(null); goTo('move'); } };
+    return (
+      <Frame {...frame} title={t('obFirstQ')} hint={t('obFirstHint')} next={on} nextLabel="obFirstNext" nextDisabled={!what.trim() || busy}
+        extra={<button class="linklike ob-skip" type="button" onClick={() => void finish()} disabled={busy} data-testid="ob-first-skip">{t('obFirstNot')}</button>}>
+        <label class="field">
+          <input type="text" value={what} aria-label={t('obFirstLabel')} placeholder={ex[0]} autocomplete="off" autocapitalize="sentences" enterkeyhint="next" data-testid="ob-first-input"
+            onInput={e => setWhat((e.target as HTMLInputElement).value)} onKeyDown={e => { if (e.key === 'Enter' && !e.isComposing) on(); }} />
+        </label>
+        <p class="hint">{t('obFirstTry')}</p>
+        <p class="help-ex">{ex.map(x => <button type="button" class="chip" key={x} onClick={() => setWhat(x)} data-testid="ob-first-ex">{x}</button>)}</p>
+      </Frame>
+    );
+  }
+
+  if (id === 'move') {
+    const deal = () => { const r = readFirst(); void finish('done', { title: r.title, starter: moveNow.trim(), suit, fields: r.fields }); };
+    return (
+      <Frame {...frame} title={t('obMoveQ')} hint={t('obMoveHint')} next={deal} nextLabel="obMoveGo" nextDisabled={busy}>
+        <p class="ob-card" data-testid="ob-first-title"><span class={'suit-' + suit} aria-hidden="true">{merged.suits[suit].glyph}</span> {firstTitle}</p>
+        <label class="field"><span>{t('obMoveLabel')}</span>
+          <input type="text" value={moveNow} placeholder={t('starterPh')} autocomplete="off" autocapitalize="sentences" data-testid="ob-move-input" onInput={e => setMove((e.target as HTMLInputElement).value)} />
+        </label>
+        <div class="field"><span>{t('obMoveSuit')}</span>
+          <div class="bigchoices obsuits" role="group" aria-label={t('obMoveSuit')}>
+            {SUIT_ORDER.map(k => (
+              <button type="button" class="btn" aria-pressed={suit === k} onClick={() => setSuit(k)} data-testid={'ob-suit-' + k}><span class={'suit-' + k} aria-hidden="true">{merged.suits[k].glyph}</span> {merged.suits[k].name[lang.value]}</button>
+            ))}
+          </div>
+        </div>
       </Frame>
     );
   }

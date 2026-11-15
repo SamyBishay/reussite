@@ -2,7 +2,7 @@
 // again in Settings → Sync; and "Restore with a recovery key" (the first screen of set-up and Settings → Sync) brings the list back on a fresh browser profile.
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { expandSettings, goTab, noSideways, setLanguage } from './helpers';
+import { everythingOn, expandSettings, goTab, noSideways, setLanguage } from './helpers';
 
 const NEW_DEVICE = { cookies: [], origins: [] };
 
@@ -37,6 +37,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
     test.slow();
     const a = await freshDevice(browser, info, width, height);
     await setUpWithACard(a.page, 'call the bank tomorrow');
+    await everythingOn(a.page); // a new install starts with two tabs; this spec opens Projects on the restored device
 
     // Switch sync on: the key is shown when it is made.
     await goTab(a.page, 'settings');

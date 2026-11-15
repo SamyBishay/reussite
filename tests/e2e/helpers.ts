@@ -259,6 +259,19 @@ export async function openTripSheet(page: Page) {
   await expect(page.getByTestId('sheet').getByTestId('trip-sheet')).toBeVisible();
 }
 
+/**
+ * A device that went through set-up starts small (the simple start, docs/dev/onboarding.md): Home and Today, no places, trips or addresses. A spec that is
+ * not about that turns everything on as a person would, in Settings (Show every tab and the two switches); it is synced, so a paired device has it too.
+ */
+export async function everythingOn(page: Page) {
+  await goTab(page, 'settings');
+  const every = page.getByTestId('tabs-every');
+  if (await every.count()) await every.click(); // the fold goes once every tab shows
+  await expect(page.getByTestId('tab-matrix')).toBeVisible();
+  for (const sw of ['places-switch', 'addresses-switch']) if (!(await page.getByTestId(sw).isChecked())) await page.getByTestId(sw).check();
+  await page.getByTestId('tab-home').click();
+}
+
 /** Switch the app's language from Settings (the choice is kept, so later pages are in it). */
 export async function setLanguage(page: Page, lang: 'en' | 'fr') {
   await goTab(page, 'settings');

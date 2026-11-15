@@ -1,6 +1,11 @@
 # What's new
 
 ## Next — less clutter
+- A new start is small. A new Réussite opens with two tabs, **Home** and **Today**, and your deck folded under today's hand. **Calendar** arrives with your first card at a fixed time, **Projects** with your first project or your eighth card, and **the Matrix** at twelve open cards or after your first weekly review; each arrival is one line behind the bell. Settings → **Tabs** → **Show every tab** brings them all now. If you already use Réussite, nothing changes.
+- On a new Réussite, **Places and trips** and **Addresses and people** start off; switch them on in Settings → Method → More. They come on by themselves when you already have places or addresses (from another device or a backup).
+- On a new Réussite, **Deal the day** is one screen: three cards and one for leisure or people, **Keep** or **Swap** each, then **Deal**. **The full morning ritual** is one tap away.
+- The weekly review starts once your deck is a week old and holds ten cards.
+- A new device no longer says "A new version is ready" in its first minutes.
 - Fewer buttons on a card. **Start here** shows **Start** (or **Continue**) and **Played**, then **Note**, **Move** and **Drop**; tap the card for the rest (Swap, I started earlier, I'm stuck, everything about it). **I'm stuck** stays on the card when you paused it or it came over from yesterday. Played asks how long it took, as Already played did.
 - **Move** (and ⇄ on the Matrix) has the four boxes, the next days and Take off today in one sheet: moving a card to tomorrow is two taps, without leaving the screen. Every card in a Matrix box now has ⇄; tapping the card still opens it.
 - A card's form starts with what you need most: the title, the first move, the note, the due date, the estimate and the suit. The place shows only once you have places.

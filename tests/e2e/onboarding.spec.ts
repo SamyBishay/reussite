@@ -1,5 +1,5 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type Route, type TestInfo } from '@playwright/test';
-import { importSample, noSideways, goTab, goNotifications, expandSettings, setLanguage } from './helpers';
+import { everythingOn, importSample, noSideways, goTab, goNotifications, expandSettings, setLanguage } from './helpers';
 
 // First-run setup (S9 and its follow-ups; 14 Nov): the welcome (what Réussite is, in the solitaire's words, with the language as a small switch), the four suits
 // (prefilled, editable), then the first card (tests/e2e/firstcard.spec.ts), which "Not now" passes on the way Home.
@@ -162,15 +162,18 @@ test.describe('on a new device', () => {
     await page.goto('/');
     await page.getByTestId('ob-skip').click();
     await expect(page.getByTestId('home')).toBeVisible();
-    await expect(page.locator('.tabbar .tab')).toHaveCount(5);
+    // A new install starts with Home and Today (the simple start, 15 Nov: tests/e2e/simplestart.spec.ts); it was every tab.
+    await expect(page.locator('.tabbar .tab')).toHaveCount(2);
     await page.reload();
     await expect(page.getByTestId('home')).toBeVisible();
     await expect(page.getByTestId('ob-language')).toHaveCount(0);
     await goTab(page, 'today');
     await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /Personal projects/);
     await goTab(page, 'settings');
-    await expect(page.getByTestId('places').locator('input')).toHaveCount(1); // only the "add a place" field: no place was made
-    await expect(page.getByTestId('addresses-switch')).toBeChecked();
+    // No place was made, and Places and trips and Addresses and people start off (15 Nov); switched on, the place list is empty but for its "add a place" field.
+    await expect(page.getByTestId('addresses-switch')).not.toBeChecked();
+    await page.getByTestId('places-switch').check();
+    await expect(page.getByTestId('places').locator('input[type=text]')).toHaveCount(1);
     await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -186,6 +189,7 @@ test.describe('on a new device', () => {
 
   test('the Next steps are on the bell page: each line opens its Settings section, a line that is done goes, and the list can be hidden for good', async ({ page }) => {
     await byMyself(page);
+    await everythingOn(page); // Addresses & people starts off on a new install (15 Nov), and its line shows only while it is on
     await page.getByTestId('home-bell').click();
     await expect(page.getByTestId('next-steps')).toBeVisible();
     await noSideways(page, 'next steps');

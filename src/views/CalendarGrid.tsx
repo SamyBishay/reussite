@@ -91,6 +91,7 @@ export function CalendarGrid({ mode, date }: GridProps) {
       '+ {{n}} events': t('calMore', { n: '{{n}}' }), '+ 1 event': t('calMoreOne'), 'No events': t('calNoEvents'),
       'Full day- and multiple day events': t('calAllDay'), 'Link to {{n}} more events on {{date}}': t('calMoreLink', { n: '{{n}}', date: '{{date}}' }),
       'Link to 1 more event on {{date}}': t('calMoreLinkOne', { date: '{{date}}' }), Today: t('pickToday'), Day: t('calDay'), Week: t('calWeek'), Month: t('calMonth'), List: t('calAgenda'),
+      to: t('calTo'),
     };
     const colors = (v: string) => ({ main: `var(--suit-${v})`, container: 'var(--card)', onContainer: 'var(--ink)' });
     const neutral = { main: 'var(--ink-3)', container: 'var(--card)', onContainer: 'var(--ink)' };
@@ -99,7 +100,8 @@ export function CalendarGrid({ mode, date }: GridProps) {
       defaultView: 'week',
       selectedDate: plain(latest.current.date),
       locale, firstDayOfWeek: 1, timezone: zone as never, isDark: false, isResponsive: false,
-      translations: { [locale]: text },
+      // The library looks a language up by its locale without the hyphen (frFR, enGB); under 'fr-FR' none of these was ever found, and its English keys showed.
+      translations: { [locale.replace('-', '')]: text },
       weekOptions: { gridHeight: 1152, nDays: 7, eventWidth: 96, gridStep: 60 },
       monthGridOptions: { nEventsPerDay: 4 },
       calendars: {

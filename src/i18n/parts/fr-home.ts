@@ -405,6 +405,7 @@ export const frHome: Partial<Strings> = {
   calMoreOne: '+ 1 de plus',
   calNoEvents: 'Rien ce jour-là',
   calAllDay: 'Toute la journée',
+  calTo: 'à',
   calMoreLink: 'Voir les {n} autres du {date}',
   calMoreLinkOne: 'Voir l’autre du {date}',
   feedDetailLabel: 'Ce que dit le flux',

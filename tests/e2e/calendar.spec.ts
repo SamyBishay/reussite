@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { importSample, expandSheet, morningDate, appDay } from './helpers';
+import { importSample, expandSheet, expandSettings, morningDate, appDay, PHONES, LANGS } from './helpers';
 
 const sheet = (page: import('@playwright/test').Page) => page.getByTestId('sheet');
 
@@ -90,6 +90,35 @@ test('the calendar names steps by their short name, with no launch points; a tim
   // Its place is not there, but nothing but the short name (and where, when there is a place) is.
   await expect(timed).not.toContainText('Open Mail');
 });
+
+// The library's own words are the app's, in both languages: it looks a language up as "frFR", and under "fr-FR" its English keys showed
+// ("Full day- and multiple day events", "… to …" between a stay's two dates) in French and English alike (15 Nov).
+const LIB = { en: { allDay: 'All day', to: / to / }, fr: { allDay: 'Toute la journée', to: / à / } } as const;
+for (const [w, h] of PHONES) for (const lang of LANGS) {
+  test(`the grid's own labels are in the app's words (${w}×${h}, ${lang})`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await morningDate(page);
+    // A stay over the next days: an event of several days in the all-day row.
+    const HLC = '0000000000001:0000:seed';
+    const stamp = (id: string, f: Record<string, unknown>) => ({ id, _v: 4, _hlc: Object.fromEntries(Object.keys(f).map(k => [k, HLC])), ...f });
+    const file = { format: 'reussite-backup', schema: 4, exported: new Date().toISOString(), data: {
+      places: [stamp('lyon', { name: 'Lyon', timeZone: 'Europe/Paris', order: 8 })], stays: [stamp('s1', { placeId: 'lyon', from: appDay(0), to: appDay(2), note: '' })],
+    } };
+    await page.goto('/#settings'); await expandSettings(page);
+    page.once('dialog', d => void d.accept());
+    await page.getByTestId('data').locator('input[type=file]').first().setInputFiles({ name: 'stay.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+    await expect(page.locator('.toast')).toContainText('Backup restored');
+    if (lang === 'fr') {
+      await page.getByRole('button', { name: 'Français' }).click();
+      await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    }
+    await page.getByTestId('tab-calendar').click();
+    await page.getByTestId('cal-week').click();
+    const allDay = page.getByTestId('calendar-grid').locator('.sx__date-grid');
+    await expect(allDay).toHaveAttribute('aria-label', LIB[lang].allDay);
+    await expect(allDay.locator('[aria-label]').first()).toHaveAttribute('aria-label', LIB[lang].to);
+  });
+}
 
 test('a tap on a day number opens that day, and past days show no cards played', async ({ page }) => {
   await importSample(page);

@@ -1,6 +1,7 @@
 # What's new
 
 ## Next — less clutter
+- The Calendar's own small words are in your language now: **+ 2 more**, **Nothing on this day**, and what a screen reader says for the all-day row and a stay's dates. They were in English, in French too.
 - One set of words everywhere, in English and French, from the card game Réussite is named after: a to-do is a **card**, the four parts of your days are your **suits**, all your cards are the **deck**, today's list is **today's hand**, Plan the day is **Deal the day**, a card done is **played**, and its smallest first action is its **first move**. The method, the AI's prompts and the connector speak the same way.
 - The AI kit (`docs/ai/`) now works through the connector: your AI chat app reads and edits your deck, with no copying and pasting. The README says where to add the connector in ChatGPT, Claude and Gemini.
 - One place for AI: Settings → **How Réussite understands you**. **On this device** (the default) reads what you type on Home without anything leaving the device. **A cloud AI** has two ways, and you can use one or both: **My own key**, or **My AI chat app, through the connector**. Under the choice, a short list says whether it is all linked: sync, the recovery key, the connector, when your chat app last came in, whether your key works. Tap a line that is not done to go to what does it.

@@ -492,6 +492,8 @@ test('a project’s steps are ordered by dragging a grip, too', async ({ page })
   expect(after[0]).toBe(before[1]);
   expect(after[1]).toBe(before[0]);
   await page.reload();
+  // After a reload the projects are drawn once the data is read: openAllProjects opens only the cards already there.
+  await expect(page.getByTestId('project-open').first()).toBeVisible();
   await openAllProjects(page);
   await page.locator('details').evaluateAll(ds => ds.forEach(d => ((d as HTMLDetailsElement).open = true)));
   expect(await ids()).toEqual(after);

@@ -75,21 +75,21 @@ describe('reading', () => {
   it('today: the place, the list in order, the shape of the day, fixed times, carried steps', async () => {
     const r = await tool(access, 'today');
     expect(r.isError).toBe(false);
-    expect(r.text).toContain('Next step:\nt1 | Call the agency about the keys');
-    expect(r.text).toContain('starter: Open Phone');
+    expect(r.text).toContain('Next card:\nt1 | Call the agency about the keys');
+    expect(r.text).toContain('first move: Open Phone');
     expect(r.text.indexOf('1. t1')).toBeLessThan(r.text.indexOf('2. t3'));
     expect(r.text).toMatch(/estimated 20m/);
     expect(r.text).toContain('Shape: from 14:00 until 17:30 (afternoon day).');
     expect(r.text).not.toContain('Launch points'); // stored, no longer shown
     expect(r.text).toContain('Half days: afternoon in Paris');
     expect(r.text).toContain('Fixed times:\n19:00 (1h30) t6 | Choir rehearsal');
-    expect(r.text).toContain("Carried from yesterday, not on today's list yet (2)");
+    expect(r.text).toContain("Carried from yesterday, not in today's hand yet (2)");
   });
 
   it('get_day: any date, with what was done', async () => {
     const r = await tool(access, 'get_day', { date: day(-3) });
-    expect(r.text).toContain('Done: 1 step, 14m worked.');
-    expect(r.text).toContain('t5 | Old thing (done)');
+    expect(r.text).toContain('Played: 1 card, 14m worked.');
+    expect(r.text).toContain('t5 | Old thing (played)');
     expect((await tool(access, 'get_day', { date: 'tomorrow' })).isError).toBe(true);
   });
 
@@ -102,10 +102,10 @@ describe('reading', () => {
     const proj = await tool(access, 'query_tasks', { project: 'choir' });
     expect(proj.text).toContain('t3 | Pay the rent');
     expect(proj.text).not.toContain('t1 |');
-    expect((await tool(access, 'query_tasks', { status: 'done' })).text).toContain('t5 | Old thing (done)');
-    expect((await tool(access, 'query_tasks', { due_from: day(1), due_to: day(1) })).text).toMatch(/^1 step match/);
+    expect((await tool(access, 'query_tasks', { status: 'done' })).text).toContain('t5 | Old thing (played)');
+    expect((await tool(access, 'query_tasks', { due_from: day(1), due_to: day(1) })).text).toMatch(/^1 card match/);
     expect((await tool(access, 'query_tasks', { text: 'ecrire helene' })).text).toContain('t4 | Écrire à Hélène');
-    expect((await tool(access, 'query_tasks', { text: 'zzz' })).text).toBe('No steps match.');
+    expect((await tool(access, 'query_tasks', { text: 'zzz' })).text).toBe('No cards match.');
     expect((await tool(access, 'query_tasks', { project: 'nope' })).isError).toBe(true);
   });
 
@@ -115,7 +115,7 @@ describe('reading', () => {
     await big.sync();
     const tok = (await signIn((await switchOn(big)).body.code)).access;
     const r = await tool(tok, 'query_tasks', { limit: 50 });
-    expect(r.text).toContain('80 steps match, showing the first 50');
+    expect(r.text).toContain('80 cards match, showing the first 50');
     expect(r.text.split('\n').filter(l => l.startsWith('b'))).toHaveLength(50);
     expect((await tool(tok, 'query_tasks', { limit: 500 })).isError).toBe(true);
   });
@@ -216,7 +216,7 @@ describe('a quick edit', () => {
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Choir, Hill House 602', project: 'Choir', due: day(3), at: '19:00', dur: 90 } }] });
     expect(r.isError).toBe(false);
     expect(r.text).toContain('Done: one low-risk change, applied at once.');
-    expect(r.text).toMatch(/Add step "Choir, Hill House 602"/);
+    expect(r.text).toMatch(/Add card "Choir, Hill House 602"/);
     expect(r.text).toMatch(/Undo id: u\w+/);
     expect(await batches()).toBe(before + 1);
 
@@ -234,9 +234,9 @@ describe('a quick edit', () => {
   it('ticking a step done by its title, and moving a date, also apply at once', async () => {
     const done = await tool(access, 'apply_changes', { changes: [{ op: 'task.done', id: 'pay the rent' }] });
     expect(done.text).toContain('Done: one low-risk change');
-    expect(done.text).toContain('Mark done: "Pay the rent"');
+    expect(done.text).toContain('Mark played: "Pay the rent"');
     const moved = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: 'Écrire à', set: { due: day(5) } }] });
-    expect(moved.text).toContain('Change step "Écrire à Hélène" (due - → ' + day(5) + ')');
+    expect(moved.text).toContain('Change card "Écrire à Hélène" (due - → ' + day(5) + ')');
     await app.sync();
     expect(app.device.get('tasks', 't3')).toMatchObject({ status: 'done', doneDay: TODAY, est0: 5 });
     expect(app.device.get('tasks', 't4')).toMatchObject({ due: day(5) });
@@ -261,7 +261,7 @@ describe('schema 5: labels and areas', () => {
     expect(made).toMatchObject({ label: 'CAF claim letter', _v: SCHEMA_VERSION });
     // A label on an existing step is not one of the low-risk changes: it waits for a yes.
     const upd = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: 't4', set: { label: 'Hélène letter' } }] });
-    expect(upd.text).toContain('Change step "Écrire à Hélène" (label - → Hélène letter)');
+    expect(upd.text).toContain('Change card "Écrire à Hélène" (label - → Hélène letter)');
     await tool(access, 'apply_changes', { confirm: /"confirm": "(c\w+)"/.exec(upd.text)![1]! });
     await app.sync();
     expect(app.device.get('tasks', 't4')).toMatchObject({ label: 'Hélène letter' });
@@ -306,8 +306,8 @@ describe('anything bigger waits for a yes', () => {
     expect(r.isError).toBe(false);
     expect(r.text).toContain("needs the person's yes");
     expect(r.text).toContain('1. Drop "Call the dentist"');
-    expect(r.text).toMatch(/2\. Change step "Call the agency about the keys" \(due .* → \d{4}-\d{2}-\d{2}; est 15 → 40\)/);
-    expect(r.text).toContain('3. Add step "Open Mail and text Alex"');
+    expect(r.text).toMatch(/2\. Change card "Call the agency about the keys" \(due .* → \d{4}-\d{2}-\d{2}; est 15 → 40\)/);
+    expect(r.text).toContain('3. Add card "Open Mail and text Alex"');
     expect(r.text).toMatch(/\{"confirm": "c\w+"\}/);
     expect(await batches()).toBe(before);
     await app.sync();
@@ -377,7 +377,7 @@ describe('titles instead of ids', () => {
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Pack' }] });
     expect(r.isError).toBe(true);
     expect(r.text).toContain('Nothing was written.');
-    expect(r.text).toContain('"Pack" matches 2 steps');
+    expect(r.text).toContain('"Pack" matches 2 cards');
     expect(r.text).toMatch(/a5 \| Pack boxes/);
     expect(r.text).toMatch(/a6 \| Pack books/);
     expect(await nBatches(x)).toBe(before);
@@ -385,12 +385,12 @@ describe('titles instead of ids', () => {
 
   it('an exact title beats a longer one that starts the same way; a unique prefix of whole words is enough', async () => {
     const { tok } = await small();
-    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'call' }] })).text).toContain('Mark done: "Call"');
-    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dentist' }] })).text).toContain('Mark done: "Dentist appointment"');
+    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'call' }] })).text).toContain('Mark played: "Call"');
+    expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dentist' }] })).text).toContain('Mark played: "Dentist appointment"');
     expect((await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Dent' }] })).isError).toBe(true);
     const none = await tool(tok, 'apply_changes', { changes: [{ op: 'task.done', id: 'Nothing like it' }] });
     expect(none.isError).toBe(true);
-    expect(none.text).toContain('No step with the id or title "Nothing like it"');
+    expect(none.text).toContain('No card with the id or title "Nothing like it"');
   });
 
   it('names a project, a step to wait for, and a step on the day\'s list', async () => {
@@ -449,7 +449,7 @@ describe('invalid change-sets', () => {
     const before = await batches();
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.done', id: 't3' }, { op: 'task.drop', id: 'nope-nope' }] });
     expect(r.isError).toBe(true);
-    expect(r.text).toContain('No step with the id or title "nope-nope"');
+    expect(r.text).toContain('No card with the id or title "nope-nope"');
     expect(await batches()).toBe(before);
   });
 

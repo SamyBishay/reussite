@@ -27,30 +27,30 @@ export function resolveChanges(changes: Change[], d: Data): Resolved {
   const projects = [...d.projects.values()].map(p => ({ id: p.id, name: p.name }));
   const places = [...d.places.values()].map(p => ({ id: p.id, name: p.name }));
 
-  function pick(kind: 'step' | 'project' | 'place', value: string, ids: ReadonlyMap<string, unknown>, pool: Named[], strict = true, op?: Change['op']): string {
+  function pick(kind: 'card' | 'project' | 'place', value: string, ids: ReadonlyMap<string, unknown>, pool: Named[], strict = true, op?: Change['op']): string {
     if (ids.has(value) || refs.has(value) || (kind === 'project' && value === 'inbox') || (kind === 'place' && value === 'any')) return value;
     let f = findByName(value, pool);
-    if ('none' in f && kind === 'step') {
+    if ('none' in f && kind === 'card') {
       // A standing step (the series itself) is named to change or drop it; a tick would close the series for good, and a day takes its copy.
       f = findByName(value, standing);
       if ('id' in f && op !== 'task.drop' && op !== 'task.update') {
-        problems.push({ index: at, text: `"${value}" is a standing step (${f.id}) that comes back on its days. Tick the copy placed on the day instead, or end the series with task.drop.` });
+        problems.push({ index: at, text: `"${value}" is a standing card (${f.id}) that comes back on its days. Mark the copy placed on the day played instead, or end the series with task.drop.` });
         return value;
       }
     }
-    if ('none' in f && kind === 'step') f = findByName(value, anyTask); // maybe it's already done or dropped
+    if ('none' in f && kind === 'card') f = findByName(value, anyTask); // maybe it's already done or dropped
     if ('id' in f) return f.id;
     if ('many' in f) {
-      const shown = f.many.slice(0, 8).map(m => (kind === 'step' ? line(m.id) : `${m.id} | ${oneLine(m.name)}`));
+      const shown = f.many.slice(0, 8).map(m => (kind === 'card' ? line(m.id) : `${m.id} | ${oneLine(m.name)}`));
       ambiguous.push({ index: at, text: `"${value}" matches ${f.many.length} ${kind}s; repeat with the id of the one meant:\n${shown.join('\n')}` });
     } else if (strict) {
       problems.push({ index: at, text: `No ${kind} with the id or title "${value}".` });
     }
     return value;
   }
-  const step = (v: string) => pick('step', v, d.tasks, open);
+  const step = (v: string) => pick('card', v, d.tasks, open);
   /** The step a done, drop or update names: a standing step's title is answered too (see `pick`). */
-  const one = (v: string, op: Change['op']) => pick('step', v, d.tasks, open, true, op);
+  const one = (v: string, op: Change['op']) => pick('card', v, d.tasks, open, true, op);
   const project = (v: string) => pick('project', v, d.projects, projects);
   const place = (v: string) => pick('place', v, d.places, places);
 

@@ -116,7 +116,7 @@ describe('tripData (pure)', () => {
   it('says so when there is nothing saved, and lists no people unless given', () => {
     const t = tripData(base);
     expect(t).toContain('I have no addresses saved for this place yet.');
-    expect(t).toContain('I have no open steps for this trip.');
+    expect(t).toContain('I have no open cards for this trip.');
     expect(t).not.toContain('People');
     expect(tripData({ ...base, people: [] })).toContain('there are none saved');
   });

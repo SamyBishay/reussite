@@ -52,12 +52,12 @@ describe('query_tasks and standing steps', () => {
 
   it('lists only them with standing: true, open by default', async () => {
     const t = await seen('query_tasks', { standing: true });
-    expect(t).toMatch(/^2 steps match/);
+    expect(t).toMatch(/^2 cards match/);
     expect(t).toContain('wa | ');
     expect(t).toContain('choir | ');
     expect(t).not.toContain('Call the agency');
     expect(t).not.toContain('choir-c');
-    expect(await seen('query_tasks', { standing: true, text: 'whatsapp' })).toMatch(/^1 step match/);
+    expect(await seen('query_tasks', { standing: true, text: 'whatsapp' })).toMatch(/^1 card match/);
     expect(await seen('query_tasks', { standing: true, status: 'dropped' })).toContain('gym | ');
   });
 });
@@ -80,7 +80,7 @@ describe('get_task and standing steps', () => {
 describe('apply_changes and standing steps', () => {
   it('a done by the title of a series says what to do instead, and writes nothing', async () => {
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.done', id: WA }] });
-    expect(r.text).toContain(`"${WA}" is a standing step (wa)`);
+    expect(r.text).toContain(`"${WA}" is a standing card (wa)`);
     expect(r.text).toContain('task.drop');
     await app.sync();
     expect(app.device.get('tasks', 'wa')!.status).toBe('open');
@@ -88,7 +88,7 @@ describe('apply_changes and standing steps', () => {
 
   it('changes a series by its title after the yes: a new time and days, never cleared', async () => {
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: WA, set: { at: '21:00', weekdays: [1, 2, 3, 4, 5] } }] });
-    expect(r.text).toContain(`Change step "${WA}"`);
+    expect(r.text).toContain(`Change card "${WA}"`);
     const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
     expect((await tool(access, 'apply_changes', { confirm: id })).isError).toBe(false);
     await app.sync();

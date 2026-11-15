@@ -77,7 +77,7 @@ export function writeWarnings(cs: ChangeSet, plan: Plan, v: View): string[] {
   }
   for (const k of adds) {
     const stay = planOf(d, k).filter(id => isOpen(d.tasks.get(id)) && !mentioned.get(k)!.has(id));
-    if (stay.length) out.push(`Warning: already on ${dayName(v, k)}'s list before this: ${named(stay)}. Keep them, or send \`plan\` with the whole list to replace it.`);
+    if (stay.length) out.push(`Warning: already in ${dayName(v, k)}'s hand before this: ${named(stay)}. Keep them, or send \`plan\` with the whole hand to replace it.`);
   }
 
   // 2. Steps taken off a day's list that keep that day as their due date.
@@ -86,7 +86,7 @@ export function writeWarnings(cs: ChangeSet, plan: Plan, v: View): string[] {
     const now = new Set(l.after);
     const ids = l.before.filter(id => !now.has(id) && live(id) && get(id)!.due === k);
     ids.forEach(id => stillDue.add(id));
-    if (ids.length) out.push(`Warning: off ${dayName(v, k)}'s list but still due ${dayName(v, k)}: ${named(ids)}. Clear \`due\` if they should leave the day.`);
+    if (ids.length) out.push(`Warning: out of ${dayName(v, k)}'s hand but still due ${dayName(v, k)}: ${named(ids)}. Clear \`due\` if they should leave the day.`);
   }
 
   // 3. Steps made or changed here, due tomorrow or earlier (or timed with no day), that no day's list holds.
@@ -100,15 +100,15 @@ export function writeWarnings(cs: ChangeSet, plan: Plan, v: View): string[] {
   }
   for (const [k, ids] of [...lonely].sort(([a], [b]) => a.localeCompare(b))) {
     out.push(k
-      ? `Warning: due ${dayName(v, k)} but on no list: ${named(ids)}. The person may want them on that day's list.`
-      : `Warning: a time but no day, and on no list: ${named(ids, id => ` (${get(id)!.at})`)}.`);
+      ? `Warning: due ${dayName(v, k)} but in no hand: ${named(ids)}. The person may want them in that day's hand.`
+      : `Warning: a time but no day, and in no hand: ${named(ids, id => ` (${get(id)!.at})`)}.`);
   }
 
   // 4. A timed step due on a later day put on an earlier day's list: its time and its due date are the later day's (calendar, reminders), so it shows on both.
   for (const [k, l] of lists) {
     const before = new Set(l.before);
     const ids = l.after.filter(id => !before.has(id) && live(id) && get(id)!.at && get(id)!.due && get(id)!.due! > k);
-    if (ids.length) out.push(`Warning: on ${dayName(v, k)}'s list but fixed for a later day: ${named(ids, id => ` (${dayName(v, get(id)!.due!)} ${get(id)!.at})`)}. It will show on both days. Change its due date if it belongs here, or leave it off this list.`);
+    if (ids.length) out.push(`Warning: in ${dayName(v, k)}'s hand but fixed for a later day: ${named(ids, id => ` (${dayName(v, get(id)!.due!)} ${get(id)!.at})`)}. It will show on both days. Change its due date if it belongs here, or leave it out of this hand.`);
   }
   return out;
 }

@@ -67,9 +67,12 @@ export function memoryFor(message: string, steps: { title: string; project?: str
   };
 }
 
+/** The app's words, said once in every system prompt: the person reads the AI's replies next to the app's screens. */
+export const WORDS = 'Use the app\'s words with the person: each thing to do is a card (a "task" in the change-set); the four suits are the parts of their days, always called by the person\'s own names and symbols; the deck is every card; today\'s hand is the day\'s list (the day\'s "plan"); planning the day is dealing it; a card done is played; its smallest first action is its first move (the field "starter"). Never call a card a step, a task or a to-do, nor a suit a pillar or a category.';
+
 /** The stable part of every system prompt (the method, the profile, the person's preferences, the language) and the feature's own part. */
 export function systemPrompt(contract: string, l = lang.value): { stable: string; rest: string } {
-  const stable = [`You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone.`, method(l), profileText(), preferencesSystem(settings.value.aiPreferences), answerIn(l)].filter(Boolean).join('\n\n');
+  const stable = [`You help someone use Réussite, a planning app built on the CBT method below for adults with ADHD. Follow the method and its tone. ${WORDS}`, method(l), profileText(), preferencesSystem(settings.value.aiPreferences), answerIn(l)].filter(Boolean).join('\n\n');
   return { stable, rest: `# Your task\n\n${contract.trim()}` };
 }
 
@@ -107,8 +110,8 @@ export function header(): string {
  */
 export function calibrationLine(apps: (string | null | undefined)[] = []): string {
   const m = estModel.value;
-  if (!m.ready) return `Calibration: not enough timed steps yet (${m.count}); people usually underestimate, so leave room.`;
-  const parts = [`Calibration: real time is about ×${Math.exp(m.g).toFixed(1)} this person's first estimate (${m.count} timed steps)`];
+  if (!m.ready) return `Calibration: not enough timed cards yet (${m.count}); people usually underestimate, so leave room.`;
+  const parts = [`Calibration: real time is about ×${Math.exp(m.g).toFixed(1)} this person's first estimate (${m.count} timed cards)`];
   for (const a of [...new Set(apps.map(appKey).filter(Boolean))]) {
     const pts = estPoints.value.filter(p => appKey(p.app) === a);
     const r = medianRatio(pts.map(p => ({ est0: p.est0, real: p.real })));
@@ -133,11 +136,11 @@ export function scopeLines(s: Scope): string {
   if (s.kind === 'today') {
     const plan = planOf(k).map(id => T(id)!).filter(x => !x.template);
     const cand = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x) && !plan.includes(x)).sort(byPriority);
-    return `Today's list:\n${stepLines(plan) || '(empty)'}\n\nOther open steps, most pressing first:\n${stepLines(cand, Math.max(0, MAX_STEPS - plan.length)) || '(none)'}`;
+    return `Today's hand:\n${stepLines(plan) || '(empty)'}\n\nOther open cards, most pressing first:\n${stepLines(cand, Math.max(0, MAX_STEPS - plan.length)) || '(none)'}`;
   }
   if (s.kind === 'matrix') {
     const open = [...tasks.value.values()].filter(x => isOpen(x) && inPlace(x)).sort(byPriority);
-    return `Open steps, most pressing first (${Math.min(open.length, MAX_STEPS)} of ${open.length}):\n${stepLines(open)}`;
+    return `Open cards, most pressing first (${Math.min(open.length, MAX_STEPS)} of ${open.length}):\n${stepLines(open)}`;
   }
   if (s.kind === 'project') {
     const p = projects.value.get(s.id) as (Project & { id: string }) | undefined;
@@ -146,7 +149,7 @@ export function scopeLines(s: Scope): string {
     const all = [...tasks.value.values()].filter(x => x.project === s.id && !x.template && x.status !== 'dropped' && x.kind !== 'event');
     const open = all.filter(x => x.status === 'open').sort(byOrder);
     const smart = p.smart ? Object.entries(p.smart).filter(([, v]) => v).map(([k, v]) => `${k}: ${one(String(v))}`).join('; ') : '';
-    return `Project ${p.id}: ${one(p.name)} (${p.status}), due ${p.due ?? '-'}\n${goalLines(p, all, one).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} steps done, ${open.length} open:\n${stepLines(open)}`;
+    return `Project ${p.id}: ${one(p.name)} (${p.status}), due ${p.due ?? '-'}\n${goalLines(p, all, one).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${all.length - open.length} cards played, ${open.length} open:\n${stepLines(open)}`;
   }
   const d = decisions.value.get(s.id);
   return d ? decisionLines(d) : '';
@@ -174,8 +177,8 @@ export function contextPack(s: Scope, question: string, l = lang.value, drop?: s
 
 
 const MEMORY_RULE = 'Memory lines record only what the person said, in their words. Never write a conclusion about their health, character or anyone\'s private life.';
-const OUT_OF_SCOPE = 'You only help with the person\'s list, their memory notes and the method. For anything else (the weather, general knowledge, writing, other apps) return no changes, give one short line in "note" saying that and that their usual AI can help with it, and set "outside": true.';
-const ANSWER_IN_NOTE = 'To answer a question about their list, their memory or the method, return no changes and put the answer in "note": short, plain, no preamble.';
+const OUT_OF_SCOPE = 'You only help with the person\'s deck, their memory notes and the method. For anything else (the weather, general knowledge, writing, other apps) return no changes, give one short line in "note" saying that and that their usual AI can help with it, and set "outside": true.';
+const ANSWER_IN_NOTE = 'To answer a question about their deck, their memory or the method, return no changes and put the answer in "note": short, plain, no preamble.';
 
 /** The list as an AI needs it for one request: today's list, the steps the words point at, the memory they name. */
 function listContext(message: string, request: string) {
@@ -183,7 +186,7 @@ function listContext(message: string, request: string) {
   const rel = relevantSteps(message).filter(x => !plan.includes(x));
   const steps = [...plan, ...rel].slice(0, MAX_STEPS);
   const memo = memoryFor(message, steps);
-  const user = [header(), projectLines(), placeLines(), `Today's list: ${plan.map(x => x.id).join(', ') || '(empty)'}`, STEP_HEADER + '\n' + stepLines(steps), calibrationLine(steps.map(x => x.app)), memo.text, request].filter(Boolean).join('\n\n');
+  const user = [header(), projectLines(), placeLines(), `Today's hand: ${plan.map(x => x.id).join(', ') || '(empty)'}`, STEP_HEADER + '\n' + stepLines(steps), calibrationLine(steps.map(x => x.app)), memo.text, request].filter(Boolean).join('\n\n');
   return { user, notes: memo.names };
 }
 

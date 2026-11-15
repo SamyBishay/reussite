@@ -33,7 +33,7 @@ describe('the authorize page', () => {
     const { clientId } = await register('Claude');
     const b = await beginAuthorize(clientId);
     expect(b.status).toBe(200);
-    expect(b.html).toContain('read and edit this list');
+    expect(b.html).toContain('read and edit this deck');
     expect(b.html).toContain('Claude');
     expect(b.html).toContain('claude.ai'); // where the sign-in goes
     expect(b.html.match(/<input /g)).toHaveLength(2); // the handle (hidden) and the code
@@ -46,7 +46,7 @@ describe('the authorize page', () => {
     const { clientId } = await register('<script>alert(1)</script> & co');
     const fr = await beginAuthorize(clientId, { acceptLanguage: 'fr-FR,fr;q=0.9,en;q=0.5' });
     expect(fr.html).toContain('<html lang="fr">');
-    expect(fr.html).toContain('lire et modifier cette liste');
+    expect(fr.html).toContain('lire et modifier ce paquet');
     expect(fr.html).not.toContain('<script>alert');
     expect(fr.html).toContain('&#60;script&#62;alert(1)&#60;/script&#62; &#38; co');
     expect((await beginAuthorize(clientId, { acceptLanguage: 'en-GB,fr;q=0.3' })).html).toContain('<html lang="en">');
@@ -88,7 +88,7 @@ describe('who gets a token', () => {
     expect(wrong.headers.get('Location')).toBeNull();
     const html = await wrong.text();
     expect(html).toContain('wrong or has expired');
-    expect(html).toContain('read and edit this list');
+    expect(html).toContain('read and edit this deck');
     // The code is still good afterwards, from a fresh page (the failed try used up nothing).
     const again = await beginAuthorize(clientId);
     expect((await submitAuthorize(again, code)).status).toBe(302);

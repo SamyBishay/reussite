@@ -36,17 +36,17 @@ describe('the morning request', () => {
     expect(p.load.planned).toBeGreaterThan(0);
   });
 
-  it('puts the five sections in the request, with the person’s own names for the pillars', () => {
+  it('puts the five sections in the request, with the person’s own names for the suits', () => {
     const { proposal } = proposalFor(k);
     const { system, user } = morningPrompt(proposal);
-    for (const head of ['1. Must happen', '2. Projects to move today', '3. Pillars', '4. Where the person is today']) expect(user).toContain(head);
+    for (const head of ['1. Must happen', '2. Projects to move today', '3. Suits', '4. Where the person is today']) expect(user).toContain(head);
     expect(user).toContain('C = Kin');
     expect(user).toMatch(/^t1 \| Open the file for t1 \| Q1 \| /m);
-    expect(user).toContain('first step: t2 | Open the draft and read page one');
+    expect(user).toContain('first card: t2 | Open the draft and read page one');
     expect(user).toMatch(/planned of .* free|The room the day has: /);
-    // The AI proposes; it asks nothing open, and the app's own jargon stays out of what the person reads.
+    // The AI proposes; it asks nothing open, and it speaks the app's words (cards, suits), never steps or pillars.
     expect(system.rest).toContain('do not ask open questions');
-    expect(system.rest).toContain('never the words "card" or "suit"');
+    expect(system.rest).toContain('never "step", "task" or "pillar"');
   });
 
   it('a later turn carries what was kept, what was skipped and what the person said', () => {

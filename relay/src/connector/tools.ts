@@ -18,19 +18,19 @@ import { loadCold, loadSpace, NeedCold, needsCold, type Loaded } from './space';
 import { View } from './view';
 import { unwrap } from './wrap';
 
-export const INSTRUCTIONS = `Réussite is a planning app built on a CBT method for adults with ADHD. This connector reads and edits one person's list: steps, projects, the day's plan, places, decisions.
+export const INSTRUCTIONS = `Réussite is a planning app built on a CBT method for adults with ADHD, named after the card game (patience, in English). This connector reads and edits one person's deck: their cards, projects, today's hand, places, decisions. Use the app's words with the person: each thing to do is a card (a "task" in the tools and the change-set); the four suits are the parts of their days, always called by the person's own names and symbols; the deck is every card; today's hand is the day's list (a day's "plan"); planning the day is dealing it ("Deal the day"); a card done is played; its smallest first action is its first move (the field "starter"). Never call a card a step, a task or a to-do, nor a suit a pillar or a category.
 
-Call get_method before planning a day or running a decision, and follow it. Read with today, get_day, query_tasks, get_task, get_project and get_decision.
+Call get_method before dealing a day or running a decision, and follow it. Read with today, get_day, query_tasks, get_task, get_project and get_decision.
 
-Call read_memory when the person names someone, a place or a matter ("what does Ibrahim have on", "the flat"): it gives what they told Réussite about it and the open steps that name it. With no arguments it gives their profile and the index of notes. A new fact goes through apply_changes as a memory.add change, in the person's own words, and a memory change always waits for their yes, however small.
+Call read_memory when the person names someone, a place or a matter ("what does Ibrahim have on", "the flat"): it gives what they told Réussite about it and the open cards that name it. With no arguments it gives their profile and the index of notes. A new fact goes through apply_changes as a memory.add change, in the person's own words, and a memory change always waits for their yes, however small.
 
-When the person lays out their day, write the whole list with day.update and \`plan\`, not \`add\` (the day may already hold steps from an earlier plan), then read it back with today or get_day. Read what apply_changes answers, the warnings too, before asking for a yes, and show it to the person.
+When the person lays out their day, write the whole hand with day.update and \`plan\`, not \`add\` (the day may already hold cards from an earlier deal), then read it back with today or get_day. Read what apply_changes answers, the warnings too, before asking for a yes, and show it to the person.
 
-Never change the list without the person's yes, except one low-risk change they asked for (add one step, tick one done, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
+Never change the deck without the person's yes, except one low-risk change they asked for (add one card, mark one played, move one date): apply_changes applies that at once and returns an undo id. Anything else comes back as a diff and a confirmation id; show the diff, and call apply_changes again with that id only after the person says yes in the chat.
 
-A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. Three times, three fields: "due" (with "dueAt") is a deadline and is in no calendar; "at" (with "dur") is an appointment that happens then; "slot" ({day, at, dur}) is time set aside to work on a step. Plan the person's work time with "slot", never with "at". A weekly series ("every Monday at 19:00") is a standing step; its last day goes in "until" (YYYY-MM-DD, standing steps only, null clears it), never in a note. A series that comes today shows under Fixed times with "no card on the day yet" until the app places its copy: never add a one-off for it. A change-set holds at most 25 changes: split bigger work into several, one call each. Never give weights to decision items; the person weighs them.
+A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single apply_changes call: a task.create with "at", and titles work wherever an id is expected. Three times, three fields: "due" (with "dueAt") is a deadline and is in no calendar; "at" (with "dur") is an appointment that happens then; "slot" ({day, at, dur}) is time set aside to work on a card. Plan the person's work time with "slot", never with "at". A weekly series ("every Monday at 19:00") is a standing card; its last day goes in "until" (YYYY-MM-DD, standing cards only, null clears it), never in a note. A series that comes today shows under Fixed times with "no card on the day yet" until the app places its copy: never add a one-off for it. A change-set holds at most 25 changes: split bigger work into several, one call each. Never give weights to decision items; the person weighs them.
 
-A step marked [waiting for] is something outside the person's hands (a call back, a reply): never plan, estimate or schedule it. Make one with kind "event" in a chain (and an optional check date, "nudge"); when it has happened, task.done with the day it did frees what waits for it.`;
+A card marked [waiting for] is something outside the person's hands (a call back, a reply): never deal, estimate or schedule it. Make one with kind "event" in a chain (and an optional check date, "nudge"); when it has happened, task.done with the day it did frees what waits for it.`;
 
 export interface Row { wrapped: string; wall: number; counter: number }
 
@@ -53,8 +53,8 @@ function opener(env: Env, space: string, row: Row) {
     const keys = entry?.keys ?? { spaceId: space, encKey: await importEncKey(b64uDecode((await unwrap(env, space, row.wrapped)).k)) };
     const s = await loadSpace(env, space, keys, { wall: row.wall, counter: row.counter }, entry);
     s.wrapped = row.wrapped;
-    if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.');
-    const c: Ctx = { env, s, v: viewOf(s), full: async () => { if (needsCold(s)) { await loadCold(env, s); if (s.newer) throw new ToolError('The list was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.'); } c.v = viewOf(s); } };
+    if (s.newer) throw new ToolError('The deck was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.');
+    const c: Ctx = { env, s, v: viewOf(s), full: async () => { if (needsCold(s)) { await loadCold(env, s); if (s.newer) throw new ToolError('The deck was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.'); } c.v = viewOf(s); } };
     // A stub of an old step: read the cold part now, and ask the maintenance cron to cut the hot part again so that the next
     // call (on any isolate) needn't. The cut is not made here: it costs more than a read has left (docs/dev/connector.md, "Maintenance").
     if (s.split?.pending) { await c.full(); await env.DB.prepare('UPDATE connector SET compact_due = 1 WHERE space = ?1 AND compact_due = 0').bind(space).run().catch(() => undefined); }
@@ -91,7 +91,7 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
       } catch (e) {
         if (e instanceof ToolError) return text({ text: e.message, error: true });
         console.error('connector tool failed', name, e instanceof Error ? e.name : typeof e);
-        return text({ text: 'Something went wrong reading or writing the list. Try again; if it keeps happening, switch the connector off and on in Réussite.', error: true });
+        return text({ text: 'Something went wrong reading or writing the deck. Try again; if it keeps happening, switch the connector off and on in Réussite.', error: true });
       }
     }) as never);
 
@@ -103,24 +103,24 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     let f = findByName(value, pool(x => !x.template));
     if ('none' in f) f = findByName(value, pool(x => !!x.template));
     if ('id' in f) return c.v.tasks.get(f.id)!;
-    if ('many' in f) throw new ToolError(`"${value}" matches ${f.many.length} steps; call again with the id of the one meant:\n${lines(c.v, f.many.slice(0, 8).map(m => c.v.tasks.get(m.id)!))}`);
+    if ('many' in f) throw new ToolError(`"${value}" matches ${f.many.length} cards; call again with the id of the one meant:\n${lines(c.v, f.many.slice(0, 8).map(m => c.v.tasks.get(m.id)!))}`);
     if (needsCold(c.s)) throw new NeedCold(); // an old finished step: not in the hot part
-    throw unknown('step', value, 'Use query_tasks to find it (status "all" includes standing and dropped steps).');
+    throw unknown('card', value, 'Use query_tasks to find it (status "all" includes standing and dropped cards).');
   };
 
-  tool('today', "Today: the current place, today's list in order with the day's shape and fixed times, the next step, steps carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
+  tool('today', "Today: the current place, today's hand in order with the day's shape and fixed times, the next card, cards carried from yesterday, things waited for to ask about (Check rows), and the day's estimated total with its range.", z.object({}), read, c => ({ text: dayText(c.v, c.v.today) }));
 
-  tool('get_day', 'Any date (YYYY-MM-DD): its list in order (read it back after writing a day), the shape of the day, fixed times, from today on the things waited for to ask about (Check rows), and what was done that day.', z.object({ date: day }), read, (c, { date }) => {
+  tool('get_day', 'Any date (YYYY-MM-DD): its hand in order (read it back after writing a day), the shape of the day, fixed times, from today on the things waited for to ask about (Check rows), and what was played that day.', z.object({ date: day }), read, (c, { date }) => {
     if (needsCold(c.s) && date < c.s.split!.from) throw new NeedCold(); // before the hot window
     return { text: dayText(c.v, date) };
   });
 
-  tool('query_tasks', 'Find steps, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 plan, 3 quick, 4 later. Open steps by default, most pressing first. Standing steps (fixed times that come back on weekdays, marked "(standing, …)") are listed with status "all", or alone with standing: true. Things the person waits for are marked "[waiting for]"; waiting_for: true lists only those, with what each holds back.', z.object({
+  tool('query_tasks', 'Find cards, at most 50 as compact lines (id | title | quadrant | due | estimate | project). Quadrants: 1 now, 2 protect, 3 quick, 4 later. Open cards by default, most pressing first. Standing cards (fixed times that come back on weekdays, marked "(standing, …)") are listed with status "all", or alone with standing: true. Things the person waits for are marked "[waiting for]"; waiting_for: true lists only those, with what each holds back.', z.object({
     quadrant: z.number().int().min(1).max(4).optional(),
     project: z.string().optional().describe('A project id or name'),
-    place: z.string().optional().describe('A place id or name, or "any"; includes steps that can be done anywhere'),
+    place: z.string().optional().describe('A place id or name, or "any"; includes cards that can be played anywhere'),
     status: z.enum(['open', 'done', 'dropped', 'all']).optional(),
-    standing: z.boolean().optional().describe('Only standing steps (with status, default open)'),
+    standing: z.boolean().optional().describe('Only standing cards (with status, default open)'),
     waiting_for: z.boolean().optional().describe('Only things the person waits for (events), with how long and what each holds back (with status, default open)'),
     due_from: day.optional(), due_to: day.optional(),
     text: z.string().optional().describe('Words that must all appear in the title, note or project name'),
@@ -139,9 +139,9 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     return { text: queryText(c.v, { quadrant: a.quadrant, status: a.status, standing: a.standing, waitingFor: a.waiting_for, dueFrom: a.due_from, dueTo: a.due_to, text: a.text, limit: a.limit }, ids) };
   });
 
-  tool('get_task', 'One step with everything on it, and its work sessions. The id, or its title.', z.object({ id: z.string() }), read, (c, { id }) => ({ text: taskText(c.v, task(c, id)) }));
+  tool('get_task', 'One card with everything on it, and its work sessions. The id, or its title.', z.object({ id: z.string() }), read, (c, { id }) => ({ text: taskText(c.v, task(c, id)) }));
 
-  tool('get_project', 'One project: its goal (the outcome, how it is measured and where the bar stands, when it starts, and the open steps that move it), the SMART fields, and its steps (at most 50 open ones). The id, or its name.', z.object({ id: z.string() }), read, (c, { id }) => {
+  tool('get_project', 'One project: its goal (the outcome, how it is measured and where the bar stands, when it starts, and the open cards that move it), the SMART fields, and its cards (at most 50 open ones). The id, or its name.', z.object({ id: z.string() }), read, (c, { id }) => {
     const f = c.v.projects.has(id) || id === 'inbox' ? { id } : findByName(id, [...c.v.projects.values()].map(p => ({ id: p.id, name: p.name })));
     if ('many' in f) throw new ToolError(`"${id}" matches several projects:\n${f.many.map(m => `${m.id} | ${m.name}`).join('\n')}`);
     if (!('id' in f)) {
@@ -157,22 +157,22 @@ export function buildServer(env: Env, space: string, row: Row): McpServer {
     if (!('id' in f)) throw unknown('decision', id, 'Decisions:\n' + [...c.v.decisions.values()].slice(0, 30).map(d => `${d.id} | ${d.title}`).join('\n'));
     const d = c.v.decisions.get(f.id)!;
     const steps = d.taskIds.map(i => c.v.tasks.get(i)).filter((t): t is TaskW => !!t && t.status !== 'dropped');
-    return { text: decisionLines(d) + (steps.length ? `\nsteps:\n${lines(c.v, steps)}` : '') };
+    return { text: decisionLines(d) + (steps.length ? `\ncards:\n${lines(c.v, steps)}` : '') };
   });
 
-  tool('read_memory', "What the person told Réussite, in their own words. Nothing: their profile and an index of the notes. A name (a person, place or matter, or an alias): that note with its lines numbered from 1 and the open steps that name it. A query (free words): the notes named in it or with those words in a line. Private notes are never shown.", z.object({
+  tool('read_memory', "What the person told Réussite, in their own words. Nothing: their profile and an index of the notes. A name (a person, place or matter, or an alias): that note with its lines numbered from 1 and the open cards that name it. A query (free words): the notes named in it or with those words in a line. Private notes are never shown.", z.object({
     name: z.string().optional().describe('A note id, name or alias; or words that contain one'),
     query: z.string().optional().describe('Free words, e.g. a question'),
   }), read, (c, a) => ({ text: memoryText(c.v, a) }));
 
-  // The method needs no list: it doesn't open the space.
+  // The method needs no deck: it doesn't open the space.
   server.registerTool('get_method', {
-    description: 'The Réussite method (rules, tone, how to run a plan or a decision) and the change-set format apply_changes takes. Read it before planning or deciding.',
+    description: 'The Réussite method (rules, tone, how to deal a day or run a decision) and the change-set format apply_changes takes. Read it before dealing a day or deciding.',
     inputSchema: z.object({ language: z.enum(['en', 'fr']).optional().describe('Default en') }),
     annotations: read,
   }, async ({ language }) => text({ text: `${cleanMethod(language === 'fr' ? methodFr : methodEn)}\n\n---\n\n${shortChangeset(changesetDoc)}` }));
 
-  tool('apply_changes', 'Edit the list with a change-set (format in get_method). One low-risk change (add a step, tick one done, move one date) applies at once and returns an undo id. Anything else returns a diff with its warnings and a confirmation id: read both, show them to the person, and call again with {"confirm": id} only after they say yes. To lay out a day, send day.update with `plan` (the whole list), not `add`, and read the day back. Titles work in place of ids. At most 25 changes per call: split bigger work into several change-sets, one call each. An invalid change-set writes nothing.', z.object({
+  tool('apply_changes', 'Edit the deck with a change-set (format in get_method). One low-risk change (add a card, mark one played, move one date) applies at once and returns an undo id. Anything else returns a diff with its warnings and a confirmation id: read both, show them to the person, and call again with {"confirm": id} only after they say yes. To lay out a day, send day.update with `plan` (the whole hand), not `add`, and read the day back. Titles work in place of ids. At most 25 changes per call: split bigger work into several change-sets, one call each. An invalid change-set writes nothing.', z.object({
     changes: z.array(z.looseObject({ op: z.string().describe('e.g. task.create, task.update, task.done, task.drop, day.update') })).optional(),
     note: z.string().optional(),
     v: z.union([z.number(), z.string()]).optional().describe('Change-set version, 1'),

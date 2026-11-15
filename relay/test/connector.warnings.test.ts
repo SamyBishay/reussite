@@ -31,7 +31,7 @@ describe('add over a list that already holds steps', () => {
   it('says what was already on the list, in the diff and in the done answer', async () => {
     const tok = await list();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'day.update', date: TODAY, add: ['Buy coffee'] }] });
-    const line = "Warning: already on today's list before this: Old photos; Old essay; Priest visit. Keep them, or send `plan` with the whole list to replace it.";
+    const line = "Warning: already in today's hand before this: Old photos; Old essay; Priest visit. Keep them, or send `plan` with the whole hand to replace it.";
     expect(r.text).toContain(line);
     expect(r.text.indexOf(line)).toBeLessThan(r.text.indexOf('Nothing has been written yet'));
     expect(await confirm(tok, r.text)).toContain(line);
@@ -40,7 +40,7 @@ describe('add over a list that already holds steps', () => {
   it('does not name a step the change-set mentions, and says nothing for `plan`', async () => {
     const tok = await list();
     const some = await tool(tok, 'apply_changes', { changes: [{ op: 'day.update', date: TODAY, add: ['Buy coffee'], remove: ['Old photos', 'Old essay'] }] });
-    expect(some.text).toContain("already on today's list before this: Priest visit.");
+    expect(some.text).toContain("already in today's hand before this: Priest visit.");
     const whole = await tool(tok, 'apply_changes', { changes: [{ op: 'day.update', date: TODAY, plan: ['Buy coffee', 'Call the club'] }] });
     expect(whole.text).not.toContain('already on');
   });
@@ -56,7 +56,7 @@ describe('add over a list that already holds steps', () => {
     await x.sync();
     const tok = (await signIn((await switchOn(x)).body.code)).access;
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'day.update', date: day(3), add: ['New one'] }] });
-    expect(r.text).toMatch(/already on (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d{4}-\d\d-\d\d's list before this: Step A; Step B; Step C; Step D; Step E; Step F; and 2 more\./);
+    expect(r.text).toMatch(/already in (Sun|Mon|Tue|Wed|Thu|Fri|Sat) \d{4}-\d\d-\d\d's hand before this: Step A; Step B; Step C; Step D; Step E; Step F; and 2 more\./);
   });
 });
 
@@ -65,7 +65,7 @@ describe('steps due a day that end up on no list', () => {
     const tok = await list();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Pick up the keys', due: TODAY } }] });
     expect(r.text).toContain('Done:');
-    expect(r.text).toContain('Warning: due today but on no list: Pick up the keys. The person may want them on that day\'s list.');
+    expect(r.text).toContain('Warning: due today but in no hand: Pick up the keys. The person may want them in that day\'s hand.');
   });
 
   it('is silent when the same change-set puts the step on that day\'s list', async () => {
@@ -74,7 +74,7 @@ describe('steps due a day that end up on no list', () => {
       { op: 'task.create', ref: 'k', set: { title: 'Pick up the keys', due: TODAY } },
       { op: 'day.update', date: TODAY, plan: ['k'] },
     ] });
-    expect(r.text).not.toContain('on no list');
+    expect(r.text).not.toContain('in no hand');
   });
 
   it('names two steps and, for a step changed to a date, the day', async () => {
@@ -84,8 +84,8 @@ describe('steps due a day that end up on no list', () => {
       { op: 'task.update', id: 'Buy coffee', set: { due: day(1) } },
       { op: 'task.update', id: 'Call the club', set: { due: TODAY } },
     ] });
-    expect(r.text).toContain('Warning: due today but on no list: Pick up the keys; Call the club.');
-    expect(r.text).toContain('Warning: due tomorrow but on no list: Buy coffee.');
+    expect(r.text).toContain('Warning: due today but in no hand: Pick up the keys; Call the club.');
+    expect(r.text).toContain('Warning: due tomorrow but in no hand: Buy coffee.');
   });
 
   it('does not name a timed step due that day (it shows among the fixed times), a far date, or a step with no date', async () => {
@@ -95,13 +95,13 @@ describe('steps due a day that end up on no list', () => {
       { op: 'task.create', set: { title: 'Next month', due: day(30) } },
       { op: 'task.create', set: { title: 'Someday' } },
     ] });
-    expect(r.text).not.toContain('on no list');
+    expect(r.text).not.toContain('in no hand');
   });
 
   it('names a timed step with no day', async () => {
     const tok = await list();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Dinner', at: '20:00' } }] });
-    expect(r.text).toContain('Warning: a time but no day, and on no list: Dinner (20:00).');
+    expect(r.text).toContain('Warning: a time but no day, and in no hand: Dinner (20:00).');
   });
 });
 
@@ -109,7 +109,7 @@ describe('steps taken off a day that stay due on it', () => {
   it('says they are still due, and stops when the change-set clears the date', async () => {
     const tok = await list();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'day.update', date: TODAY, plan: ['Old photos', 'Priest visit'] }] });
-    const line = "Warning: off today's list but still due today: Old essay. Clear `due` if they should leave the day.";
+    const line = "Warning: out of today's hand but still due today: Old essay. Clear `due` if they should leave the day.";
     expect(r.text).toContain(line);
     expect(await confirm(tok, r.text)).toContain(line);
     const cleared = await tool(tok, 'apply_changes', { changes: [
@@ -117,7 +117,7 @@ describe('steps taken off a day that stay due on it', () => {
       { op: 'task.update', id: 'Old essay', set: { due: null } },
     ] });
     expect(cleared.text).not.toContain('still due');
-    expect(cleared.text).not.toContain('on no list');
+    expect(cleared.text).not.toContain('in no hand');
   });
 
   it('does not say it of a step that was not due that day', async () => {
@@ -140,7 +140,7 @@ describe('a timed step put on an earlier day than its own', () => {
     await x.sync();
     const tok2 = (await signIn((await switchOn(x)).body.code)).access;
     const r2 = await tool(tok2, 'apply_changes', { changes: [{ op: 'day.update', date: TODAY, add: ['Priest visit'] }] });
-    expect(r2.text).toContain("Warning: on today's list but fixed for a later day: Priest visit (tomorrow 10:11). It will show on both days. Change its due date if it belongs here, or leave it off this list.");
+    expect(r2.text).toContain("Warning: in today's hand but fixed for a later day: Priest visit (tomorrow 10:11). It will show on both days. Change its due date if it belongs here, or leave it out of this hand.");
   });
 });
 

@@ -63,7 +63,7 @@ describe('query_tasks and events', () => {
 
   it('get_task says what it is, and the step behind it names it as waiting for', async () => {
     const ev = await seen('get_task', { id: 'bell' });
-    expect(ev).toContain("waiting for: something outside the person's hands, not a step to do or schedule; check on " + day(-7));
+    expect(ev).toContain("waiting for: something outside the person's hands, not a card to play or schedule; check on " + day(-7));
     expect(ev).not.toContain('quadrant:');
     const fit = await seen('get_task', { id: 'fit' });
     expect(fit).toContain('waiting on: ["bell The bellman calls back with a tailor [waiting for]"]');
@@ -76,7 +76,7 @@ describe('today and get_day: the Check rows', () => {
     expect(t).toContain(`Check: The bellman calls back with a tailor (bell, since ${day(-7)}).`);
     expect(t).not.toContain('Check: The registry replies');
     expect(t).not.toContain('Check: The cousin');
-    expect(t.split('List (')[1]!.split('\n\n')[0]).not.toContain('bellman');
+    expect(t.split('Hand (')[1]!.split('\n\n')[0]).not.toContain('bellman');
     expect(await seen('get_day', { date: TODAY })).toContain('Check: The bellman');
   });
 
@@ -95,7 +95,7 @@ describe('apply_changes and events', () => {
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'The landlord replies', kind: 'event', nudge: day(2), project: 'Wedding' } }] });
     expect(r.isError).toBe(false);
     expect(r.text).toContain('Done: one low-risk change, applied at once.');
-    expect(r.text).toContain('Add waiting-for step "The landlord replies"');
+    expect(r.text).toContain('Add waiting-for card "The landlord replies"');
     expect(await batches()).toBe(before + 1);
     await app.sync();
     const made = [...(app.device.docs.get('tasks')?.values() ?? [])].find(t => t.title === 'The landlord replies')!;
@@ -124,7 +124,7 @@ describe('apply_changes and events', () => {
   it('moving the check day waits for the person\'s yes, like any other change', async () => {
     const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.update', id: 'never', set: { nudge: day(1) } }] });
     expect(r.text).toContain('This needs the person');
-    expect(r.text).toContain('Change step "The cousin answers" (nudge ' + day(1) + ')');
+    expect(r.text).toContain('Change card "The cousin answers" (nudge ' + day(1) + ')');
   });
 
   it('task.done with a past day marks it happened on that day and frees what waits for it', async () => {
@@ -148,7 +148,7 @@ describe('apply_changes and events', () => {
     const that = await seen('get_day', { date: day(-2) });
     expect(that).toContain('Happened (things waited for):');
     expect(that).toContain('bell | The bellman calls back with a tailor (happened)');
-    expect(that).not.toContain('Done: 1 step');
+    expect(that).not.toContain('Played: 1 card');
   });
 
   it('marking an event happened without a day is today', async () => {

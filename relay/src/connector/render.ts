@@ -94,7 +94,7 @@ function step(v: View, t: TaskW): string {
   if (t.at) extra.push(`at ${t.at}${t.dur ? ' for ' + mins(t.dur) : ''} [appointment]`);
   const slot = readSlot(t.slot);
   if (slot) extra.push(`slot ${slotWords(slot)} [work time]`);
-  if (t.starter) extra.push(`starter: ${oneLine(t.starter)}`);
+  if (t.starter) extra.push(`first move: ${oneLine(t.starter)}`);
   if (t.resume) extra.push(`resume: ${oneLine(t.resume)}`);
   if (t.started) extra.push(`timer running since ${t.started.slice(11, 16)} UTC`);
   const logged = [...v.sessions.values()].filter(x => x.taskId === t.id).reduce((n, x) => n + (Number(x.m) || 0), 0);
@@ -140,21 +140,21 @@ export function dayText(v: View, k: string): string {
 
   if (isToday && v.where.here !== 'any') L.push(`Place: ${v.places.get(v.where.here)?.name ?? v.where.here} (${v.zone})`);
   const next = isToday ? startHereToday(v, plan) : null;
-  if (isToday) L.push(next ? `Next step${next.fixed ? ` (a fixed time has taken over: ${next.fixed.time}, leave at ${next.fixed.leave})` : ''}:\n${step(v, next.task)}` : plan.length ? 'Next step: none, the list is played.' : 'Next step: none, no list yet today.');
+  if (isToday) L.push(next ? `Next card${next.fixed ? ` (a fixed time has taken over: ${next.fixed.time}, leave at ${next.fixed.leave})` : ''}:\n${step(v, next.task)}` : plan.length ? 'Next card: none, the hand is played.' : 'Next card: none, no hand dealt yet today.');
 
   if (plan.length) {
     const est = work.reduce((a, t) => a + (personal(v, t)?.value ?? t.est ?? 0), 0);
     const lo = work.reduce((a, t) => a + (personal(v, t)?.lo ?? t.est ?? 0), 0);
     const hi = work.reduce((a, t) => a + (personal(v, t)?.hi ?? t.est ?? 0), 0);
     const total = est > 0 ? ` · estimated ${lo !== hi ? `${mins(est)} (range ${mins(lo)} to ${mins(hi)})` : mins(est)}` : '';
-    L.push(`List (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? (t.due && t.due > k && isOpen(t) ? ` [${t.at}, fixed for ${t.due}]` : ` [${t.at}]`) : ''}${readSlot(t.slot) ? ` [slot ${slotWords(readSlot(t.slot)!)}]` : ''}${t.started ? ' [running]' : ''}`).join('\n'));
-  } else L.push('List: empty.');
+    L.push(`Hand (${open.length} open of ${plan.length}${total}), in order:\n` + plan.map((t, i) => `${i + 1}. ${line(v, t)}${optional.has(t.id) ? ' [if there is room]' : ''}${t.at ? (t.due && t.due > k && isOpen(t) ? ` [${t.at}, fixed for ${t.due}]` : ` [${t.at}]`) : ''}${readSlot(t.slot) ? ` [slot ${slotWords(readSlot(t.slot)!)}]` : ''}${t.started ? ' [running]' : ''}`).join('\n'));
+  } else L.push('Hand: empty.');
 
   // The morning's shape (the app's check-in): from when, until when. Launch points no longer exist; a stored one is not shown.
   if (day?.shape?.start) L.push(`Shape: from ${day.shape.start}${day.shape.end ? ` until ${day.shape.end}` : ''} (${day.shape.preset} day).`);
   if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
   const fixed = fixedOn(d, k), series = standingOn(v, k);
-  if (fixed.length || series.length) L.push('Fixed times:\n' + [...fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`), ...series.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)} [no card on the day yet: the app puts it on the list when it opens; do not add a copy]`)].sort().join('\n'));
+  if (fixed.length || series.length) L.push('Fixed times:\n' + [...fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`), ...series.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)} [no card on the day yet: the app puts it in the hand when it opens; do not add a copy]`)].sort().join('\n'));
   // Things the person waits for whose check date has come: asked from that day until answered, as Today does. Not steps, never on the list.
   if (k >= v.today) {
     const checks = nudgesDue(v.tasks.values(), k);
@@ -162,7 +162,7 @@ export function dayText(v: View, k: string): string {
   }
   if (isToday) {
     const carried = yesterdayOpen(d, k, addDays(k, -1)).map(id => v.tasks.get(id)!);
-    if (carried.length) L.push(`Carried from yesterday, not on today's list yet (${carried.length}):\n${lines(v, carried, 10)}`);
+    if (carried.length) L.push(`Carried from yesterday, not in today's hand yet (${carried.length}):\n${lines(v, carried, 10)}`);
     const check = decisionsToCheck(v.decisions.values(), k);
     if (check.length) L.push('Decisions to check: ' + check.map(c => `${c.id} ${oneLine(c.title)}`).join('; '));
   }
@@ -170,9 +170,9 @@ export function dayText(v: View, k: string): string {
   const done = dayDone.filter(t => !isEvent(t)), happened = dayDone.filter(isEvent);
   let minutes = 0;
   for (const s of v.sessions.values()) if (s.d === k) minutes += Number(s.m) || 0;
-  if (done.length || minutes) L.push(`Done: ${done.length} step${done.length === 1 ? '' : 's'}, ${mins(Math.round(minutes))} worked.${done.length ? '\n' + lines(v, done, 10) : ''}`);
+  if (done.length || minutes) L.push(`Played: ${done.length} card${done.length === 1 ? '' : 's'}, ${mins(Math.round(minutes))} worked.${done.length ? '\n' + lines(v, done, 10) : ''}`);
   if (happened.length) L.push(`Happened (things waited for):\n${lines(v, happened, 10)}`);
-  if (day?.first && !isToday) L.push(`First step chosen: ${oneLine(day.first.title)}`);
+  if (day?.first && !isToday) L.push(`First card chosen: ${oneLine(day.first.title)}`);
   return L.join('\n\n');
 }
 
@@ -215,11 +215,11 @@ export function queryText(v: View, q: Query, ids: { project?: string; place?: st
       const extra = w ? [`waiting ${w.days} day${w.days === 1 ? '' : 's'}`, ...(w.unlocks.length ? [`holds back: ${w.unlocks.map(x => oneLine(x.title)).join(', ')}`] : [])] : [];
       return line(v, t) + (extra.length ? '\n    ' + extra.join(' · ') : '');
     }).join('\n');
-    return hit.length ? `${hit.length} thing${hit.length === 1 ? '' : 's'} waited for (outside events, not steps to do or schedule)${hit.length > max ? `, showing the first ${max}` : ''}.\n${'id | title | - | - | - | project'}\n${body}` : 'Nothing is being waited for.';
+    return hit.length ? `${hit.length} thing${hit.length === 1 ? '' : 's'} waited for (outside events, not cards to play or schedule)${hit.length > max ? `, showing the first ${max}` : ''}.\n${'id | title | - | - | - | project'}\n${body}` : 'Nothing is being waited for.';
   }
-  const waiting = hidden ? ` ${hidden} more wait${hidden === 1 ? 's' : ''} for another step, under its head; get_task on a head lists its chain.` : '';
-  if (!hit.length) return 'No steps match.' + waiting;
-  return `${hit.length} step${hit.length === 1 ? '' : 's'} match${hit.length > max ? `, showing the first ${max}` : ''}.${waiting}\n${'id | title | quadrant | due | estimate | project'}\n${lines(v, hit, max)}`;
+  const waiting = hidden ? ` ${hidden} more wait${hidden === 1 ? 's' : ''} for another card, under its head; get_task on a head lists its chain.` : '';
+  if (!hit.length) return 'No cards match.' + waiting;
+  return `${hit.length} card${hit.length === 1 ? '' : 's'} match${hit.length > max ? `, showing the first ${max}` : ''}.${waiting}\n${'id | title | quadrant | due | estimate | project'}\n${lines(v, hit, max)}`;
 }
 
 /** The steps of the chain a step is in, in the order they unfold (head first), each with its id; the step asked for is marked. */
@@ -237,9 +237,9 @@ export function taskText(v: View, t: TaskW): string {
   const L = [
     line(v, t),
     f('status', (event && t.status === 'done' ? 'happened' : t.status) + (t.doneDay ? ' on ' + t.doneDay : '')),
-    event ? f('waiting for', `something outside the person's hands, not a step to do or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
+    event ? f('waiting for', `something outside the person's hands, not a card to play or schedule${t.status === 'open' ? t.nudge ? `; check on ${t.nudge}, then ask whether it happened` : '; no check date' : ''}`) : f('quadrant', `Q${quadOf(t)}${t.urgent ? ' (marked urgent)' : ''}${t.important ? '' : ', not important'}`),
     f('estimate', t.est ? `${mins(t.est)}${p ? `, personal estimate ${mins(p.value)} (range ${mins(p.lo)} to ${mins(p.hi)})` : ''}` : null),
-    f('due time', t.due && t.dueAt ? `${t.dueAt} on ${t.due} (a deadline: it is in no calendar and the step stays on the list)` : null),
+    f('due time', t.due && t.dueAt ? `${t.dueAt} on ${t.due} (a deadline: it is in no calendar and the card stays in the deck)` : null),
     f('at', t.at ? `${t.at}${t.dur ? ' for ' + mins(t.dur) : ''} (an appointment: it is in the calendar)` : null),
     f('slot', readSlot(t.slot) ? `${slotWords(readSlot(t.slot)!)} (work time set aside: movable, not an appointment)` : null),
     f('slot log', Array.isArray(t.slotLog) && t.slotLog.length ? t.slotLog.slice(-5).map(e => `${e.at.slice(0, 16)} ${e.by} ${e.why}: ${e.from && readSlot(e.from) ? slotWords(readSlot(e.from)!) : 'none'} → ${e.to && readSlot(e.to) ? slotWords(readSlot(e.to)!) : 'none'}`).join('; ') : null),
@@ -254,7 +254,7 @@ export function taskText(v: View, t: TaskW): string {
     f('created', t.created), f('by', t.src === 'ai' ? 'an AI' : null),
   ].filter(Boolean);
   const ss = [...v.sessions.values()].filter(s => s.taskId === t.id).sort((a, b) => String(a.d + a.at).localeCompare(String(b.d + b.at)));
-  if (ss.length) L.push('Time is logged on this step: offer Continue, not Start. The timer picks up from the total; each run is its own session.');
+  if (ss.length) L.push('Time is logged on this card: offer Continue, not Start. The timer picks up from the total; each run is its own session.');
   L.push(ss.length ? `Sessions (${ss.length}, ${mins(ss.reduce((a, s) => a + (Number(s.m) || 0), 0))} in all):\n` + ss.map(s => `${s.d} | ${s.m}m | ${s.source}${s.why ? ' | ' + s.why : ''}`).join('\n') : 'Sessions: none.');
   return L.join('\n');
 }
@@ -272,7 +272,7 @@ export function projectText(v: View, id: string): string {
   const smart = p.smart ? Object.entries(p.smart).filter(([, x]) => x).map(([k, x]) => `${k}: ${oneLine(String(x))}`).join('; ') : '';
   const where = p.where && p.where !== 'any' ? `, place ${v.places.get(p.where)?.name ?? p.where}` : '';
   const done = all.length - open.length + (v.cold?.x.done[id] ?? 0);
-  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\n${goalLines(p, all, oneLine, !!v.cold?.x.done[id]).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${done} steps done, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
+  return `Project ${p.id}: ${oneLine(p.name)} (${p.status}, suit ${p.suit}${where}), due ${p.due ?? '-'}\n${goalLines(p, all, oneLine, !!v.cold?.x.done[id]).join('\n')}${smart ? '\nSMART: ' + smart : ''}\n${done} cards played, ${open.length} open${open.length > MAX_LINES ? ` (first ${MAX_LINES})` : ''}:\n${lines(v, open)}`;
 }
 
 // ---------- memory ----------
@@ -326,7 +326,7 @@ export function memoryText(v: View, a: { name?: string; query?: string }): strin
     let t = noteBlock(n);
     if (n.kind !== 'profile') {
       const steps = queryText(v, { text: n.name, limit: MAX_NOTE_STEPS }, {});
-      if (steps !== 'No steps match.') t += `\nOpen steps naming ${oneLine(n.name)}:\n${steps}`;
+      if (steps !== 'No cards match.') t += `\nOpen cards naming ${oneLine(n.name)}:\n${steps}`;
     }
     return t;
   });
@@ -347,10 +347,10 @@ const happens = (it: Planned, v: View): boolean => { const op = it.ops[0]; retur
 
 /** One planned change as a line, with `before → after` for each field. */
 export function describe(it: Planned, v: View): string {
-  const what = it.target === 'task' ? 'step' : it.target === 'memory' ? 'memory note' : it.target;
+  const what = it.target === 'task' ? 'card' : it.target === 'memory' ? 'memory note' : it.target;
   const name = it.title ? ` "${oneLine(it.title)}"` : '';
   const waitingFor = it.target === 'task' && it.kind === 'create' && it.diffs.some(x => x.field === 'kind' && x.after === 'event');
-  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${waitingFor ? 'waiting-for step' : what}${name}` : it.kind === 'done' ? `Mark ${happens(it, v) ? 'happened' : 'done'}:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
+  const head = it.kind === 'remember' ? `${createsNote(it) ? 'Remember, in a new note' : 'Remember, in the note'}${name}` : it.kind === 'create' ? `Add ${waitingFor ? 'waiting-for card' : what}${name}` : it.kind === 'done' ? `Mark ${happens(it, v) ? 'happened' : 'played'}:${name}` : it.kind === 'drop' ? `Drop${name}` : it.kind === 'reorder' ? 'Reorder steps' : `Change ${what}${name}`;
   const diffs = it.diffs.map(d => {
     const nice = (x: unknown) => (d.field === 'plan' || d.field === 'order' || d.field === 'after') && Array.isArray(x) ? x.map(i => v.tasks.get(String(i))?.title ?? i).join(', ') : show(x);
     return d.before === undefined ? `${d.field} ${nice(d.after)}` : `${d.field} ${nice(d.before)} → ${nice(d.after)}`;

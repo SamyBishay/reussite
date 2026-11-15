@@ -289,8 +289,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
           const clash = eventClashes(f as Partial<TaskSet>);
           if (clash.length) { refused.push({ at: ci, text: eventClash(clash) }); for (const k of clash) delete (f as Record<string, unknown>)[k]; }
           if (!wasEvent) {
-            if (tk.template) { refused.push({ at: ci, text: 'a standing step cannot become an event' }); break; }
-            if (tk.status !== 'open') { refused.push({ at: ci, text: 'only an open step can become an event' }); break; }
+            if (tk.template) { refused.push({ at: ci, text: 'a standing card cannot become an event' }); break; }
+            if (tk.status !== 'open') { refused.push({ at: ci, text: 'only an open card can become an event' }); break; }
             if (tk.started) { refused.push({ at: ci, text: 'its timer is running; the person stops it in the app first, then it can become an event' }); break; }
             const nothing = toEventFields() as Record<string, unknown>;
             for (const k of Object.keys(nothing)) if ((tk[k] ?? false) !== (nothing[k] ?? false)) (f as Record<string, unknown>)[k] = nothing[k];

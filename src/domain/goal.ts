@@ -197,7 +197,7 @@ export function goalLines(
 ): string[] {
   const list = [...steps];
   const out = outcomeOf(p);
-  const lines = [`goal: ${out ? one(out) : '-'}`, `measure: ${measureText(p, list)}${older && measureOf(p).kind === 'count' ? ' (older done steps not counted)' : ''}`];
+  const lines = [`goal: ${out ? one(out) : '-'}`, `measure: ${measureText(p, list)}${older && measureOf(p).kind === 'count' ? ' (older played cards not counted)' : ''}`];
   const start = startOf(p);
   if (start) lines.push(`starts: ${start}`);
   const moving = list.filter(x => x.project === p.id && x.status === 'open' && advancing(x));

@@ -31,7 +31,7 @@ beforeAll(async () => {
 describe('reading the three times', () => {
   it('get_task says which is which, and the log', async () => {
     const t = await seen('get_task', { id: 'rep' });
-    expect(t).toContain(`due time: 17:00 on ${day(3)} (a deadline: it is in no calendar and the step stays on the list)`);
+    expect(t).toContain(`due time: 17:00 on ${day(3)} (a deadline: it is in no calendar and the card stays in the deck)`);
     expect(t).toContain(`slot: ${TODAY} 14:00 for 45m (work time set aside: movable, not an appointment)`);
     expect(t).toMatch(/slot log: .* me planned: none → /);
     expect(t).not.toMatch(/\bat: 14:00/);

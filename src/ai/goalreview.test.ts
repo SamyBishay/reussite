@@ -143,13 +143,13 @@ describe('the request', () => {
     expect(user).toMatch(/^s3 \|.* \| not said$/m);
     // Not another project’s step, a done one, something waited for or a standing step.
     for (const gone of ['o1', 'd1 |', 'w1 |', 't1 |']) expect(user).not.toContain(gone);
-    expect(user).toContain('1 steps done, 3 open');
+    expect(user).toContain('1 cards played, 3 open');
   });
 
-  it('asks it to propose, not to question, and to keep the app’s words out', () => {
+  it('asks it to propose, not to question, and to speak the app’s words (cards, suits)', () => {
     const { system } = goalReviewPrompt('p1');
     expect(system.rest).toContain('do not ask open questions');
-    expect(system.rest).toContain('never the words "card" or "suit"');
+    expect(system.rest).toContain('never "step", "task" or "pillar"');
     expect(system.rest).toContain('"belongs"');
     expect(system.rest).toContain('"moves"');
   });

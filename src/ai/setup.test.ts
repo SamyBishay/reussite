@@ -109,12 +109,12 @@ describe('shortName', () => {
 });
 
 describe('the setup conversation', () => {
-  it('asks for the pillars, places and preferences, and never the app\'s jargon to the person', () => {
+  it('asks for the suits, places and preferences, in the app\'s words', () => {
     const { system, user } = setupPrompt([{ who: 'me', text: 'I am finishing a thesis and I live with my kids.' }]);
-    expect(system.rest).toContain('four pillars');
+    expect(system.rest).toContain('four suits');
     expect(system.rest).toContain('settings.update');
     expect(system.rest).toContain('place.create');
-    expect(system.rest).toContain('Never say "card", "suit", "matrix"');
+    expect(system.rest).toContain('never "pillar", "category" or "kind of time"');
     expect(user).toContain('Person: I am finishing a thesis and I live with my kids.');
     expect(user).toContain('1 message from the person');
     // Nothing of the list or the memory goes: a first run has none.

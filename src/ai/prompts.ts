@@ -1,5 +1,5 @@
 // What each AI feature sends (brief §10, features 2–6): the method and the feature's contract as
-// the system prompt; compact lines for at most 25 steps, and the calibration line whenever the
+// the system prompt; compact lines for at most 25 cards, and the calibration line whenever the
 // AI is asked for estimates.
 import { projects, tasks, places, settings, today, here, type WithId } from '../app/store';
 import { T, dayDoc, byOrder, spentOf } from '../app/model';
@@ -16,19 +16,19 @@ type P = { system: { stable: string; rest: string }; user: string; notes: string
 const one = (s: string) => s.replace(/\s+/g, ' ').trim();
 const join = (xs: (string | number | false | null | undefined)[]) => xs.filter(x => typeof x === 'string' && x).join('\n\n');
 
-const STEP_RULES = 'A step title starts with its first physical action and says where (the app, the place). A starter is the first 2-minute move: so small it cannot fail. Estimates are minutes, starting-up time included; a step over 30 minutes should be split.';
+const STEP_RULES = 'A card\'s title starts with its first physical action and says where (the app, the place). Its first move (the field "starter") is the first 2-minute action: so small it cannot fail. Estimates are minutes, starting-up time included; a card over 30 minutes should be split.';
 const STEP_JSON = '{"title": "...", "starter": "...", "est": 15}';
 
-// ---------- 2. Plan my day ----------
+// ---------- 2. Deal the day ----------
 export function planPrompt(inp: PlanInput, rule: Plan, fixed: { title: string; at: string; dur: number }[]): P {
-  const system = systemPrompt(`Improve today's plan, which was made by fixed rules. You may reorder it, pick between candidates, write starters for steps that lack one, and split a step that is too big into smaller steps.
-Keep the rules, or your plan is thrown away: at most ${inp.maxWorkSteps} work steps (steps carried from yesterday may go past it by one); exactly one Protect step (role "protect", a Q2 step) when there is one to pick; exactly one standing obligation (role "obligation", only from the obligations listed); carried steps keep role "carried"; use only the ids you are given.
+  const system = systemPrompt(`Improve today's hand, which fixed rules dealt. You may reorder it, pick between candidates, write first moves ("starters") for cards that lack one, and split a card that is too big into smaller cards.
+Keep the rules, or your hand is thrown away: at most ${inp.maxWorkSteps} work cards (cards carried from yesterday may go past it by one); exactly one Protect card (role "protect", a Q2 card) when there is one to pick; exactly one standing obligation (role "obligation", only from the obligations listed); carried cards keep role "carried"; use only the ids you are given.
 ${STEP_RULES}
 Reply with JSON only:
 {"plan": [{"id": "...", "role": "carried|now|protect|quick|obligation|optional", "at": "HH:MM (obligation only)"}], "starters": [{"id": "...", "starter": "..."}], "split": [{"id": "...", "steps": [${STEP_JSON}]}], "note": "one or two sentences: what you changed and why"}
-"split" replaces the step with the steps you list, the first one keeping its id; leave it empty unless a step is too big to start.`);
+"split" replaces the card with the cards you list, the first one keeping its id; leave it empty unless a card is too big to start.`);
   const ids = [...inp.carried, ...inp.candidates, ...inp.optional].map(s => s.id).filter((x, i, a) => a.indexOf(x) === i).slice(0, MAX_STEPS);
-  const shape = `Today's shape: ${inp.shape.preset} day, starting at ${inp.shape.start}${fixed.length ? '; fixed: ' + fixed.map(f => `${f.at} ${one(f.title)} (${f.dur} min)`).join(', ') : ''}. Work-step limit: ${inp.maxWorkSteps}.`;
+  const shape = `Today's shape: ${inp.shape.preset} day, starting at ${inp.shape.start}${fixed.length ? '; fixed: ' + fixed.map(f => `${f.at} ${one(f.title)} (${f.dur} min)`).join(', ') : ''}. Work-card limit: ${inp.maxWorkSteps}.`;
   // Fixed-time items are in the plan whatever it says; the AI hears of them in the shape line.
   const planned = rule.items.filter(i => i.role !== 'fixed');
   const roleOf = new Map(planned.map(i => [i.id, i.role + (i.at ? ' ' + i.at : '')]));
@@ -40,8 +40,8 @@ Reply with JSON only:
     `Carried from yesterday: ${inp.carried.map(s => s.id).join(', ') || '(none)'}`,
     STEP_HEADER + '\n' + stepLines(ids.map(id => ({ id }))),
     inp.obligations.length && 'Standing obligations (id | title | last done):\n' + inp.obligations.slice(0, 10).map(o => `${o.id} | ${one(T(o.id)?.title ?? '')} | ${o.lastDone ?? 'never'}`).join('\n'),
-    'The rule-based plan (id | role | title):\n' + ruleLines,
-    starters.length && 'Steps with no starter yet: ' + starters.join(', '),
+    'The hand the rules dealt (id | role | title):\n' + ruleLines,
+    starters.length && 'Cards with no first move yet: ' + starters.join(', '),
     calibrationLine(ids.map(id => T(id)?.app)),
     memo.text,
   ]);
@@ -52,7 +52,7 @@ Reply with JSON only:
 export function breakDownPrompt(id: string): P {
   const tk = T(id)!;
   const p = projects.value.get(tk.project);
-  const system = systemPrompt(`Break the step below into 2 to 6 smaller steps, in order: each waits for the one before. The first step is the one to start now.
+  const system = systemPrompt(`Break the card below into 2 to 6 smaller cards, in order: each waits for the one before. The first card is the one to start now.
 ${STEP_RULES}
 Reply with JSON only: {"steps": [${STEP_JSON}], "note": "one sentence"}`);
   const memo = memoryFor('', [tk]);
@@ -60,7 +60,7 @@ Reply with JSON only: {"steps": [${STEP_JSON}], "note": "one sentence"}`);
     header(),
     STEP_HEADER + '\n' + stepLine(tk),
     p && p.id !== 'inbox' ? `Project: ${one(p.name)}${outcomeOf(p) ? '; goal: ' + one(outcomeOf(p)) : ''}` : '',
-    tk.starter ? 'Its starter now: ' + one(tk.starter) : '',
+    tk.starter ? 'Its first move now: ' + one(tk.starter) : '',
     tk.note ? 'Its note: ' + one(tk.note).slice(0, 400) : '',
     calibrationLine([tk.app]),
     memo.text,
@@ -73,7 +73,7 @@ const DECISION_TASK: Record<DecisionAsk, string> = {
   problem: 'Draft the problem lines from the person\'s description: what is happening, what should be happening, the gap, constraints, deadline, and what is in their control. Short, concrete, in their words. Reply with JSON only: {"title": "a short question", "problem": {"what": "", "should": "", "gap": "", "constraints": "", "deadline": "", "control": ""}, "note": ""}',
   options: 'Suggest options the list is missing (doing nothing, waiting, a smaller version, combining, asking someone, handing it off are common ones). Do not judge them. Reply with JSON only: {"options": [{"name": "..."}], "note": ""}',
   items: 'Suggest items for the four columns of the named option: pros of doing it, cons of doing it, pros of not doing it, cons of not doing it. Short phrases. Never give weights or scores: weights belong to the person. Reply with JSON only: {"options": [{"name": "the option", "pros": [], "cons": [], "prosNot": [], "consNot": []}], "note": ""}',
-  steps: `Draft the steps that carry out the choice, in order, and a SMART goal for the project. ${STEP_RULES} Reply with JSON only: {"steps": [${STEP_JSON}], "goal": "one sentence", "smart": {"specific": "", "measurable": "", "attainable": "", "relevant": "", "dated": ""}, "note": ""}`,
+  steps: `Draft the cards that carry out the choice, in order, and a SMART goal for the project. ${STEP_RULES} Reply with JSON only: {"steps": [${STEP_JSON}], "goal": "one sentence", "smart": {"specific": "", "measurable": "", "attainable": "", "relevant": "", "dated": ""}, "note": ""}`,
 };
 
 export function decisionPrompt(d: WithId<Decision>, what: DecisionAsk, extra = ''): P {
@@ -94,14 +94,14 @@ export function decisionPrompt(d: WithId<Decision>, what: DecisionAsk, extra = '
 // ---------- 5. Stuck ----------
 export function stuckPrompt(id: string, friction: string): P {
   const tk = T(id)!;
-  const system = systemPrompt(`The person is stuck on this step (${friction === 'start' ? 'can\'t start' : friction === 'restart' ? 'can\'t get back into it' : 'keeps drifting off'}). Propose one smaller starter: a first move under 2 minutes, physical and concrete, that cannot fail. Reply with JSON only: {"starter": "...", "note": "one short sentence"}`);
+  const system = systemPrompt(`The person is stuck on this card (${friction === 'start' ? 'can\'t start' : friction === 'restart' ? 'can\'t get back into it' : 'keeps drifting off'}). Propose one smaller first move (the field "starter"): an action under 2 minutes, physical and concrete, that cannot fail. Reply with JSON only: {"starter": "...", "note": "one short sentence"}`);
   const memo = memoryFor('', [tk]);
   const user = join([
     header(),
     STEP_HEADER + '\n' + stepLine(tk),
-    tk.starter ? 'Starter that didn\'t work: ' + one(tk.starter) : 'No starter yet.',
+    tk.starter ? 'First move that didn\'t work: ' + one(tk.starter) : 'No first move yet.',
     tk.resume ? 'Where they stopped: ' + one(tk.resume) : '',
-    spentOf(tk.id) > 0 ? 'Time already logged: ' + fmtMin(spentOf(tk.id)) + '. They continue this step; do not say start.' : '',
+    spentOf(tk.id) > 0 ? 'Time already logged: ' + fmtMin(spentOf(tk.id)) + '. They continue this card; do not say start.' : '',
     tk.app ? 'App or place: ' + one(tk.app) : '',
     memo.text,
   ]);
@@ -110,7 +110,7 @@ export function stuckPrompt(id: string, friction: string): P {
 
 // ---------- 6. Sunday review help ----------
 export function reviewPrompt(projectId: string): P {
-  const system = systemPrompt(`It is the weekly review. For the project below, propose a one-sentence goal, its SMART lines, and the next 1 to 3 steps if the project has no clear next step. Keep what the person already wrote unless it is vague. ${STEP_RULES}
+  const system = systemPrompt(`It is the weekly review. For the project below, propose a one-sentence goal, its SMART lines, and the next 1 to 3 cards if the project has no clear next card. Keep what the person already wrote unless it is vague. ${STEP_RULES}
 Reply with JSON only: {"goal": "...", "smart": {"specific": "", "measurable": "", "attainable": "", "relevant": "", "dated": ""}, "next": [${STEP_JSON}], "note": "one sentence"}`);
   const scope = scopeLines({ kind: 'project', id: projectId });
   const memo = memoryFor(scope);
@@ -122,26 +122,26 @@ Reply with JSON only: {"goal": "...", "smart": {"specific": "", "measurable": ""
 // ---------- 7. The morning conversation ----------
 const MORNING_JSON = `{"note": "one or two sentences: the day in a nutshell, and by how much it is over if it is",
  "must": [{"id": "...", "line": "why today, short", "cut": false}],
- "goals": [{"project": "...", "id": "...", "line": "why this project, why this step"}],
+ "goals": [{"project": "...", "id": "...", "line": "why this project, why this card"}],
  "pillars": [{"suit": "S|D|C|H", "id": "...", "line": "..."}, {"suit": "C", "new": ${STEP_JSON}, "line": "..."}],
  "here": [{"id": "...", "line": "..."}],
- "first": "id of the step to start with",
+ "first": "id of the card to start with",
  "split": [{"id": "...", "steps": [${STEP_JSON}]}]}`;
 
-const MORNING_TASK = `It is the morning. Propose the person's day in five sections. You propose and the person chooses: they keep, swap or skip each item with a tap, so do not ask open questions and do not ask how they feel. Use only the ids you are given, and take each item from the candidates of its section.
+const MORNING_TASK = `It is the morning: you are dealing the person's day with them. Propose today's hand in five sections. You propose and the person chooses: they keep, swap or skip each item with a tap, so do not ask open questions and do not ask how they feel. Use only the ids you are given, and take each item from the candidates of its section.
 1. "must": what has to happen today, from the first section's candidates (the fixed items and the events to check stay whatever you say). Rank them; "line" says why today.
-2. "goals": the one or two projects to move today (never more than two), each with the step to start with, taken from that project's steps. "line" says why that project and that step.
-3. "pillars": one item for each of the four pillars, in the person's own words for them (given below). Take it from the pillar's candidates, or write a new step ("new") when there is none or a better one is plain from what you know of the person, for example a call to someone they care about, as a first action of 15 minutes or less. Say it in "line" in a short sentence ("For family: call your mother").
+2. "goals": the one or two projects to move today (never more than two), each with the card to start with, taken from that project's cards. "line" says why that project and that card.
+3. "pillars": one item for each of the four suits, in the person's own names and symbols for them (given below). Take it from the suit's candidates, or write a new card ("new") when there is none or a better one is plain from what you know of the person, for example a call to someone they care about, as a first action of 15 minutes or less. Say it in "line" in a short sentence ("♥ Others: call your mother").
 4. "here": given where the person is today, what can be done there: take it from the place's candidates.
-5. The total: the day's load is given, as planned time against free time. When it is more than the room, say by how much in "note" and put "cut": true on the steps you would leave out first (never a fixed item, and the Protect steps last). Give "first": the step to start with, which must be one you keep.
-${STEP_RULES} Only "goals" and "pillars" may have a "new" step; a goal's new step joins that project. Use "split" for a step that is over 30 minutes or has no clear first action: the first of its steps keeps the id and is the one that goes on the day, the others wait for it. Say "pillar", "goal" or the person's own names; never the words "card" or "suit". Short lines, facts, no praise, no guilt, no counts of what was not done.
+5. The total: the day's load is given, as planned time against free time. When it is more than the room, say by how much in "note" and put "cut": true on the cards you would leave out first (never a fixed item, and the Protect cards last). Give "first": the card to start with, which must be one you keep.
+${STEP_RULES} Only "goals" and "pillars" may have a "new" card; a goal's new card joins that project. Use "split" for a card that is over 30 minutes or has no clear first action: the first of its cards keeps the id and is the one dealt into the day, the others wait for it. Say "card", "suit", "goal" or the person's own names for their suits; never "step", "task" or "pillar". Short lines, facts, no praise, no guilt, no counts of what was not played.
 Reply with JSON only (leave a section out only if it has no candidates):
 ${MORNING_JSON}`;
 
-const pillarName = (s: SuitId) => settings.value.suits[s]?.short[lang.value] ?? s;
+const suitName = (s: SuitId) => settings.value.suits[s]?.short[lang.value] ?? s;
 
 /**
- * The morning conversation's request (Morning point 3): the candidates of `proposeDay` in five sections, the pillars in the person's
+ * The morning conversation's request (Morning point 3): the candidates of `proposeDay` in five sections, the suits in the person's
  * own words, the room the day has. A later turn (`o.message`) carries what the person kept and skipped and what they said.
  */
 export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[]; skipped?: string[]; load?: Proposal['load'] } = {}): P {
@@ -154,7 +154,7 @@ export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[
   const sec = (head: string, rows: string[]) => `${head}\n${rows.length ? rows.join('\n') : '(no candidates)'}`;
   const proj = (g: Proposal['goals'][number]) => {
     const pr = projects.value.get(g.project);
-    return `${g.project} | ${one(pr?.name ?? g.project)} | goal: ${pr && outcomeOf(pr) ? one(outcomeOf(pr)) : '-'} | due ${pr?.due ?? '-'}\n   first step: ${line(g.step)}${g.more.length ? '\n   then: ' + g.more.map(line).join('\n         ') : ''}`;
+    return `${g.project} | ${one(pr?.name ?? g.project)} | goal: ${pr && outcomeOf(pr) ? one(outcomeOf(pr)) : '-'} | due ${pr?.due ?? '-'}\n   first card: ${line(g.step)}${g.more.length ? '\n   then: ' + g.more.map(line).join('\n         ') : ''}`;
   };
   const load = o.load ?? p.load;
   const place = here.value === 'any' ? 'Anywhere (no place set for today)' : places.value.get(here.value)?.name ?? here.value;
@@ -163,17 +163,17 @@ export function morningPrompt(p: Proposal, o: { message?: string; kept?: string[
   const user = join([
     header(),
     `The room the day has: ${fmtMin(load.planned)} planned of ${fmtMin(load.free)} free${load.over ? `, ${fmtMin(load.over)} more than fits` : ''}. The planned time is the first candidate of each section below.`,
-    `The person's pillars (use these words): ${PILLARS.map(s => `${s} = ${pillarName(s)}`).join('; ')}.`,
+    `The person's suits (use these names and symbols): ${PILLARS.map(s => `${s} = ${suitName(s)}${settings.value.suits[s]?.glyph ? ` (${settings.value.suits[s]!.glyph})` : ''}`).join('; ')}.`,
     sec('1. Must happen (id | title | quadrant | due | estimate | project; why):', [
       ...p.must.map(m => `${withTime(m.id)} [${m.why}]`),
       ...(p.mustMore.length ? ['Could replace one of these:', ...p.mustMore.map(line)] : []),
     ]),
-    sec('2. Projects to move today, the first one first (id | name | goal | due; then steps in order):', [...p.goals.map(proj), ...(p.moreGoals.length ? ['Other projects that could replace one:', ...p.moreGoals.map(proj)] : [])]),
-    sec('3. Pillars: for each, the proposed step first, then others; "covered" are steps of that pillar already in the other sections:', PILLARS.map(s => {
+    sec('2. Projects to move today, the first one first (id | name | goal | due; then cards in order):', [...p.goals.map(proj), ...(p.moreGoals.length ? ['Other projects that could replace one:', ...p.moreGoals.map(proj)] : [])]),
+    sec('3. Suits: for each, the proposed card first, then others; "covered" are cards of that suit already in the other sections:', PILLARS.map(s => {
       const c = p.pillars[s];
-      return `${s} ${pillarName(s)}: ${[c.pick, ...c.more].filter((x): x is string => !!x).map(line).join(' ;; ') || '(nothing open: write a new step if one is plain)'}${c.covered.length ? ` || covered: ${c.covered.join(', ')}` : ''}`;
+      return `${s} ${suitName(s)}: ${[c.pick, ...c.more].filter((x): x is string => !!x).map(line).join(' ;; ') || '(nothing open: write a new card if one is plain)'}${c.covered.length ? ` || covered: ${c.covered.join(', ')}` : ''}`;
     })),
-    sec(`4. Where the person is today: ${place}${areas.length ? ' (' + areas.join(', ') + ')' : ''}. Steps that belong there:`, [...p.here.ids.map(line), ...(p.here.more.length ? ['Could replace one of these:', ...p.here.more.map(line)] : [])]),
+    sec(`4. Where the person is today: ${place}${areas.length ? ' (' + areas.join(', ') + ')' : ''}. Cards that belong there:`, [...p.here.ids.map(line), ...(p.here.more.length ? ['Could replace one of these:', ...p.here.more.map(line)] : [])]),
     calibrationLine(ids.map(id => T(id)?.app)),
     o.message !== undefined && join([
       `The person has chosen so far. Kept: ${o.kept?.join(', ') || '(none)'}. Skipped, so never offer them again: ${o.skipped?.join(', ') || '(none)'}.`,
@@ -197,11 +197,11 @@ const GOAL_JSON = `{"note": "one or two sentences: what holds and what is vague"
 
 const GOAL_TASK = `It is the weekly review, and you are checking one project's goal. You propose and the person chooses: they keep or skip each proposal and flip each answer with a tap, so do not ask open questions. Use only the ids you are given.
 1. "check": test the goal against SMART in three parts and say, for each, whether it holds ("ok") and in one short fact why not: the "outcome" (one sentence a stranger could tell is reached or not), the "measure" (a count with a target and a unit, or milestones, so the bar can fill; "none" means no bar), and the "dates" (a start and a due that leave a realistic time).
-2. Only if a part does not hold, propose the fix: "outcome" reworded in the person's own words, a "measure", or "start" and "due" dates. Leave a key out when it needs no change. A count's target must be a real number the person could reach by finishing steps; milestones are 2 to 6 results, not tasks.
-3. "steps": for each open step below, say whether it "belongs" to the goal and whether finishing it "moves" it. A step moves the goal only if finishing it adds to the measure (one more page of ten, a milestone reached). Preparing, waiting, tidying and housekeeping do not move it, though they may belong to the project. A step that does not belong cannot move the goal. "line" says why in a few words.
-4. "drop": steps that no longer serve this goal and could go (the person decides; a step that only waits or is a small chore is not a reason).
-5. "add": at most 3 new steps if the goal clearly lacks a way forward; "moves" says whether each would move the goal.
-${STEP_RULES} Say "goal", "project", "step" or the person's own names; never the words "card" or "suit". Short lines, facts, no praise, no guilt, no counts of what was not done.
+2. Only if a part does not hold, propose the fix: "outcome" reworded in the person's own words, a "measure", or "start" and "due" dates. Leave a key out when it needs no change. A count's target must be a real number the person could reach by playing cards; milestones are 2 to 6 results, not cards.
+3. "steps": for each open card below, say whether it "belongs" to the goal and whether playing it "moves" it. A card moves the goal only if playing it adds to the measure (one more page of ten, a milestone reached). Preparing, waiting, tidying and housekeeping do not move it, though they may belong to the project. A card that does not belong cannot move the goal. "line" says why in a few words.
+4. "drop": cards that no longer serve this goal and could go (the person decides; a card that only waits or is a small chore is not a reason).
+5. "add": at most 3 new cards if the goal clearly lacks a way forward; "moves" says whether each would move the goal.
+${STEP_RULES} Say "goal", "project", "card" or the person's own names for their suits; never "step", "task" or "pillar". Short lines, facts, no praise, no guilt, no counts of what was not done.
 Reply with JSON only (leave out any key that needs no change):
 ${GOAL_JSON}`;
 
@@ -223,11 +223,11 @@ export function goalReviewPrompt(projectId: string, o: { message?: string; skipp
     p ? `Project ${projectId}: ${one(p.name)} (${p.status})` : '',
     p ? goalLines({ ...p, id: projectId }, all.map(x => ({ ...x, id: x.id })), one).join('\n') + `\ndue: ${p.due ?? '-'}` : '',
     smart && 'SMART answers the person gave: ' + smart,
-    `${all.length - open.length} steps done, ${open.length} open${open.length > MAX_STEPS ? ` (first ${MAX_STEPS})` : ''}. Open steps (${STEP_HEADER} | moves the goal?):\n${rows.join('\n') || '(none)'}`,
+    `${all.length - open.length} cards played, ${open.length} open${open.length > MAX_STEPS ? ` (first ${MAX_STEPS})` : ''}. Open cards (${STEP_HEADER} | moves the goal?):\n${rows.join('\n') || '(none)'}`,
     calibrationLine(open.map(x => x.app)),
     o.message !== undefined && join([
       `Proposals the person skipped, so never offer them again: ${o.skipped?.join(', ') || '(none)'}.`,
-      `Where the steps stand in their answers now: ${o.answers?.join('; ') || '(none)'}.`,
+      `Where the cards stand in their answers now: ${o.answers?.join('; ') || '(none)'}.`,
       `They say: ${o.message.trim()}`,
       'Reply with the full revised proposal in the same JSON, changed only as they ask.',
     ]),

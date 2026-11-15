@@ -62,10 +62,10 @@ const EVENT_NO = ['est', 'starter', 'urgent', 'important', 'due', 'dueAt', 'at',
 const has = (v: unknown) => v != null && v !== false && v !== '' && !(Array.isArray(v) && !v.length);
 /** The fields of `set` an event may not have, set to something. */
 export const eventClashes = (set: Partial<TaskSet>): string[] => EVENT_NO.filter(k => has(set[k]));
-export const eventClash = (fields: string[]) => `an event (kind "event", something the person waits for) has no ${fields.join(', ')}; leave ${fields.length === 1 ? 'it' : 'them'} out, or make it a step (kind "task")`;
-export const UNTIL_STANDING = 'until is the last day of a standing step (template, weekdays and at); this step is not standing, so no end date was set';
+export const eventClash = (fields: string[]) => `an event (kind "event", something the person waits for) has no ${fields.join(', ')}; leave ${fields.length === 1 ? 'it' : 'them'} out, or make it a card (kind "task")`;
+export const UNTIL_STANDING = 'until is the last day of a standing card (template, weekdays and at); this card is not standing, so no end date was set';
 export const DUE_AT_NEEDS_DUE = 'dueAt is the time of a deadline and needs a due date; none was set, so no time was kept';
-export const NUDGE_ONLY = 'nudge is the check date of an event (kind "event"); a step has none';
+export const NUDGE_ONLY = 'nudge is the check date of an event (kind "event"); a card has none';
 /** `creating`: with no `kind` a new step is a task, so a nudge on it is a mistake; an update with no kind leaves that to the step it names. */
 const eventRules = (creating: boolean) => (set: TaskSet, ctx: z.RefinementCtx) => {
   if (set.kind === 'event') {

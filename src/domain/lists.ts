@@ -162,13 +162,13 @@ export const projName = (projects: ReadonlyMap<string, Pick<Project, 'name'>>, i
  */
 export function stepLine(t: Pick<TaskW, 'id' | 'title' | 'project' | 'due' | 'est' | 'status' | 'urgent' | 'important'> & Partial<Pick<TaskW, 'kind' | 'nudge' | 'dueAt'>>, d: Pick<Data, 'projects'>, chain?: { after: number; due: string | null } | 'waiting'): string {
   const event = t.kind === 'event';
-  const done = t.status === 'done' ? (event ? ' (happened)' : ' (done)') : t.status === 'dropped' ? ' (dropped)' : '';
+  const done = t.status === 'done' ? (event ? ' (happened)' : ' (played)') : t.status === 'dropped' ? ' (dropped)' : '';
   // The head of a chain says how many steps wait after it and the earliest due date in the chain.
   const note = chain === 'waiting' ? ' (waiting)' : chain ? ` (+${chain.after} after${chain.due ? ', chain due ' + chain.due : ''})` : '';
   const wait = event && t.status === 'open' ? ` [waiting for${t.nudge ? ', check ' + t.nudge : ''}]` : '';
   return [t.id, one(t.title) + wait + done + note, event ? '-' : 'Q' + quadOf(t), (t.due ? t.due + (t.dueAt ? ' ' + t.dueAt : '') : '-'), t.est ? t.est + 'm' : '-', one(projName(d.projects, t.project))].join(' | ');
 }
-export const STEP_HEADER = 'Steps (id | title | quadrant: Q1 now, Q2 plan, Q3 quick, Q4 later | due | estimate | project):';
+export const STEP_HEADER = 'Cards (id | title | quadrant: Q1 now, Q2 protect, Q3 quick, Q4 later | due | estimate | project):';
 
 /** A decision as compact lines: problem, options with their columns, and the choice. */
 export function decisionLines(d: WithId<Decision>): string {

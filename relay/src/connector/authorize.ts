@@ -16,7 +16,7 @@ type Lang = 'en' | 'fr';
 const TEXT = {
   en: {
     title: 'Connect to Réussite',
-    lead: (c: string) => `${c} will be able to <strong>read and edit this list</strong>.`,
+    lead: (c: string) => `${c} will be able to <strong>read and edit this deck</strong>.`,
     sendsTo: (h: string) => `You will be sent back to ${h}.`,
     local: 'This sends access to an app on this computer. Continue only if you just started signing in from it.',
     unverified: 'This app registered itself; its name is not verified.',
@@ -31,7 +31,7 @@ const TEXT = {
   },
   fr: {
     title: 'Connecter Réussite',
-    lead: (c: string) => `${c} pourra <strong>lire et modifier cette liste</strong>.`,
+    lead: (c: string) => `${c} pourra <strong>lire et modifier ce paquet</strong>.`,
     sendsTo: (h: string) => `Vous serez renvoyé vers ${h}.`,
     local: 'Cela donne l’accès à une application de cet ordinateur. Continuez seulement si vous venez de lancer la connexion depuis celle-ci.',
     unverified: 'Cette application s’est déclarée elle-même ; son nom n’est pas vérifié.',

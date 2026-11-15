@@ -141,9 +141,9 @@ describe('the words an AI reads', () => {
   it('says the outcome, the measure, the start and the steps that move it', () => {
     expect(goalLines(p, steps, s => s)).toEqual(['goal: Hand in the thesis', 'measure: count, 3 of 10 pages', 'starts: 2026-09-01', 'moves the goal: s2 Write methods']);
   });
-  it('a project with no bar says so; older done steps are mentioned for a count only', () => {
+  it('a project with no bar says so; older played cards are mentioned for a count only', () => {
     expect(goalLines({ id: 'p', goal: null }, [], s => s)).toEqual(['goal: -', 'measure: none (no bar)']);
-    expect(goalLines(p, steps, s => s, true)[1]).toContain('older done steps not counted');
+    expect(goalLines(p, steps, s => s, true)[1]).toContain('older played cards not counted');
     expect(goalLines({ id: 'p', goal: null }, [], s => s, true)[1]).toBe('measure: none (no bar)');
   });
   it('milestones list what is done and what is open', () => {

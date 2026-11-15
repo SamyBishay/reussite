@@ -79,7 +79,7 @@ export async function applyChanges(c: Ctx, input: Input): Promise<Out> {
   if ('errors' in checked) return err(`${noWrite} The change-set is not valid:\n${checked.errors.join('\n')}\nThe contract is in get_method.`);
 
   const found = resolveChanges(checked.changes, c.v.data);
-  if (found.problems.some(p => p.text.startsWith('No step')) && needsCold(c.s)) throw new NeedCold(); // maybe it is an old finished step
+  if (found.problems.some(p => p.text.startsWith('No card')) && needsCold(c.s)) throw new NeedCold(); // maybe it is an old finished step
   if (found.ambiguous.length) return err(`${noWrite} Which one is meant?\n${found.ambiguous.map(a => `Change ${a.index + 1}: ${a.text}`).join('\n')}\nRepeat the change with the id of the one meant.`);
   if (found.problems.length) return err(`${noWrite} Not found:\n${found.problems.map(p => `Change ${p.index + 1}: ${p.text}`).join('\n')}`);
 
@@ -139,7 +139,7 @@ async function confirmed(c: Ctx, id: string): Promise<Out> {
   if (plan.items.length !== items) {
     if (needsCold(c.s)) throw new NeedCold(); // it may name an old finished step, which only the cold part holds
     await c.env.DB.prepare('DELETE FROM connector_pending WHERE id = ?1 AND applied_at IS NULL').bind(id).run();
-    return err(`${noWrite} The list changed since the person was shown these changes. Send the change-set again to get a fresh confirmation.`);
+    return err(`${noWrite} The deck changed since the person was shown these changes. Send the change-set again to get a fresh confirmation.`);
   }
   const now = Date.now();
   const claim = await c.env.DB.prepare(
@@ -178,7 +178,7 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
   for (const it of plan.items) for (const op of it.ops) {
     if (op.t !== 'finish' || !isEvent(c.v.tasks.get(op.id))) continue;
     const freed = liveNextHeads(c.v.tasks, op.id).map(id => `${id} ${oneLine(c.v.tasks.get(id)?.title ?? '')}`.trim());
-    if (freed.length) notes = [...notes, `Freed by it: ${freed.join('; ')}. It is on no day's list yet; day.update adds it to one.`];
+    if (freed.length) notes = [...notes, `Freed by it: ${freed.join('; ')}. It is in no day's hand yet; day.update deals it into one.`];
   }
   const undoId = rid('u');
   const undoBlob = await sealToText(c.s.keys, { docs: edits.undo });

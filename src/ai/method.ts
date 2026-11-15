@@ -17,7 +17,7 @@ export function shortChangeset(doc: string): string {
 
 ## Example
 
-"R: choir every Monday 19:00, Hill House 602", one call, one change (a standing step with a fixed time; for a single Monday, give \`due\` and no \`template\`):
+"R: choir every Monday 19:00, Hill House 602", one call, one change (a standing card with a fixed time; for a single Monday, give \`due\` and no \`template\`):
 
 \`\`\`reussite
 {"v": 1, "changes": [{"op": "task.create", "set": {"title": "Choir, Hill House 602", "template": true, "weekdays": [1], "at": "19:00", "dur": 90}}]}

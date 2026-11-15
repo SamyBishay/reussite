@@ -33,7 +33,7 @@ describe('prompt building', () => {
     expect(methodSummary()).not.toContain('Draft for review');
     expect(methodSummary()).not.toContain('## Starters');
     expect(systemPrompt('X', 'fr').stable).toMatch(/Answer in French\.$/);
-    expect(calibrationLine()).toMatch(/^Calibration: not enough timed steps yet/);
+    expect(calibrationLine()).toMatch(/^Calibration: not enough timed cards yet/);
   });
   it('asks for the block without a drop address, and for the one-tap link with one', () => {
     const base = 'https://app.example/drop#' + 'S'.repeat(22) + '.' + 'K'.repeat(43) + '.';

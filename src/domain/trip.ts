@@ -44,11 +44,11 @@ export interface TripInput {
   categories: { id: string; name: string }[];
   /** The stay's place's addresses, in the order to show. */
   addresses: AddressIn[];
-  /** Lines of the open steps for the trip (id | title | …), already built. */
+  /** Lines of the open cards for the trip (id | title | …), already built. */
   steps: string[];
   /** Lines of what already has a time on the trip, already built. */
   fixed: string[];
-  /** Lines of what is already on each day's list: `day: id title; …`, for days that have something. */
+  /** Lines of what is already in each day's hand: `day: id title; …`, for days that have something. */
   planned: string[];
   /** Only when the person ticked them for this request; undefined sends none. */
   people?: PersonIn[];
@@ -66,9 +66,9 @@ export function tripData(i: TripInput): string {
     `Days to plan${i.to > days[days.length - 1]! ? ` (the first ${days.length} of the stay)` : ''}: ${days.map(k => `${weekday(k).slice(0, 3)} ${k}`).join(', ')}.`,
     `Address categories (id): ${cats || 'other'}.`,
     ads.shown.length ? `${ADDRESS_HEADER}\n${ads.shown.map(a => addressLine(a, i.categories.find(c => c.id === a.category)?.name ?? a.category)).join('\n')}${ads.more ? `\n(and ${ads.more} more not shown)` : ''}` : 'I have no addresses saved for this place yet.',
-    i.steps.length ? `Open steps for this trip ${STEP_HEADER.replace(/^Steps /, '')}\n${i.steps.join('\n')}` : 'I have no open steps for this trip.',
+    i.steps.length ? `Open cards for this trip ${STEP_HEADER.replace(/^Cards /, '')}\n${i.steps.join('\n')}` : 'I have no open cards for this trip.',
     i.fixed.length ? `Already fixed in time on these days (day | time | minutes | title):\n${i.fixed.join('\n')}` : '',
-    i.planned.length ? `Already on a day's list:\n${i.planned.join('\n')}` : '',
+    i.planned.length ? `Already in a day's hand:\n${i.planned.join('\n')}` : '',
   ];
   if (i.people) {
     const ps = capped(i.people, MAX_TRIP_PEOPLE);
@@ -80,11 +80,11 @@ export function tripData(i: TripInput): string {
 /** What to ask of the AI, and how to answer. `placeId` is the id to put in `where` and in an address's `place`. */
 export function tripInstructions(placeId: string, categoryIds: string[]): string {
   return [
-    'This is a trip to plan. Use my lists above and, if you can browse the web, check opening hours, closing days, booking requirements and how to get from one place to the next before you put anything on a day; say in "note" what you could not check.',
+    'This is a trip to plan. Use my cards and addresses above and, if you can browse the web, check opening hours, closing days, booking requirements and how to get from one place to the next before you put anything on a day; say in "note" what you could not check.',
     'Answer with one change-set that does these things:',
-    `- Day lists: for each day of the trip, one \`day.update\` whose \`add\` lists that day's steps, as ids of my existing steps or as steps you make with \`task.create\` (give each a \`ref\`, and \`"where": "${placeId}"\`). A day is a short list, three or four things with room to rest, never an hourly grid: no times on ordinary steps. Start each new step's title with the first action ("Open Maps and walk to…").`,
+    `- A hand for each day: for each day of the trip, one \`day.update\` whose \`add\` lists that day's cards, as ids of my existing cards or as cards you make with \`task.create\` (give each a \`ref\`, and \`"where": "${placeId}"\`). A day's hand is short, three or four cards with room to rest, never an hourly grid: no times on ordinary cards. Start each new card's title with the first action ("Open Maps and walk to…").`,
     `- Things that happen at a set time (a train, a booking, a ticket): \`task.create\` with \`at\` (HH:MM), \`dur\` (minutes), \`due\` (the day) and \`"where": "${placeId}"\`. They are the only things with a time.`,
-    `- Places you suggest that I do not have yet: \`address.create\` with \`name\`, \`category\` (one of: ${categoryIds.join(', ') || 'other'}), \`"place": "${placeId}"\`, \`mapsUrl\` only if you are sure of a real Google or Apple Maps link, \`street\` if you know it, and \`note\`: one line on why, and what you checked (hours, closing day). They are saved as places I want to go, marked as yours, for me to untick. Do not suggest one I already have, and put a suggested place on a day only by making a step for it ("Go to…").`,
-    'Do not change anything else on my list. Do not give weights.',
+    `- Places you suggest that I do not have yet: \`address.create\` with \`name\`, \`category\` (one of: ${categoryIds.join(', ') || 'other'}), \`"place": "${placeId}"\`, \`mapsUrl\` only if you are sure of a real Google or Apple Maps link, \`street\` if you know it, and \`note\`: one line on why, and what you checked (hours, closing day). They are saved as places I want to go, marked as yours, for me to untick. Do not suggest one I already have, and put a suggested place on a day only by making a card for it ("Go to…").`,
+    'Do not change anything else in my deck. Do not give weights.',
   ].join('\n');
 }

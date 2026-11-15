@@ -1,7 +1,7 @@
 // The task sheet: the form for a step (place, repeat, waits for, goes to, dates, slots), a new step, and the places for a select.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { settings, projects, today, places, toast, stays, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayCards, isWaiting, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
 import { patchTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, skipThisTime, stopRepeating, addPlace, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists } from './actions';
 import { openHappened } from './EventUi';
@@ -414,7 +414,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix', first = fal
         <div class="go quiet pickfrom" data-testid="add-from">
           <button class="btn small ghost" type="button" data-testid="add-from-deck" onClick={() => openPick('list', pickOn)}>{t('fromYourList')}</button>
           <button class="btn small ghost" type="button" data-testid="add-from-standing" onClick={() => openPick('standing', pickOn)}>{t('leisurePeople')}</button>
-          {pickOn === today.value && rawPlan(pickOn).length > 0 && !dayDoc(pickOn)?.checkin && <button class="btn small ghost" type="button" data-testid="add-from-deal" onClick={() => { closeSheet(); flows.planDay(); }}>{t('planTheDay')}</button>}
+          {/* The hand as Today shows it, fixed-time cards of the day included, as the row of adders had it. */}
+          {pickOn === today.value && dayCards(pickOn).some(x => !isWaiting(x)) && !dayDoc(pickOn)?.checkin && <button class="btn small ghost" type="button" data-testid="add-from-deal" onClick={() => { closeSheet(); flows.planDay(); }}>{t('planTheDay')}</button>}
         </div>
       )}
       <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>

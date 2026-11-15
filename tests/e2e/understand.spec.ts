@@ -3,7 +3,7 @@
 // On this device leaves the connector as it was. No copy and paste anywhere in set-up or Settings, and the Connect screen names the three chat
 // apps in order with who can use each (DECISIONS.md 2026-11-15).
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, PHONES, LANGS, goTab } from './helpers';
+import { noSideways, PHONES, LANGS } from './helpers';
 
 const NEW_DEVICE = { cookies: [], origins: [] };
 
@@ -36,7 +36,10 @@ const wordsOf = (page: Page, selector: string) => page.evaluate(sel => {
 const pressed = (page: Page, id: string, on: boolean) => expect(page.getByTestId(id)).toHaveAttribute('aria-pressed', String(on));
 const toTop = (page: Page) => page.evaluate(() => window.scrollTo(0, 0));
 const openSection = async (page: Page) => {
-  await goTab(page, 'settings');
+  // Home's menu, as a person goes (goTab would open every fold).
+  await page.getByTestId('tab-home').click();
+  await page.getByTestId('home-menu').click();
+  await page.getByTestId('menu-settings').click();
   const s = page.getByTestId('understand');
   await expect(s).not.toHaveAttribute('open', ''); // Settings opens folded, as before
   await s.locator('summary').first().click();
@@ -135,9 +138,9 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     const who = page.getByTestId('ob-link').getByTestId('conn-apps-who').locator('li');
     await expect(who).toHaveCount(4);
     for (const [i, name] of ['ChatGPT', 'Claude', 'Gemini'].entries()) await expect(who.nth(i)).toContainText(new RegExp('^' + name));
-    await expect(page.getByTestId('conn-app-chatgpt')).toContainText(W.chatgpt);
-    await expect(page.getByTestId('conn-app-gemini')).toContainText(W.gemini);
-    await expect(page.getByTestId('conn-app-other')).toContainText('MCP');
+    await expect(page.getByTestId('ob-link').getByTestId('conn-app-chatgpt')).toContainText(W.chatgpt);
+    await expect(page.getByTestId('ob-link').getByTestId('conn-app-gemini')).toContainText(W.gemini);
+    await expect(page.getByTestId('ob-link').getByTestId('conn-app-other')).toContainText('MCP');
     expect(await wordsOf(page, '.ob'), 'connect').not.toMatch(PASTE);
     await noSideways(page, 'connect: who can use it');
     await page.getByTestId('ob-back').click();

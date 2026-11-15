@@ -353,7 +353,7 @@ test.describe('with an AI, from Settings', () => {
   /** From "Connect my AI chat app" to the steps in the app: who can use it and the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
   async function connectApp(page: Page) {
     await expect(page.getByTestId('ob-link')).toBeVisible();
-    await expect(page.getByTestId('conn-apps-who').locator('li')).toHaveCount(4);
+    await expect(page.getByTestId('ob-link').getByTestId('conn-apps-who').locator('li')).toHaveCount(4);
     await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole list');
     await noJargon(page, 'connect the app');
     await page.getByTestId('ob-link-on').click();
@@ -367,7 +367,7 @@ test.describe('with an AI, from Settings', () => {
     await expect(page.getByTestId('ob-link-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
     await expect(page.getByTestId('ob-link-steps')).toContainText('Add custom connector');
     // Per-app steps, each with the same weight: ChatGPT, Claude, Gemini, and a line for any other app that accepts MCP connectors.
-    const apps = page.getByTestId('conn-apps-how').locator('li');
+    const apps = page.getByTestId('ob-link').getByTestId('conn-apps-how').locator('li');
     await expect(apps).toHaveCount(4);
     for (const [i, name] of ['ChatGPT', 'Claude', 'Gemini'].entries()) await expect(apps.nth(i)).toContainText(name);
     await expect(apps.nth(3)).toContainText('accepts MCP connectors');

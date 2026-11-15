@@ -24,7 +24,9 @@ The **Notifications** page lists everything that waits, all of it and not only t
 
 Type or dictate a line at the bottom. English or French, whichever you like, and accents and capitals don't matter. If no AI is connected, a round **?** button sits next to the box: it opens **What you can type**, the list below, and tapping an example puts it in the box.
 
-**Add a step.** Just write it: "call the bank tomorrow", "dentist Friday 14h". A leading "add", "ajouter" or "remind me to" is ignored. A short line with no verb goes to your Inbox.
+**Add a card.** Just write it: "call the bank tomorrow", "dentist Friday 14h". A leading "add", "ajouter", "remind me to", "I need to", "don't forget to", "je dois" or a list's dash or number is left out. A short line with no verb goes to your Inbox. A long sentence is a card too, as you wrote it.
+
+Réussite also gives the new card its **suit** when the words point to one: "pay the rent" goes to your money and papers suit, matched against the names and descriptions of your suits and against where your own cards with the same words went. A project you name ("Thesis: read chapter 2", "#thesis") puts the card in that project. When two suits are as likely as each other, it leaves the suit for you. And it writes the card's **first move** from its verb: "pay the rent" gets "Open the bank app", "call the bank" gets "Open the Phone app".
 
 **Tick one done.** "done the report", "finished the report", "fini le rapport", "j'ai fini le rapport". Add "yesterday" or "hier" at the end for yesterday.
 
@@ -32,17 +34,29 @@ Type or dictate a line at the bottom. English or French, whichever you like, and
 
 **Drop one.** "drop the games", "abandon", "scrap", "supprimer", "abandonner". It opens a screen first so you can confirm.
 
-**A day.** today, tonight, tomorrow, the day after tomorrow, in 3 days, in 2 weeks, friday, next friday, 26/10 (day first), 26 oct, 2026-10-26; or aujourd'hui, ce soir, demain, après-demain, dans 3 jours, vendredi prochain, le 26 octobre. A weekday on its own is the next one, never today.
+**Say it as you would.** "I paid the rent", "the rent is done", "les impôts sont faits" tick a card done; "the photos are for Monday", "the report tomorrow instead" move it; "forget the photos", "cancel the gym" drop it. These work only when the words name a card you have: with none, "cancel the gym membership" is a new card.
 
-**A time.** 19:00, 7pm, at 19h, noon; or 19h, 19h30, à 19h, midi, vers 19h. "9:00" with no day means today, or tomorrow if it has already passed. A range such as 14h-15h30 or "de 14h à 15h30" sets the time and the length.
+**Several cards at once.** Put a semicolon or a new line between them, or "then" or "puis": "call the bank; buy bread friday". "call the bank and book the dentist" is two cards too, because each half starts with a verb; "buy milk and eggs" stays one. Several cards always open a screen first, so you can tick the ones you want.
 
-**A length.** 45 min, 2h30, for 2 hours, about 20 minutes; or pendant 2 heures, environ 20 minutes. "5h" and more, or "at 19h", is a time, not a length.
+**Urgent or important.** "urgent: renew the passport", "send the form, important", "pay the fine asap", "call back !!".
+
+**Waiting for.** "waiting for the parcel", "en attente du colis", "j'attends le devis" puts it in **Waiting for** (in the menu), not among the things to do. Add a day ("waiting for the parcel friday") and that is when Réussite asks you about it.
+
+**A note on a card.** "note on the rent: the landlord wants a transfer", "note sur le loyer : par virement". The words after the colon go at the end of that card's note, at once.
+
+**The timer.** "start the report" puts the card in today's hand and starts its timer on Today; "pause" or "stop the timer" pauses it. Said afterwards, "the report took 40 min" or "spent 25 minutes on the report" saves that time on the card.
+
+**A day.** today, tonight, tomorrow, the day after tomorrow, in 3 days, in two days, in 2 weeks, friday, next friday, this weekend, next week, next month, end of the month, 26/10 (day first), 26 oct, 2026-10-26; or aujourd'hui, ce soir, demain, après-demain, dans 3 jours, dans quinze jours, vendredi prochain, lundi en huit, ce week-end, la semaine prochaine, fin du mois, le 26 octobre. A weekday on its own is the next one, never today.
+
+**A time.** 19:00, 7pm, at 19h, noon, half past two, quarter to five, 3 o'clock, "by midnight"; or 19h, 19h30, à 19h, midi, midi et demi, vers 19h, à 15 heures, à 3 heures et demie. "9:00" with no day means today, or tomorrow if it has already passed. A range such as 14h-15h30 or "de 14h à 15h30" sets the time and the length.
+
+**A length.** 45 min, 2h30, for 2 hours, for an hour, about 20 minutes, "tidy the desk, half an hour"; or pendant 2 heures, environ 20 minutes, ", une demi-heure". "5h" and more, or "at 19h", is a time, not a length.
 
 **A place.** "at" or "chez", "au", "à" followed by a place you have in Places.
 
-**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in. Add "until 31 Dec" ("jusqu'au 31 décembre") after it and the repeat ends on that day: "choir every Tuesday 18:00 until 31 Dec".
+**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "every weekday", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in. Add "until 31 Dec" ("jusqu'au 31 décembre") after it and the repeat ends on that day: "choir every Tuesday 18:00 until 31 Dec".
 
-**Anything else** (a question, several things at once, a long sentence) opens the step form, filled in as far as it could read. Connecting an AI (Settings → AI) lets you write free sentences.
+**Anything else** (a question, a pasted paragraph, a line Réussite can't read) opens the form of a new card, filled in as far as it could read. No AI is needed for any of the above: it all happens on your device.
 
 Examples:
 
@@ -56,11 +70,12 @@ Examples:
 What happens next depends on the line:
 
 - **Adding a step, ticking one done, or moving a date** happens at once. Réussite says what it did and shows **Undo**.
+- **A note on a card** goes in at once, and the line above the box says "Changed: …".
 - **Anything bigger** (dropping a step, a decision, several changes, anything that touches your notes) opens a screen first, so you can tick what you want.
-- **If a line is unclear**, Réussite asks which step you mean, or how long a step took, or opens the step form already filled in.
+- **If a line is unclear**, Réussite asks which card you mean, or how long it took, or opens the form already filled in. A name that is nearly right ("done the reprot") is never taken on its own: Réussite shows the card it thinks you mean, and you tap it.
 - **A short line with no verb** is added as a step in your Inbox.
 
-Nothing is written until the line is clear. If you have set up an AI, a line that the app can't read goes to it, and you see what is sent first. See [AI](ai.md).
+Nothing is written until the line is clear. If you have set up an AI, a line that the app can't read goes to it, and so does a long sentence, and you see what is sent first. See [AI](ai.md).
 
 ## Undo and History
 

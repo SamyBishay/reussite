@@ -1,6 +1,9 @@
 # What's new
 
 ## Next — less clutter
+- Home's box understands much more with no AI, all on your device. One line can make several cards ("call the bank; buy bread friday"), and you tick the ones you want. A long sentence becomes a card as you wrote it. A new card gets its suit from its words ("pay the rent" goes to money and papers) and a first move from its verb ("Open the bank app"); a project you name puts it there.
+- You can also write: "urgent: renew the passport"; "waiting for the parcel" (it goes to Waiting for); "note on the rent: the landlord wants a transfer" (added to that card's note); "start the rent", "pause" and "the rent took 40 min" for the timer; "I paid the rent", "the photos are for Monday", "forget the photos". Days and times in words work too: "this weekend", "dans quinze jours", "half past two", "à 3 heures et demie", "for an hour". A name that is nearly right is shown for you to tap, never taken on its own.
+- **What can I type?** on Home has examples for all of this.
 - Opening Réussite for the first time now says what it is: the card game patience, where everything you have to do is a card, each day is a short hand, and each card you play lands on one of four piles. One button, **Play your first card**. After the four suits you write the one thing you have been putting off, give it a first move (Réussite suggests one from the verb: “Open the Phone app” for a call) and a suit, and land on Today with that card under Start here. Once it is played, a small card offers a reminder for tomorrow morning. **Not now** skips the card. The language is a small switch at the top.
 - A card's **starter** is now called its **first move**.
 - A page to send to a friend: **/hello/** (and **/hello/fr/**) says what Réussite is, with pictures, and a link sent in a chat now shows a title, a sentence and a picture.

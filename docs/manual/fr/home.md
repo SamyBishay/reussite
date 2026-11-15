@@ -24,7 +24,9 @@ La page **Notifications** liste tout ce qui attend, et pas seulement le plus pre
 
 Écrivez ou dictez une ligne en bas. En anglais ou en français, comme vous voulez ; les accents et les majuscules n’ont pas d’importance. Si aucune IA n’est connectée, un bouton rond **?** se trouve à côté de la boîte : il ouvre **Ce que vous pouvez écrire**, la liste ci-dessous, et toucher un exemple le met dans la boîte.
 
-**Ajouter une étape.** Écrivez-la simplement : « appeler la banque demain », « dentiste vendredi 14h ». Un « ajouter », « add » ou « remind me to » au début est ignoré. Une ligne courte sans verbe va dans votre boîte de réception.
+**Ajouter une carte.** Écrivez-la simplement : « appeler la banque demain », « dentiste vendredi 14h ». Un « ajouter », « je dois », « il faut », « ne pas oublier de », « add » ou « remind me to » au début est laissé de côté, comme le tiret ou le numéro d’une liste. Une ligne courte sans verbe va dans votre boîte de réception. Une longue phrase devient aussi une carte, telle que vous l’avez écrite.
+
+Réussite donne aussi à la nouvelle carte sa **couleur** quand les mots en désignent une : « payer le loyer » va dans votre couleur argent et papiers, d’après les noms et les descriptions de vos couleurs et d’après la couleur où sont allées vos propres cartes aux mêmes mots. Un projet que vous nommez (« Thèse : lire le chapitre 2 », « #thèse ») met la carte dans ce projet. Quand deux couleurs sont aussi probables l’une que l’autre, il vous laisse choisir. Et il écrit le **premier geste** de la carte d’après son verbe : « payer le loyer » reçoit « Ouvrir l’appli de la banque », « appeler la banque » reçoit « Ouvrir l’appli Téléphone ».
 
 **En cocher une comme faite.** « fait le rapport », « fini le rapport », « j’ai fini le rapport », « done the report ». Ajoutez « hier » à la fin pour hier.
 
@@ -32,17 +34,29 @@ La page **Notifications** liste tout ce qui attend, et pas seulement le plus pre
 
 **En abandonner une.** « abandonner les jeux », « supprimer », « drop the games », « scrap ». Un écran s’ouvre d’abord pour que vous confirmiez.
 
-**Un jour.** aujourd’hui, ce soir, demain, après-demain, dans 3 jours, dans 2 semaines, vendredi, vendredi prochain, 26/10 (le jour d’abord), 26 oct, 2026-10-26 ; ou today, tonight, tomorrow, in 3 days, next friday. Un jour de la semaine seul est le prochain, jamais aujourd’hui.
+**Dites-le comme vous le diriez.** « j’ai payé le loyer », « les impôts sont faits », « I paid the rent » cochent une carte comme faite ; « les impôts plutôt vendredi », « the photos are for Monday » la déplacent ; « laisser tomber les photos », « annuler la salle de sport » l’abandonnent. Cela ne marche que si les mots nomment une carte que vous avez : sinon, « annuler l’abonnement à la salle » est une nouvelle carte.
 
-**Une heure.** 19h, 19h30, à 19h, midi, vers 19h ; ou 19:00, 7pm, noon. « 9:00 » sans jour veut dire aujourd’hui, ou demain s’il est déjà passé. Une plage comme 14h-15h30 ou « de 14h à 15h30 » fixe l’heure et la durée.
+**Plusieurs cartes d’un coup.** Mettez un point-virgule ou un retour à la ligne entre elles, ou « puis » : « appeler la banque ; acheter du pain vendredi ». « appeler la banque et prendre rendez-vous chez le dentiste » fait aussi deux cartes, parce que chaque moitié commence par un verbe ; « acheter du lait et des œufs » reste une seule carte. Plusieurs cartes ouvrent toujours d’abord un écran, pour que vous cochiez celles que vous voulez.
 
-**Une durée.** 45 min, 2h30, pendant 2 heures, environ 20 minutes. « 5h » et plus, ou « à 19h », est une heure, pas une durée.
+**Urgent ou important.** « urgent : renouveler le passeport », « envoyer le dossier, important », « payer l’amende en urgence », « rappeler d’urgence ».
+
+**En attente.** « en attente du colis », « j’attends le devis », « waiting for the parcel » le met dans **En attente de** (dans le menu), pas parmi les choses à faire. Ajoutez un jour (« en attente du colis vendredi ») et c’est ce jour-là que Réussite vous en parle.
+
+**Une note sur une carte.** « note sur le loyer : le propriétaire veut un virement », « note on the rent: by transfer ». Les mots après les deux-points vont à la fin de la note de cette carte, tout de suite.
+
+**Le chrono.** « démarrer le rapport » met la carte dans la main du jour et lance son chrono sur Aujourd’hui ; « pause » ou « arrêter le chrono » le met en pause. Dit après coup, « le rapport a pris 40 min » ou « j’ai passé 1h30 sur le rapport » enregistre ce temps sur la carte.
+
+**Un jour.** aujourd’hui, ce soir, demain, après-demain, dans 3 jours, dans deux jours, dans quinze jours, dans 2 semaines, vendredi, vendredi prochain, lundi en huit, ce week-end, la semaine prochaine, le mois prochain, fin du mois, 26/10 (le jour d’abord), 26 oct, 2026-10-26 ; ou today, tonight, tomorrow, in 3 days, next friday, this weekend, next week. Un jour de la semaine seul est le prochain, jamais aujourd’hui.
+
+**Une heure.** 19h, 19h30, à 19h, midi, midi et demi, vers 19h, à 15 heures, à 3 heures et demie, à 5 heures moins le quart ; ou 19:00, 7pm, noon, half past two. « 9:00 » sans jour veut dire aujourd’hui, ou demain s’il est déjà passé. Une plage comme 14h-15h30 ou « de 14h à 15h30 » fixe l’heure et la durée.
+
+**Une durée.** 45 min, 2h30, pendant 2 heures, pendant une heure, environ 20 minutes, « ranger le bureau, une demi-heure ». « 5h » et plus, ou « à 19h », est une heure, pas une durée.
 
 **Un lieu.** « chez », « au », « à » suivi d’un lieu que vous avez dans Lieux.
 
-**Une répétition.** « chorale chaque mercredi 19h30 », « tous les jours », « every Wednesday ». Avec une heure, cela fait une étape permanente ; sans heure, ou pour un écart plus long, le formulaire de l’étape s’ouvre avec Répétition rempli. Ajoutez « jusqu’au 31 décembre » (« until 31 Dec ») après, et la répétition s’arrête ce jour-là : « chorale chaque mardi 18h jusqu’au 31 décembre ».
+**Une répétition.** « chorale chaque mercredi 19h30 », « tous les jours », « en semaine », « every Wednesday ». Avec une heure, cela fait une étape permanente ; sans heure, ou pour un écart plus long, le formulaire de l’étape s’ouvre avec Répétition rempli. Ajoutez « jusqu’au 31 décembre » (« until 31 Dec ») après, et la répétition s’arrête ce jour-là : « chorale chaque mardi 18h jusqu’au 31 décembre ».
 
-**Tout le reste** (une question, plusieurs choses à la fois, une longue phrase) ouvre le formulaire de l’étape, rempli autant que possible. Connecter une IA (Réglages → IA) permet d’écrire des phrases libres.
+**Tout le reste** (une question, un paragraphe collé, une ligne que Réussite ne sait pas lire) ouvre le formulaire d’une nouvelle carte, rempli autant que possible. Rien de tout cela ne demande d’IA : tout se passe sur votre appareil.
 
 Exemples :
 
@@ -56,11 +70,12 @@ Exemples :
 Ce qui se passe ensuite dépend de la ligne :
 
 - **Ajouter une étape, en cocher une comme faite, ou déplacer une date** se fait tout de suite. Réussite dit ce qu’il a fait et montre **Annuler**.
+- **Une note sur une carte** s’ajoute tout de suite, et la ligne au-dessus de la boîte dit « Modifié : … ».
 - **Tout ce qui est plus gros** (abandonner une étape, une décision, plusieurs changements, tout ce qui touche vos notes) ouvre d’abord un écran, pour que vous cochiez ce que vous voulez.
-- **Si une ligne n’est pas claire**, Réussite demande de quelle étape vous parlez, ou combien de temps une étape a pris, ou ouvre le formulaire de l’étape déjà rempli.
+- **Si une ligne n’est pas claire**, Réussite demande de quelle carte vous parlez, ou combien de temps elle a pris, ou ouvre le formulaire déjà rempli. Un nom presque juste (« fini le loyre ») n’est jamais pris tout seul : Réussite montre la carte qu’il croit reconnaître, et vous la touchez.
 - **Une ligne courte sans verbe** est ajoutée comme étape dans votre boîte de réception.
 
-Rien n’est écrit tant que la ligne n’est pas claire. Si vous avez configuré une IA, une ligne que l’appli ne sait pas lire lui est envoyée, et vous voyez d’abord ce qui part. Voir [L’IA](ai.md).
+Rien n’est écrit tant que la ligne n’est pas claire. Si vous avez configuré une IA, une ligne que l’appli ne sait pas lire lui est envoyée, une longue phrase aussi, et vous voyez d’abord ce qui part. Voir [L’IA](ai.md).
 
 ## Annuler et Historique
 

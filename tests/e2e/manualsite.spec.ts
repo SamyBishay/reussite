@@ -33,6 +33,21 @@ test('the French pages, the language switch and the pictures', async ({ page }) 
   await expect(page).toHaveURL(/\/manual\/getting-started\.html$/);
 });
 
+test('the research index is served in both languages and leads to a rule page', async ({ page }) => {
+  for (const [path, h1, rule, ruleH1, lang] of [
+    ['/manual/research', 'The research behind the method', 'research-4', /^Rule 4/, 'en'],
+    ['/manual/fr/research', 'La recherche derrière la méthode', 'research-4', /^Règle 4/, 'fr'],
+  ] as const) {
+    await page.goto(path);
+    await expect(page.locator('html')).toHaveAttribute('lang', lang);
+    await expect(page.locator('h1')).toHaveText(h1);
+    await expect(page.locator('[data-testid="home"]')).toHaveCount(0);
+    await page.locator(`main a[href="${rule}.html"]`).first().click();
+    await expect(page.locator('h1')).toHaveText(ruleH1);
+    await expect(page.locator('main a[href^="https://doi.org/"]').first()).toBeVisible();
+  }
+});
+
 test('a dark device gets the dark pictures', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/manual/matrix.html');

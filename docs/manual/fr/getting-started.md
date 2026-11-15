@@ -37,6 +37,8 @@ Si vous utilisez déjà Réussite sur un autre appareil, choisissez **Restaurer 
 
 Un Réussite tout neuf commence petit, et grandit à mesure que vous l’utilisez. C’est voulu : une longue liste d’onglets et de réglages est une mauvaise façon de rencontrer une première carte.
 
+![Aujourd’hui sur un Réussite tout neuf : deux onglets, et le paquet replié sous la main du jour](shot:newstart)
+
 - **Deux onglets : Accueil et Aujourd’hui.** L’accueil, c’est la salutation et une boîte où écrire. Aujourd’hui, c’est votre main et **Commencez ici**. Sous la main du jour, un pli, **Le paquet · n cartes**, contient toutes vos cartes.
 - **D’autres onglets arrivent quand ils ont quelque chose à montrer.** **Calendrier** arrive avec votre première carte ou obligation régulière à heure fixe. **Projets** arrive avec votre premier projet (pas la boîte de réception) ou à huit cartes. **La Matrice** arrive à douze cartes ouvertes, ou après votre première revue de la semaine. Chaque arrivée est une ligne derrière la cloche de l’accueil, jamais une fenêtre qui surgit, et un onglet arrivé reste.
 - **Afficher tous les onglets.** Dans Réglages → **Onglets**, **Afficher tous les onglets** amène les trois tout de suite, pour de bon. Il n’apparaît que tant qu’un onglet manque. Un lien vers un onglet l’ouvre, affiché ou non.

@@ -37,6 +37,8 @@ If you already use Réussite on another device, choose **Restore with a recovery
 
 A new Réussite starts small, and grows as you use it. This is on purpose: a long list of tabs and settings is a poor way to meet a first card.
 
+![Today on a new Réussite: two tabs, and the deck folded under today's hand](shot:newstart)
+
 - **Two tabs: Home and Today.** Home is the greeting and one box where you type. Today is your hand and **Start here**. Under today's hand there is a fold, **The deck · n cards**, with all your cards.
 - **More tabs arrive when they have something to show.** **Calendar** arrives with your first card or standing item that has a fixed time. **Projects** arrives with your first project (not the Inbox) or at eight cards. **The Matrix** arrives at twelve open cards, or after your first weekly review. Each arrival is one line behind the bell on Home, never a pop-up, and a tab that has arrived stays.
 - **Show every tab.** In Settings → **Tabs**, **Show every tab** brings all three now, for good. It only shows while one is missing. Any link to a tab opens it, shown or not.

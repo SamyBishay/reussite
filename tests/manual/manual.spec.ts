@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { openMenu, expandSettings, stubNow } from '../e2e/helpers';
+import { NEW_USER_SUITS } from '../../src/data/settings';
 
 // The manual's screenshots (docs/dev/manual.md). One run makes every picture the manual shows, in both languages and both
 // themes, from invented data only: nothing here is read from the real list, and `private/` is never touched. Run with
@@ -70,7 +71,7 @@ function list(lang: Lang): Docs {
   ];
   const item = (id: string, text: string, w: number) => ({ id, text, w, by: 'me' });
   return {
-    meta: [['settings', { language: lang, preset: 'st-george', here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
+    meta: [['settings', { language: lang, preset: 'st-george', suits: NEW_USER_SUITS, here: 'home', reduceMotion: true, celebrations: 'off', credit: { en: '', fr: '' } }]],
     places: [['home', { name: L('Home', 'Maison'), timeZone: 'Europe/Paris', order: 1 }], ['lisbon', { name: L('Lisbon', 'Lisbonne'), timeZone: 'Europe/Lisbon', order: 2 }], ['oldtown', { name: L('Old town', 'Vieille ville'), timeZone: 'Europe/Paris', order: 3, parentId: 'home' }]],
     stays: [['stay1', { placeId: 'lisbon', from: day(12), to: day(16), note: '' }]],
     projects: [
@@ -160,6 +161,24 @@ for (const lang of LANGS) for (const theme of THEMES) {
         await expect(page.getByTestId('ob-language')).toBeVisible();
         if (lang === 'fr') await page.getByTestId('ob-lang-fr').click();
         await shot(page, 'onboarding');
+      });
+      test('the small start of a new install', async ({ page }) => {
+        // A new install after set-up: two tabs, today's hand, and the deck folded under it. Three cards typed on Home, in the app's language.
+        await page.goto('/');
+        await expect(page.getByTestId('ob-language')).toBeVisible();
+        if (lang === 'fr') await page.getByTestId('ob-lang-fr').click();
+        await page.getByTestId('ob-skip').click();
+        await expect(page.getByTestId('home')).toBeVisible();
+        for (const line of lang === 'fr'
+          ? ['appeler la banque demain', 'acheter du pain vendredi', 'répondre à l’électricien']
+          : ['call the bank tomorrow', 'buy bread friday', 'reply to the electrician']) {
+          await page.getByTestId('home-input').fill(line);
+          await page.getByTestId('home-input').press('Enter');
+          await expect(page.getByTestId('home-line')).toBeVisible();
+        }
+        await page.goto('/#today');
+        await expect(page.getByTestId('deck-fold')).toBeVisible();
+        await shot(page, 'newstart');
       });
     });
 

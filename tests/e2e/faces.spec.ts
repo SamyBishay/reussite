@@ -49,9 +49,18 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     expect(await ids(page, '.go.quiet')).toEqual(['first-note', 'first-move', 'drop']);
     await expect(page.getByTestId('first').getByTestId('stuck')).toHaveCount(0);
     await expect(page.getByTestId('first').locator('.edits')).toHaveCount(0);
+    // Each button can be brought whole into the room between the top bar and the tab bar, and a tap at its middle lands on it. (It was `toBeInViewport({ ratio: 1 })`
+    // after `scrollIntoViewIfNeeded`: Chrome scrolls only as far as the nearest edge, which left I'm stuck's bottom at 568.203 of 568 (0.2 CSS px, half a device pixel
+    // at 2.625) and the whole button behind the fixed tab bar, which that check did not see; Firefox centres it. Measured 15 Nov.)
     for (const b of await page.getByTestId('first').getByRole('button').all()) {
-      await b.scrollIntoViewIfNeeded();
-      await expect(b).toBeInViewport({ ratio: 1 });
+      const m = await b.evaluate(el => {
+        el.scrollIntoView({ block: 'center' });
+        const r = el.getBoundingClientRect(), px = 1 / devicePixelRatio;
+        const top = document.getElementById('topbar')!.getBoundingClientRect().bottom, bottom = document.querySelector('.tabbar')!.getBoundingClientRect().top;
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { id: (el as HTMLElement).dataset.testid ?? (el as HTMLElement).innerText, inside: r.top >= top - px && r.bottom <= bottom + px && r.left >= -px && r.right <= innerWidth + px, onIt: !!hit && el.contains(hit) };
+      });
+      expect(m, m.id).toEqual({ id: m.id, inside: true, onIt: true });
     }
     await noSideways(page, `Start here (${tag})`);
 
@@ -73,9 +82,18 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await load(page, w, h, lang, { spent: 25, sessions: [{ d: '2026-11-09', m: 25, why: 'paused', at: '2026-11-09T10:00:00.000Z' }], carried: 1 });
     await expect(page.getByTestId('go-timer')).toHaveText(lang === 'fr' ? 'Reprendre' : 'Continue');
     expect(await ids(page, '.go.quiet')).toEqual(['first-note', 'first-move', 'drop', 'stuck']);
+    // Each button can be brought whole into the room between the top bar and the tab bar, and a tap at its middle lands on it. (It was `toBeInViewport({ ratio: 1 })`
+    // after `scrollIntoViewIfNeeded`: Chrome scrolls only as far as the nearest edge, which left I'm stuck's bottom at 568.203 of 568 (0.2 CSS px, half a device pixel
+    // at 2.625) and the whole button behind the fixed tab bar, which that check did not see; Firefox centres it. Measured 15 Nov.)
     for (const b of await page.getByTestId('first').getByRole('button').all()) {
-      await b.scrollIntoViewIfNeeded();
-      await expect(b).toBeInViewport({ ratio: 1 });
+      const m = await b.evaluate(el => {
+        el.scrollIntoView({ block: 'center' });
+        const r = el.getBoundingClientRect(), px = 1 / devicePixelRatio;
+        const top = document.getElementById('topbar')!.getBoundingClientRect().bottom, bottom = document.querySelector('.tabbar')!.getBoundingClientRect().top;
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { id: (el as HTMLElement).dataset.testid ?? (el as HTMLElement).innerText, inside: r.top >= top - px && r.bottom <= bottom + px && r.left >= -px && r.right <= innerWidth + px, onIt: !!hit && el.contains(hit) };
+      });
+      expect(m, m.id).toEqual({ id: m.id, inside: true, onIt: true });
     }
     await noSideways(page, `Start here, paused (${tag})`);
   });

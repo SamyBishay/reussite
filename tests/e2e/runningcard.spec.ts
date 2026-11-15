@@ -59,7 +59,8 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await first.locator('.t').click();
     await sheet.getByTestId('run-strip').getByTestId('run-pause').click();
     await expect(sheet).toBeHidden();
-    expect(await started(page, id)).toBeNull();
+    // The sheet closes as Pause is tapped and the write lands a moment later (Android Chrome read it first in 4 runs of 20, 15 Nov): wait for it, as the card does.
     await expect(first.getByTestId('go-timer')).toBeVisible();
+    await expect.poll(() => started(page, id)).toBeNull();
   });
 }

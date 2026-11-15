@@ -1,11 +1,17 @@
 // The tools, against a list written by a simulated app device through the real relay.
 import { env } from 'cloudflare:workers';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { openFromText } from '../../src/sync/crypto';
 import { decodeBatch } from '../../src/sync/wire';
 import { SCHEMA_VERSION } from '../../src/data/schema';
 import type { ChangeBatch } from '../../src/sync/protocol';
 import { newApp, signIn, switchOn, tool, type App } from './connector';
+
+// The fixture has the 19:00 Choir rehearsal today, and from 18:30 the relay rightly puts it before the hand: these tests
+// run today at 09:00 UTC (10:00 or 11:00 in Paris, the fixture's place), when t1 is the next card. The clock still ticks.
+vi.useFakeTimers({ toFake: ['Date'], shouldAdvanceTime: true });
+vi.setSystemTime(new Date(new Date().toISOString().slice(0, 10) + 'T09:00:00Z'));
+afterAll(() => { vi.useRealTimers(); });
 
 const TODAY = new Date().toISOString().slice(0, 10);
 const day = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);

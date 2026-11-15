@@ -65,7 +65,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     // The section, and its three options: On this device (chosen on a new install), and A cloud AI with its two ways.
     await openSection(page);
     const s = page.getByTestId('understand');
-    await expect(s.locator('summary')).toContainText(W.title);
+    await expect(s.locator('summary').first()).toContainText(W.title);
     await expect(page.getByTestId('ai-none')).toContainText(W.device);
     await expect(page.getByTestId('understand-cloud')).toContainText(W.cloud);
     await pressed(page, 'ai-none', true);

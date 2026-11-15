@@ -10,13 +10,13 @@ Sans synchronisation, sans IA et sans connecteur, tout reste sur votre appareil.
 
 ## Avec la synchronisation
 
-Votre liste est d’abord brouillée sur votre appareil. **Ce que le relais peut voir :**
+Votre paquet est d’abord brouillée sur votre appareil. **Ce que le relais peut voir :**
 
-- votre liste sous forme de blocs brouillés, leur taille et leur heure d’arrivée ;
+- votre paquet sous forme de blocs brouillés, leur taille et leur heure d’arrivée ;
 - les adresses IP ;
 - l’adresse de notification de chaque appareil, et les heures auxquelles ses notifications sont dues (leur texte est brouillé, donc le relais ne peut pas le lire) ;
-- le flux de calendrier, seulement si vous l’activez. Avec **Les heures seulement**, il dit seulement « Heure fixe » et « Étape prévue ». Avec **Noms courts** (le choix par défaut), et avec **Noms courts, lieux et notes**, ce qu’il dit (les noms courts, puis les lieux, les notes et les liens) est stocké en clair, et celui qui fait tourner le relais peut le lire ;
-- toute votre liste, **tant que le connecteur est activé**.
+- le flux de calendrier, seulement si vous l’activez. Avec **Les heures seulement**, il dit seulement « Heure fixe » et « Carte prévue ». Avec **Noms courts** (le choix par défaut), et avec **Noms courts, lieux et notes**, ce qu’il dit (les noms courts, puis les lieux, les notes et les liens) est stocké en clair, et celui qui fait tourner le relais peut le lire ;
+- toute votre paquet, **tant que le connecteur est activé**.
 
 Il ne voit jamais ce qu’il y a dans un bloc brouillé.
 
@@ -30,7 +30,7 @@ Votre clé d’API reste sur cet appareil. Elle n’est jamais synchronisée et 
 
 - **Les notes privées** de la mémoire : jamais envoyées à une IA, même par le connecteur.
 - **Comment joindre une personne :** jamais dans un paquet de voyage.
-- **Le diagnostic :** il n’inclut jamais vos étapes, notes, noms, lieux ou clés.
+- **Le diagnostic :** il n’inclut jamais vos cartes, notes, noms, lieux ou clés.
 
 ## Oublier et supprimer
 
@@ -40,4 +40,4 @@ Votre clé d’API reste sur cet appareil. Elle n’est jamais synchronisée et 
 
 ## Si vous perdez tout
 
-Si vous perdez tous vos appareils et la clé de récupération, la liste est perdue pour de bon. Voir [Synchronisation et appareil perdu](sync-and-recovery.md).
+Si vous perdez tous vos appareils et la clé de récupération, le paquet est perdu pour de bon. Voir [Synchronisation et appareil perdu](sync-and-recovery.md).

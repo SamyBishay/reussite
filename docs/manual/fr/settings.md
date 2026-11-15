@@ -13,7 +13,7 @@ English ou Français. Le changement est immédiat.
 ## Apparence
 
 - **Thème :** Système, Clair, Sombre, ou Selon l’heure (vous réglez quand le clair commence et quand le sombre commence).
-- **Palette** et **Couleur d’accent**, et les **Couleurs des familles**. Les nouvelles personnes commencent avec la palette **af Klint**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
+- **Palette** et **Couleur d’accent**, et les **Teintes des couleurs**. Les nouvelles personnes commencent avec la palette **af Klint**. Si vous en aviez choisi une avant, elle reste. Réussite vous prévient quand une couleur est difficile à lire (visez un contraste de 4,5 pour 1).
 - **Taille du texte :** Petit, Moyen ou Grand.
 - **Réduire les animations**.
 - **Célébrations :** Désactivées, Calmes ou Vives. **Son** et **Volume**.
@@ -24,15 +24,21 @@ English ou Français. Le changement est immédiat.
 
 Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raisonnables :
 
-- **Mettre en évidence les échéances à moins de (jours).** Trois semaines par défaut. Une échéance dans cette fenêtre s’affiche en rouge. Elle ne rend pas une étape urgente : c’est vous qui le cochez.
+- **Mettre en évidence les échéances à moins de (jours).** Trois semaines par défaut. Une échéance dans cette fenêtre s’affiche en rouge. Elle ne rend pas une carte urgente : c’est vous qui le cochez.
 - **La journée commence à.** 5 h par défaut. Une nuit tardive compte comme le même jour jusque-là.
-- **Étapes de travail par jour, au plus.** Trois par défaut.
-- **Temps de planification (min).** 15 par défaut.
-- **La journée finit à.** 19 h par défaut. Le rituel de planification compte la place entre son début et cette heure ; le « jusqu’à quand » de chaque matin la remplace pour ce jour-là.
-- **Familles :** ce sont vos quatre piliers, les parts de vos journées qui comptent pour vous. Renommez-les et choisissez leurs symboles.
-- **Lieux**, leurs **zones** et **Séjours.** Voir [Lieux et voyages](places-and-trips.md).
-- **Utiliser Adresses et proches**, et les **catégories d’adresses.** Voir [Adresses et proches](addresses-and-people.md).
-- Les heures d’une **obligation**, le **jour et l’heure de la revue de la semaine**, le **point du matin** et la **clôture de la journée.** Les notifications s’en servent.
+- **Cartes de travail par jour, au plus.** Trois par défaut.
+- **Temps de planification (min).** 15 par défaut : le temps mis de côté pour distribuer la journée elle-même.
+- **La journée finit à.** 19 h par défaut. Distribuer la journée compte la place entre son début et cette heure ; le « jusqu’à quand » de chaque matin la remplace pour ce jour-là.
+- **Familles :** ce sont vos quatre couleurs, les parts de vos journées qui comptent pour vous. Renommez-les et choisissez leurs symboles.
+- **Utiliser Lieux et séjours**, puis **Lieux**, leurs **zones** et **Séjours.** Sur un Réussite tout neuf, c’est désactivé, et le lieu en haut des listes, le lieu d’une carte, les séjours et Préparer ce voyage sont masqués tant que vous ne l’activez pas. Voir [Lieux et voyages](places-and-trips.md).
+- **Utiliser Adresses et proches**, et les **catégories d’adresses.** Également désactivé sur un Réussite tout neuf. Voir [Adresses et proches](addresses-and-people.md).
+
+Un réglage activé parce que vous avez déjà des lieux, des séjours, des adresses ou des proches est grisé, et dit pourquoi. Rien de ce que vous avez enregistré n’est supprimé quand vous en désactivez un : cela revient quand vous le réactivez. Si vous utilisiez Réussite avant ce changement, les deux sont activés.
+- Les heures d’une **obligation**, le **jour et l’heure de la revue de la semaine**, le **point du matin** et la **clôture de la journée.** Les notifications s’en servent. **Commencer la revue** est ici aussi, et ouvre la revue n’importe quel jour, même sur un Réussite tout neuf où elle attend.
+
+## Onglets
+
+**Afficher tous les onglets** met tout de suite Calendrier, Projets et la Matrice dans la barre d’onglets, pour de bon. Il n’apparaît que tant que l’un d’eux n’est pas encore arrivé. Un Réussite tout neuf commence avec Accueil et Aujourd’hui et les autres arrivent tout seuls ; voir [Prise en main](getting-started.md). Si vous utilisiez déjà Réussite, vous les voyez déjà tous.
 
 ## Comment Réussite vous comprend
 
@@ -63,11 +69,11 @@ Abonnez-vous à vos éléments à heure fixe depuis une appli de calendrier. Cho
 
 ## Données
 
-- **Exporter une sauvegarde** enregistre un fichier avec toute votre liste.
+- **Exporter une sauvegarde** enregistre un fichier avec tout votre paquet.
 - **Restaurer une sauvegarde** fusionne une sauvegarde avec ce qui est sur cet appareil. Les modifications les plus récentes d’ici l’emportent, et une sauvegarde de ce qui était là avant est conservée.
 - **Exporter une sauvegarde chiffrée** (quand la synchronisation est active) ne s’ouvre que sur un appareil qui détient votre clé de récupération.
-- **Importer depuis Réussite 1** reprend votre liste de la première version. Vous voyez ce qui sera importé avant que quoi que ce soit soit écrit.
-- **Garder ma liste sur cet appareil** demande au navigateur de ne pas effacer votre liste quand la place manque.
+- **Importer depuis Réussite 1** reprend votre paquet de la première version. Vous voyez ce qui sera importé avant que quoi que ce soit soit écrit.
+- **Garder mon paquet sur cet appareil** demande au navigateur de ne pas effacer votre paquet quand la place manque.
 
 Si la synchronisation est désactivée, Réussite vous rappelle toutes les deux semaines d’enregistrer un fichier de sauvegarde. C’est votre filet de sécurité.
 
@@ -75,4 +81,4 @@ Si la synchronisation est désactivée, Réussite vous rappelle toutes les deux 
 
 La version, **Lire le manuel**, le crédit des peintures qui ont inspiré l’aspect af Klint, **Copier le diagnostic**, la note de confidentialité et **Nouveautés**.
 
-**Copier le diagnostic** produit un court rapport (versions, appareil, erreurs) que vous pouvez envoyer à un ami quand quelque chose se casse. Il n’inclut jamais vos étapes, notes, noms, lieux ou clés.
+**Copier le diagnostic** produit un court rapport (versions, appareil, erreurs) que vous pouvez envoyer à un ami quand quelque chose se casse. Il n’inclut jamais vos cartes, notes, noms, lieux ou clés.

@@ -1,16 +1,16 @@
 # Home and its one box
 
-Home is where you start. The Réussite mark and a greeting sit in the middle of the screen, and at the bottom there is one box. The step to start is on [Today](daily-loop.md), and only there.
+Home is where you start. The Réussite mark and a greeting sit in the middle of the screen, and at the bottom there is one box. The card to start is on [Today](daily-loop.md), and only there.
 
 ![Home: a greeting, and a line just typed](shot:home)
 
 ## What Home says
 
-At the top there is the name, Réussite, with a small clock beside it and the date under it, and the **bell** and the **menu** on the right. Réussite is named on Home only: the other tabs show just the date and where you are. In the middle of the screen, the heart of the Réussite mark, large, sits above one line that greets you, in large type, centred. The mark follows the light or dark theme. The small clock beside the name tells the time where you are, the way the timer shows time passing: colour that fills, in the colours of Hilma af Klint’s painting *The Dove*, no hands and no numbers. In the middle the hour is a rose disc that fills clockwise from the top (a full turn is twelve hours), with twelve small ticks round it so that it reads as a clock face. Round it the minutes ring, teal in the light theme and blue in the dark, fills and starts again each hour, and the thinnest ring, outermost and gold, fills with the seconds and starts again each minute. It follows the light or dark theme. The seconds move once a second, only while the screen is showing; if you have asked for less motion (the device’s setting, or **Reduce motion** in Settings), the seconds ring is not drawn and the clock moves once a minute. A screen reader says the time in words. The line is a hello and nothing else, picked from a long list for any time of day plus a few for the hour: “Hello.”, “Good morrow.”, “What ho!”, “Dear Sir or Madam,”, “Hwæt!”, “Well met, fellow flibbertigibbet.” It never talks about your day, never asks you anything, and is the same with or without an AI. Home never scrolls: when a card is shown under the greeting (Plan the day, a step you missed, a question, Next steps), the mark and the line get smaller to make room, and a card too tall for a small screen scrolls inside itself. Open Home again and you get another sentence, not the same one twice in a day while another fits.
+At the top there is the name, Réussite, with a small clock beside it and the date under it, and the **bell** and the **menu** on the right. Réussite is named on Home only: the other tabs show just the date and where you are. In the middle of the screen, the heart of the Réussite mark, large, sits above one line that greets you, in large type, centred. The mark follows the light or dark theme. The small clock beside the name tells the time where you are, the way the timer shows time passing: colour that fills, in the colours of Hilma af Klint’s painting *The Dove*, no hands and no numbers. In the middle the hour is a rose disc that fills clockwise from the top (a full turn is twelve hours), with twelve small ticks round it so that it reads as a clock face. Round it the minutes ring, teal in the light theme and blue in the dark, fills and starts again each hour, and the thinnest ring, outermost and gold, fills with the seconds and starts again each minute. It follows the light or dark theme. The seconds move once a second, only while the screen is showing; if you have asked for less motion (the device’s setting, or **Reduce motion** in Settings), the seconds ring is not drawn and the clock moves once a minute. A screen reader says the time in words. The line is a hello and nothing else, picked from a long list for any time of day plus a few for the hour: “Hello.”, “Good morrow.”, “What ho!”, “Dear Sir or Madam,”, “Hwæt!”, “Well met, fellow flibbertigibbet.” It never talks about your day, never asks you anything, and is the same with or without an AI. Home never scrolls: when a card is shown under the greeting (Deal the day, a card you missed, a question, Next steps), the mark and the line get smaller to make room, and a card too tall for a small screen scrolls inside itself. Open Home again and you get another sentence, not the same one twice in a day while another fits.
 
 Under the line there is nothing: no card, no notice, no suggestion, no button. After you type a line that creates or changes a card, one line appears just above the box, "Created: Call the bank" or "Changed: Call the bank". Tap it to open the card. It goes at your next line. (To take a change back, use History, in the menu.)
 
-**Start here**, the running step with its clock and **Pause**, and tomorrow's first step are on [Today](daily-loop.md) alone, at the very top. When the box needs to ask you something (which of several steps you mean, how long a step took, an AI's answer, a change waiting for your yes), you are taken to Today, where the question is the first card. Home never asks.
+**Start here**, the running card with its clock and **Pause**, and tomorrow's first card are on [Today](daily-loop.md) alone, at the very top. When the box needs to ask you something (which of several cards you mean, how long a card took, an AI's answer, a change waiting for your yes), you are taken to Today, where the question is the first card. Home never asks.
 
 Home has no counts, no list and no streaks. What waits for you is not in the way: a small **bell** at the top shows a quiet dot when something new is waiting, and opens the **Notifications** page.
 
@@ -18,7 +18,7 @@ Home has no counts, no list and no streaks. What waits for you is not in the way
 
 ![The Notifications page](shot:notifications)
 
-The **Notifications** page lists everything that waits, all of it and not only the most urgent, each with its buttons: **Plan the day** when nothing is planned yet (with an AI set up it opens a proposal you keep, swap or skip, and **Plan it myself** opens the ritual), **Close the day** when everything on today's list is done, a fixed-time step that has passed and is not done (“Call the bank” was at 10:00, with **Move** and **Remove**), your recovery key if you haven't saved it, decisions to check, yesterday's steps left open (**Decide them one at a time** opens them one card at a time; nothing moves by itself), the review day, the **Next steps** (things set-up does not ask: an AI, sync, reminders, the calendar, Addresses & people), and the app's own notices (a new version, a newer copy of your data, a stale sync, “Still on…?”). The dot shows when something has not been seen yet. It has no number and is never red. When nothing waits, the page says so.
+The **Notifications** page lists everything that waits, all of it and not only the most urgent, each with its buttons: **Deal the day** when no hand is dealt yet (on a new Réussite it opens the quick deal, one screen; with an AI set up it opens a proposal you keep, swap or skip, and **Deal it myself** opens the ritual), **Close the day** when every card in today's hand is played, a fixed-time card that has passed and is not played (“Call the bank” was at 10:00, with **Move** and **Remove**), your recovery key if you haven't saved it, decisions to check, yesterday's cards left open (**Decide them one at a time** opens them one card at a time; nothing moves by itself), the review day, the **Next steps** (things set-up does not ask: an AI, sync, reminders, the calendar, Addresses & people), a line when a new tab has arrived (Calendar, Projects, the Matrix: see [Getting started](getting-started.md)), and the app's own notices (a new version, a newer copy of your data, a stale sync, “Still on…?”). The dot shows when something has not been seen yet. It has no number and is never red. When nothing waits, the page says so.
 
 ## The one box
 
@@ -28,13 +28,13 @@ Type or dictate a line at the bottom. English or French, whichever you like, and
 
 Réussite also gives the new card its **suit** when the words point to one: "pay the rent" goes to your money and papers suit, matched against the names and descriptions of your suits and against where your own cards with the same words went. A project you name ("Thesis: read chapter 2", "#thesis") puts the card in that project. When two suits are as likely as each other, it leaves the suit for you. And it writes the card's **first move** from its verb: "pay the rent" gets "Open the bank app", "call the bank" gets "Open the Phone app".
 
-**Tick one done.** "done the report", "finished the report", "fini le rapport", "j'ai fini le rapport". Add "yesterday" or "hier" at the end for yesterday.
+**Play one.** "done the report", "finished the report", "fini le rapport", "j'ai fini le rapport". Add "yesterday" or "hier" at the end for yesterday.
 
 **Move one.** "move the photos to Monday", "push", "postpone", "reschedule", "reporter le dentiste à vendredi", "décaler", "repousser".
 
 **Drop one.** "drop the games", "abandon", "scrap", "supprimer", "abandonner". It opens a screen first so you can confirm.
 
-**Say it as you would.** "I paid the rent", "the rent is done", "les impôts sont faits" tick a card done; "the photos are for Monday", "the report tomorrow instead" move it; "forget the photos", "cancel the gym" drop it. These work only when the words name a card you have: with none, "cancel the gym membership" is a new card.
+**Say it as you would.** "I paid the rent", "the rent is done", "les impôts sont faits" play a card; "the photos are for Monday", "the report tomorrow instead" move it; "forget the photos", "cancel the gym" drop it. These work only when the words name a card you have: with none, "cancel the gym membership" is a new card.
 
 **Several cards at once.** Put a semicolon or a new line between them, or "then" or "puis": "call the bank; buy bread friday". "call the bank and book the dentist" is two cards too, because each half starts with a verb; "buy milk and eggs" stays one. Several cards always open a screen first, so you can tick the ones you want.
 
@@ -54,7 +54,7 @@ Réussite also gives the new card its **suit** when the words point to one: "pay
 
 **A place.** "at" or "chez", "au", "à" followed by a place you have in Places.
 
-**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "every weekday", "tous les jours". With a time, this makes a standing step; without one, or for a longer gap, the step form opens with Repeats filled in. Add "until 31 Dec" ("jusqu'au 31 décembre") after it and the repeat ends on that day: "choir every Tuesday 18:00 until 31 Dec".
+**A repeat.** "choir every Wednesday 19:30", "chorale chaque mercredi 19h30", "every day", "every weekday", "tous les jours". With a time, this makes a standing card; without one, or for a longer gap, the card's form opens with Repeats filled in. Add "until 31 Dec" ("jusqu'au 31 décembre") after it and the repeat ends on that day: "choir every Tuesday 18:00 until 31 Dec".
 
 **Anything else** (a question, a pasted paragraph, a line Réussite can't read) opens the form of a new card, filled in as far as it could read. No AI is needed for any of the above: it all happens on your device.
 
@@ -69,11 +69,11 @@ Examples:
 
 What happens next depends on the line:
 
-- **Adding a step, ticking one done, or moving a date** happens at once. Réussite says what it did and shows **Undo**.
+- **Adding a card, playing one, or moving a date** happens at once. Réussite says what it did and shows **Undo**.
 - **A note on a card** goes in at once, and the line above the box says "Changed: …".
-- **Anything bigger** (dropping a step, a decision, several changes, anything that touches your notes) opens a screen first, so you can tick what you want.
+- **Anything bigger** (dropping a card, a decision, several changes, anything that touches your notes) opens a screen first, so you can tick what you want.
 - **If a line is unclear**, Réussite asks which card you mean, or how long it took, or opens the form already filled in. A name that is nearly right ("done the reprot") is never taken on its own: Réussite shows the card it thinks you mean, and you tap it.
-- **A short line with no verb** is added as a step in your Inbox.
+- **A short line with no verb** is added as a card in your Inbox.
 
 Nothing is written until the line is clear. If you have set up an AI, a line that the app can't read goes to it, and so does a long sentence, and you see what is sent first. See [AI](ai.md).
 
@@ -85,11 +85,11 @@ Open **History** from the menu at the top of Home. It lists the last 90 days of 
 
 ## The menu
 
-The menu icon at the top of Home holds what has no tab: **Settings**, **Places**, **Addresses & people**, **+ Address**, **Memory**, **Waiting for** and **History**. The bell sits next to it.
+The menu icon at the top of Home holds what has no tab: **Settings**, **Memory**, **Waiting for** and **History**, and, when you have switched them on, **Places** (with Places and trips) and **Addresses & people** with **+ Address**. The bell sits next to it.
 
 ## The tab bar
 
-The bar at the bottom has five places: Home, Today, Matrix, Projects and Calendar. It shows only words, never counts.
+The bar at the bottom shows only words, never counts. A new Réussite has two places, Home and Today. Calendar, Projects and the Matrix join them as they have something to show, or all at once with Settings → Tabs → **Show every tab**. If you already used Réussite, you keep all five.
 
 **Research says:** We found no study of a start screen with few choices; the method as a whole has some support, not this detail. [See the evidence](research-method.md).
 

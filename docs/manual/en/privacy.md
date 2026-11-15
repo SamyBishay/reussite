@@ -10,13 +10,13 @@ With no sync, no AI and no connector, everything stays on your device. There are
 
 ## With sync
 
-Your list is scrambled on your device first. **What the relay can see:**
+Your deck is scrambled on your device first. **What the relay can see:**
 
-- your list as scrambled blobs, their sizes and when they arrive;
+- your deck as scrambled blobs, their sizes and when they arrive;
 - IP addresses;
 - the push address of each device, and the times its notifications are due (their text is scrambled, so the relay can't read it);
-- the calendar feed, only if you switch it on. At **Times only** it says only "Fixed time" and "Planned step". At **Short names** (the default), and at **Short names, places and notes**, what it says (short names, and then places, notes and links) is stored in plain text, and whoever runs the relay can read it;
-- your whole list, **while the connector is on**.
+- the calendar feed, only if you switch it on. At **Times only** it says only "Fixed time" and "Planned card". At **Short names** (the default), and at **Short names, places and notes**, what it says (short names, and then places, notes and links) is stored in plain text, and whoever runs the relay can read it;
+- your whole deck, **while the connector is on**.
 
 It never sees what is inside a scrambled blob.
 
@@ -30,7 +30,7 @@ Your API key stays on this device. It is never synced and never in a backup.
 
 - **Private notes** in Memory: never sent to an AI, not even through the connector.
 - **How to reach a person:** never in a trip pack.
-- **Diagnostics:** never include your steps, notes, names, places or keys.
+- **Diagnostics:** never include your cards, notes, names, places or keys.
 
 ## Forget and delete
 
@@ -40,4 +40,4 @@ Your API key stays on this device. It is never synced and never in a backup.
 
 ## If you lose everything
 
-If you lose every device and the recovery key, the list is gone for good. See [Sync and recovering a lost device](sync-and-recovery.md).
+If you lose every device and the recovery key, the deck is gone for good. See [Sync and recovering a lost device](sync-and-recovery.md).

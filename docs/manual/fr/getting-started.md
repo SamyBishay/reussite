@@ -8,7 +8,7 @@ Réussite est une appli web. Rien à télécharger dans une boutique.
 - **Android :** ouvrez-la dans Chrome. Touchez le menu, puis Installer l’application.
 - **Ordinateur :** ouvrez-la dans Chrome, Edge ou Firefox. Chrome et Edge affichent une icône d’installation dans la barre d’adresse.
 
-Elle marche hors connexion. Votre liste vit sur votre appareil.
+Elle marche hors connexion. Votre paquet vit sur votre appareil.
 
 ## La mise en route
 
@@ -26,16 +26,29 @@ Vous arrivez sur Aujourd’hui avec cette carte sous **Commencez ici**. Faites s
 
 **Une IA, plus tard.** D’emblée, Réussite vous comprend **sur cet appareil** : ce que vous tapez sur l’accueil est lu par l’appli elle-même, et rien ne quitte l’appareil. Pour **une IA dans le cloud**, ouvrez Réglages → **Comment Réussite vous comprend** (ou la ligne **Choisir comment Réussite vous comprend**). Il y a deux façons, et vous pouvez utiliser l’une, l’autre ou les deux :
 
-- **Ma propre clé.** Planifier la journée et la revue du dimanche sont une conversation dans l’appli. Cela coûte quelques centimes par mois, sur votre propre clé. **Obtenir une clé, pas à pas** montre comment : créez un compte chez OpenRouter (une clé donne accès à de nombreux modèles) ou Anthropic (une clé pour ses propres modèles), créez une clé, mettez-la dans la case. La clé reste sur cet appareil. Vous pouvez ensuite parler de vos journées à l’IA, et elle propose les quatre couleurs, vos lieux et la façon dont vous voulez qu’une IA travaille avec vous, sur l’écran de revue, avec une case à cocher pour chaque ligne.
-- **Mon appli de chat IA, par le connecteur.** **Connecter mon appli de chat IA, pas à pas** : vous planifiez votre journée en parlant à votre appli de chat IA (ChatGPT, Claude, Gemini ou une autre qui accepte les connecteurs de type MCP) ; elle lit et modifie votre liste, avec votre accord. Le premier écran dit qui peut l’utiliser dans chaque appli. Les étapes activent la synchronisation et montrent votre clé de récupération à garder (avec un seul geste **Je l’ai gardée** avant de continuer), activent le connecteur, disent où l’ajouter dans chaque appli, montrent l’adresse et le code d’appairage, et vérifient qu’elle est bien entrée. Vos couleurs et vos lieux restent tels quels ; changez-les dans les Réglages.
+- **Ma propre clé.** Distribuer la journée et la revue de la semaine sont une conversation dans l’appli. Cela coûte quelques centimes par mois, sur votre propre clé. **Obtenir une clé, pas à pas** montre comment : créez un compte chez OpenRouter (une clé donne accès à de nombreux modèles) ou Anthropic (une clé pour ses propres modèles), créez une clé, mettez-la dans la case. La clé reste sur cet appareil. Vous pouvez ensuite parler de vos journées à l’IA, et elle propose les quatre couleurs, vos lieux et la façon dont vous voulez qu’une IA travaille avec vous, sur l’écran de revue, avec une case à cocher pour chaque ligne.
+- **Mon appli de chat IA, par le connecteur.** **Connecter mon appli de chat IA, pas à pas** : vous distribuez votre journée en parlant à votre appli de chat IA (ChatGPT, Claude, Gemini ou une autre qui accepte les connecteurs de type MCP) ; elle lit et modifie votre paquet, avec votre accord. Le premier écran dit qui peut l’utiliser dans chaque appli. Les cartes activent la synchronisation et montrent votre clé de récupération à garder (avec un seul geste **Je l’ai gardée** avant de continuer), activent le connecteur, disent où l’ajouter dans chaque appli, montrent l’adresse et le code d’appairage, et vérifient qu’elle est bien entrée. Vos couleurs et vos lieux restent tels quels ; changez-les dans les Réglages.
 
 Il n’y a pas de copier-coller. Voir [L’IA](ai.md).
 
 Si vous utilisez déjà Réussite sur un autre appareil, choisissez **Restaurer avec une clé de récupération** sur le premier écran et saisissez votre clé de récupération. Vos lieux et réglages viennent de l’autre appareil, et rien de celui-ci ne les écrase. Voir [Synchronisation et récupération d’un appareil perdu](sync-and-recovery.md).
 
+## Un départ en douceur
+
+Un Réussite tout neuf commence petit, et grandit à mesure que vous l’utilisez. C’est voulu : une longue liste d’onglets et de réglages est une mauvaise façon de rencontrer une première carte.
+
+- **Deux onglets : Accueil et Aujourd’hui.** L’accueil, c’est la salutation et une boîte où écrire. Aujourd’hui, c’est votre main et **Commencez ici**. Sous la main du jour, un pli, **Le paquet · n cartes**, contient toutes vos cartes.
+- **D’autres onglets arrivent quand ils ont quelque chose à montrer.** **Calendrier** arrive avec votre première carte ou obligation régulière à heure fixe. **Projets** arrive avec votre premier projet (pas la boîte de réception) ou à huit cartes. **La Matrice** arrive à douze cartes ouvertes, ou après votre première revue de la semaine. Chaque arrivée est une ligne derrière la cloche de l’accueil, jamais une fenêtre qui surgit, et un onglet arrivé reste.
+- **Afficher tous les onglets.** Dans Réglages → **Onglets**, **Afficher tous les onglets** amène les trois tout de suite, pour de bon. Il n’apparaît que tant qu’un onglet manque. Un lien vers un onglet l’ouvre, affiché ou non.
+- **Lieux et séjours, et Adresses et proches, sont désactivés.** Dans Réglages → Méthode → Plus, activez **Utiliser Lieux et séjours** (le lieu en haut des listes, le lieu d’une carte, les séjours, Préparer ce voyage) et **Utiliser Adresses et proches**. Si vous avez déjà des lieux ou des adresses (d’un autre appareil ou d’une sauvegarde), ils s’activent tout seuls, et les Réglages disent pourquoi. Rien de ce que vous avez enregistré n’est jamais supprimé quand vous désactivez.
+- **Distribuer la journée tient sur un écran.** Jusqu’à trois cartes et une pour les loisirs ou les proches, **Garder** ou **Échanger** chacune, puis **Distribuer**. **Le rituel du matin complet** est à un toucher. Voir [La boucle du jour](daily-loop.md).
+- **La revue de la semaine attend** que votre paquet ait une semaine et compte dix cartes.
+
+**Si vous utilisiez déjà Réussite, rien ne change.** Une installation d’avant, un appareil qui en rejoint un autre par la synchronisation et une sauvegarde que vous restaurez gardent tous les onglets, Lieux et séjours, Adresses et proches, le rituel du matin et la revue de la semaine, exactement comme avant.
+
 ## Votre première journée
 
-Quand rien n’est encore planifié, la cloche de l’accueil propose **Planifier la journée** ; elle lance le point du matin. Voir [La boucle du jour](daily-loop.md).
+Quand votre journée n’a pas encore de main, la cloche de l’accueil propose **Distribuer la journée** ; elle distribue la main du jour. Voir [La boucle du jour](daily-loop.md).
 
 ## L’idée à retenir
 

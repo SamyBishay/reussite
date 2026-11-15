@@ -1,6 +1,6 @@
 # The calendar
 
-The **Calendar** tab is a real calendar. It has the views **Day**, **Week** (or **3 days** on a phone), **Month**, **Agenda** and **Log**. The one you pick is remembered.
+The **Calendar** tab is a real calendar. On a new Réussite it arrives with your first card or standing item that has a fixed time (see [Getting started](getting-started.md)); Settings → Tabs → **Show every tab** brings it now. It has the views **Day**, **Week** (or **3 days** on a phone), **Month**, **Agenda** and **Log**. The one you pick is remembered.
 
 The tab is one screen tall, like Home: the page itself never scrolls, only the grid inside it. On a phone it is kept tight: the views in one row, the dates (‹ the day ›, and a small **↩ Today** chip when you have moved away) in the next, and the grid right under them, filling the screen down to the tab bar. The **Log** is one of the views, so it is a tap away, and it scrolls inside its own box, with the version line at its end. The suit piles are on Today only, not here.
 
@@ -10,36 +10,36 @@ The tab is one screen tall, like Home: the page itself never scrolls, only the g
 
 ## What a day shows
 
-The calendar is for things **at a fixed time**. Your day’s steps and what is due are in [Today](daily-loop.md). Every item on the calendar is also a card on its day's list in Today: the same step, so a change in one is a change in the other.
+The calendar is for things **at a fixed time**. Your day’s cards and what is due are in [Today](daily-loop.md). Every item on the calendar is also a card in its day's hand in Today: the same card, so a change in one is a change in the other.
 
 - **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays, up to its last day if it has one.
-- **Slots** are time you set aside to work on a step (see [Today](daily-loop.md)). They show in every view, set apart from appointments: a dashed outline instead of a solid block, and the word “slot” before the name. Drag one on the hour grid to move it; it stays a slot. They are not in the feed.
-- Past days show the same; a done one is struck through.
-- A **stay** is a coloured band over its days. A **half day** you chose in the morning check-in shows as a small label: "Afternoon · Heliopolis".
-- Each event shows the step's **short name** and, when there is room, the address or place.
+- **Slots** are time you set aside to work on a card (see [Today](daily-loop.md)). They show in every view, set apart from appointments: a dashed outline instead of a solid block, and the word “slot” before the name. Drag one on the hour grid to move it; it stays a slot. They are not in the feed.
+- Past days show the same; a played one is struck through.
+- A **stay** is a coloured band over its days. A **half day** you chose when dealing the day shows as a small label: "Afternoon · Heliopolis".
+- Each event shows the card's **short name** and, when there is room, the address or place.
 
-Tap an event to open the step. Tap a day's number to open that day.
+Tap an event to open the card. Tap a day's number to open that day.
 
 ## Moving things
 
-- **Change a time or a day:** drag a timed step on the grid. It moves in steps of 15 minutes.
-- On a phone, tap a step to open it and change its time or day there.
+- **Change a time or a day:** drag a timed card on the grid. It moves in cards of 15 minutes.
+- On a phone, tap a card to open it and change its time or day there.
 
 If you view one of your place's areas (the place pill), the calendar shows that area, plus what applies anywhere.
 
 ## The calendar feed
 
-Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your appointments (the steps with a fixed time) stay up to date there; slots and deadlines are not sent, from a week back to six weeks ahead.
+Settings → Calendar can give your calendar app an address to subscribe to (Apple Calendar, Google Calendar and others). Your appointments (the cards with a fixed time) stay up to date there; slots and deadlines are not sent, from a week back to six weeks ahead.
 
 While this device’s feed is off, a small line under the grid, **Show these in your calendar app: Settings → Calendar**, takes you to where you switch it on. Once it is on, the line goes away.
 
-Your list has one feed, shared by all your devices: switch it on, off or make a new address on one, and the others follow. It is updated whenever one of your devices opens Réussite or changes something, and right after a change made through the connector. A device that has not synced leaves the feed alone, so it never shows an old copy of your list. A feed that nothing has updated for ten days shows one event today, "Réussite: this calendar is out of date", which says what to do.
+Your deck has one feed, shared by all your devices: switch it on, off or make a new address on one, and the others follow. It is updated whenever one of your devices opens Réussite or changes something, and right after a change made through the connector. A device that has not synced leaves the feed alone, so it never shows an old copy of your deck. A feed that nothing has updated for ten days shows one event today, "Réussite: this calendar is out of date", which says what to do.
 
 **What the feed says** has three levels:
 
 - **Times only.** It says only "Fixed time", and when.
-- **Short names.** Each step's short name. This is the default.
-- **Short names, places and notes.** Also the place or address, the title, the note and the link, and a link that opens the step in Réussite.
+- **Short names.** Each card's short name. This is the default.
+- **Short names, places and notes.** Also the place or address, the title, the note and the link, and a link that opens the card in Réussite.
 
 - On the last two levels what the feed says is stored in plain text on the relay, and whoever runs it can read it. Réussite warns you.
 - Anyone who has the address can read the feed. Keep it to yourself. **Make a new address** and the old one stops working, on every device.

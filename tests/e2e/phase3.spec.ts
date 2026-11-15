@@ -1,7 +1,9 @@
 import { test, expect, type Browser, type BrowserContextOptions, type Page, type TestInfo } from '@playwright/test';
 import { deflateRawSync } from 'node:zlib';
-import { importSample, noSideways, goTab, openMenu, expandSettings, openTripSheet } from './helpers';
+import { importSample, noSideways, goTab, openMenu, expandSettings } from './helpers';
 import { decodeRecoveryKey, deriveKeys } from '../../src/sync/keys';
+import { deriveInbox } from '../../src/sync/inbox';
+import { dropPrefix } from '../../src/sync/droplink';
 
 test('Settings → About → Copy diagnostics shows the version and none of the list', async ({ page }) => {
   await importSample(page);
@@ -304,16 +306,17 @@ test('connector: needs sync first; then switch on shows an address and a code, s
 });
 
 for (const w of WIDTHS) {
-  test(`connector and one-tap link settings don't scroll sideways at ${w}px`, async ({ page }) => {
+  test(`connector settings don't scroll sideways at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
     await page.goto('/#settings'); await expandSettings(page);
-    await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
+    await expect(page.getByTestId('connector')).toContainText('sync comes first');
     await noSideways(page, 'sync off');
     await setUp(page);
     await page.getByTestId('sync-key-saved').click();
     await expect(page.getByTestId('sync-status')).toContainText('Synced at');
-    await expect(page.getByTestId('drop-address')).toContainText('/drop#');
-    await noSideways(page, 'drop address');
+    await expandSettings(page);
+    await expect(page.getByTestId('connector-on')).toBeVisible();
+    await noSideways(page, 'connector off, sync on');
     await page.getByTestId('connector-on').click();
     await page.getByTestId('connector-on-confirm').click();
     await expandSettings(page);
@@ -332,10 +335,13 @@ const cs = (title: string) => ({ v: 1, note: 'From my AI', changes: [{ op: 'task
 /** What an AI with a code tool would write: the drop address, then z. and the compressed change-set. */
 const linkFor = (address: string, change: unknown) => address.trim() + 'z.' + deflateRawSync(Buffer.from(JSON.stringify(change))).toString('base64url');
 
-async function dropAddress(page: Page): Promise<string> {
-  await page.goto('/#settings'); await expandSettings(page);
-  await expect(page.getByTestId('drop-address')).toContainText('/drop#');
-  return (await page.getByTestId('drop-address').innerText()).trim();
+/**
+ * The drop address of a recovery key, worked out the way the app does (src/app/sync.ts): no screen shows it since the one-tap link setting went
+ * (DECISIONS.md 2026-11-15), and links already sent must still work.
+ */
+async function dropAddress(recovery: string): Promise<string> {
+  const k = decodeRecoveryKey(recovery);
+  return ORIGIN + '/drop#' + dropPrefix({ space: (await deriveKeys(k)).spaceId, pub: (await deriveInbox(k)).publicKey });
 }
 
 /** The change-sets the relay holds for a recovery key (read as the app does, with the space's secret). */
@@ -345,30 +351,18 @@ async function inboxSize(recovery: string): Promise<number> {
   return ((await res.json()) as { items: unknown[] }).items.length;
 }
 
-test('one-tap link: Settings → AI shows the drop address and the sentence to paste; the trip pack then asks for the link', async ({ page }) => {
+test('one-tap link: no screen offers it any more, with sync off or on; a link already sent still opens the review', async ({ page }) => {
   await page.goto('/#settings'); await expandSettings(page);
-  await expect(page.getByTestId('drop-needs-sync')).toBeVisible();
-  await openTripSheet(page);
-  await page.locator('summary', { hasText: 'See the text' }).click();
-  await expect(page.getByTestId('pack')).toContainText('fenced code block labelled reussite');
-  await expect(page.getByTestId('pack')).not.toContainText('/drop#');
-  await page.keyboard.press('Escape');
-
-  await setUp(page);
+  for (const id of ['drop-section', 'drop-address', 'drop-sentence', 'drop-needs-sync']) await expect(page.getByTestId(id)).toHaveCount(0);
+  const recovery = await setUp(page);
   await page.getByTestId('sync-key-saved').click();
-  const addr = await dropAddress(page);
+  await expect(page.getByTestId('sync-status')).toContainText('Synced at');
+  await expandSettings(page);
+  for (const id of ['drop-section', 'drop-address', 'drop-sentence']) await expect(page.getByTestId(id)).toHaveCount(0);
+  const addr = await dropAddress(recovery);
   expect(addr).toMatch(new RegExp('^' + ORIGIN + '/drop#[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}\\.$'));
-  await expect(page.getByTestId('drop-sentence')).toContainText(addr + 'z.DATA');
-  await expect(page.getByTestId('drop-sentence')).toContainText('8,000');
-  await openTripSheet(page);
-  await page.locator('summary', { hasText: 'See the text' }).click();
-  await expect(page.getByTestId('pack')).toContainText(addr + 'z.DATA');
-  await expect(page.getByTestId('pack')).not.toContainText('end your reply with one fenced code block labelled reussite that holds');
-  // a link pasted where a block is expected is read the same way
-  await page.getByTestId('trip-sheet').getByTestId('pack-paste').click();
-  await page.getByTestId('paste-text').fill('Here you go: ' + linkFor(addr, cs('Open Mail and answer the pasted one')) + ' — hope it helps.');
-  await page.getByTestId('paste-go').click();
-  await expect(page.getByTestId('review')).toContainText('answer the pasted one');
+  await page.goto(linkFor(addr, cs('Open Mail and answer the old link')).replace(ORIGIN, ''));
+  await expect(page.getByTestId('review')).toContainText('answer the old link', { timeout: 20_000 });
 });
 
 test('one-tap link: a browser with nothing leaves it in the inbox; the device with the list shows it at its next sync, one at a time, and the relay forgets each', async ({ browser }, info) => {
@@ -378,7 +372,7 @@ test('one-tap link: a browser with nothing leaves it in the inbox; the device wi
   const recovery = await setUp(pa);
   await pa.getByTestId('sync-key-saved').click();
   await expect(pa.getByTestId('sync-status')).toContainText('Synced at');
-  const addr = await dropAddress(pa);
+  const addr = await dropAddress(recovery);
 
   // "iPhone Safari": a context of its own, no data, no sync
   const b = await secondDevice(browser, info);
@@ -431,7 +425,7 @@ test('one-tap link: opened in the browser that holds the list, it shows the revi
   const recovery = await setUp(a.page);
   await a.page.getByTestId('sync-key-saved').click();
   await expect(a.page.getByTestId('sync-status')).toContainText('Synced at');
-  const addr = await dropAddress(a.page);
+  const addr = await dropAddress(recovery);
   const posts: string[] = [];
   const tab = await a.ctx.newPage(); // the same storage
   tab.on('request', r => { if (r.method() === 'POST') posts.push(r.url()); });
@@ -471,10 +465,10 @@ test('one-tap link: opened in the browser that holds the list, it shows the revi
 test('one-tap link: the installed app, told to focus its open window, gets the link from the launch queue', async ({ browser }, info) => {
   test.slow();
   const a = await secondDevice(browser, info);
-  await setUp(a.page);
+  const recovery = await setUp(a.page);
   await a.page.getByTestId('sync-key-saved').click();
   await expect(a.page.getByTestId('sync-status')).toContainText('Synced at');
-  const addr = await dropAddress(a.page);
+  const addr = await dropAddress(recovery);
   const tab = await a.ctx.newPage();
   // what Chrome gives an installed app whose manifest says launch_handler focus-existing
   await tab.addInitScript(() => Object.defineProperty(window, 'launchQueue', { configurable: true, value: { setConsumer: (f: unknown) => { (window as unknown as { launched: unknown }).launched = f; } } }));

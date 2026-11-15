@@ -125,17 +125,21 @@ test('invalid AI output shows one sentence and writes nothing', async ({ page })
   await expect(page.getByTestId('ai-error').getByRole('button', { name: 'Ask any AI' })).toHaveCount(0);
 });
 
-test('Plan this trip, then Paste the reply: only ticked changes are applied', async ({ page }) => {
+test('Plan this trip with a key asks the AI and shows its changes on the review screen: only ticked changes are applied', async ({ page }) => {
   await importSample(page);
+  await setUpAnthropic(page);
+  let answer = 'No change-set here, sorry.';
+  const seen = await mockAnthropic(page, () => answer);
   await openTripSheet(page);
-  await page.locator('summary', { hasText: 'See the text' }).click();
-  await expect(page.getByTestId('pack')).toContainText('fenced code block labelled reussite');
-  await sheet(page).getByTestId('pack-paste').click();
-  await page.getByTestId('paste-text').fill('No block here, sorry.');
-  await page.getByTestId('paste-go').click();
-  await expect(page.getByTestId('paste-error')).toContainText('no change-set');
-  await page.getByTestId('paste-text').fill('Here is what I suggest.\n\n```reussite\n' + changeSet + '\n```\nGood luck!');
-  await page.getByTestId('paste-go').click();
+  // No copy, share or paste: one button that asks.
+  for (const id of ['pack', 'copy-pack', 'pack-paste']) await expect(sheet(page).getByTestId(id)).toHaveCount(0);
+  await sheet(page).getByTestId('trip-go').click();
+  await expect(page.getByTestId('ai-user')).toContainText('Lyon');
+  await page.getByTestId('ai-send').click();
+  await expect(page.getByTestId('ai-error')).toBeVisible(); // a reply with nothing to read writes nothing
+  expect(seen).toHaveLength(1);
+  answer = changeSet;
+  await sheet(page).getByTestId('trip-go').click();
   await expect(page.getByTestId('chg')).toHaveCount(3);
   await page.getByTestId('chg').nth(2).getByRole('checkbox').uncheck();
   await page.getByTestId('apply-changes').click();
@@ -159,13 +163,14 @@ const notes = (page: Page) => page.evaluate(() => new Promise<{ name: string; li
 }));
 
 for (const w of [320, 375, 430]) {
-  test(`a pasted standing obligation and memory line: memory sits under Remember, at ${w}px`, async ({ page }) => {
+  test(`an AI's standing obligation and memory line: memory sits under Remember, at ${w}px`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 800 });
     await importSample(page);
+    await setUpAnthropic(page);
+    await mockAnthropic(page, standing);
     await openTripSheet(page);
-    await sheet(page).getByTestId('pack-paste').click();
-    await page.getByTestId('paste-text').fill('```reussite\n' + standing + '\n```');
-    await page.getByTestId('paste-go').click();
+    await sheet(page).getByTestId('trip-go').click();
+    await page.getByTestId('ai-send').click();
     await expect(page.getByTestId('chg')).toHaveCount(2);
     await expect(page.getByTestId('remember')).toContainText('Rehearsal is at Hill House 602');
     await expect(page.getByTestId('remember')).toContainText('new');
@@ -197,10 +202,11 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'review');
     await page.keyboard.press('Escape');
     await openTripSheet(page);
-    await page.locator('summary', { hasText: 'See the text' }).click();
-    await noSideways(page, 'the trip pack');
-    await sheet(page).getByTestId('pack-paste').click();
-    await noSideways(page, 'paste the reply');
+    await noSideways(page, 'the trip sheet');
+    await sheet(page).getByTestId('trip-go').click();
+    await page.getByTestId('ai-send').click();
+    await expect(page.getByTestId('review')).toBeVisible();
+    await noSideways(page, 'the trip review');
   });
 }
 

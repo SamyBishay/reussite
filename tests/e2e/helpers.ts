@@ -195,8 +195,8 @@ export async function addCard(page: Page, title: string) {
 }
 
 /**
- * The Paste the reply sheet is reached from Plan this trip (and from set-up), no longer from a button on Today. This restores one place and
- * one upcoming stay on top of what the app holds (a backup merges), then opens the trip sheet from Settings. Tests tap `pack-paste` in it.
+ * Plan this trip, from a stay in Settings. This restores one place and one upcoming stay on top of what the app holds (a backup merges), then opens
+ * the trip sheet. The button shows only with a cloud AI (a key on this device, or the connector), so set one up first.
  */
 export async function openTripSheet(page: Page) {
   const HLC = '0000000000001:0000:seed';

@@ -116,17 +116,13 @@ test('the first run in French has no English left, by myself and with an AI', as
       // An AI, later: the same screens in a sheet, from the Réglages.
       await goTab(page, 'settings');
       await expandSettings(page);
+      await scan('how Réussite understands you', '[data-testid=understand]');
       await page.getByTestId('ai-guided').click();
-      await scan('ways', '[data-testid=sheet]');
-      await page.getByTestId('ob-way-key').click();
       await scan('key', '[data-testid=sheet]');
       await noSideways(page, 'key in French');
-      await page.getByTestId('ob-key-paste').click();
-      await scan('paste', '[data-testid=sheet]');
-      await noSideways(page, 'paste in French');
-      await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-back').click();
-      await page.getByTestId('ob-way-connector').click();
+      await page.getByTestId('ob-back').click(); // the first screen of a way: Back closes the sheet
+      await expect(page.getByTestId('sheet')).toBeHidden();
+      await page.getByTestId('connector-guided').click();
       await scan('connect Claude', '[data-testid=sheet]');
       await noSideways(page, 'connect Claude in French');
       await page.getByTestId('ob-link-on').click();

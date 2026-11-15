@@ -170,6 +170,36 @@ async function openTrip(page: Page) {
   await expect(sheet(page).getByTestId('trip-sheet')).toBeVisible();
 }
 
+const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
+const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' };
+/** My own key (Anthropic), and an AI that answers whatever `answer.text` holds; returns it and the requests seen. Plan this trip asks it directly. */
+async function withKey(page: Page) {
+  await page.goto('/#settings'); await expandSettings(page);
+  await page.getByTestId('ai-anthropic').click();
+  await page.getByTestId('ai-key').fill('sk-ant-test');
+  await page.getByTestId('ai-key-save').click();
+  await expect(page.getByTestId('ai-settings')).toContainText(/A key is saved\.|Une clé est enregistrée\./);
+  const answer = { text: '' };
+  const seen: { system: string; user: string }[] = [];
+  await page.route(ANTHROPIC, async route => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    const body = route.request().postDataJSON() as { system: { text: string }[] | string; messages: { content: string | { text: string }[] }[] };
+    const flat = (c: string | { text: string }[]) => (typeof c === 'string' ? c : c.map(x => x.text).join(''));
+    seen.push({ system: flat(body.system), user: body.messages.map(m => flat(m.content)).join('\n') });
+    await route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ content: [{ type: 'text', text: answer.text }], stop_reason: 'end_turn' }) });
+  });
+  return { answer, seen };
+}
+/** Plan this trip's one button, and "Show me what's sent" the first time: what goes to the AI, read before it leaves. */
+async function askTrip(page: Page, send = true): Promise<string> {
+  await sheet(page).getByTestId('trip-go').click();
+  await expect(page.getByTestId('ai-preview')).toBeVisible();
+  const user = await page.getByTestId('ai-user').innerText();
+  if (send) await page.getByTestId('ai-send').click();
+  else await page.getByTestId('ai-preview').getByRole('button', { name: /Cancel|Annuler/ }).click();
+  return user;
+}
+
 const reply = () => JSON.stringify({ v: 1, note: 'Hours checked on the venues\' sites; the museum is closed on Mondays.', changes: [
   { op: 'task.create', ref: 'walk', set: { title: 'Open Maps and walk through the old town', where: PLACE, est: 45 } },
   { op: 'task.create', ref: 'lunch', set: { title: 'Go to Café Mokka for lunch', where: PLACE, est: 60 } },
@@ -181,33 +211,38 @@ const reply = () => JSON.stringify({ v: 1, note: 'Hours checked on the venues\' 
   { op: 'address.create', set: { name: 'Musée des Confluences', category: 'museum', place: PLACE, mapsUrl: 'https://maps.apple.com/?q=Mus%C3%A9e%20des%20Confluences', street: '86 Quai Perrache', note: 'Closed Monday' } },
 ] });
 
-test('Plan this trip: the pack, then a pasted reply comes back as day lists, a train and want-to-go addresses, and Undo takes it all back', async ({ page }) => {
+test('Plan this trip with a key: the request, then the AI\'s reply comes back as day lists, a train and want-to-go addresses, and Undo takes it all back', async ({ page }) => {
   await seed(page, tripSeed());
+  const ai = await withKey(page);
+  ai.answer.text = reply();
   await openTrip(page);
-  const pack = sheet(page).getByTestId('pack');
-  await sheet(page).locator('summary', { hasText: 'See the text' }).click();
+  // No pack to copy, share or paste: one button that asks the AI.
+  for (const id of ['pack', 'copy-pack', 'pack-paste']) await expect(sheet(page).getByTestId(id)).toHaveCount(0);
   await sheet(page).getByTestId('trip-question').fill('Three slow days, one museum, a good dinner on the first night.');
-  await expect(pack).toContainText('The trip: Lyon (place id lyon)');
-  await expect(pack).toContainText('Chez Louise | Food | been | 5 rue des Lilas | 2026-03-02 again, "Lovely quenelles" | Cash only');
-  await expect(pack).toContainText('Buy a gift for Mum');
-  await expect(pack).not.toContainText('Pay the rent');
-  await expect(pack).not.toContainText('Paris bakery');
-  await expect(pack).toContainText('check opening hours');
-  await expect(pack).toContainText('## My question\n\nThree slow days, one museum, a good dinner on the first night.');
-  // People only when ticked, and never how to reach them.
+  // People only when ticked, and never how to reach them: read in "Show me what's sent", then cancelled.
   await expect(sheet(page).getByTestId('trip-people')).not.toBeChecked();
-  await expect(pack).not.toContainText('Théophile');
+  let sent = await askTrip(page, false);
+  expect(sent).toContain('The trip: Lyon (place id lyon)');
+  expect(sent).toContain('Chez Louise | Food | been | 5 rue des Lilas | 2026-03-02 again, "Lovely quenelles" | Cash only');
+  expect(sent).toContain('Buy a gift for Mum');
+  expect(sent).not.toContain('Pay the rent');
+  expect(sent).not.toContain('Paris bakery');
+  expect(sent).toContain('Request:\nThree slow days, one museum, a good dinner on the first night.');
+  expect(sent).not.toContain('Théophile');
+  expect(ai.seen).toHaveLength(0); // nothing left before Send
   await sheet(page).getByTestId('trip-people').check();
-  await expect(pack).toContainText('Théophile Marchand | 2026-09-01 | Allergic to hazelnuts');
-  await expect(pack).not.toContainText('33699999999');
+  sent = await askTrip(page, false);
+  expect(sent).toContain('Théophile Marchand | 2026-09-01 | Allergic to hazelnuts');
+  expect(sent).not.toContain('33699999999');
   await sheet(page).getByTestId('trip-people').uncheck();
-  await expect(pack).not.toContainText('Théophile');
   await noSideways(page, 'trip sheet');
 
-  await sheet(page).getByTestId('pack-paste').click();
-  await page.getByTestId('paste-text').fill('Here is a plan for your three days.\n\n```reussite\n' + reply() + '\n```\n');
-  await page.getByTestId('paste-go').click();
+  sent = await askTrip(page);
+  expect(sent).not.toContain('Théophile');
   await expect(page.getByTestId('chg')).toHaveCount(8);
+  expect(ai.seen).toHaveLength(1);
+  expect(ai.seen[0]!.system).toContain('check opening hours');
+  expect(ai.seen[0]!.system).toContain('address.create');
   await expect(page.getByTestId('review')).toContainText('Café Mokka');
   await expect(page.getByTestId('review')).toContainText('Closed Monday');
   await noSideways(page, 'trip review');
@@ -240,11 +275,10 @@ test('Plan this trip: the pack, then a pasted reply comes back as day lists, a t
   expect(await plan(iso(1))).toBe(2);
   expect(await plan(iso(2))).toBe(2);
 
-  // Kept in History as a pasted reply, with Undo.
+  // Kept in History, with Undo.
   await openMenu(page, 'history');
   const row = page.getByTestId('history-row').first();
-  await expect(row).toContainText('Hours checked on the venues');
-  await expect(row.getByTestId('history-src')).toHaveText('Pasted reply');
+  await expect(row).toContainText('Three slow days, one museum');
   await row.getByTestId('history-undo').click();
   await expect.poll(async () => (await live(page, 'addresses')).filter(a => a.by === 'ai').length).toBe(0);
   expect((await live(page, 'addresses')).map(a => a.name).sort()).toEqual(['Chez Louise', 'Paris bakery']);
@@ -256,10 +290,10 @@ test('Plan this trip: the pack, then a pasted reply comes back as day lists, a t
 
 test('an address in a trip reply can be unticked, and then it is not saved', async ({ page }) => {
   await seed(page, tripSeed());
+  const ai = await withKey(page);
+  ai.answer.text = reply();
   await openTrip(page);
-  await sheet(page).getByTestId('pack-paste').click();
-  await page.getByTestId('paste-text').fill('```reussite\n' + reply() + '\n```');
-  await page.getByTestId('paste-go').click();
+  await askTrip(page);
   await page.getByTestId('chg').filter({ hasText: 'Musée des Confluences' }).getByRole('checkbox').uncheck();
   await page.getByTestId('apply-changes').click();
   await expect(sheet(page)).toBeHidden();
@@ -268,20 +302,44 @@ test('an address in a trip reply can be unticked, and then it is not saved', asy
 
 test('a reply with a mistake in it writes nothing', async ({ page }) => {
   await seed(page, tripSeed());
+  const ai = await withKey(page);
+  ai.answer.text = '{"v": 1, "changes": [{"op": "address.create", "set": {"category": "food"}}]}';
   await openTrip(page);
-  await sheet(page).getByTestId('pack-paste').click();
-  await page.getByTestId('paste-text').fill('```reussite\n{"v": 1, "changes": [{"op": "address.create", "set": {"category": "food"}}]}\n```');
-  await page.getByTestId('paste-go').click();
-  await expect(page.getByTestId('paste-error')).toBeVisible();
+  await askTrip(page);
+  await expect(page.getByTestId('ai-error')).toBeVisible();
   await expect(page.getByTestId('review')).toHaveCount(0);
   expect((await live(page, 'addresses')).map(a => a.name).sort()).toEqual(['Chez Louise', 'Paris bakery']);
 });
 
-test('Plan this trip is not offered with the module off', async ({ page }) => {
+test('Plan this trip is not offered with the module off, nor with no cloud AI', async ({ page }) => {
   await seed(page, tripSeed());
+  // On this device (no key, no connector): no button.
+  await expect(page.getByTestId('stays')).toContainText('Lyon');
+  await expect(page.getByTestId('plan-trip')).toHaveCount(0);
+  await withKey(page);
   await expect(page.getByTestId('plan-trip')).toBeVisible();
   await page.getByTestId('addresses-switch').uncheck();
   await expect(page.getByTestId('plan-trip')).toHaveCount(0);
+});
+
+test('with the connector and no key, Plan this trip gives the sentence to say in the chat app', async ({ page }) => {
+  test.slow();
+  await seed(page, tripSeed());
+  // The relay says the connector is on (sync is real, the connector's state is stubbed).
+  await page.route('**/v1/spaces/*/connector', async route => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ on: true, lastUsed: null, url: 'http://localhost:8787/mcp' }) });
+  });
+  await page.getByTestId('sync-setup').click();
+  await page.getByTestId('sync-make-key').click();
+  await page.getByTestId('sync-key-saved').click();
+  await expandSettings(page);
+  await expect(page.getByTestId('connector-state')).toContainText('The connector is on');
+  await openTrip(page);
+  await expect(sheet(page).getByTestId('trip-say')).toContainText('Plan my trip to Lyon');
+  for (const id of ['trip-go', 'trip-question', 'pack', 'pack-paste']) await expect(sheet(page).getByTestId(id)).toHaveCount(0);
+  await expect(sheet(page)).not.toContainText(/paste/i);
+  await noSideways(page, 'trip sheet, connector');
 });
 
 for (const [width, french] of [[320, false], [375, false], [430, false], [320, true]] as const) {
@@ -298,13 +356,12 @@ for (const [width, french] of [[320, false], [375, false], [430, false], [320, t
     await openPlan(page);
     await noSideways(page, 'offers in the plan');
     await page.keyboard.press('Escape');
+    const ai = await withKey(page);
+    ai.answer.text = reply();
     await openTrip(page);
-    await sheet(page).locator('summary', { hasText: /See the text|Voir le texte/ }).click();
     await sheet(page).getByTestId('trip-people').check();
     await noSideways(page, 'trip sheet');
-    await sheet(page).getByTestId('pack-paste').click();
-    await page.getByTestId('paste-text').fill('```reussite\n' + reply() + '\n```');
-    await page.getByTestId('paste-go').click();
+    await askTrip(page);
     await expect(page.getByTestId('chg')).toHaveCount(8);
     await noSideways(page, 'trip review');
   });

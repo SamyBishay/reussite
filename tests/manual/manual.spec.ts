@@ -234,10 +234,15 @@ for (const lang of LANGS) for (const theme of THEMES) {
       await page.goto('/#settings');
       await shot(page, 'settings');
       await expandSettings(page);
+      // Plan this trip shows with a cloud AI: an invented key, never used (the picture is taken before anything is asked).
+      await page.getByTestId('ai-anthropic').click();
+      await page.getByTestId('ai-key').fill('sk-ant-manual');
+      await page.getByTestId('ai-key-save').click();
       await page.getByTestId('stays').getByTestId('plan-trip').click();
       await expect(sheet(page).getByTestId('trip-sheet')).toBeVisible();
       await shot(page, 'trip');
       await closeSheet(page);
+      await page.getByTestId('ai-none').click(); // back to On this device for the pictures that follow
       await atTop(page, 'sync');
       await shot(page, 'sync', true);
       await atTop(page, 'privacy');

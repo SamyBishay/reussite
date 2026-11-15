@@ -3,7 +3,8 @@ import { importSample, noSideways, goTab, goNotifications, expandSettings, setLa
 
 // First-run setup (S9 and its follow-ups; 14 Nov): the welcome (what Réussite is, in the solitaire's words, with the language as a small switch), the four suits
 // (prefilled, editable), then the first card (tests/e2e/firstcard.spec.ts), which "Not now" passes on the way Home.
-// An AI (a key and a conversation, the AI chat app through the connector, any chatbot by copy and paste) is "Later": the same screens open from Settings in a sheet.
+// A cloud AI (a key and a conversation, or the AI chat app through the connector) is "Later": its screens open from Settings → How Réussite understands you,
+// in a sheet. There is no copy-and-paste way any more (DECISIONS.md 2026-11-15; the choice itself is tested in understand.spec.ts).
 // A new device is one that has no data and no record of having finished. Every other test runs as a device that has (playwright.config.ts puts the record in
 // localStorage); these ask for a new one.
 const NEW_DEVICE = { cookies: [], origins: [] };
@@ -250,16 +251,10 @@ async function checkFits(page: Page, id: string) {
 
 // ---- An AI, later: the guided screens open from Settings in a sheet (on a device that finished set-up)
 
-/** Settings → AI → Set up with an AI…, then one of the ways. */
-async function guided(page: Page, how: 'key' | 'connector' | 'chatbot') {
+/** Settings → How Réussite understands you, then the guided screens of one way: My own key (Get a key, step by step) or the connector. */
+async function guided(page: Page, how: 'key' | 'connector') {
   await settingsAi(page);
-  if (how === 'connector') {
-    await page.getByTestId('connector-guided').click();
-    return;
-  }
-  await page.getByTestId('ai-guided').click();
-  await expect(page.getByTestId('ob-ways')).toBeVisible();
-  await page.getByTestId(how === 'key' ? 'ob-way-key' : 'ob-copypaste-link').click();
+  await page.getByTestId(how === 'connector' ? 'connector-guided' : 'ai-guided').click();
 }
 const sheet = (page: Page) => page.getByTestId('sheet');
 
@@ -267,13 +262,9 @@ test.describe('with an AI, from Settings', () => {
   test('with a key in the app: the tutorial, then a conversation that ends on the review screen, then Settings holds what was ticked', async ({ page }) => {
     const seen = await stub(page, ASKING, PROPOSAL);
     await settingsAi(page);
+    // The way is chosen in Settings (My own key); its guided screens start at the tutorial.
+    await expect(page.getByTestId('way-key')).toContainText('few cents a month');
     await page.getByTestId('ai-guided').click();
-    // The ways: a key, the AI chat app, or any chatbot.
-    await expect(page.getByTestId('ob-way-key')).toContainText('AI inside the app (a key)');
-    await expect(page.getByTestId('ob-way-key')).toContainText('few cents a month');
-    await expect(page.getByTestId('ob-way-connector')).toContainText('Your AI chat app, through the connector');
-    await expect(page.getByTestId('ob-copypaste-link')).toContainText('Any chatbot');
-    await page.getByTestId('ob-way-key').click();
     // The tutorial: get a key, test it.
     await expect(page.getByTestId('ob-key')).toBeVisible();
     await expect(page.getByTestId('ob-key-link')).toHaveAttribute('href', 'https://openrouter.ai/keys');
@@ -336,7 +327,7 @@ test.describe('with an AI, from Settings', () => {
     await expect(page.getByTestId('ai-prefs')).toHaveValue(/Things never to do: no emojis/);
   });
 
-  test('unticking everything goes back to the conversation, and an AI that is down offers a chatbot instead', async ({ page }) => {
+  test('unticking everything goes back to the conversation, and an AI that is down says so, with no copy-and-paste way out', async ({ page }) => {
     await stub(page, PROPOSAL, 500);
     await guided(page, 'key');
     await sheet(page).getByTestId('ai-key').fill('sk-or-test');
@@ -352,51 +343,17 @@ test.describe('with an AI, from Settings', () => {
     await page.getByTestId('ob-chat-say').fill('Change the second one.');
     await page.getByTestId('ob-chat-send').click();
     await expect(page.getByTestId('ai-error')).toBeVisible();
-    await page.getByTestId('ai-error').getByRole('button', { name: 'Use a chatbot instead' }).click();
-    await expect(page.getByTestId('ob-paste')).toBeVisible();
-  });
-
-  test('any chatbot: copy the message in, paste the reply back, and the same review; no connector', async ({ page }) => {
-    await guided(page, 'chatbot');
-    await expect(page.getByTestId('ob-paste')).toBeVisible();
-    await expect(page.getByTestId('ob-paste')).toContainText('any chatbot');
-    await expect(page.getByTestId('ob-paste').locator('.eyebrow')).toHaveCount(0); // one screen: no "n of N"
-    await noJargon(page, 'paste');
-    // The message it copies: the job, the block it must end with, and nothing of the person's.
-    await page.getByTestId('ob-paste').locator('details summary').click();
-    const pack = await page.getByTestId('ob-pack').innerText();
-    expect(pack).toContain('four parts of my days');
-    expect(pack).toContain('settings.update');
-    expect(pack).toContain('fenced code block labelled reussite');
-    await expect(page.getByTestId('ob-connector-note')).toHaveCount(0);
-    // A reply with no block says so; one that holds nothing to set up says so.
-    await page.getByTestId('ob-paste-text').fill('Sure! Here are your pillars: work, home...');
-    await page.getByTestId('ob-paste-go').click();
-    await expect(page.getByTestId('ob-paste-error')).toContainText('no change-set');
-    await page.getByTestId('ob-paste-text').fill('```reussite\n' + JSON.stringify({ v: 1, changes: [{ op: 'task.create', set: { title: 'Open Mail and reply' } }] }) + '\n```');
-    await page.getByTestId('ob-paste-go').click();
-    await expect(page.getByTestId('ob-paste-error')).toContainText('nothing to set up');
-    // The real reply (a step in it is left out: a set-up makes none).
-    const reply = 'Here you go.\n\n```reussite\n' + JSON.stringify({ v: 1, note: 'Your set-up', changes: [...SETUP, { op: 'task.create', set: { title: 'Open Mail and reply' } }] }) + '\n```\n';
-    await page.getByTestId('ob-paste-text').fill(reply);
-    await page.getByTestId('ob-paste-go').click();
-    await expect(page.getByTestId('review')).toBeVisible();
-    await expect(page.getByTestId('chg')).toHaveCount(3);
-    await page.getByTestId('apply-changes').click();
-    await expect(sheet(page)).toBeHidden();
-    await goTab(page, 'today');
-    await expect(page.locator('.pile[data-suit=C]')).toHaveAttribute('aria-label', /My kids/);
-    await goTab(page, 'settings');
-    await expect(page.getByTestId('places')).toContainText('Flat');
-    await expect(page.getByTestId('places')).toContainText('Library');
-    await expect(page.getByTestId('ai-none')).toHaveAttribute('aria-pressed', 'true'); // no key: no provider
+    await expect(page.getByTestId('ai-error').getByRole('button', { name: /chatbot/i })).toHaveCount(0);
+    await expect(page.getByTestId('ob-paste')).toHaveCount(0);
+    await expect(page.getByTestId('ob-chat-say')).toBeVisible(); // still talking: try again
   });
 
   // ---- The AI chat app through the connector (needs the relay on :8787, which has a throwaway wrap key)
 
-  /** From "Connect my AI chat app" to the steps in the app: the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
+  /** From "Connect my AI chat app" to the steps in the app: who can use it and the privacy cost said first, sync and its recovery key, then the address and the pairing code. */
   async function connectApp(page: Page) {
     await expect(page.getByTestId('ob-link')).toBeVisible();
+    await expect(page.getByTestId('conn-apps-who').locator('li')).toHaveCount(4);
     await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole list');
     await noJargon(page, 'connect the app');
     await page.getByTestId('ob-link-on').click();
@@ -409,9 +366,11 @@ test.describe('with an AI, from Settings', () => {
     await page.getByTestId('ob-link-key-saved').click();
     await expect(page.getByTestId('ob-link-url')).toHaveText(/^http:\/\/localhost:8787\/mcp$/);
     await expect(page.getByTestId('ob-link-steps')).toContainText('Add custom connector');
-    // Per-app steps, each with the same weight: Claude, and a line for any other app that accepts MCP connectors.
-    await expect(page.getByTestId('ob-link-apps').locator('li')).toHaveCount(2);
-    await expect(page.getByTestId('ob-link-apps').locator('li').nth(1)).toContainText('accepts MCP connectors');
+    // Per-app steps, each with the same weight: ChatGPT, Claude, Gemini, and a line for any other app that accepts MCP connectors.
+    const apps = page.getByTestId('conn-apps-how').locator('li');
+    await expect(apps).toHaveCount(4);
+    for (const [i, name] of ['ChatGPT', 'Claude', 'Gemini'].entries()) await expect(apps.nth(i)).toContainText(name);
+    await expect(apps.nth(3)).toContainText('accepts MCP connectors');
     await expect(page.getByTestId('connector-code')).toBeVisible();
     await expect(page.getByTestId('ob-link-state')).toContainText('Waiting for your app');
   }
@@ -472,16 +431,8 @@ test.describe('with an AI, from Settings', () => {
         await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
       } else await goTab(page, 'settings');
       await expandSettings(page);
-      await page.getByTestId('ai-guided').click();
-      await checkFits(page, 'ob-ways');
-      // Any chatbot.
-      await page.getByTestId('ob-copypaste-link').click();
-      await checkFits(page, 'ob-paste');
-      await page.getByTestId('ob-paste').locator('details summary').click();
-      await checkFits(page, 'ob-paste');
-      await page.getByTestId('ob-back').click();
       // With a key, every screen of the tutorial and the conversation.
-      await page.getByTestId('ob-way-key').click();
+      await page.getByTestId('ai-guided').click();
       await checkFits(page, 'ob-key');
       await sheet(page).getByTestId('ai-key').fill('sk-or-test');
       await sheet(page).getByTestId('ai-key-save').click();

@@ -124,6 +124,14 @@ describe('check-in, close, review, decisions', () => {
     expect(week({ days: [day('2026-10-25', { review: '2026-10-25T17:00:00Z' })] }).filter(e => e.kind === 'review')).toEqual([]);
     expect(week({}, '2026-10-19', '2026-10-25', settings({ reviewDay: 6, reviewTime: '10:00' })).filter(e => e.kind === 'review').map(e => e.day)).toEqual(['2026-10-24']);
   });
+  it('a new install’s review push waits until the deck is a week old and holds ten cards; an install from before is unchanged', () => {
+    const reviews = (w: Parameters<typeof state>[0], since: string) => week(w, '2026-10-19', '2026-10-25', settings({ simpleSince: since })).filter(e => e.kind === 'review').map(e => e.id);
+    const ten = Array.from({ length: 10 }, (_, i) => task('c' + i, { at: null }));
+    expect(reviews({ tasks: ten }, '2026-10-20T09:00:00.000Z')).toEqual([]); // five days old
+    expect(reviews({ tasks: ten.slice(0, 9) }, '2026-10-10T09:00:00.000Z')).toEqual([]); // nine cards
+    expect(reviews({ tasks: ten }, '2026-10-10T09:00:00.000Z')).toEqual(['review:2026-10-25']);
+    expect(reviews({}, '')).toEqual(['review:2026-10-25']);
+  });
   it('a decision is checked on its review date, in the morning; only while decided', () => {
     const ev = week({ decisions: [decision('d1', { reviewOn: '2026-10-22' }), decision('d2', { reviewOn: '2026-10-22', status: 'closed' }), decision('d3', { reviewOn: '2026-12-01' }), decision('d4', { reviewOn: null })] }).filter(e => e.kind === 'decision');
     expect(ev.map(e => [e.id, e.decisionId, iso(e.at)])).toEqual([['decision:d1:2026-10-22', 'd1', '2026-10-22T06:30:00.000Z']]);

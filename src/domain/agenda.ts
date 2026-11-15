@@ -2,6 +2,7 @@
 // Fixed-time items (one-off and standing), the check-in, the close of the day, the
 // weekly review and decision checks. Push notifications (notify.ts), the planner's fixed lines and
 // the calendar exports all read it, so they agree on what is when. Pure: no store, no clock.
+import { factsOf, reviewWaits } from './start';
 import type { Day, Decision, Place, Stay, Task } from '../data/schema';
 import { addDays, type DayKey } from './dates';
 import { isoDow } from './repeat';
@@ -31,6 +32,8 @@ export interface AgendaSettings {
   reviewTime: string;
   /** Default minutes of notice before a fixed-time item. */
   notifyLead: number;
+  /** A new install's set-up time (the simple start): its review waits. Absent or empty for an install from before. */
+  simpleSince?: string;
 }
 
 export type AgendaKind = 'fixed' | 'checkin' | 'close' | 'review' | 'decision';
@@ -136,11 +139,14 @@ export function agenda(data: AgendaData, s: AgendaSettings, from: DayKey, to: Da
 
   // The day's own times.
   const morning = clockOf(s.morningAt), evening = clockOf(s.eveningAt), review = clockOf(s.reviewTime);
+  // A new install's review waits until the deck is a week old and holds ten cards (src/domain/start.ts); an install from before has no `simpleSince`.
+  const since = s.simpleSince ?? '';
+  const deck = since ? factsOf(data.tasks.values(), [], data.days.values()) : null;
   for (let k = from; k <= to; k = addDays(k, 1)) {
     const d = data.days.get(k);
     if (morning && !d?.checkin) put({ id: 'checkin:' + k, kind: 'checkin', day: k, clock: morning });
     if (evening && !d?.closed) put({ id: 'close:' + k, kind: 'close', day: k, clock: evening });
-    if (review && isoDow(k) === s.reviewDay && !d?.review) put({ id: 'review:' + k, kind: 'review', day: k, clock: review });
+    if (review && isoDow(k) === s.reviewDay && !d?.review && !(deck && reviewWaits(since, k, deck))) put({ id: 'review:' + k, kind: 'review', day: k, clock: review });
   }
   // A decision is checked on its review date, in the morning.
   if (morning) {

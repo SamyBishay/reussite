@@ -2,7 +2,7 @@
 // (the page's ground, no alpha, no filter), with the status bar's room (`--sat`) as its top padding. Safari 26 web apps fill the status bar with the colour of a fixed or sticky
 // element at the top edge and show a soft blur when there is none, so this is a real element at y = 0, not a pseudo-element, and it is never re-created: this component
 // renders into it once (main.tsx) and only its content changes with the screen. Content starts below it by layout, because it is in the flow (see docs/dev/topbar.md).
-import { dayDoc, minutesOn } from './model';
+import { dayDoc, minutesOn, placesOn } from './model';
 import { here, pageView, places, ready, today } from './store';
 import { viewsElsewhere } from '../domain/view';
 import { placeName, areaName } from './sheets';
@@ -39,7 +39,7 @@ function Mast() {
       <h1 class="vh">{t(TAB_KEY[view.value] ?? 'appName')}</h1>
       <p class="dateline">{fmtDate(today.value, { weekday: 'long', day: 'numeric', month: 'long' })}{d?.closed ? ' · ' + t('dayClosed') : ''}</p>
       {timed > 0 && <p class="mast-timed" data-testid="mast-timed" title={t('timed', { t: fmtMin(timed) })}><wbr /><span>{t('timedMast', { t: fmtMin(timed) })}</span></p>}
-      <PlacePill />
+      {placesOn() && <PlacePill />}
     </header>
   );
 }

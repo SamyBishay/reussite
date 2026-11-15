@@ -10,7 +10,7 @@ import { shownGreetings, rememberGreeting } from '../app/greetingShown';
 import { openSheet, closeSheet } from '../app/ui';
 import { openPlaces } from '../app/PlacesSheet';
 import { openNewAddress } from '../app/AddressSheets';
-import { addressesOn } from '../app/model';
+import { addressesOn, placesOn } from '../app/model';
 import { go, type View } from '../app/nav';
 import { isTouch } from '../app/keyboard';
 import { cardNow, homeLine, submitHome } from '../app/home';
@@ -31,7 +31,7 @@ function HomeMenu() {
       <h3>{t('menu')}</h3>
       <ul class="picklist menu">
         <li><button type="button" class="linklike" onClick={() => to('settings')} data-testid="menu-settings"><b>{t('tabSettings')}</b></button></li>
-        <li><button type="button" class="linklike" onClick={() => { closeSheet(); openPlaces(); }} data-testid="menu-places"><b>{t('placesTitle')}</b></button></li>
+        {placesOn() && <li><button type="button" class="linklike" onClick={() => { closeSheet(); openPlaces(); }} data-testid="menu-places"><b>{t('placesTitle')}</b></button></li>}
         {addressesOn() && <li><button type="button" class="linklike" onClick={() => to('addresses')} data-testid="menu-addresses"><b>{t('addrTitle')}</b></button></li>}
         {addressesOn() && <li><button type="button" class="linklike" onClick={() => { closeSheet(); openNewAddress(); }} data-testid="menu-add-address"><b>{t('addrNewBtn')}</b></button></li>}
         <li><button type="button" class="linklike" onClick={() => to('memory')} data-testid="menu-memory"><b>{t('memoryTitle')}</b></button></li>

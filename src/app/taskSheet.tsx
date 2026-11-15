@@ -1,7 +1,7 @@
 // The task sheet: the form for a step (place, repeat, waits for, goes to, dates, slots), a new step, and the places for a select.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { settings, projects, today, places, toast, stays, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayCards, isWaiting, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
+import { T, addressesOn, placesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayCards, isWaiting, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
 import { patchTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, skipThisTime, stopRepeating, addPlace, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists } from './actions';
 import { openHappened } from './EventUi';
@@ -245,7 +245,7 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix', first = fal
   // Optional fields live under More; the summary counts the ones that have a value.
   const hiddenSet = countSet(tk.label, tk.project !== 'inbox' ? tk.project : '', feed,kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
   // The place is asked only once there is a place other than Anywhere to pick (or the card already has one).
-  const placeShown = places.value.size > 0 || where !== 'any';
+  const placeShown = placesOn() && (places.value.size > 0 || where !== 'any');
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {

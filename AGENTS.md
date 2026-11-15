@@ -12,7 +12,7 @@ Réussite is a local-first PWA for planning with a CBT method for adult ADHD. Th
 | `npm run e2e` | end-to-end tests, Firefox (the main desktop browser) |
 | `E2E_CLOCK="2026-11-02 13:00" npm run e2e` | the same suite as if it were then (`HH:MM` for today): the tests' Node side reads that moment; specs that must not depend on the hour pin the browser's clock themselves (`tests/e2e/clock.ts`, `morningClock`, `morningDate`) |
 | `npm run e2e:android` | end-to-end tests, Chrome on Android emulation |
-| `npm run e2e:webkit` | end-to-end tests, WebKit and iPhone emulation, in Playwright's container (podman) |
+| `npm run e2e:webkit` | end-to-end tests, WebKit and iPhone emulation, in Playwright's container (podman); about 21 minutes; once before the last ship, not per ship (invariant 7) |
 | `npm run manual:shots` | the manual's screenshots (`public/manual/shots`), not part of `e2e`; see `docs/dev/manual.md` |
 | `npm run build` | production build into `dist/` |
 | `npm run check:import`, `npm run check:app` | run the importer and the app on the real export in `private/`; they print counts only |
@@ -45,10 +45,10 @@ One list. The first eight are about the product, the rest about how sessions wor
 4. **Every write goes through `store.ts`** (`createDoc`, `update`, `upsert`, `removeDoc`) so it gets field clocks and respects read-only mode.
 5. **No hard-coded UI text, and nothing personal.** Every string goes in `en.ts` and `fr.ts` in the same change. French typography is applied automatically.
 6. **`private/` is never committed, printed or sent anywhere.** Checks that read it print counts only.
-7. **Tests must pass before a commit:** typecheck, the unit tests, and the e2e specs of what you touched; the whole `npm run e2e` before a merge or a deploy. Nothing may scroll sideways at 320, 375 or 430 px.
+7. **Tests must pass before a commit:** typecheck, the unit tests, and the e2e specs of what you touched, on Firefox; the whole Firefox and Android suites (`npm run e2e`, `npm run e2e:android`) before a merge or a deploy. The WebKit suite (`npm run e2e:webkit`) is not a gate for each ship: it runs once before the last ship of a batch of work. A WebKit failure that passes on Firefox and Android and does not fail every time goes on the phone checklist; no agent is sent to diagnose it. Nothing may scroll sideways at 320, 375 or 430 px.
 8. Links open outside the app; only schemes in `ALLOWED_SCHEMES` are accepted.
 9. **A request is done, or the last message says why not.** Done means a passing test or a commit hash that names it. Never close one as "check on the phone" or "not now". A backlog only on the owner's word. The final message lists every request of the session as done (hash, how verified) or not done (reason).
-10. **Verified means a test.** A passing test that exercises the behaviour at 320×568 and 390×844, in English and French. Typecheck alone is not verification. If only an iPhone can show it, it goes on a phone checklist and stays unverified until the owner ticks it.
+10. **Verified means a test, and one is enough.** One passing test per changed behaviour, not one per screen size and language. Layout (what fits, what wraps, sideways scroll) is tested at 320×568 and 390×844; both languages only where the change is about wording or how text fits. Typecheck alone is not verification. If only an iPhone can show it, it goes on a phone checklist and stays unverified until the owner ticks it.
 11. **Phone-only behaviour is unverified.** iOS top and notch, push and 320 px wraps can't be proven by emulation. Add a test that measures the symptom at 320, 375 and 430, and write "unverified on device" in the last message.
 12. **The owner's words outrank the plan.** If a plan or prompt says "only if it blocks" about something the owner asked for, do it anyway and say so. Requests given in a session are done in that session; never file them for the owner to apply, and never write "proposed brief edits" in place of the work.
 13. **Look before reversing.** Before changing a surface, grep `DECISIONS.md` for it. If the request reverses an entry, name that entry, ask once, then mark the old entry superseded.
@@ -57,7 +57,7 @@ One list. The first eight are about the product, the rest about how sessions wor
 16. **If an item turns out much bigger than described,** stop that item, report why, and go on to the next.
 17. **If a prompt looks cut off, say so before starting.**
 18. **Leave nothing running.** Kill every background job and watcher you start before you finish.
-19. **When your own change breaks a test, fix the change and carry on.** Never fix it by weakening a test or changing what it asserts.
+19. **When your own change breaks a test, fix the change and carry on.** Never fix it by weakening a test or changing what it asserts. One exception: a test of a synthetic gesture (a drag, a long press) that fails only sometimes, only on emulated WebKit, is marked `test.fixme` for WebKit with the reason, and what it checks goes on the phone checklist.
 20. **When wording doesn't fit, use the shortest neutral label that does,** and say so in the report.
 21. **Never deploy with a failing check:** stop and report instead.
 22. **Otherwise, stop and ask only when a fix would change something the owner decided.**

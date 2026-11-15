@@ -1,6 +1,8 @@
 # Places and trips
 
-A **place** is somewhere you live, work or stay for a while. Each place gets its own page, and its own clock if it is in another time zone. Steps marked **Anywhere** show on every page.
+A **place** is somewhere you live, work or stay for a while. Each place gets its own page, and its own clock if it is in another time zone. Cards marked **Anywhere** show on every page.
+
+**Places and trips is off on a new Réussite.** Until you switch on **Use Places and trips** in Settings → Method, the place pill, a card's place, stays and Plan this trip are hidden, and every card is simply Anywhere. If you already have places or stays (from another device or a backup), it switches on by itself. Nothing is deleted when you switch it off.
 
 ![The Places sheet](shot:places)
 
@@ -19,21 +21,21 @@ Your choice is kept on this device, so the app reopens on the area you were view
 
 An **area** is somewhere inside a place: Heliopolis in Cairo. Add one under the place in Settings → Method → Places, or in the Places sheet (**+ Add an area**). An area has no time zone of its own; it uses its place's. Removing an area puts what was set to it back on the place.
 
-Where you choose a place, the list shows each place followed by its areas. A step in an area is on its place's page too.
+Where you choose a place, the list shows each place followed by its areas. A card in an area is on its place's page too.
 
-To see only one area, tick **View** on it in the place menu: Today and the calendar then show that area's steps plus those set to Anywhere, and the matrix the area's alone. Tick the place again to see it all. Lists are grouped under the area's name.
+To see only one area, tick **View** on it in the place menu: Today and the calendar then show that area's cards plus those set to Anywhere, and the matrix the area's alone. Tick the place again to see it all. Lists are grouped under the area's name.
 
-**Half days.** In the morning check-in, **Where will you be?** lets you pick a place or one of its areas for the morning and for the afternoon. The plan then draws on that area first and keeps its steps together. Today and the calendar show "Afternoon · Heliopolis".
+**Half days.** In the full morning ritual, **Where will you be?** lets you pick a place or one of its areas for the morning and for the afternoon. The hand then draws on that area first and keeps its cards together. Today and the calendar show "Afternoon · Heliopolis".
 
 ## Stays
 
 A **stay** is a place with a first and a last day. Add one in Settings → Method, under Stays. On the first day Réussite switches to that place by itself, in its time zone. Outside a stay, you're wherever you said you were.
 
-**Before I leave.** A step can be set as "Before I leave", a number of days before the last day of a stay. Its date moves with the stay, and it sorts nearest first in its box; tick it urgent when it is.
+**Before I leave.** A card can be set as "Before I leave", a number of days before the last day of a stay. Its date moves with the stay, and it sorts nearest first in its box; tick it urgent when it is.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Deciding in advance when and where to act helps people follow through; trips have not been tested. [See the evidence](research-9.md).
 
-**Practice says:** a trip is easier when the things to do before leaving are on the list weeks before, not the night before. `[E?]`
+**Practice says:** a trip is easier when the things to do before leaving are in your deck weeks before, not the night before.
 
 ## Plan this trip
 
@@ -45,4 +47,4 @@ With **your own key**, type your question and tap **Ask the AI**. Your AI gets y
 
 The answer comes back on the review screen: day lists, fixed times and places to try, each with a tick. Places the AI suggests are saved as **Want to go**, with its reason in the note. Nothing is written until you tick it, and everything can be undone from History.
 
-With **your AI chat app, through the connector**, and no key on this device, the sheet gives you a sentence to say in a new chat ("Plan my trip to Lyon, …, with Réussite"); your chat app reads your list itself and asks for your yes before it changes anything. See [AI](ai.md).
+With **your AI chat app, through the connector**, and no key on this device, the sheet gives you a sentence to say in a new chat ("Plan my trip to Lyon, …, with Réussite"); your chat app reads your deck itself and asks for your yes before it changes anything. See [AI](ai.md).

@@ -4,48 +4,48 @@ La plupart des gens, et surtout les personnes avec un TDAH, sous-estiment le tem
 
 ![Le Journal : votre ratio et vos séances chronométrées](shot:log)
 
-## Estimer chaque étape
+## Estimer chaque carte
 
-Quand vous ajoutez une étape, donnez-lui une estimation en minutes, **en comptant le temps qu’il faut pour s’y mettre**. La planification elle-même compte aussi (15 minutes par défaut, Réglages → Méthode).
+Quand vous ajoutez une carte, donnez-lui une estimation en minutes, **en comptant le temps qu’il faut pour s’y mettre**. La planification elle-même compte aussi : distribuer la journée prend un peu de temps (15 minutes par défaut, Réglages → Méthode).
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** on sous-estime souvent la durée des tâches, et les adultes ayant un TDAH se trompent davantage sur le temps. [Voir les preuves](research-3.md).
 
-**La pratique dit :** les gens sous-estiment. Écrire un chiffre est le premier pas pour corriger. `[E?]`
+**La pratique dit :** les gens sous-estiment. Écrire un chiffre est le premier pas pour corriger.
 
 ## Chronométrer et noter le temps réel
 
-Touchez **Lancer le chrono** quand vous commencez. Quand vous vous arrêtez, le temps réel est enregistré. Vous avez marqué une étape comme faite sans le chrono ? Réussite demande « Combien de temps ça a pris ? » avec des boutons à la mesure de votre estimation, une molette pour tout le reste, et **Je n’ai pas chronométré**.
+Touchez **Lancer le chrono** quand vous commencez. Quand vous vous arrêtez, le temps réel est enregistré. Vous avez joué une carte sans le chrono ? Réussite demande « Combien de temps ça a pris ? » avec des boutons à la mesure de votre estimation, une molette pour tout le reste, et **Je n’ai pas chronométré**.
 
-Pendant qu’un chrono tourne, trois anneaux sont à côté de l’horloge sur la première carte. L’anneau extérieur se remplit au fil de l’estimation de l’étape. C’est une image du temps qui passe, pas une note.
+Pendant qu’un chrono tourne, trois anneaux sont à côté de l’horloge sur la première carte. L’anneau extérieur se remplit au fil de l’estimation de la carte. C’est une image du temps qui passe, pas une note.
 
-Vous avez oublié de lancer le chrono ? **J’ai commencé plus tôt** vous laisse dire quand vous avez commencé. Vous avez oublié de l’arrêter ? « Toujours sur… ? » apparaît au bout d’environ deux fois votre durée habituelle pour l’étape (au moins 45 minutes). Touchez **J’ai arrêté à…** et corrigez en deux touches. Chaque séance chronométrée peut être corrigée après coup : ouvrez l’étape, et sous Temps, utilisez **Corriger cette séance** ou **Ajouter du temps**.
+Vous avez oublié de lancer le chrono ? **J’ai commencé plus tôt** vous laisse dire quand vous avez commencé. Vous avez oublié de l’arrêter ? « Toujours sur… ? » apparaît au bout d’environ deux fois votre durée habituelle pour la carte (au moins 45 minutes). Touchez **J’ai arrêté à…** et corrigez en deux touches. Chaque séance chronométrée peut être corrigée après coup : ouvrez la carte, et sous Temps, utilisez **Corriger cette séance** ou **Ajouter du temps**.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** dans une série d’expériences, savoir combien de temps avait pris une première tâche ne changeait pas le biais des prédictions suivantes, et chronométrer ses propres cartes puis comparer n’a pas été testé chez des adultes ayant un TDAH. [Voir les preuves](research-4.md).
 
-**La pratique dit :** comparer l’estimation au temps réel corrige la prochaine estimation. `[E?]`
+**La pratique dit :** comparer l’estimation au temps réel corrige la prochaine estimation.
 
 ## Des estimations qui apprennent votre rythme
 
-Après cinq étapes chronométrées, chaque estimation montre ce que ça vous prend d’habitude, par exemple « 20 min → souvent 26 min pour vous ». Votre propre estimation est toujours affichée en premier, et celle qui vous est propre seulement après, pour qu’elle ne vous ancre pas. Touchez-la pour voir sur quoi elle repose : vos étapes pour cette appli, ce projet, cette famille, ou toutes vos étapes.
+Après cinq cartes chronométrées, chaque estimation montre ce que ça vous prend d’habitude, par exemple « 20 min → souvent 26 min pour vous ». Votre propre estimation est toujours affichée en premier, et celle qui vous est propre seulement après, pour qu’elle ne vous ancre pas. Touchez-la pour voir sur quoi elle repose : vos cartes pour cette appli, ce projet, cette couleur, ou toutes vos cartes.
 
 D’ici là, vous voyez « J’apprends votre rythme : 3 sur 5 chronométrées. »
 
 ## Votre ratio
 
-Le Journal montre votre ratio : le temps réel sur l’estimation. « ×1,2 » veut dire que les choses vous prennent 20 % de plus que ce que vous devinez. Le plan s’en sert : « environ 3 h avec votre ×1,2 habituel ». Plus on est proche de ×1,0, mieux c’est, mais c’est un fait, pas une note.
+Le Journal montre votre ratio : le temps réel sur l’estimation. « ×1,2 » veut dire que les choses vous prennent 20 % de plus que ce que vous devinez. Distribuer la journée s’en sert : « environ 3 h avec votre ×1,2 habituel ». Plus on est proche de ×1,0, mieux c’est, mais c’est un fait, pas une note.
 
 À la fin de la revue de la semaine, vous voyez comment les estimations de la semaine se comparent à la réalité, et où le chrono s’est arrêté tôt (concentration perdue, bloqué, interrompu, fatigué, changement de tâche). Le schéma des raisons montre où va votre attention.
 
-## Les démarreurs
+## Les premiers gestes
 
-Chaque étape porte un **démarreur** : l’unique action qui fait passer de ne pas faire à faire. Choisissez bien son niveau.
+Chaque carte porte un **premier geste** : l’unique action qui fait passer de ne pas faire à faire. Choisissez bien son niveau.
 
-- **Pas en dessous de vos réflexes.** S’habiller, prendre ses clés, déverrouiller le téléphone ne sont pas des démarreurs.
+- **Pas en dessous de vos réflexes.** S’habiller, prendre ses clés, déverrouiller le téléphone ne sont pas des premiers gestes.
 - **Pas au-dessus du seuil.** Tout ce qui demande une décision, une recherche, de se rappeler quelque chose ou de rédiger un texte est déjà passé le point d’entrée.
 - **Le bon niveau** est la première action physique ou à l’écran qui vous met face à la tâche, avec son matériel devant vous : ouvrir l’appli sur le bon écran, s’asseoir au bureau avec le formulaire et un stylo, taper l’objet du message.
 
-**Le test :** pourriez-vous le faire en moins de deux minutes, tout de suite, sans réfléchir à comment ? Si ça demande de réfléchir, voyez plus petit. Si c’est un réflexe, allez une étape plus loin.
+**Le test :** pourriez-vous le faire en moins de deux minutes, tout de suite, sans réfléchir à comment ? Si ça demande de réfléchir, voyez plus petit. Si c’est un réflexe, allez une carte plus loin.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** le premier geste de deux minutes n’a pas été testé en lui-même ; les programmes de TCC qui enseignent la planification aident les adultes ayant un TDAH. [Voir les preuves](research-5.md).
 
-**La pratique dit :** le démarreur est la version en deux minutes. S’il n’a pas marché, la friction est ailleurs : écrivez-en un plus petit et gardez-le. `[E?]`
+**La pratique dit :** le premier geste est la version en deux minutes. S’il n’a pas marché, la friction est ailleurs : écrivez-en un plus petit et gardez-le.

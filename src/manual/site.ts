@@ -7,20 +7,20 @@ import { join } from 'node:path';
 import type { Plugin } from 'vite';
 import { translate, type Lang } from '../i18n';
 import { classifyHref, parseMarkdown, plain, shotName, titleOf, type Block, type Inline } from './markdown';
-import { PAGES, isPage, type PageSlug } from './pages';
+import { EVIDENCE, PAGES, isAnyPage, isEvidence, type AnySlug } from './pages';
 
 const LANGS: Lang[] = ['en', 'fr'];
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** Where a page of a language lives, from the site root. */
-export const pagePath = (l: Lang, slug: PageSlug) => `manual/${l === 'fr' ? 'fr/' : ''}${slug === 'index' ? 'index' : slug}.html`;
+export const pagePath = (l: Lang, slug: AnySlug) => `manual/${l === 'fr' ? 'fr/' : ''}${slug === 'index' ? 'index' : slug}.html`;
 /** The link to a page, from a page of the same language (they sit in one folder). */
-const pageHref = (slug: PageSlug) => (slug === 'index' ? './' : `${slug}.html`);
+const pageHref = (slug: AnySlug) => (slug === 'index' ? './' : `${slug}.html`);
 /** The folder the pictures are in, from a page of this language. */
 const shotsDir = (l: Lang) => (l === 'fr' ? '../shots' : 'shots');
 
 /** Where a page's pictures and the manual's pages are, from that page. The manual's own pages sit beside one another; the hello page is a folder away. */
-interface Where { shots: string; page: (slug: PageSlug) => string }
+interface Where { shots: string; page: (slug: AnySlug) => string }
 const inManual = (l: Lang): Where => ({ shots: shotsDir(l), page: pageHref });
 
 function inline(c: Inline[], l: Lang, w: Where = inManual(l)): string {
@@ -37,7 +37,7 @@ function inline(c: Inline[], l: Lang, w: Where = inManual(l)): string {
     }
     const to = classifyHref(x.href);
     const inner = inline(x.c, l, w);
-    if (to.kind === 'page' && isPage(to.slug)) return `<a href="${w.page(to.slug)}">${inner}</a>`;
+    if (to.kind === 'page' && isAnyPage(to.slug)) return `<a href="${w.page(to.slug)}">${inner}</a>`;
     if (to.kind === 'out') return `<a href="${esc(to.href)}" rel="noopener noreferrer">${inner}</a>`;
     return inner;
   }).join('');
@@ -96,15 +96,18 @@ footer{padding:0 0 48px;color:var(--ink-2);font-size:15px}
 `.trim();
 
 /** One page, whole: `from` is the language of the page; `prev` and `next` are its neighbours in reading order. */
-export function renderPage(l: Lang, slug: PageSlug, md: string): string {
+export function renderPage(l: Lang, slug: AnySlug, md: string): string {
   const tr = (k: Parameters<typeof translate>[1]) => translate(l, k);
   const bs = parseMarkdown(md);
-  const i = PAGES.indexOf(slug);
-  const prev = i > 0 ? PAGES[i - 1]! : null, next = i < PAGES.length - 1 ? PAGES[i + 1]! : null;
+  // A research page reads in its own order (docs/evidence), the manual's pages in theirs.
+  const seq: readonly AnySlug[] = isEvidence(slug) ? EVIDENCE : PAGES;
+  const i = seq.indexOf(slug);
+  const prev = i > 0 ? seq[i - 1]! : null, next = i < seq.length - 1 ? seq[i + 1]! : null;
+  const back: AnySlug | null = slug === 'index' ? null : isEvidence(slug) && slug !== 'research' ? 'research' : 'index';
   const other: Lang = l === 'en' ? 'fr' : 'en';
   // From /manual/<page>.html to /manual/fr/<page>.html and back (the index is the folder itself).
   const switchHref = l === 'en' ? `fr/${slug === 'index' ? '' : slug + '.html'}` : `../${slug === 'index' ? '' : slug + '.html'}`;
-  const titles = (s: PageSlug) => esc(titleOf(parseMarkdown(readMd(l, s))));
+  const titles = (s: AnySlug) => esc(titleOf(parseMarkdown(readMd(l, s))));
   const title = esc(titleOf(bs));
   const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'";
   const css = CSS.replace(/FONTDIR/g, l === 'fr' ? '../fonts' : 'fonts');
@@ -132,7 +135,7 @@ export function renderPage(l: Lang, slug: PageSlug, md: string): string {
 </header>
 <main id="text">
 ${blocks(bs, l)}
-${slug === 'index' ? '' : `<p><a href="${pageHref('index')}">← ${esc(tr('manualContents'))}</a></p>`}
+${back ? `<p><a href="${pageHref(back)}">← ${back === 'index' ? esc(tr('manualContents')) : titles(back)}</a></p>` : ''}
 <nav class="pn" aria-label="${esc(tr('manualContents'))}">
 <span>${prev ? `<a href="${pageHref(prev)}" rel="prev"><small>← ${esc(tr('manualSitePrev'))}</small><br>${titles(prev)}</a>` : ''}</span>
 <span>${next ? `<a href="${pageHref(next)}" rel="next"><small>${esc(tr('manualSiteNext'))} →</small><br>${titles(next)}</a>` : ''}</span>
@@ -248,7 +251,7 @@ export function previewTags(md: string, appUrl = ''): string {
 
 let root = process.cwd();
 const readHello = (l: Lang) => readFileSync(join(root, 'docs/hello', l + '.md'), 'utf8');
-const readMd = (l: Lang, slug: PageSlug) => readFileSync(join(root, 'docs/manual', l, slug + '.md'), 'utf8');
+const readMd = (l: Lang, slug: AnySlug) => readFileSync(join(root, isEvidence(slug) ? 'docs/evidence' : 'docs/manual', l, slug + '.md'), 'utf8');
 
 /** Writes the pages and their fonts into the build (dist/manual/…). */
 export function manualSite(appUrl = ''): Plugin {
@@ -265,6 +268,7 @@ export function manualSite(appUrl = ''): Plugin {
       for (const l of LANGS) {
         const have = new Set(readdirSync(join(root, 'docs/manual', l)).map(f => f.replace(/\.md$/, '')));
         for (const slug of PAGES) if (have.has(slug)) this.emitFile({ type: 'asset', fileName: pagePath(l, slug), source: renderPage(l, slug, readMd(l, slug)) });
+        for (const slug of EVIDENCE) this.emitFile({ type: 'asset', fileName: pagePath(l, slug), source: renderPage(l, slug, readMd(l, slug)) });
       }
     },
   };

@@ -4,48 +4,48 @@ Most people, and especially people with ADHD, underestimate how long things take
 
 ![The Log: your ratio and your timed sessions](shot:log)
 
-## Estimate every step
+## Estimate every card
 
-When you add a step, give it an estimate in minutes, **including the time it takes to get started**. The planning itself counts too (15 minutes by default, Settings → Method).
+When you add a card, give it an estimate in minutes, **including the time it takes to get started**. The planning itself counts too: dealing the day takes a little time (15 minutes by default, Settings → Method).
 
-**Research says:** untested here. `[E?]`
+**Research says:** People often underestimate how long tasks take, and adults with ADHD misjudge time more. [See the evidence](research-3.md).
 
-**Practice says:** people underestimate. Writing a number down is the first step to correcting it. `[E?]`
+**Practice says:** people underestimate. Writing a number down is the first step to correcting it.
 
 ## Time it and write the real time down
 
-Tap **Start the timer** when you begin. When you stop, the real time is saved. Marked a step done without the timer? Réussite asks "How long did it take?" with buttons sized to your estimate, a wheel for anything else, and **I didn't time it**.
+Tap **Start the timer** when you begin. When you stop, the real time is saved. Played a card without the timer? Réussite asks "How long did it take?" with buttons sized to your estimate, a wheel for anything else, and **I didn't time it**.
 
-While a timer runs, three rings sit beside the clock on the first card. The outer one fills over the step's estimate. It is a picture of time passing, not a score.
+While a timer runs, three rings sit beside the clock on the first card. The outer one fills over the card's estimate. It is a picture of time passing, not a score.
 
-Forgot to start the timer? **I started earlier** lets you say when you began. Forgot to stop it? "Still on…?" appears after about twice your usual time for the step (at least 45 minutes). Tap **I stopped at…** and fix it in two taps. Every timed session can be fixed afterwards: open the step, and under Time use **Fix this session** or **Add time**.
+Forgot to start the timer? **I started earlier** lets you say when you began. Forgot to stop it? "Still on…?" appears after about twice your usual time for the card (at least 45 minutes). Tap **I stopped at…** and fix it in two taps. Every timed session can be fixed afterwards: open the card, and under Time use **Fix this session** or **Add time**.
 
-**Research says:** untested here. `[E?]`
+**Research says:** In one set of experiments, being told how long a first task took did not change the bias in later predictions, and timing your own cards and comparing has not been tested in adults with ADHD. [See the evidence](research-4.md).
 
-**Practice says:** comparing the estimate with the real time corrects the next estimate. `[E?]`
+**Practice says:** comparing the estimate with the real time corrects the next estimate.
 
 ## Estimates that learn your pace
 
-After five timed steps, each estimate shows what it usually takes you, for example "20 min → usually 26 min". Your own estimate is always shown first, and the personal one only after it, so it doesn't anchor you. Tap it to see what it is based on: your steps for that app, project, suit, or all your steps.
+After five timed cards, each estimate shows what it usually takes you, for example "20 min → usually 26 min". Your own estimate is always shown first, and the personal one only after it, so it doesn't anchor you. Tap it to see what it is based on: your cards for that app, project, suit, or all your cards.
 
 Until then you see "Learning your pace: 3 of 5 timed."
 
 ## Your ratio
 
-The Log shows your ratio: real time over estimate. "×1.2" means things take you 20% longer than you guess. The plan uses it: "about 3 h at your usual ×1.2". Closer to ×1.0 is better, but it's a fact, not a grade.
+The Log shows your ratio: real time over estimate. "×1.2" means things take you 20% longer than you guess. Dealing the day uses it: "about 3 h at your usual ×1.2". Closer to ×1.0 is better, but it's a fact, not a grade.
 
 At the end of the weekly review, you see how the week's estimates compared with reality, and where the timer stopped early (lost focus, blocked, interrupted, tired, switched task). The pattern of reasons shows where your attention goes.
 
-## Starters
+## First moves
 
-Every step carries a **starter**: the single action that crosses from not doing into doing. Pick its level carefully.
+Every card carries a **first move**: the single action that crosses from not doing into doing. Pick its level carefully.
 
-- **Not below your reflexes.** Getting dressed, picking up keys, unlocking the phone are not starters.
+- **Not below your reflexes.** Getting dressed, picking up keys, unlocking the phone are not first moves.
 - **Not above the threshold.** Anything that needs a decision, a search, remembering something or composing text is past the entry point.
 - **The right level** is the first physical or on-screen action that puts you at the task, with its material in front of you: opening the app on the right screen, sitting at the desk with the form and a pen, typing the subject line.
 
 **The test:** could you do it in under two minutes, right now, without thinking about how? If it needs thinking, go smaller. If it's a reflex, go one step further in.
 
-**Research says:** untested here. `[E?]`
+**Research says:** The two-minute first move itself has not been tested; CBT programmes that teach planning help adults with ADHD. [See the evidence](research-5.md).
 
-**Practice says:** the starter is the two-minute version. If it didn't work, the friction is somewhere else: write a smaller starter and keep it. `[E?]`
+**Practice says:** the first move is the two-minute version. If it didn't work, the friction is somewhere else: write a smaller first move and keep it.

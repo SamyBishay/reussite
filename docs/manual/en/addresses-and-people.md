@@ -1,8 +1,8 @@
 # Addresses and people
 
-This is a list made in advance, so that going out is "open the front door, then the bakery on the corner" and not a choice to make on the day. It feeds the plan. It is not a travel journal.
+This is a list made in advance, so that going out is "open the front door, then the bakery on the corner" and not a choice to make on the day. It feeds your hand. It is not a travel journal.
 
-Open **Addresses & people** from Home's menu. If you don't want it, switch it off in Settings → Method ("Use Addresses & people"). What you saved stays, and comes back when you switch it on.
+**This is off on a new Réussite.** Switch on **Use Addresses & people** in Settings → Method and **Addresses & people** appears in Home's menu. It switches on by itself if you already have addresses or people (from another device or a backup), and Settings says why. Switch it off again and what you saved stays, and comes back when you switch it on. If you used Réussite before this change, it is on.
 
 ![Addresses and people](shot:addresses)
 
@@ -20,36 +20,36 @@ Addresses belong to a place. The list shows the place you're in. Change **Showin
 
 ## After a visit
 
-When you mark done a step that goes to an address, Réussite asks "How was…?". Write a line, and say **Again**, **Maybe** or **Not again**. You can skip it, and nothing is saved then. You can also tap **Record a visit** on any address. The address becomes **Been**, and the line helps the next choice.
+When you play a card that goes to an address, Réussite asks "How was…?". Write a line, and say **Again**, **Maybe** or **Not again**. You can skip it, and nothing is saved then. You can also tap **Record a visit** on any address. The address becomes **Been**, and the line helps the next choice.
 
 ![The note after a visit](shot:visit)
 
 ## People
 
-Tap **+ Person**. Only what the plan needs: a name, how to reach them and a note. There is no home address, ever. These people didn't sign up.
+Tap **+ Person**. Only what your hand needs: a name, how to reach them and a note. There is no home address, ever. These people didn't sign up.
 
 - **How to reach them:** a link, a phone number or an email. A phone number or an email becomes a button that opens WhatsApp, Messages, Phone or Mail.
-- **Last seen:** set when you mark done a step linked to them. It is shown as a date, never as overdue.
+- **Last seen:** set when you play a card linked to them. It is shown as a date, never as overdue.
 
 ## What's on
 
-Open a person and tap **What's on**. You see the open steps that go to them, then the steps whose title or note names them, each one tap from its sheet. Done and dropped steps are not there. If the person is in an area, a step that goes to them offers a button to set its place to that area. It never does it by itself.
+Open a person and tap **What's on**. You see the open cards that go to them, then the cards whose title or note names them, each one tap from its sheet. Played and dropped cards are not there. If the person is in an area, a card that goes to them offers a button to set its place to that area. It never does it by itself.
 
-## Steps that feed them
+## Cards that feed them
 
-In a step's details, **Goes to** links the step to an address or a person. Marking it done then asks for the visit note, or updates when you last saw the person.
+In a card's details, **Goes to** links the card to an address or a person. Playing it then asks for the visit note, or updates when you last saw the person.
 
 ## Offers in the planner
 
-On a standing obligation (leisure, going out, seeing people), the field **The planner offers** can be Nothing, Addresses or People. When the plan places that obligation, the check-in, the weekly review and the day's "Leisure & people" offer up to three. Pick one and the step gets its title, starter and link. Or **Keep it as it is**. Places you'd go back to come first, then the ones you want to go to.
+On a standing obligation (leisure, going out, seeing people), the field **The planner offers** can be Nothing, Addresses or People. When your hand places that obligation, dealing the day, the weekly review and the day's "Leisure & people" offer up to three. Pick one and the card gets its title, first move and link. Or **Keep it as it is**. Places you'd go back to come first, then the ones you want to go to.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Scheduling pleasant activities treats depression, which is common in adult ADHD; treating leisure as an obligation rather than a reward has not been tested. [See the evidence](research-7.md).
 
-**Practice says:** leisure, going out and seeing people are obligations to your mental health, so they are scheduled like any step. Having the choice made ahead of time makes them easier to do. `[E?]`
+**Practice says:** leisure, going out and seeing people are obligations to your mental health, so they are scheduled like any card. Having the choice made ahead of time makes them easier to do.
 
 ## Import from Google Maps
 
-Tap **Import from Google Maps**. Export a saved list with Google Takeout (CSV or JSON), then choose the file. You see how many rows are new, how many are already on the list and how many were left out, before anything is written. An address already on the list is never replaced. Nothing leaves your device.
+Tap **Import from Google Maps**. Export a saved list with Google Takeout (CSV or JSON), then choose the file. You see how many rows are new, how many are already in your list of addresses and how many were left out, before anything is written. An address already in your list of addresses is never replaced. Nothing leaves your device.
 
 ## Privacy
 

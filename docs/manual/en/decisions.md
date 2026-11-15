@@ -1,30 +1,30 @@
 # Decisions
 
-A decision is a problem you keep turning over. Réussite gives it a method of its own: define the problem, list every option, weigh doing and not doing, choose, and turn the choice into steps.
+A decision is a problem you keep turning over. Réussite gives it a method of its own: define the problem, list every option, weigh doing and not doing, choose, and turn the choice into cards.
 
 ![A decision: the problem and the scores](shot:decision)
 
 ## Start one
 
-In **Matrix**, under the four boxes, tap **+ New decision**. Or turn a step into a decision from its details ("A decision", then **Work through the decision**). One screen at a time:
+There are several ways in. In the **Matrix** tab, under the four boxes, tap **+ New decision**; a project's page has the same button. On a new Réussite the Matrix and Projects tabs arrive later (see [Getting started](getting-started.md)), and until then you start a decision from a card: open it, set its **Kind** under **More** to **A decision** and tap **Work through the decision**; or, when a card is carried over, tap **Make it a decision**; or tap **A decision** when you are stuck. The decisions themselves are listed on the Matrix, and one to check shows behind the bell. One screen at a time:
 
 1. **The problem.** What is happening, what should be happening, the gap, the constraints, the deadline, and what is in your control. If it's really two problems, tick "This is really two problems": the second becomes a draft.
 2. **Options.** Every option you can think of, yours first. Quantity first, no judging. Under "Often missing" you will find: do nothing, delay it, a smaller version, a combination, ask someone, hand it off, change the order. Mark an option **Impossible** only if it plainly is, and say why. Then **Close the list**. Reopen it only for a genuinely new fact.
 3. **Balances.** For each option, four columns: pros of doing it, cons of doing it, pros of not doing it, cons of not doing it. Weigh each item from 1 to 5. If an item only mirrors another, mark it so it counts once. The "pros of not doing it" column is where relief and avoidance show up: that's information, not a fault.
 4. **Scores.** Score = (pros of doing + cons of not doing) − (cons of doing + pros of not doing). The highest wins. If the top two are within about 10%, Réussite asks one question: which would you regret less?
 5. **The choice.** Write why, what must be true for this to be right, what would show it's wrong, and when to check.
-6. **Steps.** Each titled with its first action, with a starter and an estimate, and a SMART goal for the project.
+6. **Cards.** Each titled with its first action, with a first move and an estimate, and a SMART goal for the project.
 
 You weigh the items yourself. An AI never sets weights.
 
-**Research says:** untested here. `[E?]`
+**Research says:** The problem-solving steps have been tested, mostly for depression; weighting pros and cons has not been tested directly. [See the evidence](research-8.md).
 
-**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible. `[E?]`
+**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible.
 
 ## Checking it later
 
 On the date you chose, Home shows "Check your decision". Did what would show it's wrong happen? If yes, **Reopen it** and start again with the new fact. If not, close it or check again later.
 
-**Research says:** untested here. `[E?]`
+**Research says:** We found no test of reviewing a decision on a set date. [See the evidence](research-8.md).
 
-**Practice says:** a decision with a date to check is easier to let go of. `[E?]`
+**Practice says:** a decision with a date to check is easier to let go of.

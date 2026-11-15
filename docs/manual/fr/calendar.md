@@ -2,7 +2,7 @@
 
 L’onglet **Calendrier** est un vrai calendrier. Il a les vues **Jour**, **Semaine** (ou **3 jours** sur un téléphone), **Mois**, **Agenda** et **Journal**. Celle que vous choisissez est mémorisée.
 
-L’onglet tient sur un écran, comme l’accueil : la page elle-même ne défile jamais, seule la grille défile à l’intérieur. Sur un téléphone, il reste compact : les vues sur une ligne, les dates (‹ le jour ›, et une petite pastille **↩ Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Le **Journal** est l’une des vues, donc à une touche, et il défile dans sa propre boîte, avec la ligne de version à la fin. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
+Sur un Réussite tout neuf, cet onglet arrive avec votre première carte ou obligation régulière à heure fixe (voir [Prise en main](getting-started.md)) ; Réglages → Onglets → **Afficher tous les onglets** l’amène tout de suite. L’onglet tient sur un écran, comme l’accueil : la page elle-même ne défile jamais, seule la grille défile à l’intérieur. Sur un téléphone, il reste compact : les vues sur une ligne, les dates (‹ le jour ›, et une petite pastille **↩ Aujourd’hui** quand vous vous en êtes éloigné) sur la suivante, et la grille juste dessous, qui remplit l’écran jusqu’à la barre d’onglets. Le **Journal** est l’une des vues, donc à une touche, et il défile dans sa propre boîte, avec la ligne de version à la fin. Les piles de couleurs sont dans Aujourd’hui seulement, pas ici.
 
 ![La semaine](shot:calendar)
 
@@ -10,36 +10,36 @@ L’onglet tient sur un écran, comme l’accueil : la page elle-même ne déf
 
 ## Ce que montre un jour
 
-Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les étapes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) . Chaque élément du calendrier est aussi une carte de la liste de son jour dans Aujourd’hui : la même étape, donc changer l’une, c’est changer l’autre.
+Le calendrier ne sert qu’à ce qui a une **heure fixe**. Les cartes du jour et les échéances sont dans [Aujourd’hui](daily-loop.md) . Chaque élément du calendrier est aussi une carte de la main de son jour dans Aujourd’hui : la même carte, donc changer l’une, c’est changer l’autre.
 
 - **Ce qui a une heure** est sur la grille des heures, à partir de l’heure où ça commence, avec sa durée. Sans durée, l’estimation est utilisée, ou une heure. Un élément permanent (la chorale le lundi) apparaît ses jours de la semaine, jusqu’à son dernier jour s’il en a un.
-- Les **créneaux** sont du temps que vous mettez de côté pour travailler sur une étape (voir [Aujourd’hui](daily-loop.md)). Ils apparaissent dans toutes les vues, distincts des rendez-vous : un contour en pointillés au lieu d’un bloc plein, et le mot « créneau » avant le nom. Faites-en glisser un sur la grille des heures pour le déplacer ; il reste un créneau. Ils ne sont pas dans le flux.
+- Les **créneaux** sont du temps que vous mettez de côté pour travailler sur une carte (voir [Aujourd’hui](daily-loop.md)). Ils apparaissent dans toutes les vues, distincts des rendez-vous : un contour en pointillés au lieu d’un bloc plein, et le mot « créneau » avant le nom. Faites-en glisser un sur la grille des heures pour le déplacer ; il reste un créneau. Ils ne sont pas dans le flux.
 - Les jours passés montrent la même chose ; ce qui est fait est barré.
-- Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie au point du matin apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
-- Chaque événement montre le **nom court** de l’étape et, s’il y a de la place, l’adresse ou le lieu.
+- Un **séjour** est une bande colorée sur ses jours. Une **demi-journée** choisie en distribuant la journée apparaît comme une petite étiquette : « Après-midi · Héliopolis ».
+- Chaque événement montre le **nom court** de la carte et, s’il y a de la place, l’adresse ou le lieu.
 
-Touchez un événement pour ouvrir l’étape. Touchez le numéro d’un jour pour ouvrir ce jour.
+Touchez un événement pour ouvrir la carte. Touchez le numéro d’un jour pour ouvrir ce jour.
 
 ## Déplacer
 
-- **Changer une heure ou un jour :** faites glisser une étape à heure fixe sur la grille. Elle se déplace par pas de 15 minutes.
-- Sur un téléphone, touchez une étape pour l’ouvrir et changer son heure ou son jour là.
+- **Changer une heure ou un jour :** faites glisser une carte à heure fixe sur la grille. Elle se déplace par pas de 15 minutes.
+- Sur un téléphone, touchez une carte pour l’ouvrir et changer son heure ou son jour là.
 
 Si vous regardez l’une des zones de votre lieu (la pastille du lieu), le calendrier montre cette zone, plus ce qui s’applique partout.
 
 ## Le flux de calendrier
 
-Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos rendez-vous (les étapes à heure fixe) y restent à jour ; les créneaux et les échéances n’y sont pas envoyés, d’une semaine en arrière à six semaines devant.
+Réglages → Calendrier peut donner à votre appli de calendrier une adresse à laquelle s’abonner (Apple Calendrier, Google Agenda et d’autres). Vos rendez-vous (les cartes à heure fixe) y restent à jour ; les créneaux et les échéances n’y sont pas envoyés, d’une semaine en arrière à six semaines devant.
 
 Tant que le flux est éteint sur cet appareil, une petite ligne sous la grille, **Les voir dans votre appli de calendrier : Réglages → Calendrier**, vous mène là où l’allumer. Une fois allumé, la ligne disparaît.
 
-Votre liste a un seul flux, partagé par tous vos appareils : activez-le, désactivez-le ou créez une nouvelle adresse sur l’un, et les autres suivent. Il est mis à jour dès qu’un de vos appareils ouvre Réussite ou change quelque chose, et juste après un changement fait par le connecteur. Un appareil qui ne s’est pas synchronisé ne touche pas au flux : il ne montre jamais une ancienne copie de votre liste. Un flux que rien n’a mis à jour depuis dix jours montre un évènement aujourd’hui, « Réussite : this calendar is out of date », qui dit quoi faire.
+Votre paquet a un seul flux, partagé par tous vos appareils : activez-le, désactivez-le ou créez une nouvelle adresse sur l’un, et les autres suivent. Il est mis à jour dès qu’un de vos appareils ouvre Réussite ou change quelque chose, et juste après un changement fait par le connecteur. Un appareil qui ne s’est pas synchronisé ne touche pas au flux : il ne montre jamais une ancienne copie de votre paquet. Un flux que rien n’a mis à jour depuis dix jours montre un évènement aujourd’hui, « Réussite : this calendar is out of date », qui dit quoi faire.
 
 **Ce que dit le flux** a trois niveaux :
 
 - **Les heures seulement.** Il dit seulement « Heure fixe », et quand.
-- **Noms courts.** Le nom court de chaque étape. C’est le choix par défaut.
-- **Noms courts, lieux et notes.** Aussi le lieu ou l’adresse, le titre, la note et le lien, et un lien qui ouvre l’étape dans Réussite.
+- **Noms courts.** Le nom court de chaque carte. C’est le choix par défaut.
+- **Noms courts, lieux et notes.** Aussi le lieu ou l’adresse, le titre, la note et le lien, et un lien qui ouvre la carte dans Réussite.
 
 - Aux deux derniers niveaux, ce que dit le flux est stocké en clair sur le relais, et celui qui le fait tourner peut le lire. Réussite vous prévient.
 - Toute personne qui a l’adresse peut lire le flux. Gardez-la pour vous. **Créer une nouvelle adresse**, et l’ancienne cesse de marcher, sur tous les appareils.

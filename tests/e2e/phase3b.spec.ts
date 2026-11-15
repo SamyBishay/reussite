@@ -45,7 +45,7 @@ test(`a standing item with weekdays sits in the plan at its time, with its leave
   await expect(sheet(page)).toBeHidden();
 
   await page.getByTestId('tab-today').click();
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
   await carryAll(page);
   await page.getByTestId('ci-next').click();
   await page.getByTestId('ci-next').click();

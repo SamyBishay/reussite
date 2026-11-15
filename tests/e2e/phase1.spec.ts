@@ -27,19 +27,19 @@ test('a place can be added from the place switcher on a fresh start', async ({ p
 
 test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page }) => {
   await importSample(page);
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
   await expect(page.getByTestId('ci-yesterday')).toContainText('text Alex');
   await carryAll(page);
   await expect(page.getByTestId('ci-shape')).toBeVisible();
   await page.getByTestId('ci-next').click();
   await expect(page.getByTestId('ci-pillars')).toBeVisible();
   await page.getByTestId('ci-next').click();
-  await expect(page.getByTestId('plan-items')).toContainText('Plan the day');
+  await expect(page.getByTestId('plan-items')).toContainText('Deal the day');
   await expect(page.getByTestId('plan-total')).toContainText('planning included');
   await page.getByTestId('go-with-this').click();
   await page.getByTestId('ci-later').click(); // the first step alone
   await expect(sheet(page)).toBeHidden();
-  await expect(page.locator('main .tableau', { hasText: 'Plan the day' })).toHaveCount(1); // on the list, or among the done ones, folded
+  await expect(page.locator('main .tableau', { hasText: 'Deal the day' })).toHaveCount(1); // on the list, or among the done ones, folded
   await expect(page.getByTestId('first')).toBeVisible();
   // A card is on one day's list: yesterday's open card is on today's or still on yesterday's, never both.
   const onToday = await page.locator('main').getByText('text Alex').count();
@@ -121,7 +121,7 @@ test('a repeating step comes back once when done', async ({ page }) => {
   await page.getByTestId('repeat').locator('select').selectOption('day');
   await sheet(page).getByRole('button', { name: 'Save' }).click();
   await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
-  await sheet(page).getByRole('button', { name: 'Mark done' }).click();
+  await sheet(page).getByRole('button', { name: 'Mark played' }).click();
   await sheet(page).getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.locator('.toast')).toContainText('Comes back on');
   await expect(page.locator('.item', { hasText: 'scanned receipts' })).toHaveCount(1);
@@ -153,7 +153,7 @@ test('a whole decision by hand: problem, options, balances, scores, choice, step
 test('completing a step never blocks the next tap', async ({ page }) => {
   await importSample(page);
   await page.getByTestId('first').getByRole('button', { name: 'Just start the timer' }).click();
-  await page.getByTestId('first').getByRole('button', { name: 'Done', exact: true }).click();
+  await page.getByTestId('first').getByRole('button', { name: 'Played', exact: true }).click();
   const t0 = Date.now();
   await page.getByTestId('tab-matrix').click({ timeout: 1000 });
   await expect(page.getByTestId('quad1')).toBeVisible();
@@ -216,14 +216,14 @@ test('the close of the day ends on St George: a tap skips it at once; Calm is a 
 test('an ordinary Done never brings St George; the day’s last card does', async ({ page }) => {
   await importSample(page);
   const sg = page.getByTestId('stgeorge');
-  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already done' });
+  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already played' });
   let seen = false;
   for (let i = 0; i < 12 && await doneBtn.count() > 0; i++) {
     await doneBtn.click();
     await page.getByRole('button', { name: 'I didn’t time it' }).click();
-    if (await page.locator('main').getByText('List played').count() > 0) {
+    if (await page.locator('main').getByText('Hand played').count() > 0) {
       await expect(sg).toBeVisible();
-      await expect(sg).toContainText('List played');
+      await expect(sg).toContainText('Hand played');
       seen = true;
       break;
     }
@@ -237,7 +237,7 @@ test('St George’s pictures are fetched when one card is left, and the fight is
   const sg = page.getByTestId('stgeorge');
   let fetched = false;
   page.on('response', r => { if (/\/assets\/knight-[\w-]+\.webp$/.test(r.url()) && r.ok()) fetched = true; });
-  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already done' });
+  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already played' });
   for (let i = 0; i < 12 && !fetched && await doneBtn.count() > 0; i++) {
     await doneBtn.click();
     await page.getByRole('button', { name: 'I didn’t time it' }).click();
@@ -270,7 +270,7 @@ for (const width of [320, 375, 430]) {
     await importSample(page);
     const check = async (name: string) => { await noSideways(page, name); };
     // Check-in, each screen.
-    await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+    await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
     await check('check-in yesterday');
     await carryAll(page);
     await check('check-in shape');
@@ -396,7 +396,7 @@ test('a card’s actions are in a bar at the top of its sheet, which stays in vi
   await page.locator('.item', { hasText: 'scanned receipts' }).locator('.linklike').click();
   const bar = sheet(page).getByTestId('task-actions');
   await expect(bar.getByRole('button', { name: 'Save' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Mark done' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Mark played' })).toBeVisible();
   await sheet(page).evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(bar.getByRole('button', { name: 'Save' })).toBeInViewport();
   const [b, s] = await Promise.all([bar.boundingBox(), sheet(page).boundingBox()]);

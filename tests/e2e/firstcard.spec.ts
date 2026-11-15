@@ -79,7 +79,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     // Start it: the line goes. Done: the card is played and its small card shows.
     await page.getByTestId('go-timer').click();
     await expect(page.getByTestId('first-coach')).toHaveCount(0);
-    await first.getByRole('button', { name: lang === 'fr' ? 'Fait' : 'Done', exact: true }).click();
+    await first.getByRole('button', { name: lang === 'fr' ? 'Jouée' : 'Played', exact: true }).click();
     const played = page.getByTestId('first-played');
     await expect(played).toBeVisible({ timeout: 15_000 });
     await expect(played).toContainText(W.played);
@@ -131,7 +131,7 @@ test('the played card offers a reminder for the morning where this device can ha
   await page.getByTestId('ob-first-input').fill('do the dishes');
   await page.getByTestId('ob-next').click();
   await page.getByTestId('ob-next').click();
-  await page.getByTestId('first').getByRole('button', { name: 'Already done', exact: true }).click();
+  await page.getByTestId('first').getByRole('button', { name: 'Already played', exact: true }).click();
   // No timer ran: it asks how long it took.
   await page.getByTestId('dur').first().click();
   const played = page.getByTestId('first-played');

@@ -99,7 +99,7 @@ async function markDone(page: Page, project: string, title: string, asked = fals
   const c = card(page, project);
   if (!(await c.locator('details').first().evaluate(d => (d as HTMLDetailsElement).open))) await c.locator('details > summary').first().click();
   await c.locator('ol.steps li', { hasText: title }).getByRole('button', { name: title }).click();
-  await sheet(page).getByRole('button', { name: 'Mark done' }).click();
+  await sheet(page).getByRole('button', { name: 'Mark played' }).click();
   await sheet(page).getByRole('button', { name: 'I didn’t time it' }).click();
   // A step that moves a goal with a count asks how much it added; closing the question keeps +1.
   if (asked) await sheet(page).getByRole('button', { name: /Keep \+1/ }).click();

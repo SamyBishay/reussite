@@ -31,7 +31,7 @@ async function aBarMoves(page: Page) {
   await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await c.locator('ol.steps li', { hasText: 'Draft chapter one' }).getByRole('button', { name: 'Draft chapter one' }).click();
-  await sheet(page).getByRole('button', { name: 'Mark done' }).click();
+  await sheet(page).getByRole('button', { name: 'Mark played' }).click();
   await sheet(page).getByRole('button', { name: 'I didn’t time it' }).click();
   await sheet(page).getByRole('button', { name: 'Keep +1' }).click();
   await expect(sheet(page)).toBeHidden();

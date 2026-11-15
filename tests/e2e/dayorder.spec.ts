@@ -70,7 +70,7 @@ test('a ticked step folds into “1 done”, closed until it is opened', async (
   await page.getByTestId('plan-list').locator('[data-task]', { hasText: 'Sort the drawer' }).getByTestId('row-done').click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   const fold = page.getByTestId('done-fold');
-  await expect(fold).toContainText('1 done');
+  await expect(fold).toContainText('1 played');
   await expect(page.getByTestId('plan-list')).not.toContainText('Sort the drawer');
   await expect(page.getByTestId('done-list')).toBeHidden();
   // The keyboard opens it.
@@ -118,7 +118,7 @@ test('a fixed item whose time has passed leaves the order: a day of only that ha
   await expect(page.getByTestId('home-line')).toBeVisible();
   await at_(page, 15, 0); // the call (14:00, 30 minutes long) is over
   await goNotifications(page);
-  await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
+  await expect(page.getByTestId('greeting-plan')).toContainText('Deal the day');
   await expect(page.getByTestId('greeting-done')).toHaveCount(0);
   await expect(page.getByTestId('greeting-next')).toHaveCount(0);
 });

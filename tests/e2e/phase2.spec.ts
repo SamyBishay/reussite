@@ -50,7 +50,7 @@ test('with no key there is no AI button at all; with a key the command box says 
   for (const tab of ['today', 'matrix', 'projects'] as const) {
     await page.getByTestId('tab-' + tab).click();
     await expect(page.getByTestId('cmd')).toBeVisible();
-    await expect(page.getByTestId('cmd-label')).toHaveText('Ask Claude to change the list');
+    await expect(page.getByTestId('cmd-label')).toHaveText('Ask Claude to change the deck');
     await expect(page.getByTestId('cmd-text')).toHaveAttribute('placeholder', /^Ask Claude…/);
     await expect(page.getByTestId('ask-any')).toHaveCount(0);
     await expect(page.getByTestId('paste-reply')).toHaveCount(0);
@@ -224,7 +224,7 @@ async function aiSession(page: Page) {
 const userText = (seen: Record<string, unknown>[], i = -1) => String(((seen.at(i)!.body as { messages: { content: string }[] }).messages[0]!).content);
 async function toPlan(page: Page) {
   // With an AI on, Plan the day opens the AI morning and its request preview; these tests are about the ritual's plan, one tap away ("Plan it myself").
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
   await expect(page.getByTestId('ai-preview')).toBeVisible();
   await page.getByTestId('ai-preview').getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByTestId('ai-preview')).toHaveCount(0);
@@ -242,7 +242,7 @@ test('Plan my day: a plan with two Protect steps is set aside; a valid one is us
   answer.text = JSON.stringify({ plan: [{ id: 't4', role: 'protect' }, { id: 't3', role: 'protect' }, { id: 't6', role: 'obligation' }], note: 'Two big ones.' });
   await page.getByTestId('ai-improve').click();
   await page.getByTestId('ai-send').click();
-  await expect(page.getByTestId('ai-plan-rejected')).toContainText('it had more than one Protect step, so here is the rule-based plan');
+  await expect(page.getByTestId('ai-plan-rejected')).toContainText('it had more than one Protect card, so here is the hand the rules dealt');
   expect(await page.getByTestId('plan-items').innerText()).toBe(rulePlan);
   expect(userText(seen)).toContain('The rule-based plan');
   expect(userText(seen)).toContain('Calibration:');
@@ -285,7 +285,7 @@ test('Break it down: proposed steps are ticked and edited before saving', async 
   await page.getByTestId('ai-step').nth(2).getByRole('checkbox').uncheck();
   await page.getByTestId('ai-step').nth(1).getByLabel('title').fill('Attach the signed lease as a PDF');
   await page.getByTestId('ai-bd-save').click();
-  await expect(page.locator('.toast')).toContainText('Broken down: 2 steps.');
+  await expect(page.locator('.toast')).toContainText('Broken down: 2 cards.');
   await page.getByTestId('tab-matrix').click();
   await expect(page.locator('.matrix')).toContainText('Open Mail and find the agency’s address');
   // The steps are in this order, so one card: the second is inside it, under "+1 after".

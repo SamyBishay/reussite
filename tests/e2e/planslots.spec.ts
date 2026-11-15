@@ -39,7 +39,7 @@ for (const language of LANGS) {
       await page.getByRole('button', { name: /^(Import|Importer)$/ }).click();
       await expect(page.getByTestId('sheet')).toBeHidden();
       await page.getByTestId('tab-today').click();
-      await page.locator('main').getByRole('button', { name: language === 'fr' ? 'Planifier la journée' : 'Plan the day' }).click();
+      await page.locator('main').getByRole('button', { name: language === 'fr' ? 'Distribuer la journée' : 'Deal the day' }).click();
       await expect(page.getByTestId('ci-shape')).toBeVisible();
       await page.getByTestId('ci-next').click();
       await page.getByTestId('ci-next').click();

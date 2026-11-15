@@ -37,7 +37,7 @@ async function openPlan(page: Page) {
   await morningClock(page);
   await page.goto('/');
   await goNotifications(page);
-  await page.locator('main').getByRole('button', { name: /Plan the day|Planifier la journée/ }).click();
+  await page.locator('main').getByRole('button', { name: /Deal the day|Distribuer la journée/ }).click();
   await page.getByTestId('ci-next').click(); // nothing was planned yesterday, so the first screen is the day's shape
   await page.getByTestId('ci-next').click(); // the pillars
   await expect(page.getByTestId('plan-items')).toBeVisible();

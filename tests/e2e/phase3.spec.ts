@@ -258,7 +258,7 @@ test('connector: needs sync first; then switch on shows an address and a code, s
   const box = page.getByTestId('connector');
   // off: what it does, and the privacy cost, before the button
   await expect(page.getByTestId('connector-on')).toBeVisible();
-  await expect(box).toContainText('whoever runs the relay can read your whole list');
+  await expect(box).toContainText('whoever runs the relay can read your whole deck');
   await expect(box).toContainText('Only a new recovery key fully undoes having shared it');
   await page.getByTestId('connector-on').click();
   await expect(page.getByTestId('connector-on-sheet')).toContainText('Switch the connector on?');
@@ -302,7 +302,7 @@ test('connector: needs sync first; then switch on shows an address and a code, s
   await expandSettings(page);
   await expect(page.getByTestId('connector-code')).toBeHidden();
   await expect(page.getByTestId('device-connector')).toBeHidden({ timeout: 10_000 });
-  await expect(page.getByTestId('about').getByTestId('privacy')).toContainText('your whole list while the connector is on');
+  await expect(page.getByTestId('about').getByTestId('privacy')).toContainText('your whole deck while the connector is on');
 });
 
 for (const w of WIDTHS) {
@@ -379,7 +379,7 @@ test('one-tap link: a browser with nothing leaves it in the inbox; the device wi
   const requests: string[] = [];
   b.page.on('request', r => { if (r.method() === 'POST') requests.push(r.url()); });
   await b.page.goto(linkFor(addr, cs('Open Mail and answer the drop one')).replace(ORIGIN, ''));
-  await expect(b.page.getByTestId('drop-sent')).toHaveText('Sent to your list. Open Réussite to review it.', { timeout: 20_000 });
+  await expect(b.page.getByTestId('drop-sent')).toHaveText('Sent to your deck. Open Réussite to review it.', { timeout: 20_000 });
   await b.page.goto(linkFor(addr, cs('Open Mail and answer the drop two')).replace(ORIGIN, ''));
   await expect(b.page.getByTestId('drop-sent')).toBeVisible({ timeout: 20_000 });
   expect(requests.filter(u => u.endsWith('/inbox'))).toHaveLength(2);

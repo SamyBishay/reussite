@@ -187,7 +187,7 @@ test('on a Monday Start here is the next step until the choir needs the time, th
 test('no list yet shows Plan the day on the bell page; with a plan open Home has no card, and a started step runs on Today alone', async ({ page }) => {
   await page.goto('/');
   await goNotifications(page);
-  await expect(page.getByTestId('greeting-plan')).toContainText('Plan the day');
+  await expect(page.getByTestId('greeting-plan')).toContainText('Deal the day');
   await importSample(page);
   await goTab(page, 'home');
   await expect(page.getByTestId('greeting-hello')).toBeVisible();

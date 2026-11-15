@@ -14,10 +14,10 @@ const NEXT = (page: Page) => page.getByTestId('ob-next');
 const next = (page: Page) => NEXT(page).click();
 /** The first card's screen, passed without making one. */
 const notNow = async (page: Page) => { await expect(page.getByTestId('ob-first')).toBeVisible(); await page.getByTestId('ob-first-skip').click(); };
-/** The AI screens opened from Settings still speak of pillars, with no cards, suits or Matrix vocabulary (the welcome and the suits say the solitaire up front: 14 Nov). */
+/** The AI screens opened from Settings speak the solitaire's words like the rest of the app (14 Nov): never the old pillars or kinds of time. */
 const noJargon = async (page: Page, where: string) => {
   const text = await page.locator('.ob').innerText();
-  expect(text, where).not.toMatch(/\b(cards?|suits?|matrix|quadrants?)\b/i);
+  expect(text, where).not.toMatch(/\b(pillars?|kinds? of time)\b/i);
 };
 
 type Wire = { messages: { role: string; content: string | { type: string; text: string }[] }[] };
@@ -292,10 +292,10 @@ test.describe('with an AI, from Settings', () => {
     await expect(page.getByTestId('ob-chat-you').first()).toContainText('usual week');
     expect(seen.length).toBe(before + 1);
     const first = text(seen[before]!);
-    expect(first).toContain('four pillars');
+    expect(first).toContain('four suits');
     expect(first).toContain('I am finishing a thesis');
-    expect(first).toContain('Never say "card", "suit"');
-    expect(first).toContain('Interpersonal obligations'); // it starts from the four kinds of time
+    expect(first).toContain('never "pillar", "category" or "kind of time"');
+    expect(first).toContain('Interpersonal obligations'); // it starts from the four suits a new person is given
     await page.getByTestId('ob-chat-say').fill('Mostly at home, and the library on weekdays.');
     await page.getByTestId('ob-chat-send').click();
     // The proposal: its words, then every change with a tick.
@@ -303,7 +303,7 @@ test.describe('with an AI, from Settings', () => {
     await expect(page.getByTestId('ob-chat-you').last()).toContainText('four pillars and two places');
     expect(text(seen[before + 1]!)).toContain('usual week'); // the exchange so far goes with it
     await expect(page.getByTestId('chg')).toHaveCount(3);
-    await expect(page.getByTestId('review')).toContainText('Pillar 1');
+    await expect(page.getByTestId('review')).toContainText('Suit 1');
     await expect(page.getByTestId('review')).toContainText('The thesis');
     await expect(page.getByTestId('review')).toContainText('Rest and my sister');
     await expect(page.getByTestId('review')).toContainText('Flat');
@@ -354,7 +354,7 @@ test.describe('with an AI, from Settings', () => {
   async function connectApp(page: Page) {
     await expect(page.getByTestId('ob-link')).toBeVisible();
     await expect(page.getByTestId('ob-link').getByTestId('conn-apps-who').locator('li')).toHaveCount(4);
-    await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole list');
+    await expect(page.getByTestId('ob-link')).toContainText('whoever runs the relay can read your whole deck');
     await noJargon(page, 'connect the app');
     await page.getByTestId('ob-link-on').click();
     await expect(page.getByTestId('recovery-key')).toBeVisible(); // sync is on, its key to keep
@@ -391,7 +391,7 @@ test.describe('with an AI, from Settings', () => {
     });
     await page.getByTestId('ob-link-check').click();
     await expect(page.getByTestId('ob-link-state')).toContainText('Your app is connected');
-    await expect(page.getByTestId('ob-link-state')).toContainText('Plan my day with Réussite');
+    await expect(page.getByTestId('ob-link-state')).toContainText('Deal my day with Réussite');
     await page.getByTestId('ob-link-continue').click();
     await expect(sheet(page)).toBeHidden();
     await expandSettings(page);

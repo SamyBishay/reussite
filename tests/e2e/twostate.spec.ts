@@ -104,7 +104,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
   test(`Drop on a carried card and Remove on a missed item (${tag})`, async ({ page }) => {
     await load(page, w, h, lang, ['a']);
     await goTab(page, 'today');
-    await page.locator('main').getByRole('button', { name: lang === 'fr' ? /Planifier la journée/ : 'Plan the day' }).first().click();
+    await page.locator('main').getByRole('button', { name: lang === 'fr' ? /Distribuer la journée/ : 'Deal the day' }).first().click();
     await expect(page.getByTestId('ci-yesterday')).toBeVisible();
     await armed(page, page.getByTestId('carried-drop'), 'carried');
     // Answer the rest of the cards to reach the missed item.

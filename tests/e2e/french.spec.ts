@@ -76,7 +76,7 @@ test('the app in French has no English left: the tabs, the menu pages, the sheet
   await openAllProjects(page);
   await page.getByTestId('edit-project').first().click(); await expandSheet(page); await scan('project sheet'); await page.keyboard.press('Escape');
   await goTab(page, 'today');
-  await page.locator('main').getByRole('button', { name: 'Planifier la journée' }).first().click();
+  await page.locator('main').getByRole('button', { name: 'Distribuer la journée' }).first().click();
   await expect(page.getByTestId('carried-card').or(page.getByTestId('ci-shape'))).toBeVisible();
   await scan('ritual yesterday');
   await carryAll(page);

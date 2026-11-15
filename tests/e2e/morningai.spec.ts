@@ -205,7 +205,7 @@ test('a reply that is not usable still leaves the five sections, with a way to t
   await expect(page.getByTestId('ai-error')).toBeVisible();
   for (const s of ['must', 'goals', 'pillars', 'here']) await expect(page.getByTestId('morning-' + s)).toBeVisible();
   await expect(item(page, 'tax')).toHaveAttribute('data-state', 'kept');
-  await page.getByRole('button', { name: 'Plan it myself' }).first().click();
+  await page.getByRole('button', { name: 'Deal it myself' }).first().click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
 });
 

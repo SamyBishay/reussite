@@ -50,7 +50,7 @@ test('something I’m waiting for: made in Break it down, listed under Waiting f
 
   // The first step done: the event is next in the chain but dormant, so nothing else appears on the list.
   await goTab(page, 'today');
-  await page.getByTestId('first').getByRole('button', { name: 'Already done' }).click();
+  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.locator('main')).not.toContainText(EVENT);
   await expect(page.locator('main')).not.toContainText('Book the tailor');

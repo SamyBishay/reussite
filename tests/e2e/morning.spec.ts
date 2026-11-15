@@ -31,7 +31,7 @@ async function start(page: Page) {
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.getByTestId('tab-today').click();
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).click();
+  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
   await expect(page.getByTestId('ci-shape')).toBeVisible();
 }
 
@@ -46,7 +46,7 @@ test('the morning: Afternoon, pillars kept and one skipped, "x of y free", cut a
   // One row for each suit; the one with nothing in it says so in one line.
   await expect(page.getByTestId('ci-pillars')).toBeVisible();
   for (const s of ['S', 'D', 'C', 'H']) await expect(page.getByTestId('pillar-' + s)).toBeVisible();
-  await expect(page.getByTestId('pillar-H')).toContainText('No life step today. Fine, or add one?');
+  await expect(page.getByTestId('pillar-H')).toContainText('No life card today. Fine, or add one?');
   const steps = page.getByTestId('pillar-step');
   expect(await steps.count()).toBeGreaterThanOrEqual(2); // Afternoon allows one work step fewer
   await steps.first().getByTestId('pillar-skip').click();

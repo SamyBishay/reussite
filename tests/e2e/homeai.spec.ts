@@ -159,7 +159,7 @@ test('the month’s spend shows in Settings, and at the limit Home goes back to 
   await say(page, 'what does Ibrahim have on');
   await expect(page.getByTestId('card-answer')).toContainText('limit on this device is reached');
   expect(seen).toHaveLength(1);
-  await page.getByTestId('card-answer').getByRole('button', { name: 'Add as a step' }).click();
+  await page.getByTestId('card-answer').getByRole('button', { name: 'Add as a card' }).click();
   await expect(sheet(page).getByTestId('task-sheet')).toBeVisible();
   await expect(sheet(page).locator('input[name=title]')).toHaveValue('what does Ibrahim have on');
 });

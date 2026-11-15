@@ -50,7 +50,7 @@ test('a chain is one card: +2 after on Today and the Matrix, unfolding, and the 
   await page.keyboard.press('Escape');
 
   await goTab(page, 'today');
-  await page.getByTestId('first').getByRole('button', { name: 'Already done' }).click();
+  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.getByTestId('first')).toContainText('Fill the form');
   await expect(page.getByTestId('first').getByTestId('chain-toggle')).toHaveText(/\+1 after/);

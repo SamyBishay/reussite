@@ -34,11 +34,11 @@ test('connector on, no key: Plan the day and the review banner offer the chat, a
   await expect(page.getByTestId('home-plan')).toBeVisible();
   const offer = page.getByTestId('home-plan-chat');
   await expect(offer).toBeVisible();
-  await expect(offer).toHaveText('Plan it in your AI chat');
+  await expect(offer).toHaveText('Deal it in your AI chat');
   // No app is named or linked: a button that copies the sentence to say in the person's own chat.
   await expect(page.locator('a[href*="claude"], a[href*="chatgpt"], a[href*="openai"]')).toHaveCount(0);
   await offer.click();
-  await expect(page.locator('.toast')).toContainText('say “Plan my day with Réussite”');
+  await expect(page.locator('.toast')).toContainText('say “Deal my day with Réussite”');
   await noSideways(page, 'home with the offer');
   // The ritual is still what Plan the day opens.
   await page.getByTestId('home-plan').click();
@@ -89,7 +89,7 @@ test('in French the offer and its sentence are French, and fit at 320px', async 
   const offer = page.getByTestId('home-plan-chat');
   await expect(offer).toHaveText('La planifier dans votre chat IA');
   await offer.click();
-  await expect(page.locator('.toast')).toContainText('dites « Planifie ma journée avec Réussite »');
+  await expect(page.locator('.toast')).toContainText('dites « Distribue ma journée avec Réussite »');
   await noSideways(page, 'home with the offer, 320px');
   await goTab(page, 'today');
   await expect(page.getByTestId('review-chat')).toHaveText('La faire dans votre chat IA');

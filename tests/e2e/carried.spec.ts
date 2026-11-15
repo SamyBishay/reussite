@@ -41,7 +41,7 @@ async function start(page: Page, tab = 'today', extra: Record<string, Record<str
   await page.getByTestId('tab-' + tab).click();
 }
 async function ritual(page: Page) {
-  await page.locator('main').getByRole('button', { name: 'Plan the day' }).first().click();
+  await page.locator('main').getByRole('button', { name: 'Deal the day' }).first().click();
   await expect(page.getByTestId('ci-yesterday')).toBeVisible();
 }
 
@@ -122,7 +122,7 @@ test('Make it a decision opens the decision with the step, on today’s list', a
 
 test('Today and the bell offer the same cards, with no bulk carry', async ({ page }) => {
   await start(page);
-  await expect(page.getByTestId('carry-card')).toContainText('Some steps from yesterday are still open');
+  await expect(page.getByTestId('carry-card')).toContainText('Some cards from yesterday are still open');
   expect((await doc(page, 'days', TODAY)).plan).toEqual(['bank']);
   await page.getByTestId('carry-open').click();
   await expect(page.getByTestId('carried-sheet')).toBeVisible();

@@ -45,9 +45,9 @@ Une étape passée est seulement laissée hors de la liste d’aujourd’hui ;
 
 **Faire le plan** montre les changements comme tout changement d’une IA, avec une case à cocher pour chacun : les nouvelles étapes, les étapes découpées, et la liste du jour avec sa première étape. Rien n’est écrit avant que vous ne cochiez. Annuler est sur le reçu de l’accueil et dans l’Historique. Si l’IA est injoignable, vous avez quand même les cinq parties, faites par les règles et sans ses mots, avec un chemin vers le rituel. **Le faire moi-même** ouvre le rituel à tout moment. Sans IA configurée, rien ne change.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** les programmes de TCC qui enseignent la planification aident les adultes ayant un TDAH ; une main courte avec un petit premier geste n’a pas été testée seule. [Voir les preuves](research-5.md).
 
-**La pratique dit :** une liste courte avec une petite première étape est plus facile à démarrer qu’une longue. Une journée planifiée en quelques minutes vaut mieux qu’une journée planifiée pendant une heure. `[E?]`
+**La pratique dit :** une liste courte avec une petite première étape est plus facile à démarrer qu’une longue. Une journée planifiée en quelques minutes vaut mieux qu’une journée planifiée pendant une heure.
 
 ## Échéances, rendez-vous et créneaux
 
@@ -95,9 +95,9 @@ Touchez **Je bloque** quand ça ne démarre pas. Réussite demande quelle est la
 
 Il montre ensuite le démarreur, ou vous aide à en écrire un plus petit. Si la même étape cale deux fois, elle cache sans doute une décision ou une information qui manque. Réussite vous propose d’en faire une question à quelqu’un, ou une décision.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** nous n’avons trouvé aucun test de ce qu’il faut faire quand on est bloqué ; de simples plans « si… alors » aident bien à s’y mettre. [Voir les preuves](research-5.md).
 
-**La pratique dit :** quand vous êtes bloqué, ne replanifiez pas la journée. Trouvez la friction et rendez la première action plus petite. `[E?]`
+**La pratique dit :** quand vous êtes bloqué, ne replanifiez pas la journée. Trouvez la friction et rendez la première action plus petite.
 
 ## La découper
 
@@ -142,6 +142,6 @@ Après les étapes suivantes, chaque projet actif a deux écrans.
 
 Avec une IA configurée, **Commencer la revue** (le jour de la revue, depuis la cloche de l’accueil, Aujourd’hui ou la matrice, et dans Réglages → Méthode sous **Passer les objectifs en revue avec l’IA**) ouvre plutôt une courte conversation sur les objectifs, un projet à la fois. Pour chaque projet, l’IA vérifie l’objectif face à SMART (la phrase, la mesure et les dates), vous dit pour chaque étape ouverte si elle appartient à l’objectif et si elle le fait avancer, et propose des changements : une phrase plus claire, une mesure, d’autres dates, des étapes à abandonner ou à ajouter. Vous gardez ou **Passez** chaque proposition, inversez d’un toucher le **Oui / Non** de n’importe quelle étape, et pouvez dire quoi changer (« rends l’objectif plus petit »). Après le dernier projet, **Voir les modifications** montre une seule liste sur l’écran de revue : cochez ce que vous voulez, rien n’est écrit avant. **Le reste de la revue** continue ensuite avec les questions habituelles, et **Passer les objectifs en revue moi-même** ouvre la revue à la main à tout moment. Sans IA, rien ne change.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** les personnes qui planifient leur temps réussissent en général mieux et se sentent mieux, mais c’est une corrélation, et la revue de la semaine n’a pas été testée seule. [Voir les preuves](research-method.md).
 
-**La pratique dit :** un regard régulier sur l’ensemble garde la liste du jour courte. `[E?]`
+**La pratique dit :** un regard régulier sur l’ensemble garde la liste du jour courte.

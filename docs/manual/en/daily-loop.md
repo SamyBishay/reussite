@@ -45,9 +45,9 @@ A skipped step is only left off today's list; it stays on your list. To change t
 
 **Make the plan** shows the changes the way every AI change is shown, with a tick for each: the new steps, the broken-down ones, and the day's list with its first step. Nothing is written before you tick. Undo is on Home's receipt and in History. If the AI is unreachable you still get the five parts, made by the rules and without its wording, with a way to the ritual. **Plan it myself** opens the ritual at any time. With no AI set up, nothing changes.
 
-**Research says:** untested here. `[E?]`
+**Research says:** CBT programmes that teach planning help adults with ADHD; a short hand with a small first move has not been tested on its own. [See the evidence](research-5.md).
 
-**Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour. `[E?]`
+**Practice says:** a short list with a small first step is easier to start than a long one. A day planned in a few minutes beats a day planned for an hour.
 
 ## Deadlines, appointments and slots
 
@@ -95,9 +95,9 @@ Tap **I'm stuck** when it won't start. Réussite asks which friction it is:
 
 Then it shows the starter, or helps you write a smaller one. If the same step stalls twice, it probably hides a decision or missing information. Réussite asks you to turn it into a question to someone, or a decision.
 
-**Research says:** untested here. `[E?]`
+**Research says:** We found no test of what to do when you are stuck; simple if-then plans do help people start. [See the evidence](research-5.md).
 
-**Practice says:** when you are stuck, don't re-plan the day. Find the friction and make the first action smaller. `[E?]`
+**Practice says:** when you are stuck, don't re-plan the day. Find the friction and make the first action smaller.
 
 ## Break it down
 
@@ -142,6 +142,6 @@ After the next steps, each active project gets two screens.
 
 With an AI set up, **Start the review** (on the review day, from Home's bell, Today or the Matrix, and in Settings → Method as **Review the goals with the AI**) opens a short conversation about the goals instead, one project at a time. For each project the AI checks the goal against SMART (the sentence, the measure and the dates), tells you for each open step whether it belongs to the goal and whether it moves it, and proposes changes: a clearer sentence, a measure, other dates, steps to drop or to add. You keep or **Skip** each proposal, flip any step's **Yes / No** with a tap, and can say what to change ("make the goal smaller"). After the last project, **See the changes** shows one list on the review screen: tick what you want and nothing is written before that. **The rest of the review** then goes on with the usual questions, and **Go through the goals myself** opens the review by hand at any point. Without an AI nothing changes.
 
-**Research says:** untested here. `[E?]`
+**Research says:** People who plan their time tend to do better and feel better, but that is a correlation, and a weekly review has not been tested on its own. [See the evidence](research-method.md).
 
-**Practice says:** a regular look at everything keeps the daily list small. `[E?]`
+**Practice says:** a regular look at everything keeps the daily list small.

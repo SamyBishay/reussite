@@ -27,9 +27,9 @@ La barre est remplie par des étapes, pas par le nombre de cartes faites. Ouvrez
 
 La revue de la semaine pose la question pour chaque étape ouverte d’un projet une fois par semaine, donc les réponses ne dépendent pas de votre mémoire. Une étape à laquelle vous n’avez jamais répondu compte comme Non, et la barre ne compte jamais des étapes juste parce qu’elles sont faites. Si vous annulez une étape, un décompte redescend. Les étapes que vous ajoutez dans le projet, dans Aujourd’hui ou en parlant à une IA peuvent toutes dire si elles font avancer l’objectif.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** se fixer un objectif clair et décider quand et où agir aide à passer à l’acte ; la liste SMART elle-même n’a pas été testée. [Voir les preuves](research-9.md).
 
-**La pratique dit :** un objectif dont on ne peut pas dire s’il est atteint n’est pas un objectif, et une barre qui se remplit pour n’importe quelle étape faite ne vous dit rien de l’objectif. `[E?]`
+**La pratique dit :** un objectif dont on ne peut pas dire s’il est atteint n’est pas un objectif, et une barre qui se remplit pour n’importe quelle étape faite ne vous dit rien de l’objectif.
 
 Les anciens projets gardent leur objectif comme phrase et n’ont pas de barre tant que vous ne choisissez pas une mesure. Ce que vous aviez écrit dans les cinq lignes SMART est conservé.
 

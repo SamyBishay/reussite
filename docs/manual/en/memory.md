@@ -29,6 +29,6 @@ Mark a note **Private: never sent to an AI**. Then no AI sees it: not the AI in 
 - **Import** reads the memory files of Claude Code, or a file of claude.ai's memory, or text you paste. Nothing is replaced: only lines you don't have yet are added. You see a summary before anything is written.
 - **Export** makes one Markdown file with a block per note, to give to any AI. Private notes stay out unless you tick the box.
 
-**Research says:** untested here. `[E?]`
+**Research says:** A plan for an unfinished task quiets nagging thoughts about it; one single list was never tested alone in adults with ADHD. [See the evidence](research-1.md).
 
-**Practice says:** write it down, so it doesn't compete in your head. `[E?]`
+**Practice says:** write it down, so it doesn't compete in your head.

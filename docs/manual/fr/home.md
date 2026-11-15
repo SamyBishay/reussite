@@ -91,6 +91,6 @@ L’icône de menu en haut de l’accueil contient ce qui n’a pas d’onglet�
 
 La barre du bas a cinq endroits : Accueil, Aujourd’hui, Matrice, Projets et Calendrier. Elle n’affiche que des mots, jamais de compteurs.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** nous n’avons trouvé aucune étude d’un écran de départ à peu de choix ; la méthode dans son ensemble a un certain appui, pas ce détail. [Voir les preuves](research-method.md).
 
-**La pratique dit :** moins il y a de choix sur l’écran où vous commencez, plus il est facile de commencer. `[E?]`
+**La pratique dit :** moins il y a de choix sur l’écran où vous commencez, plus il est facile de commencer.

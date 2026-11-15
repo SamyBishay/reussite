@@ -31,9 +31,9 @@ A **stay** is a place with a first and a last day. Add one in Settings → Metho
 
 **Before I leave.** A step can be set as "Before I leave", a number of days before the last day of a stay. Its date moves with the stay, and it sorts nearest first in its box; tick it urgent when it is.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Deciding in advance when and where to act helps people follow through; trips have not been tested. [See the evidence](research-9.md).
 
-**Practice says:** a trip is easier when the things to do before leaving are on the list weeks before, not the night before. `[E?]`
+**Practice says:** a trip is easier when the things to do before leaving are on the list weeks before, not the night before.
 
 ## Plan this trip
 

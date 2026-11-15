@@ -54,4 +54,4 @@ If one of your devices runs a newer version than another, the older one stops ed
 
 **Research says:** not applicable: this is not a method rule.
 
-**Practice says:** keep the key where you keep your passwords. `[E?]`
+**Practice says:** keep the key where you keep your passwords.

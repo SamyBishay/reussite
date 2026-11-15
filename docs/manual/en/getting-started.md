@@ -41,6 +41,6 @@ When nothing is planned yet, the bell on Home lists **Plan the day**; it starts 
 
 Starting is the hard part. Every card in Réussite has a small first move, so the jump from not doing to doing is as small as it can be.
 
-**Research says:** untested here. `[E?]`
+**Research says:** CBT programmes that teach planning help adults with ADHD, and simple if-then plans help people follow through; the two-minute first move itself has not been tested. [See the evidence](research-5.md).
 
-**Practice says:** once work has begun it usually goes fine. What fails is the jump into it, and the jump back in after a break. `[E?]`
+**Practice says:** once work has begun it usually goes fine. What fails is the jump into it, and the jump back in after a break.

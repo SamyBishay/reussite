@@ -23,9 +23,9 @@ Une date lointaine n’est pas urgente, même importante. Pas plus que ce sur qu
 
 Déplacer une étape dans une autre case règle simplement ses deux cases à cocher.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** dans les expériences, les tâches qui ont seulement l’air urgentes l’emportent sur des tâches plus importantes ; la méthode des quatre cases elle-même n’a pas été testée. [Voir les preuves](research-2.md).
 
-**La pratique dit :** la plupart de ce qui paraît urgent est seulement bruyant. C’est une vraie échéance qui rend une chose urgente. `[E?]`
+**La pratique dit :** la plupart de ce qui paraît urgent est seulement bruyant. C’est une vraie échéance qui rend une chose urgente.
 
 ## Déplacer, filtrer et chercher
 
@@ -48,9 +48,9 @@ Une étape a un titre, écrit comme la **première action** : l’appli ou le 
 
 Quand vous ouvrez une étape, ses boutons (Enregistrer, Marquer comme fait, Déplacer vers…, La découper, Abandonner et les autres) sont sur une rangée sous le titre, toujours à portée. Sous le titre, **Heure** et **Jusqu’à** : choisissez une heure fixe et sa fin sur l’horloge de votre téléphone (la durée est calculée pour vous, « Dure 3 h 30 » ; déplacer le début la garde). Sous **Plus**, vous trouverez le nom court, le démarreur, la famille, le lieu, le projet, la note, le type (une étape ou une décision), « Attend », l’appli et le lien, la répétition, et ce qu’il faut à un élément permanent (ses jours de la semaine et, s’il se termine, son dernier jour). Quand quelque chose sous Plus est réglé, il le dit (« Plus · 3 renseignés »). « Partir plus tôt » apparaît dès qu’il y a une heure.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** de simples plans « si… alors » aident à s’y mettre ; aucune étude n’a testé un titre qui nomme l’appli et l’action. [Voir les preuves](research-5.md).
 
-**La pratique dit :** un titre qui nomme l’appli et l’action, c’est une étape qu’on peut démarrer. « Impôts », non. `[E?]`
+**La pratique dit :** un titre qui nomme l’appli et l’action, c’est une étape qu’on peut démarrer. « Impôts », non.
 
 ## Étapes répétées et rendez-vous fixes
 

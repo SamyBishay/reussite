@@ -23,9 +23,9 @@ A far date isn't urgent however important. Neither is anything you can't act on 
 
 Moving a step to another box just sets its two ticks.
 
-**Research says:** untested here. `[E?]`
+**Research says:** In experiments, tasks that merely look urgent win over more important ones; the four-box method itself has not been tested. [See the evidence](research-2.md).
 
-**Practice says:** most of what feels urgent is only loud. A real deadline is what makes it urgent. `[E?]`
+**Practice says:** most of what feels urgent is only loud. A real deadline is what makes it urgent.
 
 ## Moving, filtering and searching
 
@@ -48,9 +48,9 @@ A step has a title, written as the **first action**: the app or place, then what
 
 Opening a step shows its buttons (Save, Mark done, Move to…, Break it down, Drop and the others) in a row under the title, always in reach. Under the title are **Time** and **Until**: pick a fixed time and when it ends on your phone's own clock (the length is worked out for you, "Lasts 3 h 30"; moving the start keeps it). Under **More** you will find the short name, the starter, the suit, the place, the project, the note, the kind (a step or a decision), "Waits for", the app and link, repeats, and what a standing item needs (its weekdays and, if it ends, its last day). When something under More is set, it says so ("More · 3 set"). "Leave early" appears once there is a time.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Simple if-then plans help people start; no study tested a title that names the app and the action. [See the evidence](research-5.md).
 
-**Practice says:** a title that names the app and the action is a step you can start. "Taxes" is not. `[E?]`
+**Practice says:** a title that names the app and the action is a step you can start. "Taxes" is not.
 
 ## Repeating steps and standing items
 

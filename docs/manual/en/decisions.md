@@ -17,14 +17,14 @@ In **Matrix**, under the four boxes, tap **+ New decision**. Or turn a step into
 
 You weigh the items yourself. An AI never sets weights.
 
-**Research says:** untested here. `[E?]`
+**Research says:** The problem-solving steps have been tested, mostly for depression; weighting pros and cons has not been tested directly. [See the evidence](research-8.md).
 
-**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible. `[E?]`
+**Practice says:** writing the pros and cons of doing and of not doing makes avoidance visible.
 
 ## Checking it later
 
 On the date you chose, Home shows "Check your decision". Did what would show it's wrong happen? If yes, **Reopen it** and start again with the new fact. If not, close it or check again later.
 
-**Research says:** untested here. `[E?]`
+**Research says:** We found no test of reviewing a decision on a set date. [See the evidence](research-8.md).
 
-**Practice says:** a decision with a date to check is easier to let go of. `[E?]`
+**Practice says:** a decision with a date to check is easier to let go of.

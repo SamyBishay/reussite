@@ -29,6 +29,6 @@ Marquez une note **Privée : jamais envoyée à une IA**. Aucune IA ne la voit
 - **Importer** lit les fichiers de mémoire de Claude Code, un fichier de la mémoire de claude.ai, ou du texte que vous collez. Rien n’est remplacé : seules les lignes que vous n’avez pas encore sont ajoutées. Vous voyez un résumé avant que quoi que ce soit soit écrit.
 - **Exporter** produit un fichier Markdown avec un bloc par note, à donner à n’importe quelle IA. Les notes privées restent dehors, sauf si vous cochez la case.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** faire un plan pour une tâche inachevée calme les pensées qui reviennent à son sujet ; une liste unique n’a jamais été testée seule chez des adultes ayant un TDAH. [Voir les preuves](research-1.md).
 
-**La pratique dit :** écrivez-le, pour que ça ne se dispute plus la place dans votre tête. `[E?]`
+**La pratique dit :** écrivez-le, pour que ça ne se dispute plus la place dans votre tête.

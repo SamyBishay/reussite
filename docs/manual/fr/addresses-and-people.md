@@ -43,9 +43,9 @@ Dans les détails d’une étape, **Alimente** relie l’étape à une adresse o
 
 Sur une obligation régulière (loisir, sortie, rencontre avec des proches), le champ **Le planificateur propose** peut valoir Rien, Adresses ou Proches. Quand le plan place cette obligation, le point du matin, la revue de la semaine et « Loisirs et proches » de la journée en proposent jusqu’à trois. Choisissez-en une, et l’étape reçoit son titre, son démarreur et son lien. Ou **Laisser tel quel**. Les lieux où vous retourneriez passent en premier, puis ceux où vous voulez aller.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** planifier des activités agréables soigne la dépression, fréquente dans le TDAH de l’adulte ; traiter les loisirs comme une obligation plutôt que comme une récompense n’a pas été testé. [Voir les preuves](research-7.md).
 
-**La pratique dit :** les loisirs, les sorties et voir ses proches sont des obligations envers votre santé mentale, donc on les planifie comme n’importe quelle étape. Avoir fait le choix à l’avance les rend plus faciles à faire. `[E?]`
+**La pratique dit :** les loisirs, les sorties et voir ses proches sont des obligations envers votre santé mentale, donc on les planifie comme n’importe quelle étape. Avoir fait le choix à l’avance les rend plus faciles à faire.
 
 ## Importer depuis Google Maps
 

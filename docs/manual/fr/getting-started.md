@@ -41,6 +41,6 @@ Quand rien n’est encore planifié, la cloche de l’accueil propose **Planifie
 
 Le plus dur, c’est de démarrer. Chaque carte de Réussite a un petit premier geste, pour que le saut entre ne pas faire et faire soit aussi petit que possible.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** les programmes de TCC qui enseignent la planification aident les adultes ayant un TDAH, et de simples plans « si… alors » aident à passer à l’acte ; le premier geste de deux minutes n’a pas été testé en lui-même. [Voir les preuves](research-5.md).
 
-**La pratique dit :** une fois le travail commencé, ça se passe en général bien. Ce qui échoue, c’est le saut pour s’y mettre, et celui pour s’y remettre après une pause. `[E?]`
+**La pratique dit :** une fois le travail commencé, ça se passe en général bien. Ce qui échoue, c’est le saut pour s’y mettre, et celui pour s’y remettre après une pause.

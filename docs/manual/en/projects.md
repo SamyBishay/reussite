@@ -27,9 +27,9 @@ The bar is filled by steps, not by the number of cards done. Open a step of a pr
 
 The weekly review asks about every open step of a project once a week, so the answers do not depend on you remembering. A step you never answered counts as No, and the bar never counts steps just because they are done. If you un-do a step, a count goes back down. Steps you add in the project, on Today or by talking to an AI can all say whether they move the goal.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Setting a clear goal and deciding when and where to act helps people follow through; the SMART checklist itself has not been tested. [See the evidence](research-9.md).
 
-**Practice says:** a goal you can't tell is finished isn't a goal, and a bar that fills for any step done isn't telling you about the goal. `[E?]`
+**Practice says:** a goal you can't tell is finished isn't a goal, and a bar that fills for any step done isn't telling you about the goal.
 
 Older projects keep their goal as the sentence and have no bar until you pick a measure. What you wrote in the five SMART lines is kept.
 

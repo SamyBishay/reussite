@@ -67,8 +67,8 @@ Once added, Claude and Gemini use it in their phone apps too; for ChatGPT's phon
 
 With no key on this device but the connector on, Home’s **Plan the day** card also offers **Plan it in your AI chat**, and the Sunday review banner (on Today, the Matrix and the bell) **Review in your AI chat**. They copy a short sentence (“Plan my day with Réussite”) to say in a new chat in your app. Réussite makes no AI call itself. One small change (adding a step, ticking one done, moving a date) goes straight in, with an undo. Anything else waits for your yes in the chat. **Switch off** signs every AI app out at once. Notes you marked Private are never readable by it.
 
-**Research says:** untested here. `[E?]`
+**Research says:** Trials of CBT skills programmes show real but modest gains for adults with ADHD; whether an app alone gives the same gains is not known. [See the evidence](research-method.md).
 
-**Practice says:** an AI is useful when it follows the method, asks one question at a time and says what it did. `[E?]`
+**Practice says:** an AI is useful when it follows the method, asks one question at a time and says what it did.
 
 See also [Privacy](privacy.md).

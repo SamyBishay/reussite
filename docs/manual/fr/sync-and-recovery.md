@@ -54,4 +54,4 @@ Si l’un de vos appareils a une version plus récente qu’un autre, le plus an
 
 **La recherche dit :** sans objet : ce n’est pas une règle de la méthode.
 
-**La pratique dit :** gardez la clé là où vous gardez vos mots de passe. `[E?]`
+**La pratique dit :** gardez la clé là où vous gardez vos mots de passe.

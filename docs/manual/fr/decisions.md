@@ -17,14 +17,14 @@ Dans **Matrice**, sous les quatre cases, touchez **+ Nouvelle décision**. Ou tr
 
 C’est vous qui pesez les éléments. Une IA ne fixe jamais les poids.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** les étapes de résolution de problème ont été testées, surtout pour la dépression ; la pondération des pour et des contre n’a pas été testée directement. [Voir les preuves](research-8.md).
 
-**La pratique dit :** écrire les avantages et les inconvénients de faire et de ne pas faire rend l’évitement visible. `[E?]`
+**La pratique dit :** écrire les avantages et les inconvénients de faire et de ne pas faire rend l’évitement visible.
 
 ## La vérifier plus tard
 
 À la date que vous avez choisie, l’accueil affiche « Vérifiez votre décision ». Est-ce que ce qui montrerait que c’est faux s’est produit ? Si oui, **La rouvrir** et recommencez avec le fait nouveau. Sinon, clôturez-la ou revérifiez plus tard.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** nous n’avons trouvé aucun test de la révision d’une décision à une date fixée. [Voir les preuves](research-8.md).
 
-**La pratique dit :** une décision avec une date de vérification est plus facile à lâcher. `[E?]`
+**La pratique dit :** une décision avec une date de vérification est plus facile à lâcher.

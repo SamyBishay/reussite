@@ -1,6 +1,7 @@
 # What's new
 
 ## Next — less clutter
+- The research behind the method: a page for each rule, with what studies found, what they do not show and the sources, in English and French, in the manual and at **/manual/research**. Each "Research says" line in the manual is now one sentence and a link to it. Most rules have only some support, and some are practice only; no study has tested this app.
 - A new start is small. A new Réussite opens with two tabs, **Home** and **Today**, and your deck folded under today's hand. **Calendar** arrives with your first card at a fixed time, **Projects** with your first project or your eighth card, and **the Matrix** at twelve open cards or after your first weekly review; each arrival is one line behind the bell. Settings → **Tabs** → **Show every tab** brings them all now. If you already use Réussite, nothing changes.
 - On a new Réussite, **Places and trips** and **Addresses and people** start off; switch them on in Settings → Method → More. They come on by themselves when you already have places or addresses (from another device or a backup).
 - On a new Réussite, **Deal the day** is one screen: three cards and one for leisure or people, **Keep** or **Swap** each, then **Deal**. **The full morning ritual** is one tap away.

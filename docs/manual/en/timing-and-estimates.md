@@ -8,9 +8,9 @@ Most people, and especially people with ADHD, underestimate how long things take
 
 When you add a step, give it an estimate in minutes, **including the time it takes to get started**. The planning itself counts too (15 minutes by default, Settings → Method).
 
-**Research says:** untested here. `[E?]`
+**Research says:** People often underestimate how long tasks take, and adults with ADHD misjudge time more. [See the evidence](research-3.md).
 
-**Practice says:** people underestimate. Writing a number down is the first step to correcting it. `[E?]`
+**Practice says:** people underestimate. Writing a number down is the first step to correcting it.
 
 ## Time it and write the real time down
 
@@ -20,9 +20,9 @@ While a timer runs, three rings sit beside the clock on the first card. The oute
 
 Forgot to start the timer? **I started earlier** lets you say when you began. Forgot to stop it? "Still on…?" appears after about twice your usual time for the step (at least 45 minutes). Tap **I stopped at…** and fix it in two taps. Every timed session can be fixed afterwards: open the step, and under Time use **Fix this session** or **Add time**.
 
-**Research says:** untested here. `[E?]`
+**Research says:** In one set of experiments, being told how long a first task took did not change the bias in later predictions, and timing your own cards and comparing has not been tested in adults with ADHD. [See the evidence](research-4.md).
 
-**Practice says:** comparing the estimate with the real time corrects the next estimate. `[E?]`
+**Practice says:** comparing the estimate with the real time corrects the next estimate.
 
 ## Estimates that learn your pace
 
@@ -46,6 +46,6 @@ Every step carries a **starter**: the single action that crosses from not doing 
 
 **The test:** could you do it in under two minutes, right now, without thinking about how? If it needs thinking, go smaller. If it's a reflex, go one step further in.
 
-**Research says:** untested here. `[E?]`
+**Research says:** The two-minute first move itself has not been tested; CBT programmes that teach planning help adults with ADHD. [See the evidence](research-5.md).
 
-**Practice says:** the starter is the two-minute version. If it didn't work, the friction is somewhere else: write a smaller starter and keep it. `[E?]`
+**Practice says:** the starter is the two-minute version. If it didn't work, the friction is somewhere else: write a smaller starter and keep it.

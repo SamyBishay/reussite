@@ -67,8 +67,8 @@ Une fois ajouté, Claude et Gemini l’utilisent aussi dans leurs applis pour t�
 
 Sans clé sur cet appareil mais avec le connecteur activé, la carte **Planifier la journée** de l’accueil propose aussi **La planifier dans votre chat IA**, et la bannière de la revue du dimanche (dans Aujourd’hui, la matrice et la cloche) **La faire dans votre chat IA**. Elles copient une courte phrase (« Planifie ma journée avec Réussite ») à dire dans une nouvelle conversation de votre appli. Réussite ne fait aucun appel à une IA elle-même. Un petit changement (ajouter une étape, en cocher une comme faite, déplacer une date) passe directement, avec un moyen d’annuler. Tout le reste attend votre accord dans la conversation. **Désactiver** déconnecte toutes les applis d’IA d’un coup. Les notes que vous avez marquées Privées ne sont jamais lisibles par lui.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** les essais de programmes de compétences en TCC montrent des gains réels mais modestes chez les adultes ayant un TDAH ; on ne sait pas si une appli seule donne les mêmes gains. [Voir les preuves](research-method.md).
 
-**La pratique dit :** une IA est utile quand elle suit la méthode, pose une question à la fois et dit ce qu’elle a fait. `[E?]`
+**La pratique dit :** une IA est utile quand elle suit la méthode, pose une question à la fois et dit ce qu’elle a fait.
 
 Voir aussi [Confidentialité](privacy.md).

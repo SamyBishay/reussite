@@ -33,9 +33,9 @@ Un **séjour** est un lieu avec un premier et un dernier jour. Ajoutez-en un dan
 
 **Avant de partir.** Une étape peut être réglée sur « Avant de partir », un certain nombre de jours avant le dernier jour d’un séjour. Sa date suit le séjour et elle passe en tête de sa case à mesure que le jour approche ; cochez-la urgente quand elle l’est.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** décider d’avance quand et où agir aide à passer à l’acte ; les voyages n’ont pas été testés. [Voir les preuves](research-9.md).
 
-**La pratique dit :** un voyage est plus facile quand ce qu’il y a à faire avant de partir est sur la liste des semaines à l’avance, pas la veille au soir. `[E?]`
+**La pratique dit :** un voyage est plus facile quand ce qu’il y a à faire avant de partir est sur la liste des semaines à l’avance, pas la veille au soir.
 
 ## Préparer ce voyage
 

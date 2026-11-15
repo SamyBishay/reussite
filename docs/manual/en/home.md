@@ -91,6 +91,6 @@ The menu icon at the top of Home holds what has no tab: **Settings**, **Places**
 
 The bar at the bottom has five places: Home, Today, Matrix, Projects and Calendar. It shows only words, never counts.
 
-**Research says:** untested here. `[E?]`
+**Research says:** We found no study of a start screen with few choices; the method as a whole has some support, not this detail. [See the evidence](research-method.md).
 
-**Practice says:** the fewer choices on the screen where you start, the easier it is to start. `[E?]`
+**Practice says:** the fewer choices on the screen where you start, the easier it is to start.

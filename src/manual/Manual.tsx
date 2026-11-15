@@ -7,16 +7,16 @@ import { lang, t, type Lang } from '../i18n';
 import { settings } from '../app/store';
 import { ExtLink } from '../app/ui';
 import { classifyHref, parseMarkdown, shotName, type Block, type Inline } from './markdown';
-import { isPage, type PageSlug } from './pages';
+import { isAnyPage, isEvidence, type AnySlug } from './pages';
 
-const FILES = import.meta.glob('../../docs/manual/*/*.md', { query: '?raw', import: 'default' }) as Record<string, () => Promise<string>>;
+const FILES = import.meta.glob(['../../docs/manual/*/*.md', '../../docs/evidence/*/*.md'], { query: '?raw', import: 'default' }) as Record<string, () => Promise<string>>;
 
-interface Loaded { slug: PageSlug; lang: Lang; blocks: Block[]; fellBack: boolean }
+interface Loaded { slug: AnySlug; lang: Lang; blocks: Block[]; fellBack: boolean }
 
 /** The page in this language, else in English. */
-async function load(slug: PageSlug, want: Lang): Promise<Loaded | null> {
+async function load(slug: AnySlug, want: Lang): Promise<Loaded | null> {
   for (const l of want === 'en' ? ['en' as const] : [want, 'en' as const]) {
-    const f = FILES[`../../docs/manual/${l}/${slug}.md`];
+    const f = FILES[`../../docs/${isEvidence(slug) ? 'evidence' : 'manual'}/${l}/${slug}.md`];
     if (f) return { slug, lang: l, blocks: parseMarkdown(await f()), fellBack: l !== want };
   }
   return null;
@@ -42,10 +42,10 @@ function useShotTheme(): 'light' | 'dark' {
   return v;
 }
 
-function Inlines({ c, go, shots }: { c: Inline[]; go: (s: PageSlug) => void; shots: string }) {
+function Inlines({ c, go, shots }: { c: Inline[]; go: (s: AnySlug) => void; shots: string }) {
   return <>{c.map(x => <One x={x} go={go} shots={shots} />)}</>;
 }
-function One({ x, go, shots }: { x: Inline; go: (s: PageSlug) => void; shots: string }): ComponentChildren {
+function One({ x, go, shots }: { x: Inline; go: (s: AnySlug) => void; shots: string }): ComponentChildren {
   if (x.t === 'text') return x.v;
   if (x.t === 'code') return <code>{x.v}</code>;
   if (x.t === 'b') return <strong><Inlines c={x.c} go={go} shots={shots} /></strong>;
@@ -53,7 +53,7 @@ function One({ x, go, shots }: { x: Inline; go: (s: PageSlug) => void; shots: st
   if (x.t === 'img') return <Shot name={shotName(x.src)} alt={x.alt} dir={shots} />;
   const to = classifyHref(x.href);
   const inner = <Inlines c={x.c} go={go} shots={shots} />;
-  if (to.kind === 'page' && isPage(to.slug)) return <a href="#" class="lnk wrap" onClick={e => { e.preventDefault(); go(to.slug as PageSlug); }}>{inner}</a>;
+  if (to.kind === 'page' && isAnyPage(to.slug)) return <a href="#" class="lnk wrap" onClick={e => { e.preventDefault(); go(to.slug as AnySlug); }}>{inner}</a>;
   if (to.kind === 'out') return <ExtLink href={to.href} class="lnk wrap">{inner}</ExtLink>;
   return <>{inner}</>;
 }
@@ -66,7 +66,7 @@ function Shot({ name, alt, dir }: { name: string | null; alt: string; dir: strin
   return <img class="shot" src={`manual/shots/${dir}/${name}.png`} alt={alt} width="375" loading="lazy" onError={() => setBad(true)} />;
 }
 
-function Blocks({ blocks, go, shots }: { blocks: Block[]; go: (s: PageSlug) => void; shots: string }) {
+function Blocks({ blocks, go, shots }: { blocks: Block[]; go: (s: AnySlug) => void; shots: string }) {
   const I = (c: Inline[]) => <Inlines c={c} go={go} shots={shots} />;
   return (
     <>
@@ -86,7 +86,7 @@ function Blocks({ blocks, go, shots }: { blocks: Block[]; go: (s: PageSlug) => v
 }
 
 export function ManualSheet() {
-  const [slug, setSlug] = useState<PageSlug>('index');
+  const [slug, setSlug] = useState<AnySlug>('index');
   const [page, setPage] = useState<Loaded | null | undefined>(undefined);
   const top = useRef<HTMLDivElement>(null);
   const theme = useShotTheme();

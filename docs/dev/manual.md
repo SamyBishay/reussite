@@ -6,9 +6,18 @@ For friends, in plain words. One short page per topic, in English (`docs/manual/
 
 `src/manual/pages.ts` lists them in reading order; `index.md` is the contents. A new page is a new file with the same name in `en/` and `fr/` (the test fails if one is missing or if the links and pictures differ) plus a line in `PAGES` and a link from the index. `src/manual/manual.test.ts` checks that every file is listed, every link goes to a page, every picture is one the screenshot spec takes and that all the pictures exist.
 
-Each rule or feature of the method has two lines, **Research says** and **Practice says**. Until the evidence files arrive, each carries the placeholder `[E?]` (the one `docs/METHOD.en.md` uses) and says "untested": a status, never a verdict. Search for `[E?]` to find them all when the files come. Say only what the app does; the buttons are named as `src/i18n/en.ts` names them.
+Each rule or feature of the method has two lines, **Research says** and **Practice says**. Research says is one sentence and a link to the rule's research page (see below); it never says more than that page does. Practice says is what the method's practice holds. Say only what the app does; the buttons are named as `src/i18n/en.ts` names them.
 
 Supported Markdown (`src/manual/markdown.ts`): headings, paragraphs, bullet and numbered lists, quotes, rules, code, **bold**, *italic*, `code`, links and pictures. No HTML, no tables. A link is a page (`daily-loop.md`) or a link whose scheme is in `ALLOWED_SCHEMES`; anything else is shown as plain text. A picture is `![what it shows](shot:name)`.
+
+## The research pages
+
+`docs/evidence/<language>/` holds the evidence for the method: `research.md` (the index, with the grades), `research-1.md` to `research-9.md` (one per rule of `docs/METHOD.en.md`) and `research-method.md` (the method as a whole and the weekly review). Each page gives the rule in a sentence, a grade (**some support** or **practice only**; **well supported** is for what has been tested directly in adults with ADHD, and no rule earns it), what the studies found, what they do not show, and the sources with a `https://doi.org/…` link.
+
+- **Every source is opened before it is printed**: the DOI's record (Crossref), the abstract (Europe PMC or the publisher) and a check that authors, year, journal and the claim match. What could not be opened is not stated as fact; the page says so or leaves it out. Numbers are the ones the abstract gives. No claim that Réussite treats ADHD. A blog is never a source.
+- **Rule 4 does not say that seeing your own ratio is how the bias changes**: one set of experiments (Thomas and König, 2018) found that feedback did not reduce it, and the page says so (the owner's correction, 15 Nov).
+- **They are manual pages for the viewer and the public site**: `EVIDENCE` in `src/manual/pages.ts` lists the slugs, `Manual.tsx` reads them with the manual's (a link such as `research-4.md` stays in the sheet), and `manualSite()` writes them as `/manual/research` and `/manual/research-1`… (French under `/manual/fr/`), reading in their own order with the index as the first. `manual.test.ts` checks the files, the links, a DOI link for each source, French typography (outside the source list, whose titles keep their own language) and the rule 4 sentence; `site.test.ts` that every page is built.
+- **To add a source or a rule**, add the page to both languages and to `EVIDENCE`, and open the source first.
 
 ## The viewer
 

@@ -8,9 +8,9 @@ La plupart des gens, et surtout les personnes avec un TDAH, sous-estiment le tem
 
 Quand vous ajoutez une étape, donnez-lui une estimation en minutes, **en comptant le temps qu’il faut pour s’y mettre**. La planification elle-même compte aussi (15 minutes par défaut, Réglages → Méthode).
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** on sous-estime souvent la durée des tâches, et les adultes ayant un TDAH se trompent davantage sur le temps. [Voir les preuves](research-3.md).
 
-**La pratique dit :** les gens sous-estiment. Écrire un chiffre est le premier pas pour corriger. `[E?]`
+**La pratique dit :** les gens sous-estiment. Écrire un chiffre est le premier pas pour corriger.
 
 ## Chronométrer et noter le temps réel
 
@@ -20,9 +20,9 @@ Pendant qu’un chrono tourne, trois anneaux sont à côté de l’horloge sur l
 
 Vous avez oublié de lancer le chrono ? **J’ai commencé plus tôt** vous laisse dire quand vous avez commencé. Vous avez oublié de l’arrêter ? « Toujours sur… ? » apparaît au bout d’environ deux fois votre durée habituelle pour l’étape (au moins 45 minutes). Touchez **J’ai arrêté à…** et corrigez en deux touches. Chaque séance chronométrée peut être corrigée après coup : ouvrez l’étape, et sous Temps, utilisez **Corriger cette séance** ou **Ajouter du temps**.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** dans une série d’expériences, savoir combien de temps avait pris une première tâche ne changeait pas le biais des prédictions suivantes, et chronométrer ses propres cartes puis comparer n’a pas été testé chez des adultes ayant un TDAH. [Voir les preuves](research-4.md).
 
-**La pratique dit :** comparer l’estimation au temps réel corrige la prochaine estimation. `[E?]`
+**La pratique dit :** comparer l’estimation au temps réel corrige la prochaine estimation.
 
 ## Des estimations qui apprennent votre rythme
 
@@ -46,6 +46,6 @@ Chaque étape porte un **démarreur** : l’unique action qui fait passer de n
 
 **Le test :** pourriez-vous le faire en moins de deux minutes, tout de suite, sans réfléchir à comment ? Si ça demande de réfléchir, voyez plus petit. Si c’est un réflexe, allez une étape plus loin.
 
-**La recherche dit :** non testé ici. `[E?]`
+**La recherche dit :** le premier geste de deux minutes n’a pas été testé en lui-même ; les programmes de TCC qui enseignent la planification aident les adultes ayant un TDAH. [Voir les preuves](research-5.md).
 
-**La pratique dit :** le démarreur est la version en deux minutes. S’il n’a pas marché, la friction est ailleurs : écrivez-en un plus petit et gardez-le. `[E?]`
+**La pratique dit :** le démarreur est la version en deux minutes. S’il n’a pas marché, la friction est ailleurs : écrivez-en un plus petit et gardez-le.

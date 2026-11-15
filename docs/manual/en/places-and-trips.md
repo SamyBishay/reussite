@@ -37,10 +37,12 @@ A **stay** is a place with a first and a last day. Add one in Settings → Metho
 
 ## Plan this trip
 
-Under a stay in Settings → Method, tap **Plan this trip**. Réussite builds a pack for an AI that can search the web: your addresses there, what is still to do, what is fixed in time, and your question. Add people you know there only if you tick the box. It is off by default and never includes how to reach them.
+Under a stay in Settings → Method, tap **Plan this trip**. It is there when you use a cloud AI (Settings → How Réussite understands you).
+
+With **your own key**, type your question and tap **Ask the AI**. Your AI gets your addresses there, what is still to do, what is fixed in time, and your question; **Show me what's sent** lets you read it first. Add people you know there only if you tick the box. It is off by default and never includes how to reach them.
 
 ![Plan this trip](shot:trip)
 
-Copy the pack into any chatbot. When it answers, come back and tap **Paste the reply**. You see day lists, fixed times and places to try, each with a tick. Places the AI suggests are saved as **Want to go**, with its reason in the note. Nothing is written until you tick it, and everything can be undone from History.
+The answer comes back on the review screen: day lists, fixed times and places to try, each with a tick. Places the AI suggests are saved as **Want to go**, with its reason in the note. Nothing is written until you tick it, and everything can be undone from History.
 
-You don't need an AI of your own set up for this. See [AI](ai.md).
+With **your AI chat app, through the connector**, and no key on this device, the sheet gives you a sentence to say in a new chat ("Plan my trip to Lyon, …, with Réussite"); your chat app reads your list itself and asks for your yes before it changes anything. See [AI](ai.md).

@@ -1,6 +1,20 @@
 # The connector
 
-A remote MCP server inside the relay Worker (`relay/src/connector/`). An AI app the person already pays for (Claude first) reads and edits their list through it, at no AI cost to Réussite. Brief §10. It stays off until the person switches it on.
+A remote MCP server inside the relay Worker (`relay/src/connector/`). An AI chat app the person already uses (ChatGPT, Claude, Gemini, or any app that accepts custom MCP connectors) reads and edits their list through it, at no AI cost to Réussite. Brief §10. It stays off until the person switches it on.
+
+## Where the person meets it (the app)
+
+Since 15 Nov 2026 the connector is one of the two ways of **A cloud AI** in Settings → **How Réussite understands you** (`src/app/UnderstandSettings.tsx`): **My AI chat app, through the connector**, `ConnectorPanel` in `src/app/ConnectorSettings.tsx` (test id `connector`), with its own switch. Choosing **On this device** in that section sets the AI provider to none and never switches the connector or sync off; with the connector on, a line says so and carries the connector's own switch (`openConnectorOff`, the same confirmation). The section's status list shows the connector on or off and when the chat app last came in (`lastUsed` from `GET …/connector`, read by `refreshConnector`); a line that is not done scrolls to this piece.
+
+Before the person starts, the piece and set-up's Connect screen (`ConnectStep` in `src/flows/onboarding.tsx`) say who can add a custom connector in each app, and, while the address and the pairing code are on screen, where to add it (`ConnectorApps`, strings `connWho*` and `connHow*`), in the order ChatGPT, Claude, Gemini with equal weight, then any app that accepts MCP connectors. Only what the vendors' own pages confirmed on 2026-11-15 is said:
+
+| | Who can add one | Where | On a phone |
+| --- | --- | --- | --- |
+| ChatGPT | Not confirmed by OpenAI's pages; ChatGPT's settings show whether the option is there | chatgpt.com/plugins on the web: +, Add custom MCP server, name, Server URL, then Create as a plugin; write actions ask for confirmation | Adding: web only. Use in the phone app: not confirmed |
+| Claude | Every plan (Free: one custom connector); Team and Enterprise: an owner adds it, then members connect | Customize → Connectors → + Add → Add custom connector (claude.ai or the desktop app); the server must be HTTPS on port 443 | Adding: not confirmed. The phone apps use connectors already added |
+| Gemini | Personal Google accounts (not work or school), 18 or over, in the United States, in English, Keep Activity on | gemini.google.com: Settings → Connected Apps (or Personal Intelligence first) → Add a custom app; write actions ask for confirmation | Adding: web only. The phone app uses it |
+
+Check these again when a vendor changes its page, and change only what its own page says.
 
 ## How it fits together
 

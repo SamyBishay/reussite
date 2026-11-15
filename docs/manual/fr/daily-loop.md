@@ -31,7 +31,7 @@ Il n’y a ni points de départ ni rappels de reprise : les étapes flottent e
 
 ### Planifier la journée avec une IA
 
-Quand une IA est configurée (Réglages → IA, avec une clé sur cet appareil), **Planifier la journée** sur l’accueil et la notification du matin ouvrent une proposition plutôt que les questions. L’IA propose et vous choisissez ; elle ne vous pose pas de questions ouvertes. Avant la première, Réussite vous montre ce qui sera envoyé, comme toujours.
+Quand une IA est configurée (Réglages → Comment Réussite vous comprend, Ma propre clé, avec une clé sur cet appareil), **Planifier la journée** sur l’accueil et la notification du matin ouvrent une proposition plutôt que les questions. L’IA propose et vous choisissez ; elle ne vous pose pas de questions ouvertes. Avant la première, Réussite vous montre ce qui sera envoyé, comme toujours.
 
 Vous voyez votre journée en cinq parties, chaque ligne avec **Passer** et, quand il y a autre chose à mettre à sa place, **Échanger** :
 

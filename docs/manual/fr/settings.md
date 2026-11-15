@@ -34,9 +34,9 @@ Les nombres sur lesquels la méthode tourne, avec des valeurs par défaut raison
 - **Utiliser Adresses et proches**, et les **catégories d’adresses.** Voir [Adresses et proches](addresses-and-people.md).
 - Les heures d’une **obligation**, le **jour et l’heure de la revue de la semaine**, le **point du matin** et la **clôture de la journée.** Les notifications s’en servent.
 
-## IA, Connecteur
+## Comment Réussite vous comprend
 
-Voir [L’IA](ai.md).
+**Sur cet appareil** (par défaut), ou **une IA dans le cloud** : **Ma propre clé** et **Mon appli de chat IA, par le connecteur**, chacune avec ses propres réglages ici. Sous le choix, **Tout est-il relié ?** montre la synchronisation, la clé de récupération, le connecteur, quand votre appli de chat est venue pour la dernière fois et si votre clé fonctionne ; touchez une ligne qui n’est pas faite pour aller à ce qui la fait. Choisir Sur cet appareil ne désactive jamais le connecteur. Voir [L’IA](ai.md).
 
 ## Synchronisation et appareils
 

@@ -31,7 +31,7 @@ There are no launch points or restart reminders: steps float between your fixed 
 
 ### Plan the day with an AI
 
-When an AI is set up (Settings → AI, with a key on this device), **Plan the day** on Home and the morning notification open a proposal instead of the questions. The AI proposes and you choose; it does not ask you open questions. Before the first one, Réussite shows you what will be sent, as always.
+When an AI is set up (Settings → How Réussite understands you, My own key, with a key on this device), **Plan the day** on Home and the morning notification open a proposal instead of the questions. The AI proposes and you choose; it does not ask you open questions. Before the first one, Réussite shows you what will be sent, as always.
 
 You see your day in five parts, each item with **Skip** and, when there is something else to put in its place, **Swap**:
 

@@ -39,10 +39,12 @@ Un **séjour** est un lieu avec un premier et un dernier jour. Ajoutez-en un dan
 
 ## Préparer ce voyage
 
-Sous un séjour, dans Réglages → Méthode, touchez **Préparer ce voyage**. Réussite construit un paquet pour une IA qui sait chercher sur le web : vos adresses sur place, ce qui reste à faire, ce qui est fixé dans le temps, et votre question. Vous n’y ajoutez les proches que vous connaissez là-bas que si vous cochez la case. Elle est désactivée par défaut et n’inclut jamais comment les joindre.
+Sous un séjour, dans Réglages → Méthode, touchez **Préparer ce voyage**. Il est là quand vous utilisez une IA dans le cloud (Réglages → Comment Réussite vous comprend).
+
+Avec **votre propre clé**, tapez votre question et touchez **Demander à l’IA**. Votre IA reçoit vos adresses sur place, ce qui reste à faire, ce qui est fixé dans le temps, et votre question ; **Montrer ce qui est envoyé** vous laisse le lire d’abord. Vous n’y ajoutez les proches que vous connaissez là-bas que si vous cochez la case. Elle est désactivée par défaut et n’inclut jamais comment les joindre.
 
 ![Préparer ce voyage](shot:trip)
 
-Copiez le paquet dans n’importe quel chatbot. Quand il répond, revenez et touchez **Coller la réponse**. Vous voyez des listes par jour, des heures fixes et des lieux à essayer, chacun avec une case. Les lieux que l’IA suggère sont enregistrés comme **À faire**, avec sa raison dans la note. Rien n’est écrit tant que vous ne cochez pas, et tout peut être annulé depuis l’Historique.
+La réponse revient sur l’écran de revue : des listes par jour, des heures fixes et des lieux à essayer, chacun avec une case. Les lieux que l’IA suggère sont enregistrés comme **À faire**, avec sa raison dans la note. Rien n’est écrit tant que vous ne cochez pas, et tout peut être annulé depuis l’Historique.
 
-Vous n’avez pas besoin d’avoir configuré votre propre IA pour cela. Voir [L’IA](ai.md).
+Avec **votre appli de chat IA, par le connecteur**, et sans clé sur cet appareil, la feuille vous donne une phrase à dire dans une nouvelle conversation (« Planifie mon voyage à Lyon, …, avec Réussite ») ; votre appli de chat lit elle-même votre liste et demande votre accord avant de changer quoi que ce soit. Voir [L’IA](ai.md).

@@ -1,6 +1,10 @@
 # What's new
 
 ## Next — less clutter
+- One place for AI: Settings → **How Réussite understands you**. **On this device** (the default) reads what you type on Home without anything leaving the device. **A cloud AI** has two ways, and you can use one or both: **My own key**, or **My AI chat app, through the connector**. Under the choice, a short list says whether it is all linked: sync, the recovery key, the connector, when your chat app last came in, whether your key works. Tap a line that is not done to go to what does it.
+- Choosing On this device does not switch the connector off: your chat app stays signed in until you switch it off yourself.
+- No more copy and paste: set-up's "any chatbot" way, **Paste the reply** and the **One-tap link** setting are gone. Links already sent still open. **Plan this trip** asks your AI directly when you have a key, and gives you the sentence to say in your chat app when you use the connector.
+- Connecting a chat app now says who can use it in ChatGPT, Claude and Gemini, and where to add it in each.
 - Home's box understands much more with no AI, all on your device. One line can make several cards ("call the bank; buy bread friday"), and you tick the ones you want. A long sentence becomes a card as you wrote it. A new card gets its suit from its words ("pay the rent" goes to money and papers) and a first move from its verb ("Open the bank app"); a project you name puts it there.
 - You can also write: "urgent: renew the passport"; "waiting for the parcel" (it goes to Waiting for); "note on the rent: the landlord wants a transfer" (added to that card's note); "start the rent", "pause" and "the rent took 40 min" for the timer; "I paid the rent", "the photos are for Monday", "forget the photos". Days and times in words work too: "this weekend", "dans quinze jours", "half past two", "à 3 heures et demie", "for an hour". A name that is nearly right is shown for you to tap, never taken on its own.
 - **What can I type?** on Home has examples for all of this.

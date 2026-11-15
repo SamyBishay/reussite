@@ -10,7 +10,7 @@ Non. Il n’y a pas de compte. Votre liste est sur votre appareil.
 
 ## Faut-il une IA ?
 
-Non. C’est facultatif. Sans IA, aucun écran n’en demande une. Vous pouvez quand même copier un message dans n’importe quel chatbot à la mise en route et pour **Préparer ce voyage**, et rapporter sa réponse avec **Coller la réponse**, ou connecter votre appli de chat IA. Voir [L’IA](ai.md).
+Non. Par défaut, Réussite vous comprend sur cet appareil : ce que vous tapez sur l’accueil est lu par l’appli elle-même, et rien ne quitte l’appareil. Une IA dans le cloud est facultative : votre propre clé, ou votre appli de chat IA par le connecteur, dans Réglages → Comment Réussite vous comprend. Il n’y a pas de copier-coller. Voir [L’IA](ai.md).
 
 ## Est-ce que ça marche hors connexion ?
 

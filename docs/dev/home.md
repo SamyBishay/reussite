@@ -142,8 +142,8 @@ One pure module, `src/ai/undo.ts`; the relay's connector uses it too. In the app
 Per device and month, in `local` (`aiUsage.YYYY-MM`; never synced): calls, tokens, and dollars for the calls that have a price (`src/ai/ask.ts`, `src/ai/prices.ts`).
 
 - Dollars are OpenRouter's `cost` (in every reply), or, for Anthropic's own API, the table in `prices.ts`: Haiku 5.5 $0.10 in / $0.50 out, Sonnet 5.5 $2 / $10, Opus 5.5 $4 / $20 per million tokens; cache reads $0.01 / $0.20 / $0.20; five-minute cache writes 1.25 times the input price. Haiku is not priced above 100K prompt tokens. Any other provider or model shows tokens only: no price is guessed. The table is dated in the file; update it when the prices change.
-- `aiMonthlyCap` (US dollars, default none, Settings → AI): when this month's dollars reach it, every AI call stops with the `cap` error before the preview, so nothing is shown or sent. Only calls with a dollar figure count toward it, and the settings page says so.
-- Settings → AI shows the month's calls and tokens, the dollars so far, and a note that dollars count only priced calls.
+- `aiMonthlyCap` (US dollars, default none, Settings → How Réussite understands you → My own key → More): when this month's dollars reach it, every AI call stops with the `cap` error before the preview, so nothing is shown or sent. Only calls with a dollar figure count toward it, and the settings page says so.
+- My own key (Settings → How Réussite understands you) shows under More the month's calls and tokens, the dollars so far, and a note that dollars count only priced calls.
 
 ## Memory in a request
 

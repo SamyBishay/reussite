@@ -10,7 +10,7 @@ No. There are no accounts. Your list is on your device.
 
 ## Do I need an AI?
 
-No. It is optional. Without one, no screen asks for an AI. You can still copy a message into any chatbot at set-up and for **Plan this trip**, and bring its answer back with **Paste the reply**, or connect your AI chat app. See [AI](ai.md).
+No. By default Réussite understands you on this device: what you type on Home is read by the app itself, and nothing leaves the device. A cloud AI is optional: your own key, or your AI chat app through the connector, in Settings → How Réussite understands you. There is no copy and paste. See [AI](ai.md).
 
 ## Does it work offline?
 

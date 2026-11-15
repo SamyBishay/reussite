@@ -34,9 +34,9 @@ The numbers the method runs on, with sensible defaults:
 - **Use Addresses & people**, and the **address categories.** See [Addresses and people](addresses-and-people.md).
 - Times for an **obligation**, the **weekly review day and time**, the **morning check-in** and **closing the day**. Notifications use them.
 
-## AI, Connector
+## How Réussite understands you
 
-See [AI](ai.md).
+**On this device** (the default), or **a cloud AI**: **My own key** and **My AI chat app, through the connector**, each with its own controls here. Under the choice, **Is it all linked?** lists sync, the recovery key, the connector, when your chat app last came in and whether your key works; tap a line that is not done to go to what does it. Choosing On this device never switches the connector off. See [AI](ai.md).
 
 ## Sync & devices
 

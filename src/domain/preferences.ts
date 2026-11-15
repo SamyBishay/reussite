@@ -1,6 +1,6 @@
 // How an AI should work with the person (brief §15, docs/ai/preferences.md): a short text of their own,
 // added to every AI request and to the context and trip packs. The template's fixed lines are the
-// default; onboarding fills the two free lines and the level of detail, and Settings → AI edits the text.
+// default; onboarding fills the two free lines and the level of detail, and Settings → How Réussite understands you → My own key → More edits the text.
 
 export type Detail = 'very short' | 'short' | 'full';
 export const DETAILS: readonly Detail[] = ['very short', 'short', 'full'];

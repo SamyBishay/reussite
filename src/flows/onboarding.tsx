@@ -1,8 +1,10 @@
 // First-run setup (S9), two screens: the language (taken from the phone), then the four kinds of time in the person's days, prefilled and editable (name and
 // description), and Home. Nothing else is asked: places, AI, sync, the calendar and reminders are "Later" (Settings and the Notifications page), with defaults
-// (Anywhere, no AI, sync and reminders off). "Restore with a recovery key" is on the first screen. The AI ways, which used to be the first screen's choices, are the same screens
-// opened from Settings (`entry`): a key (a short tutorial, then a conversation that ends in a change-set on the review screen), the person's AI chat app through the connector
-// (`ConnectStep`: sync and its recovery key, the connector, the address and pairing code, a check), or any chatbot by copy and paste.
+// (Anywhere, On this device, sync and reminders off). "Restore with a recovery key" is on the first screen. The two ways of a cloud AI are screens opened from
+// Settings → How Réussite understands you (`entry`): a key (a short tutorial, then a conversation that ends in a change-set on the review screen), or the
+// person's AI chat app through the connector (`ConnectStep`: who can use it, sync and its recovery key, the connector, where to add it in each app, the
+// address and pairing code, a check). There is no copy-and-paste way (DECISIONS.md 2026-11-15): with the connector, the suits and places keep their
+// defaults and are edited in Settings, so that path goes straight to Connect.
 // Every answer waits in a draft and is written once, at the end: a device that pairs with an existing space must not push defaults that would win over the settings
 // already there. What the AI path applies is what the person ticked on the review screen.
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -16,16 +18,16 @@ import { suggestFirstMove } from '../domain/firstMove';
 import { parseHome } from '../domain/parse';
 import { closeSheet } from '../app/sheet';
 import { syncOn, connector, relayBase, setupSync, connectorOn, connectorNewCode, refreshConnector, confirmKeySaved } from '../app/sync';
-import { Privacy, PairingCode, failure, type Code } from '../app/ConnectorSettings';
+import { Privacy, PairingCode, ConnectorApps, failure, type Code } from '../app/ConnectorSettings';
 import { chatPrompt } from '../app/ChatOffer';
 import { Mark } from '../app/Mark';
 import { finishedOnboarding } from '../app/onboarding';
 import { JoinPanel, KeyView } from '../app/SyncSettings';
 import { KeyField } from '../ai/AiSettings';
-import { AiError, readReply, PASTE_ERR, useAi } from '../ai/ui';
+import { AiError, useAi } from '../ai/ui';
 import { ask, draftProvider } from '../ai/ask';
 import { ReviewList, prepareReview } from '../ai/Review';
-import { setupPack, setupPrompt, SetupReply, readSetup, onlySetup, type Turn } from '../ai/setup';
+import { setupPrompt, SetupReply, readSetup, type Turn } from '../ai/setup';
 import { shortName, type Plan } from '../ai/apply';
 import { lang, t, type Key } from '../i18n';
 import { SUIT_ORDER, NEW_USER_SUITS, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
@@ -34,11 +36,11 @@ import type { ChangeSet } from '../ai/changeset';
 import { deviceZone } from '../domain/zones';
 import type { ComponentChildren } from 'preact';
 
-type Id = 'language' | 'pillars' | 'first' | 'move' | 'ways' | 'link' | 'key' | 'chat' | 'paste' | 'pair';
-/** The three choices of the first screen, and the link under them: `other` is any chatbot, by copy and paste. */
-type Path = 'hand' | 'key' | 'connector' | 'other';
-/** Where the guided AI set-up opens from Settings: the choice of ways, or one way at once. */
-export type Entry = 'ways' | Exclude<Path, 'hand'>;
+type Id = 'language' | 'pillars' | 'first' | 'move' | 'link' | 'key' | 'chat' | 'pair';
+/** First-run set-up, or one of the two ways of a cloud AI opened from Settings. */
+type Path = 'hand' | 'key' | 'connector';
+/** Which way the guided AI set-up opens on, from Settings. */
+export type Entry = Exclude<Path, 'hand'>;
 interface PlaceRow { name: string; timeZone: string }
 interface Draft { s: Partial<Settings>; places: PlaceRow[] }
 interface AiChoice { want: boolean; provider: Exclude<AiProvider, 'none'>; has: boolean }
@@ -48,8 +50,7 @@ type Provider = Exclude<AiProvider, 'none'>;
 const screens = (path: Path): Id[] =>
   path === 'hand' ? ['language', 'pillars', 'first', 'move']
     : path === 'key' ? ['key', 'chat']
-      : path === 'other' ? ['paste']
-        : ['link'];
+      : ['link'];
 
 /** What the draft turns into: places first (so the first can be where the person is), then one settings write. */
 export async function applyDraft(d: Draft, l: Settings['language'], choice: AiChoice, here?: string): Promise<void> {
@@ -88,18 +89,10 @@ function Frame({ id, n, of, title, hint, children, back, next, nextLabel = 'next
   );
 }
 
-const Choice = ({ on, onClick, title, hint, testid, primary }: { on?: boolean; onClick: () => void; title: string; hint?: string; testid: string; primary?: boolean }) => (
-  <button type="button" class={'btn' + (primary ? ' primary' : '')} aria-pressed={on} onClick={onClick} data-testid={testid}><b>{title}</b>{hint && <small>{hint}</small>}</button>
-);
-
 const KEY_LINKS: Record<Provider, { href: string; label: string; steps: [Key, Key, Key] }> = {
   openai: { href: 'https://openrouter.ai/keys', label: 'openrouter.ai/keys', steps: ['obKeyStepsOpenrouter1', 'obKeyStepsOpenrouter2', 'obKeyStepsOpenrouter3'] },
   anthropic: { href: 'https://console.anthropic.com/settings/keys', label: 'console.anthropic.com', steps: ['obKeyStepsAnthropic1', 'obKeyStepsAnthropic2', 'obKeyStepsAnthropic3'] },
 };
-
-async function copyText(text: string): Promise<boolean> {
-  try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
-}
 
 /**
  * `entry`: opened from Settings as a guided AI set-up (a sheet), not as first-run: it starts at that way, never writes the first-run record or the starting
@@ -107,11 +100,11 @@ async function copyText(text: string): Promise<boolean> {
  */
 export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => void } = {}) {
   const guided = !!entry;
-  const [id, setId] = useState<Id>(entry === 'ways' ? 'ways' : entry === 'key' ? 'key' : entry === 'connector' ? 'link' : entry === 'other' ? 'paste' : 'language');
+  const [id, setId] = useState<Id>(entry === 'key' ? 'key' : entry === 'connector' ? 'link' : 'language');
   const [trail, setTrail] = useState<Id[]>([]);
   const [draft, setDraft] = useState<Draft>({ s: guided ? {} : { suits: NEW_USER_SUITS }, places: [] });
   const [busy, setBusy] = useState(false);
-  const [path, setPath] = useState<Path>(entry && entry !== 'ways' ? entry : 'hand');
+  const path: Path = entry ?? 'hand';
   const [provider, setProvider] = useState<Provider>('openai');
   const [hasKey, setHasKey] = useState(false);
   // The first card: what the person has been putting off, its first move (suggested from the verb until they type one) and its suit.
@@ -272,23 +265,11 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
     );
   }
 
-  if (id === 'ways') return (
-    <Frame {...frame} n={undefined} of={undefined} title={t('obHow')} hint={t('obWaysHint')}>
-      <div class="bigchoices">
-        <Choice onClick={() => { setPath('key'); goTo('key'); }} title={t('obWayKey')} hint={t('obWayKeyHint')} testid="ob-way-key" />
-        <Choice onClick={() => { setPath('connector'); goTo('link'); }} title={t('obWayConnector')} hint={t('obWayConnectorHint')} testid="ob-way-connector" />
-      </div>
-      <button class="linklike ob-skip" type="button" onClick={() => { setPath('other'); goTo('paste'); }} data-testid="ob-copypaste-link">{t('obCopyPaste')}</button>
-    </Frame>
-  );
-
   if (id === 'link') return <ConnectStep {...frame} done={leave} />;
 
-  if (id === 'key') return <KeyStep {...frame} provider={provider} setProvider={setProvider} has={hasKey} setHas={setHasKey} next={() => goTo('chat')} usePaste={() => { setPath('other'); goTo('paste'); }} />;
+  if (id === 'key') return <KeyStep {...frame} provider={provider} setProvider={setProvider} has={hasKey} setHas={setHasKey} next={() => goTo('chat')} />;
 
-  if (id === 'chat') return <Chat {...frame} usePaste={() => { setPath('other'); goTo('paste'); }} reviewed={reviewed} />;
-
-  if (id === 'paste') return <PasteStep {...frame} way={path === 'connector' ? 'app' : 'other'} reviewed={reviewed} />;
+  if (id === 'chat') return <Chat {...frame} reviewed={reviewed} />;
 
   return (
     <div class="flow ob" data-testid="ob-pair">
@@ -300,8 +281,8 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
 }
 
 /** A key, step by step, for one of the two kinds of provider; then "Start talking". */
-function KeyStep({ provider, setProvider, has, setHas, next, back, usePaste, ...pos }: {
-  id: Id; n: number; of: number; back?: () => void; provider: Provider; setProvider: (p: Provider) => void; has: boolean; setHas: (b: boolean) => void; next: () => void; usePaste: () => void;
+function KeyStep({ provider, setProvider, has, setHas, next, back, ...pos }: {
+  id: Id; n: number; of: number; back?: () => void; provider: Provider; setProvider: (p: Provider) => void; has: boolean; setHas: (b: boolean) => void; next: () => void;
 }) {
   const [test, setTest] = useState<{ busy: boolean; ok: boolean; msg: string } | null>(null);
   const link = KEY_LINKS[provider];
@@ -311,8 +292,7 @@ function KeyStep({ provider, setProvider, has, setHas, next, back, usePaste, ...
     setTest({ busy: false, ok: r.ok, msg: r.ok ? t('obKeyWorks') : r.message });
   };
   return (
-    <Frame {...pos} id="key" back={back} title={t('obKeyQ')} hint={t('obKeyIntro')} next={next} nextLabel="obStartTalking" nextDisabled={!has}
-      extra={<button class="linklike ob-skip" type="button" onClick={usePaste} data-testid="ob-key-paste">{t('obKeyNoKey')}</button>}>
+    <Frame {...pos} id="key" back={back} title={t('obKeyQ')} hint={t('obKeyIntro')} next={next} nextLabel="obStartTalking" nextDisabled={!has}>
       <div class="field"><span>{t('aiProvider')}</span>
         <div class="seg" role="group" aria-label={t('aiProvider')}>
           {([['openai', 'obProviderOpenrouter'], ['anthropic', 'aiAnthropic']] as const).map(([v, k]) =>
@@ -338,7 +318,7 @@ function KeyStep({ provider, setProvider, has, setHas, next, back, usePaste, ...
 }
 
 /** The conversation, in the app: the AI asks, the person answers, and it ends on the review screen. */
-function Chat({ usePaste, reviewed, back, ...pos }: { id: Id; n: number; of: number; back?: () => void; usePaste: () => void; reviewed: (n: number) => void | Promise<void> }) {
+function Chat({ reviewed, back, ...pos }: { id: Id; n: number; of: number; back?: () => void; reviewed: (n: number) => void | Promise<void> }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [say, setSay] = useState('');
   const [review, setReview] = useState<{ plan: Plan; cs: ChangeSet } | null>(null);
@@ -374,7 +354,7 @@ function Chat({ usePaste, reviewed, back, ...pos }: { id: Id; n: number; of: num
         {ai.busy && <p class="bubble you hint" data-testid="ob-chat-busy">{t('obChatThinking')} <button class="btn small" type="button" onClick={ai.stop}>{t('stop')}</button></p>}
         <div ref={end} />
       </div>
-      {ai.err && !ai.busy && <AiError {...ai.err} manual={usePaste} manualLabel={t('obChatUsePaste')} />}
+      {ai.err && !ai.busy && <AiError {...ai.err} />}
       {review ? (
         <ReviewList plan={review.plan} note="" inline onApplied={n => { if (n > 0) void reviewed(n); else setReview(null); }} />
       ) : (
@@ -389,66 +369,9 @@ function Chat({ usePaste, reviewed, back, ...pos }: { id: Id; n: number; of: num
   );
 }
 
-/** The AI chat app of the connector path, or any chatbot: copy a message in, talk there, paste the reply back (Paste the reply, inside the flow). */
-function PasteStep({ way, reviewed, back, ...pos }: { id: Id; n: number; of: number; back?: () => void; way: 'app' | 'other'; reviewed: (n: number) => void | Promise<void> }) {
-  const pack = setupPack(lang.value);
-  const [text, setText] = useState('');
-  const [err, setErr] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [review, setReview] = useState<{ plan: Plan; cs: ChangeSet } | null>(null);
-  const read = async (e: Event) => {
-    e.preventDefault();
-    const r = await readReply(text);
-    if (!r.ok) { setErr(t(PASTE_ERR[r.error])); return; }
-    const cs = onlySetup(r.cs);
-    if (!cs) { setErr(t('obPasteNotSetup')); return; }
-    setErr('');
-    const plan = prepareReview(cs);
-    if (plan) setReview({ plan, cs });
-  };
-  const copy = async () => { const ok = await copyText(pack); setCopied(ok); toast(ok ? t('packCopied') : t('packCopyBlocked')); };
-  const share = async () => { try { await navigator.share({ title: 'Réussite', text: pack }); } catch { /* cancelled */ } };
-  const fromClipboard = async () => { try { setText(await navigator.clipboard.readText()); } catch { toast(t('pasteBlocked')); } };
-  return (
-    <div class="flow ob" data-testid="ob-paste">
-      {pos.of > 1 && <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>}
-      <h3>{way === 'app' ? t('obPasteAppQ') : t('obPasteOtherQ')}</h3>
-      <p class="hint">{t('obPasteHint')}</p>
-      <ol class="obsteps">
-        <li>{t('obPasteStep1')}</li>
-        <li>{way === 'app' ? t('obPasteStep2App') : t('obPasteStep2Other')}</li>
-        <li>{t('obPasteStep3')}</li>
-      </ol>
-      <div class="actions">
-        <button class="btn primary" type="button" onClick={copy} data-testid="ob-copy-pack">{t('packCopy')}</button>
-        {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
-      </div>
-      <details class="more"><summary>{t('packShow', { n: pack.length.toLocaleString() })}</summary><pre class="ai-pre" data-testid="ob-pack">{pack}</pre></details>
-      {copied && <p class="hint" data-testid="ob-copied">{t('obPasteCopied')}</p>}
-      {way === 'app' && <p class="hint" data-testid="ob-connector-note">{t('obConnectorNote')}</p>}
-      {review ? (
-        <ReviewList plan={review.plan} note={review.cs.note} inline onApplied={n => { if (n > 0) void reviewed(n); else setReview(null); }} />
-      ) : (
-        <form onSubmit={read}>
-          <label class="field"><span>{t('pasteLabel')}</span>
-            <textarea rows={6} value={text} onInput={e => setText((e.target as HTMLTextAreaElement).value)} data-testid="ob-paste-text" />
-          </label>
-          {err && <p class="err" role="alert" data-testid="ob-paste-error">{err}</p>}
-          <div class="actions">
-            <button class="btn primary" type="submit" disabled={!text.trim()} data-testid="ob-paste-go">{t('obPasteGo')}</button>
-            {typeof navigator.clipboard?.readText === 'function' && <button class="btn" type="button" onClick={fromClipboard}>{t('pasteFromClipboard')}</button>}
-          </div>
-        </form>
-      )}
-      <div class="actions ob-actions">{back && <button class="btn ghost" type="button" onClick={back} data-testid="ob-back">{t('back')}</button>}</div>
-    </div>
-  );
-}
-
-
 /**
- * Connect the AI chat app, inside set-up: what the connector needs, step by step, with the Settings pieces. Sync first (its recovery key is shown
- * and kept, as in Settings → Sync), then the connector (privacy said first, as in Settings → Connector), then the address and the
+ * Connect the AI chat app, inside set-up: who can use it in each app first, then what the connector needs, step by step, with the Settings pieces. Sync first (its recovery key is shown
+ * and kept, as in Settings → Sync), then the connector (privacy said first, as in Settings → How Réussite understands you), then where to add it in each app, the address and the
  * pairing code to give the app, and a check that it has come in (the relay says when the connector was last used). Without a relay
  * address, or with a relay that has no connector, it says so and leaves the connector on the Next steps.
  */
@@ -523,6 +446,7 @@ function ConnectStep({ back, done, ...pos }: { id: Id; n: number; of: number; ba
     <div class="flow ob" data-testid="ob-link">
       {pos.of > 1 && <p class="eyebrow">{t('obStep', { n: pos.n, of: pos.of })}</p>}
       <h3>{t('obLinkQ')}</h3>
+      <ConnectorApps part="who" />
       <p>{t('obLinkIntro')}</p>
       <Privacy />
       {err && <p class="err" role="alert" data-testid="ob-link-error">{err}</p>}
@@ -543,10 +467,7 @@ function ConnectStep({ back, done, ...pos }: { id: Id; n: number; of: number; ba
       <ol class="obsteps" data-testid="ob-link-steps">
         <li>{t('obLinkS1')}</li>
         <li>{t('obLinkS2')}
-          <ul class="obapps" data-testid="ob-link-apps">
-            <li>{t('obLinkAppClaude')}</li>
-            <li>{t('obLinkAppOther')}</li>
-          </ul>
+          <ConnectorApps part="how" />
         </li>
         <li>{t('obLinkS3')}</li>
       </ol>

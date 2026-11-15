@@ -35,4 +35,4 @@ export function nextSteps(f: NextFacts): NextStep[] {
 }
 
 /** The Settings section (its `data-testid`) each line opens. */
-export const SECTION: Record<NextStep, string> = { key: 'sync', sync: 'sync', ai: 'ai-settings', calendar: 'calendar-feed', notify: 'notify', addresses: 'addresses-settings', connector: 'connector' };
+export const SECTION: Record<NextStep, string> = { key: 'sync', sync: 'sync', ai: 'understand', calendar: 'calendar-feed', notify: 'notify', addresses: 'addresses-settings', connector: 'connector' };

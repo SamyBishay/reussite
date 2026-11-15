@@ -229,6 +229,20 @@ textarea.mono{letter-spacing:.04em}
 .paircode span{min-width:0}
 .urlbox{margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--ground);font-size:14px;overflow-wrap:anywhere;word-break:break-all;user-select:all}
 .steps-list{margin:var(--s3) 0 0;padding-left:22px;display:grid;gap:var(--s1)}
+/* Settings → How Réussite understands you: the choice, the status list, the two ways of a cloud AI */
+.uchoice .btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ustatus{list-style:none;margin:var(--s2) 0 0;padding:0;display:grid;gap:var(--s1)}
+.ustatus li{display:flex;gap:var(--s2);align-items:baseline;min-width:0}
+.ustatus li > :last-child{min-width:0;overflow-wrap:anywhere;text-align:left}
+.ust-mark{flex:none;width:1.2em;color:var(--ink-2)}
+.ust-mark.done{color:var(--accent)}
+.uways-h{margin:var(--s5) 0 0;font:700 16px/1.3 var(--sans)}
+.uway{margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--line-2);min-width:0}
+.uway h4{margin:0 0 var(--s1);font:700 15px/1.3 var(--sans)}
+.uway > .hint{margin:0 0 var(--s1)}
+.ustate{font-weight:400}
+.connapps .obapps li{overflow-wrap:anywhere}
+.ai-say{margin:var(--s3) 0 0;font-weight:600;overflow-wrap:anywhere}
 .privacy-h{margin:var(--s4) 0 var(--s1);font:700 16px/1.3 var(--sans)}
 .drop{position:fixed;inset:0;z-index:50;background:var(--ground);overflow-y:auto;overflow-x:hidden;display:grid;align-content:center;justify-items:center;padding:calc(var(--sat) + 20px) 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
 .drop>div{width:min(460px,100%);display:grid;gap:var(--s3)}

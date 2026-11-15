@@ -1,14 +1,11 @@
 // Setting Réussite up with an AI (S9): a short conversation in which the AI helps the person name the four pillars of their days
 // ("what matters in your days"), the places they spend time in and how they want an AI to work with them, and ends in one
-// change-set (`settings.update` and `place.create`) on the review screen. Two ways in, one contract: inside the app with a key
-// (`setupPrompt`, one request for each turn), or in any chatbot by copy and paste (`setupPack`, the reply comes back through
-// Paste the reply). No cards, suits or Matrix vocabulary reaches the person.
+// change-set (`settings.update` and `place.create`) on the review screen, inside the app with the person's own key (`setupPrompt`,
+// one request for each turn). The copy-and-paste pack for any chatbot is gone (DECISIONS.md 2026-11-15). No cards, suits or Matrix
+// vocabulary reaches the person.
 import { z } from 'zod';
-import { systemPrompt, methodSummary, answerIn } from './context';
+import { systemPrompt } from './context';
 import { readChangeSet, type Change, type ChangeSet } from './changeset';
-import { preferencesPack } from '../domain/preferences';
-import { settings } from '../app/store';
-import { lang } from '../i18n';
 
 /** The ops a setup reply may carry; anything else in it is dropped (a setup creates no steps). */
 export const SETUP_OPS: readonly Change['op'][] = ['settings.update', 'place.create'];
@@ -68,36 +65,3 @@ export function readSetup(r: SetupReplyT | null): { say: string; cs: ChangeSet |
   return { say, cs: p.ok ? p.cs : null };
 }
 
-/**
- * A change-set read from a pasted reply, cut back to the setup ops (a chatbot told only what it needs, but a pasted block is
- * anyone's): null when nothing of it is a setup change.
- */
-export function onlySetup(cs: ChangeSet): ChangeSet | null {
-  const changes = cs.changes.filter(c => SETUP_OPS.includes(c.op));
-  return changes.length ? { ...cs, changes } : null;
-}
-
-
-const FIND_PACK = `Find out three things from me, by talking, so that Réussite fits my life.
-1. My four pillars: the four parts of my days that matter to me, the ones I would like each day to touch even on a hard day. Start from the four general kinds of time every day holds: Work (job or studies, bureaucracy, paperwork), Leisure (fun, relaxation, consumption, hobbies, outings), Personal projects (side projects, chores, research) and Interpersonal obligations (functions and services for family and friends). Keep them as they are unless I say another name fits my life better; then use my own words in at most four words. Always four: if I name more than four, ask which four matter most; if fewer, ask one question about the missing part and let me decide. Order them as they matter to me, the one I would miss most first.
-2. My places: where I spend time (home, work, a second home, a city I visit often). Names only.
-3. How I want an AI to work with me: how long its answers should be ("very short", "short" or "full"), something to know about how I work, something it should never do. Leave out what I did not say.`;
-
-const HOW_PACK = `Talk plainly and warmly, one question at a time, starting from my life ("tell me about a usual week") and not from the app. ${WORDS} Facts, no praise, no guilt, no advice about my health, nothing about what I should have done. Take at most ${MAX_EXCHANGES} exchanges. As soon as you have my four pillars, end your reply with the change-set below: I will see every line in Réussite and can untick one or come back to you, so do not ask for a yes first. Do not call any tool or connector for this: give me the block.`;
-
-/**
- * The text to paste into any chatbot: the same job as the in-app conversation, ending with one
- * fenced block labelled `reussite` for Paste the reply. It holds no data of the person's, only the method in short and their
- * lines for an AI if they have any.
- */
-export function setupPack(l = lang.value): string {
-  return [
-    'I am setting up Réussite, a planning app built on a CBT method for adults with ADHD. Help me do it by talking with me, following the method and its tone.',
-    '## The method, in short\n\n' + methodSummary(l),
-    preferencesPack(settings.value.aiPreferences),
-    '## What I need from you\n\n' + FIND_PACK,
-    '## How to talk to me\n\n' + HOW_PACK,
-    '## How to give me the result\n\n' + CHANGES + '\n\nEnd your reply with one fenced code block labelled reussite that holds this JSON: {"v": 1, "note": "one short line", "changes": [ ... ]}. Never include weights or anything else.',
-    `${answerIn(l)} Start now: say hello in one line and ask me your first question.`,
-  ].filter(Boolean).join('\n\n');
-}

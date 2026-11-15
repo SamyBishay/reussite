@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { tasks, projects, places, stays, days, memory, settings, addresses, people } from '../app/store';
 import { withDefaults } from '../data/settings';
-import { tripPack } from './trip';
+import { tripPrompt } from './trip';
 import { commandPrompt, contextPack, homePrompt } from './context';
 import { breakDownPrompt, stuckPrompt, reviewPrompt } from './prompts';
 import { planChanges, applyPlanned, type Snapshot, type Writer } from './apply';
@@ -43,13 +43,21 @@ beforeEach(() => {
   memory.value = new Map([['n1', note('Lyon', 'Likes the old town at night')]]);
 });
 
-describe('the trip pack', () => {
-  const pack = (people_?: boolean, q = 'Three slow days please') => tripPack('s1', q, { people: people_, l: 'en' })!;
+describe('the trip request', () => {
+  const pack = (people_?: boolean, q = 'Three slow days please') => {
+    const p = tripPrompt('s1', q, { people: people_, l: 'en' })!;
+    return { ...p, text: [p.system.stable, p.system.rest, p.user].join('\n\n') };
+  };
 
   it('holds the stay, its place\'s addresses with their notes and last verdict, the open steps and the fixed times', () => {
     const p = pack();
     expect(p.days).toBe(3);
     const t = p.text;
+    // The data and the question are the request; the method, the trip's instructions and the contract are the instructions.
+    expect(p.user).toContain('Chez Louise');
+    expect(p.user).not.toContain('never an hourly grid');
+    expect(p.system.rest).toContain('never an hourly grid');
+    expect(p.system.rest).toContain('change-set JSON only');
     expect(t).toContain('The trip: Lyon (place id lyon), from Thursday 2026-11-12 to Saturday 2026-11-14');
     expect(t).toContain('My note: With a friend, long weekend');
     expect(t).toContain('Thu 2026-11-12, Fri 2026-11-13, Sat 2026-11-14');
@@ -63,7 +71,7 @@ describe('the trip pack', () => {
     expect(t).toContain('check opening hours');
     expect(t).toContain('address.create');
     expect(t).toContain('never an hourly grid');
-    expect(t).toContain('## My question\n\nThree slow days please');
+    expect(t).toContain('Request:\nThree slow days please');
     expect(t).toContain('Likes the old town at night'); // the memory note the stay's place picks
     expect(p.notes).toEqual(['Lyon']);
   });
@@ -77,20 +85,20 @@ describe('the trip pack', () => {
     for (const s of ['33699999999', 'whatsapp://', 'pe1']) expect(on, s).not.toContain(s);
   });
 
-  it('puts the answer\'s link into the instructions when there is a drop address', () => {
-    const t = tripPack('s1', '', { drop: 'https://app.example/drop#SPACE.KEY.' })!.text;
-    expect(t).toContain('https://app.example/drop#SPACE.KEY.z.DATA');
-    expect(t).toContain('Plan this trip for me.');
+  it('asks to plan the trip when the question is empty, and asks for no link or code block', () => {
+    const t = pack(false, '').text;
+    expect(t).toContain('Request:\nPlan this trip for me.');
+    for (const s of ['/drop#', 'fenced code block', 'labelled reussite']) expect(t, s).not.toContain(s);
   });
 
-  it('carries the person\'s AI preferences, and leaves the section out when they were emptied', () => {
+  it('carries the person\'s AI preferences, and leaves them out when they were emptied', () => {
     settings.value = withDefaults({ aiPreferences: '- Be brief.' });
-    expect(pack().text).toContain('## How I want you to work with me\n\n- Be brief.');
+    expect(pack().system.stable).toContain('- Be brief.');
     settings.value = withDefaults({ aiPreferences: '' });
-    expect(pack().text).not.toContain('How I want you to work');
+    expect(pack().system.stable).not.toContain('How the person wants an AI to work');
   });
   it('is null for a stay that is gone', () => {
-    expect(tripPack('nope', '')).toBeNull();
+    expect(tripPrompt('nope', '')).toBeNull();
   });
 
   it('keeps people and addresses out of every other request, trip packs aside', () => {

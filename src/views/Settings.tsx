@@ -23,12 +23,12 @@ const PRESET_NAME: Record<string, 'presetLilacSea' | 'presetInkCoral' | 'presetF
 import { openReview } from '../flows/review';
 import { openGoalReview } from '../flows/reviewai';
 import { aiOn } from '../ai/ask';
+import { offersChat } from '../app/ChatOffer';
 import { addresses } from '../app/store';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { openLayoutDiagnostics } from '../app/LayoutDiagnostics';
-import { AiSettings } from '../ai/AiSettings';
+import { UnderstandSettings } from '../app/UnderstandSettings';
 import { SyncSettings, saveBackupFile } from '../app/SyncSettings';
-import { ConnectorSettings } from '../app/ConnectorSettings';
 import { CalendarSettings } from '../app/CalendarSettings';
 import { NotifySettings } from '../app/NotifySettings';
 import { markFull, readBackupFile, syncOn } from '../app/sync';
@@ -201,7 +201,7 @@ export function StaysEditor() {
           <input type="date" aria-label={t('stayTo')} value={st.to} onChange={e => { const v = (e.target as HTMLInputElement).value; if (v) void saveStay(st.id, { ...st, to: v }); }} />
           <button class="btn small ghost" type="button" onClick={() => void removeStay(st.id)} aria-label={t('remove', { what: placeName(st.placeId) })}>×</button>
         </div>
-        {addressesOn() && st.to >= today.value && <div class="stayact"><button class="btn small" type="button" onClick={() => openTrip(st.id)} data-testid="plan-trip">{t('tripBtn')}</button></div>}
+        {addressesOn() && st.to >= today.value && (aiOn.value || offersChat()) && <div class="stayact"><button class="btn small" type="button" onClick={() => openTrip(st.id)} data-testid="plan-trip">{t('tripBtn')}</button></div>}
       </>
       ))}
       {ps.length ? (
@@ -407,9 +407,8 @@ export function Settings() {
       <Method />
       <NotifySettings />
       <CalendarSettings />
-      <AiSettings />
+      <UnderstandSettings />
       <SyncSettings />
-      <ConnectorSettings />
       <Data />
       <Fold title={t('language')} testid="language">
         <div class="seg" role="group" aria-label={t('language')} style="margin-top:var(--s2)">

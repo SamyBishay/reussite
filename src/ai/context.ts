@@ -172,8 +172,6 @@ export function contextPack(s: Scope, question: string, l = lang.value, drop?: s
   ].filter(Boolean).join('\n\n');
 }
 
-/** The one sentence to paste once into an AI's custom instructions or memory. */
-export const dropMemoryLine = (base: string): string => `About my Réussite list: whenever you propose changes to it, answer like this. ${dropInstruction(base)}`;
 
 const MEMORY_RULE = 'Memory lines record only what the person said, in their words. Never write a conclusion about their health, character or anyone\'s private life.';
 const OUT_OF_SCOPE = 'You only help with the person\'s list, their memory notes and the method. For anything else (the weather, general knowledge, writing, other apps) return no changes, give one short line in "note" saying that and that their usual AI can help with it, and set "outside": true.';

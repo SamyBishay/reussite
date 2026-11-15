@@ -1,44 +1,21 @@
-// Settings → AI (brief §10): provider, base URL, the two model slots, the key (device-local
-// only), "Test the connection" and "Always show what's sent".
+// Settings → How Réussite understands you → My own key (brief §10): provider, base URL, the two model slots, the key (device-local
+// only), "Test the connection" and "Always show what's sent". A piece of that section (src/app/UnderstandSettings.tsx), not a section of its own.
 import { openGuidedAi } from '../flows/guidedAi';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { signal } from '@preact/signals';
 import { z } from 'zod';
 import { settings, saveSettings, toast } from '../app/store';
 import { t } from '../i18n';
-import { More, Fold, countSet } from '../app/More';
+import { More, countSet } from '../app/More';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import { ask, getKey, setKey, forgetSeen, spent, loadSpent } from './ask';
 import { monthTokens } from './prices';
-import { dropMemoryLine } from './context';
-import { dropBase, syncOn } from '../app/sync';
 
 const set = (p: Parameters<typeof saveSettings>[0]) => void saveSettings(p);
 const TEST_SCHEMA = z.object({ ok: z.literal(true) });
-
-/** The drop address and the sentence to paste once into an AI (the one-tap link, docs/CHANGESET.md). */
-function DropAddress() {
-  const base = dropBase.value;
-  const sentence = base ? dropMemoryLine(base) : '';
-  const copy = () => navigator.clipboard?.writeText(sentence).then(() => toast(t('dropCopied')), () => undefined);
-  return (
-    <div class="field" data-testid="drop-section"><span>{t('dropSection')}</span>
-      <p class="hint" style="margin:0">{t('dropHint')}</p>
-      {!syncOn.value ? <p class="hint" data-testid="drop-needs-sync">{t('dropNeedsSync')}</p>
-        : !base ? <p class="hint">{t('dropUnsupported')}</p>
-        : (
-          <>
-            <p class="field-label">{t('dropAddress')}</p>
-            <p class="urlbox mono" data-testid="drop-address">{base}</p>
-            <small class="hint">{t('dropAddressHint')}</small>
-            <p class="field-label">{t('dropPaste')}</p>
-            <pre class="ai-pre" data-testid="drop-sentence">{sentence}</pre>
-            <div class="actions"><button class="btn" type="button" onClick={copy} data-testid="drop-copy">{t('dropCopy')}</button></div>
-          </>
-        )}
-    </div>
-  );
-}
+/** The last "Test the connection" on this screen, for the status list: cleared when the provider or the key changes. */
+export const keyTest = signal<{ ok: boolean; msg: string } | null>(null);
 
 /** This month's use on this device, and the limit. */
 function Spend() {
@@ -95,7 +72,7 @@ export function KeyField({ p, onHas }: { p: Exclude<AiProvider, 'none'>; onHas?:
   );
 }
 
-/** The person's lines for an AI (docs/ai/preferences.md): in every request and pack. Used here and in onboarding. */
+/** The person's lines for an AI (docs/ai/preferences.md): in every request. Used here and in onboarding. */
 export function PreferencesEditor({ value, onSave, testid = 'ai-prefs' }: { value: string; onSave: (v: string) => void; testid?: string }) {
   const [text, setText] = useState(value);
   useEffect(() => setText(value), [value]);
@@ -109,16 +86,23 @@ export function PreferencesEditor({ value, onSave, testid = 'ai-prefs' }: { valu
   );
 }
 
-export function AiSettings() {
+/**
+ * My own key: the provider, the key and its test, the guided set-up, and under More the rest. `data-testid="ai-settings"`, which the status list
+ * and Next steps scroll to. Choosing no provider is "On this device", the first choice of the section above it.
+ */
+export function AiKeyPanel() {
   const s = settings.value;
   const p = s.aiProvider;
   const [hasKey, setHasKey] = useState(false);
-  const [test, setTest] = useState<{ busy: boolean; msg: string; ok: boolean } | null>(null);
-  useEffect(() => { setTest(null); if (p === 'none') setHasKey(false); }, [p]);
+  const [busy, setBusy] = useState(false);
+  const test = keyTest.value;
+  useEffect(() => { keyTest.value = null; if (p === 'none') setHasKey(false); }, [p]);
+  const onHas = (b: boolean) => { if (b !== hasKey) keyTest.value = null; setHasKey(b); };
   const runTest = async () => {
-    setTest({ busy: true, msg: '', ok: false });
+    setBusy(true); keyTest.value = null;
     const r = await ask('test', 'quick', 'Reply with exactly this JSON and nothing else: {"ok": true}', 'Connection test.', TEST_SCHEMA, { noPreview: true, maxTokens: 2000 });
-    setTest({ busy: false, ok: r.ok, msg: r.ok ? t('aiTestOk', { model: s.aiModels[p as Exclude<AiProvider, 'none'>].quick }) : r.message });
+    setBusy(false);
+    keyTest.value = { ok: r.ok, msg: r.ok ? t('aiTestOk', { model: s.aiModels[p as Exclude<AiProvider, 'none'>].quick }) : r.message };
   };
   const models = p === 'none' ? null : s.aiModels[p];
   const setModel = (slot: 'quick' | 'thinking', v: string) => {
@@ -126,24 +110,23 @@ export function AiSettings() {
     set({ aiModels: { ...s.aiModels, [p]: { ...s.aiModels[p], [slot]: v.trim() || DEFAULT_SETTINGS.aiModels[p][slot] } } });
   };
   return (
-    <Fold title={t('aiSection')} testid="ai-settings">
-      <p class="hint">{t('aiIntro')}</p>
-      <div class="actions"><button class="btn" type="button" onClick={() => void openGuidedAi()} data-testid="ai-guided">{t('aiGuided')}</button></div>
+    <div class="uway-body" data-testid="ai-settings">
       <div class="field"><span>{t('aiProvider')}</span>
         <div class="seg" role="group" aria-label={t('aiProvider')} style="flex-wrap:wrap">
-          {([['none', 'aiNone'], ['openai', 'aiOpenAI'], ['anthropic', 'aiAnthropic']] as const).map(([v, k]) =>
+          {([['openai', 'aiOpenAI'], ['anthropic', 'aiAnthropic']] as const).map(([v, k]) =>
             <button type="button" aria-pressed={p === v} onClick={() => set({ aiProvider: v })} data-testid={'ai-' + v}>{t(k)}</button>)}
         </div>
       </div>
       {models && (
         <>
-          {p !== 'none' && <KeyField p={p} onHas={setHasKey} />}
+          {p !== 'none' && <KeyField p={p} onHas={onHas} />}
           <div class="actions">
-            <button class="btn" type="button" disabled={!hasKey || test?.busy} onClick={runTest} data-testid="ai-test">{test?.busy ? t('aiTesting') : t('aiTest')}</button>
+            <button class="btn" type="button" disabled={!hasKey || busy} onClick={runTest} data-testid="ai-test">{busy ? t('aiTesting') : t('aiTest')}</button>
           </div>
-          {test && !test.busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:var(--s2)">{test.msg}</p>}
+          {test && !busy && <p class={test.ok ? 'hint' : 'err'} role="status" data-testid="ai-test-result" style="margin-top:var(--s2)">{test.msg}</p>}
         </>
       )}
+      <div class="actions"><button class="btn ghost small" type="button" onClick={() => void openGuidedAi('key')} data-testid="ai-guided">{t('aiGuided')}</button></div>
       <More n={countSet(models && (models.quick !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].quick || models.thinking !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].thinking), p === 'openai' && s.aiBaseUrl !== DEFAULT_SETTINGS.aiBaseUrl, s.aiPreferences !== DEFAULT_SETTINGS.aiPreferences, s.aiAlwaysShow, s.aiMonthlyCap)} testid="ai-more">
         {p === 'openai' && (
           <label class="field"><span>{t('aiBaseUrl')}</span>
@@ -166,8 +149,7 @@ export function AiSettings() {
         </div>
         <p class="hint">{t('aiAlwaysShowHint')} <button class="linklike" type="button" onClick={() => void forgetSeen().then(() => toast(t('aiSeenReset')))}>{t('aiSeenResetBtn')}</button></p>
         {p !== 'none' && <Spend />}
-        <DropAddress />
       </More>
-    </Fold>
+    </div>
   );
 }

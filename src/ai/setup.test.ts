@@ -5,7 +5,7 @@ import { withDefaults, DEFAULT_SETTINGS } from '../data/settings';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import { readChangeSet, parseChangeSet, type ChangeSet } from './changeset';
 import { planChanges, applyPlanned, shortName, type Snapshot, type Writer } from './apply';
-import { setupPrompt, setupPack, readSetup, onlySetup, SETUP_OPS, MAX_EXCHANGES } from './setup';
+import { setupPrompt, readSetup, SETUP_OPS, MAX_EXCHANGES } from './setup';
 import type { Settings } from '../data/settings';
 
 const gen = { id: (p: string) => p + '1', now: () => '2026-11-02T08:00:00.000Z', zone: 'Europe/Paris' };
@@ -137,31 +137,7 @@ describe('the setup conversation', () => {
     expect(readSetup(null)).toEqual({ say: '', cs: null });
   });
 
-  it('cuts a pasted change-set back to the setup ops', () => {
-    const mixed = cs([{ op: 'task.create', set: { title: 'Open Mail' } }, { op: 'settings.update', set: { pillars: PILLARS } }]);
-    expect(onlySetup(mixed)!.changes.map(c => c.op)).toEqual(['settings.update']);
-    expect(onlySetup(cs([{ op: 'task.create', set: { title: 'Open Mail' } }]))).toBeNull();
+  it('allows two ops only', () => {
     expect(SETUP_OPS).toEqual(['settings.update', 'place.create']);
-  });
-});
-
-describe('the pack for any chatbot', () => {
-  it('is the same job, ends on the reussite block, and holds nothing of the person\'s', () => {
-    settings.value = withDefaults({ ...settings.value, aiPreferences: 'Say it short.' });
-    const pack = setupPack('en');
-    expect(pack).toContain('four parts of my days');
-    expect(pack).toContain('settings.update');
-    expect(pack).toContain('fenced code block labelled reussite');
-    expect(pack).toContain('Do not call any tool or connector');
-    expect(pack).toContain('Say it short.'); // their lines for an AI, if they have any
-    expect(pack).toContain('Answer in English.');
-    // The block it asks for reads back as a setup change-set.
-    const reply = '```reussite\n{"v":1,"note":"Done","changes":[{"op":"settings.update","set":{"pillars":[{"name":"The thesis"},{"name":"Paperwork"},{"name":"My kids"},{"name":"Rest"}]}},{"op":"place.create","set":{"name":"Home"}}]}\n```';
-    const r = parseChangeSet(reply);
-    expect(r.ok && onlySetup(r.cs)!.changes).toHaveLength(2);
-  });
-
-  it('asks in French when the app is', () => {
-    expect(setupPack('fr')).toContain('Answer in French.');
   });
 });

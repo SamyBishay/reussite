@@ -1,4 +1,4 @@
-// Settings → Connector (brief §10): let an AI app read and edit the list through the relay.
+// The connector (brief §10): let an AI chat app read and edit the list through the relay. A piece of Settings → How Réussite understands you.
 // Off by default. Switching on hands the relay the list's key, so the privacy cost is said first,
 // plainly, and again in the confirmation.
 import { openGuidedAi } from '../flows/guidedAi';
@@ -8,7 +8,7 @@ import { openSheet, closeSheet } from './sheet';
 import { connector, connectorNewCode, connectorOff, connectorOn, refreshConnector, spaceGone, syncOn } from './sync';
 import { RelayError } from '../sync/client';
 import { t, locale } from '../i18n';
-import { More, Fold, openFold } from './More';
+import { More, openFold } from './More';
 
 const when = (at: number) => new Date(at).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -73,6 +73,9 @@ function SwitchOffSheet({ done }: { done: () => void }) {
   );
 }
 
+/** The connector's own switch, off: the same sheet from the connector's piece and from the line under On this device. */
+export const openConnectorOff = (done: () => void = () => undefined) => openSheet(<SwitchOffSheet key={'cf' + Date.now()} done={done} />);
+
 /** `ABCD-EFGH` in large grouped characters, with the minutes left. */
 export function PairingCode({ code, onNew, busy }: { code: Code | null; onNew: () => void; busy: boolean }) {
   const [now, setNow] = useState(Date.now());
@@ -93,7 +96,34 @@ export function PairingCode({ code, onNew, busy }: { code: Code | null; onNew: (
   );
 }
 
-export function ConnectorSettings() {
+/** The three chat apps in a fixed order, with equal weight (no vendor first by preference), and any other app that takes MCP connectors. */
+const APPS = [
+  { id: 'chatgpt', who: 'connWhoChatgpt', how: 'connHowChatgpt' },
+  { id: 'claude', who: 'connWhoClaude', how: 'connHowClaude' },
+  { id: 'gemini', who: 'connWhoGemini', how: 'connHowGemini' },
+] as const;
+
+/**
+ * Which chat apps, from the vendors' own pages (read 2026-11-15; DECISIONS.md): `who` can use a custom connector, before the person starts;
+ * `how`, the menu path in each app, while the address and the pairing code are on screen. Used here and on set-up's Connect screen.
+ */
+export function ConnectorApps({ part }: { part: 'who' | 'how' }) {
+  return (
+    <div class="field connapps" data-testid={'conn-apps-' + part}><span>{t(part === 'who' ? 'connWhoTitle' : 'connHowTitle')}</span>
+      <ul class="obapps">
+        {APPS.map(a => <li data-testid={'conn-app-' + a.id}>{t(part === 'who' ? a.who : a.how)}</li>)}
+        <li data-testid="conn-app-other">{t(part === 'who' ? 'connWhoOther' : 'connHowOther')}</li>
+      </ul>
+      <p class="hint">{t(part === 'who' ? 'connWhoCheck' : 'connHowComputer')}</p>
+    </div>
+  );
+}
+
+/**
+ * My AI chat app, through the connector: a piece of Settings → How Réussite understands you (src/app/UnderstandSettings.tsx), with its own switch.
+ * `data-testid="connector"`, which the status list and Next steps scroll to.
+ */
+export function ConnectorPanel() {
   const [code, setCode] = useState<Code | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -102,7 +132,8 @@ export function ConnectorSettings() {
   const st = connector.value;
 
   if (!on) return (
-    <Fold title={t('connectorSection')} testid="connector">
+    <div class="uway-body" data-testid="connector">
+      <ConnectorApps part="who" />
       <p class="hint">{t('connectorSyncFirst')}</p>
       <div class="actions">
         <button class="btn primary" type="button" data-testid="connector-guided" onClick={() => void openGuidedAi('connector')}>{t('connectorGuided')}</button>
@@ -113,7 +144,7 @@ export function ConnectorSettings() {
           el?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
         }}>{t('connectorGoSync')}</button>
       </div>
-    </Fold>
+    </div>
   );
 
   const newCode = async () => {
@@ -125,10 +156,11 @@ export function ConnectorSettings() {
   const copyUrl = () => navigator.clipboard?.writeText(st!.url).then(() => toast(t('connectorUrlCopied')), () => undefined);
 
   return (
-    <Fold title={t('connectorSection')} testid="connector">
+    <div class="uway-body" data-testid="connector">
       {!st ? <p class="hint" role="status">{t('connectorChecking')}</p> : !st.on ? (
         <>
           <p>{t('connectorIntro')}</p>
+          <ConnectorApps part="who" />
           <Privacy />
           {err && <p class="err" role="alert">{err}</p>}
           <div class="actions">
@@ -146,20 +178,16 @@ export function ConnectorSettings() {
           </div>
           {err && <p class="err" role="alert" data-testid="connector-error">{err}</p>}
           <More open={!!code} testid="connector-more">
-            <ol class="steps-list">
-              <li>{t('connectorStep1')}</li>
-              <li>{t('connectorStep2')}</li>
-              <li>{t('connectorStep3')}</li>
-            </ol>
-            <p class="hint">{t('connectorOtherApps')}</p>
+            <ConnectorApps part="how" />
+            <p class="hint">{t('connectorStep3')}</p>
             <PairingCode code={code} onNew={newCode} busy={busy} />
             <div class="actions">
               <button class="btn" type="button" disabled={readOnly.value} data-testid="connector-off"
-                onClick={() => openSheet(<SwitchOffSheet key={'cf' + Date.now()} done={() => setCode(null)} />)}>{t('connectorOff')}</button>
+                onClick={() => openConnectorOff(() => setCode(null))}>{t('connectorOff')}</button>
             </div>
           </More>
         </>
       )}
-    </Fold>
+    </div>
   );
 }

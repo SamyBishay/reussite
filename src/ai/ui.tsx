@@ -1,4 +1,4 @@
-// AI on screen: "Show me what's sent", the command box (named for the AI the person set up), the trip pack's copy and share, and the pasted reply.
+// AI on screen: "Show me what's sent", the command box (named for the AI the person set up), and Plan this trip.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { openSheet, closeSheet } from '../app/ui';
 import { settings, stays, people, places, toast } from '../app/store';
@@ -8,13 +8,11 @@ import { t, fmtDate } from '../i18n';
 import { pending, aiOn, askChanges, type ErrorKind, type AskResult } from './ask';
 import { commandPrompt, type Scope } from './context';
 import { aiName } from './aiName';
-import { tripPack } from './trip';
-import { parseChangeSet, readChangeSet, type ParseResult } from './changeset';
+import { tripPrompt } from './trip';
 import { DiagnosticsButton } from '../app/Diagnostics';
 import { openChangeReview } from './Review';
-import { dropBase } from '../app/sync';
-import { recordArrival } from '../app/home';
-import { parseDropFragment } from '../sync/droplink';
+import { recordTrip } from '../app/home';
+import { offersChat } from '../app/ChatOffer';
 
 /** Shown above any open sheet while a request waits for Send. Mount once, in App. */
 export function PreviewHost() {
@@ -65,8 +63,7 @@ export function AiError({ error, message, manual, manualLabel }: { error: ErrorK
 
 /**
  * Command box (feature 1): plain language → change-set → review. Only with an AI set up and its key on this device, and then it
- * names that AI ("Ask Claude to change the list"). Without one there is nothing here: no button, no copy-and-paste route on the
- * screen (that route lives in set-up and in Plan this trip). `scope` is kept for the callers; the box no longer uses it.
+ * names that AI ("Ask Claude to change the list"). Without one there is nothing here: no button. `scope` is kept for the callers; the box no longer uses it.
  * `compact` (Matrix, Projects): one line, the label out of sight and the button beside the text, so the boxes below stay on the screen.
  */
 export function CommandBox({ compact }: { scope?: Scope; compact?: boolean }) {
@@ -107,88 +104,68 @@ export function CommandBox({ compact }: { scope?: Scope; compact?: boolean }) {
   );
 }
 
-async function copy(text: string): Promise<boolean> {
-  try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
-}
-
-/** The pack as it will leave, and the ways to take it: copy, share, then Paste the reply. */
-function PackBlock({ pack }: { pack: string }) {
-  const [copied, setCopied] = useState(false);
-  const doCopy = async () => { const ok = await copy(pack); setCopied(ok); toast(ok ? t('packCopied') : t('packCopyBlocked')); };
-  const share = async () => { try { await navigator.share({ title: 'Réussite', text: pack }); } catch { /* cancelled */ } };
-  return (
-    <>
-      <details class="more"><summary>{t('packShow', { n: pack.length.toLocaleString() })}</summary><pre class="ai-pre" data-testid="pack">{pack}</pre></details>
-      <div class="actions">
-        <button class="btn primary" type="button" onClick={doCopy} data-testid="copy-pack">{t('packCopy')}</button>
-        {typeof navigator.share === 'function' && <button class="btn" type="button" onClick={share}>{t('packShare')}</button>}
-        <button class="btn" type="button" onClick={() => openPaste()} data-testid="pack-paste">{t('pasteReply')}</button>
-      </div>
-      {copied && <p class="hint" style="margin-top:var(--s3)">{t('packNext')}</p>}
-    </>
-  );
-}
-
-/** "Plan this trip": the pack for a stay, with the people there only if ticked for this request (default: not). */
+/**
+ * "Plan this trip", from a stay. With a key on this device it asks the AI directly (the people there only if ticked, for this request; default: not),
+ * and the change-set opens on the review screen, kept in History with its Undo. With the connector and no key it gives the sentence to say in the
+ * chat app, which reads the list itself. With neither, Settings does not offer the button.
+ */
 function TripAsk({ stayId }: { stayId: string }) {
   const [q, setQ] = useState('');
   const [withPeople, setWithPeople] = useState(false);
-  const pack = tripPack(stayId, q, { people: withPeople, drop: dropBase.value });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ error: ErrorKind | 'empty'; message: string } | null>(null);
+  const ctl = useRef<AbortController | null>(null);
   const st = stays.value.get(stayId);
-  if (!pack || !st) return <p class="hint">{t('tripGone')}</p>;
+  const prompt = aiOn.value ? tripPrompt(stayId, q, { people: withPeople }) : null;
+  if (!st || !places.value.get(st.placeId)) return <p class="hint">{t('tripGone')}</p>;
+  const where = { place: placeName(st.placeId), from: fmtDate(st.from), to: fmtDate(st.to) };
+
+  if (!aiOn.value) {
+    if (!offersChat()) return <p class="hint">{t('tripNoAi')}</p>;
+    const say = t('chatTripPrompt', where);
+    const copy = () => navigator.clipboard?.writeText(say).then(() => toast(t('chatCopied', { say })), () => toast(t('chatCopied', { say })));
+    return (
+      <div data-testid="trip-sheet">
+        <h3>{t('tripTitle')}</h3>
+        <p class="hint">{t('tripChatHint', where)}</p>
+        <p class="ai-say" data-testid="trip-say">“{say}”</p>
+        <div class="actions"><button class="btn primary" type="button" onClick={copy} data-testid="trip-copy-say">{t('tripChatCopy')}</button></div>
+      </div>
+    );
+  }
+
   const n = [...people.value.values()].filter(p => onPage(places.value, p.placeId, st.placeId)).length;
+  const go = async () => {
+    const pr = tripPrompt(stayId, q, { people: withPeople });
+    if (!pr || busy) return;
+    setBusy(true); setErr(null);
+    ctl.current = new AbortController();
+    const r = await askChanges('trip', 'thinking', pr.system, pr.user, { signal: ctl.current.signal, notes: pr.notes });
+    setBusy(false);
+    if (!r.ok) { if (r.error !== 'cancelled') setErr(r); return; }
+    const text = q.trim() || t('tripRequest', { place: where.place });
+    openChangeReview(r.cs, { request: text, record: true, onApplied: (applied, undo) => { if (applied) void recordTrip(r.cs, applied, undo, text); } });
+  };
   return (
     <div data-testid="trip-sheet">
       <h3>{t('tripTitle')}</h3>
-      <p class="hint">{t('tripHint', { place: placeName(st.placeId), from: fmtDate(st.from), to: fmtDate(st.to) })}</p>
+      <p class="hint">{t('tripHint', where)}</p>
       <label class="field"><span>{t('askQuestion')}</span>
         <textarea rows={3} value={q} placeholder={t('tripQuestionPh')} onInput={e => setQ((e.target as HTMLTextAreaElement).value)} data-testid="trip-question" />
       </label>
       <label class="tog"><input type="checkbox" checked={withPeople} onChange={e => setWithPeople((e.target as HTMLInputElement).checked)} data-testid="trip-people" /> {t('tripPeople', { n })}</label>
       <p class="hint">{t('tripPeopleHint')}</p>
-      <p class="hint" data-testid="trip-notes">{t('aiNotesSent')}: {pack.notes.length ? pack.notes.join(', ') : t('aiNotesNone')}</p>
-      <PackBlock pack={pack.text} />
+      <p class="hint" data-testid="trip-notes">{t('aiNotesSent')}: {prompt?.notes.length ? prompt.notes.join(', ') : t('aiNotesNone')}</p>
+      <div class="actions">
+        {busy ? <><span class="hint">{t('aiBusy')}</span><button class="btn small" type="button" onClick={() => ctl.current?.abort()}>{t('stop')}</button></>
+          : <button class="btn primary" type="button" onClick={() => void go()} data-testid="trip-go">{t('tripGo')}</button>}
+      </div>
+      {err && <AiError {...err} />}
     </div>
   );
 }
-/** "Plan this trip", from a stay: a context pack for an AI with web search. Works without a provider. */
+/** "Plan this trip", from a stay (Settings → Method → More → Stays). */
 export const openTrip = (stayId: string) => openSheet(<TripAsk key={'trip' + stayId} stayId={stayId} />, true);
-
-export const PASTE_ERR = { noJson: 'pasteNoBlock', invalid: 'pasteInvalid', version: 'pasteVersion', empty: 'chgNoneLeft' } as const;
-/** A pasted reply read: the one-tap link pasted instead of a block is read the same way the drop page does. */
-export async function readReply(text: string): Promise<ParseResult> {
-  const link = /\/drop#([^\s<>"')\]]+)/.exec(text)?.[1];
-  return link ? parseDropFragment(link).then(d => readChangeSet(d.json), () => ({ ok: false as const, error: 'invalid' as const })) : parseChangeSet(text);
-}
-function Paste() {
-  const [text, setText] = useState('');
-  const [err, setErr] = useState('');
-  const go = async (e: Event) => {
-    e.preventDefault();
-    const r = await readReply(text);
-    if (!r.ok) { setErr(t(PASTE_ERR[r.error])); return; }
-    setErr('');
-    // Kept in History with its Undo, like a one-tap link (a trip plan's days and addresses come back this way).
-    openChangeReview(r.cs, { record: true, onApplied: (n, undo) => { if (n) void recordArrival(r.cs, 'paste', n, undo); } });
-  };
-  const fromClipboard = async () => { try { setText(await navigator.clipboard.readText()); } catch { toast(t('pasteBlocked')); } };
-  return (
-    <form data-testid="paste-sheet" onSubmit={go}>
-      <h3>{t('pasteReply')}</h3>
-      <p class="hint">{t('pasteHint')}</p>
-      <label class="field"><span>{t('pasteLabel')}</span>
-        <textarea rows={8} value={text} onInput={e => setText((e.target as HTMLTextAreaElement).value)} data-testid="paste-text" />
-      </label>
-      {err && <p class="err" role="alert" data-testid="paste-error" style="margin-top:var(--s2)">{err}</p>}
-      <div class="actions">
-        <button class="btn primary" type="submit" disabled={!text.trim()} data-testid="paste-go">{t('pasteGo')}</button>
-        {typeof navigator.clipboard?.readText === 'function' && <button class="btn" type="button" onClick={fromClipboard}>{t('pasteFromClipboard')}</button>}
-      </div>
-    </form>
-  );
-}
-/** "Paste the reply": find the ```reussite block and open the review screen. */
-export const openPaste = () => openSheet(<Paste key={'paste' + Date.now()} />, true);
 
 /** One AI call from inside a flow: busy, Stop, and the error to show. */
 export function useAi() {

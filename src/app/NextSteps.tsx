@@ -8,7 +8,7 @@ import { pushState, pushOn, refreshPushState } from './push';
 import { addressesOn } from './model';
 import { settings } from './store';
 import { feedId } from './feed';
-import { openGuidedAi } from '../flows/guidedAi';
+import { reveal } from './More';
 import { nextSteps as linesOf, SECTION, type NextStep } from '../domain/nextSteps';
 import { t, type Key } from '../i18n';
 
@@ -26,12 +26,7 @@ const TEXT: Record<NextStep, [Key, Key]> = {
 export function openSettingsSection(testid: string): void {
   go('settings');
   let tries = 0;
-  const find = () => {
-    const el = document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
-    if (!el) { if (tries++ < 30) requestAnimationFrame(find); return; }
-    for (let d: HTMLDetailsElement | null = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
-    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-  };
+  const find = () => { if (!reveal(testid, false) && tries++ < 30) requestAnimationFrame(find); };
   requestAnimationFrame(find);
 }
 
@@ -65,7 +60,7 @@ export function NextStepsCard() {
       <p class="hint">{t('nextHint')}</p>
       <ul class="picklist menu">
         {lines.map(l => (
-          <li><button type="button" class="linklike" onClick={() => (l === 'ai' ? void openGuidedAi() : openSettingsSection(SECTION[l]))} data-testid={'next-' + l}><b>{t(TEXT[l][0])}</b><small>{t(TEXT[l][1])}</small></button></li>
+          <li><button type="button" class="linklike" onClick={() => openSettingsSection(SECTION[l])} data-testid={'next-' + l}><b>{t(TEXT[l][0])}</b><small>{t(TEXT[l][1])}</small></button></li>
         ))}
       </ul>
       <div class="actions"><button class="btn small ghost" type="button" onClick={() => void dismissNextSteps()} data-testid="next-dismiss">{t('nextDismiss')}</button></div>

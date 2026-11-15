@@ -1,14 +1,13 @@
-// "Plan this trip" (brief §5, Addresses and people): a context pack for an AI with web search, built from a stay.
-// The pack is the one place addresses go to an AI, and people go only when the person ticked them for this request.
-// Nothing here calls an AI: the pack is copied or shared, and the reply comes back through "Paste the reply".
+// "Plan this trip" (brief §5, Addresses and people): one request to the AI the person set up with their own key, built from a stay. Its change-set
+// opens on the review screen like every AI change. This request is the one place addresses go to an AI, and people go only when the person ticked
+// them for this request. With the connector and no key the app makes no request: it gives the sentence to say in the chat app (ChatOffer).
 import { onPage } from '../domain/places';
 import { tasks, projects, places, stays, days, decisions, addresses, people, settings, memory } from '../app/store';
 import { isOpen, whereOf, byPriority, categories, planOf, T } from '../app/model';
-import { header, projectLines, calibrationLine, stepLines, methodSummary, changesetContract, answerIn, dropInstruction, MAX_STEPS } from './context';
+import { header, projectLines, calibrationLine, stepLines, changesetContract, systemPrompt, MAX_STEPS } from './context';
 import { lang } from '../i18n';
 import { agenda } from '../domain/agenda';
 import { pickNotes, noteBlock } from '../domain/memory';
-import { preferencesPack } from '../domain/preferences';
 import { oneLine as one } from '../domain/lists';
 import { tripData, tripInstructions, tripDays } from '../domain/trip';
 import type { Stay } from '../data/schema';
@@ -18,10 +17,9 @@ export const tripQuestion = () => 'Plan this trip for me.';
 export interface TripOptions {
   /** Share the people saved for this place, for this request only. Default: no. */
   people?: boolean;
-  drop?: string | null;
   l?: 'en' | 'fr';
 }
-export interface TripPack { text: string; notes: string[]; days: number }
+export interface TripPrompt { system: { stable: string; rest: string }; user: string; notes: string[]; days: number }
 
 /** Open steps that belong to the trip: those of the stay's place, due on its days, or waiting on its end; the most pressing first. */
 function tripSteps(id: string, st: Stay) {
@@ -32,8 +30,8 @@ function tripSteps(id: string, st: Stay) {
 
 const MEMORY_USE = 'It is what the person told Réussite in their own words: use it to understand them, never to draw conclusions about their health, character or anyone\'s private life.';
 
-/** The pack for a stay, or null when the stay is gone. */
-export function tripPack(stayId: string, question: string, o: TripOptions = {}): TripPack | null {
+/** The request for a stay, or null when the stay is gone. */
+export function tripPrompt(stayId: string, question: string, o: TripOptions = {}): TripPrompt | null {
   const st = stays.value.get(stayId);
   const place = st && places.value.get(st.placeId);
   if (!st || !place) return null;
@@ -59,18 +57,12 @@ export function tripPack(stayId: string, question: string, o: TripOptions = {}):
   const picked = pickNotes({
     notes: memory.value.values(), message: [question, place.name, st.note].join('\n'), tasks: steps, projects: projects.value.values(), budgetTokens: settings.value.memoryBudget,
   });
-  const text = [
-    'I use Réussite, a planning app built on a CBT method for adults with ADHD. Help me plan a trip, following the method.',
-    '## The method, in short\n\n' + methodSummary(l),
-    preferencesPack(settings.value.aiPreferences),
-    '## My data\n\n' + [header(), projectLines(), data, calibrationLine(steps.map(x => x.app))].filter(Boolean).join('\n\n'),
-    picked.length && `## What I have told Réussite about me and my people\n\nNote id | kind | name | aliases, then numbered lines. ${MEMORY_USE}\n\n` + picked.map(noteBlock).join('\n\n'),
-    '## How to propose changes\n\n' + changesetContract(),
-    '## This trip\n\n' + tripInstructions(place.id, cats.map(c => c.id)),
-    '## My question\n\n' + (question.trim() || tripQuestion()),
-    `${answerIn(l)} ` + (o.drop
-      ? `End your reply with the change-set. ${dropInstruction(o.drop)} Never include weights.`
-      : 'End your reply with one fenced code block labelled reussite that holds the change-set. Never include weights.'),
+  const rest = picked.filter(n => n.kind !== 'profile');
+  const system = systemPrompt(`Help the person plan a trip. ${tripInstructions(place.id, cats.map(c => c.id))}\n\nReply with the change-set JSON only, no prose; put what you want to say in "note". Never include weights.\n\n${changesetContract()}`, l);
+  const user = [
+    header(), projectLines(), data, calibrationLine(steps.map(x => x.app)),
+    rest.length ? `Memory (note id | kind | name | aliases, then numbered lines). ${MEMORY_USE}\n\n` + rest.map(noteBlock).join('\n\n') : '',
+    'Request:\n' + (question.trim() || tripQuestion()),
   ].filter(Boolean).join('\n\n');
-  return { text, notes: picked.map(n => n.name), days: dayList.length };
+  return { system, user, notes: picked.map(n => n.name), days: dayList.length };
 }

@@ -136,7 +136,10 @@ export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: 
   return { exchange: id };
 }
 
-/** A change-set that came from outside Home (a one-tap link, the relay's inbox, or a reply pasted into "Paste the reply") and was applied: its own exchange, so History lists it and Undo takes it back. */
+/**
+ * A change-set that came from outside Home (a one-tap link already sent, or the relay's inbox) and was applied: its own exchange, so History lists it
+ * and Undo takes it back. `paste` stays for the exchanges recorded when "Paste the reply" was still on the screens.
+ */
 export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox' | 'paste', n: number, undo: UndoDoc[]): Promise<void> {
   await addTurn({ at: new Date().toISOString(), text: cs.note.slice(0, 200) || t(src === 'link' ? 'arrivedLink' : src === 'paste' ? 'arrivedPaste' : 'arrivedInbox'), kind: 'changes', n }, { cs: gen.id('c'), undo }, src);
 }
@@ -144,6 +147,11 @@ export async function recordArrival(cs: ChangeSet, src: 'link' | 'inbox' | 'past
 /** The morning's change-set, ticked on the planning screen (src/flows/morning.tsx): an exchange of Home's own, so its receipt and Undo show on Home and in History. */
 export async function recordPlanning(cs: ChangeSet, n: number, undo: UndoDoc[]): Promise<void> {
   await addTurn({ at: new Date().toISOString(), text: t('mornRequest'), kind: 'changes', reply: cs.note || undefined, n }, { cs: gen.id('c'), undo });
+}
+
+/** A trip planned by the AI with the person's key (Plan this trip, src/ai/ui.tsx), ticked on the review screen: an exchange of Home's own, with its receipt and Undo, as the morning's. */
+export async function recordTrip(cs: ChangeSet, n: number, undo: UndoDoc[], text: string): Promise<void> {
+  await addTurn({ at: new Date().toISOString(), text: text.slice(0, 200), kind: 'changes', reply: cs.note || undefined, n }, { cs: gen.id('c'), undo });
 }
 
 /** The Sunday review's goal changes, ticked on the review screen (src/flows/reviewai.tsx): an exchange of Home's own, with its receipt and Undo, as the morning's. */

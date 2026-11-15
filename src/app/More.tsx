@@ -28,6 +28,19 @@ export function Fold({ title, testid, open, onToggle, children }: { title: strin
   );
 }
 
+/**
+ * Brings a piece of the screen into view: every fold around it opens (and the piece itself, if it is one), it scrolls to the top, and its first
+ * button takes the focus. False when the piece is not on the screen.
+ */
+export function reveal(testid: string, focus = true): boolean {
+  const el = document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
+  if (!el) return false;
+  for (let d: HTMLDetailsElement | null = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true;
+  el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  if (focus) el.querySelector<HTMLElement>('button:not([disabled]), input, select, textarea')?.focus({ preventScroll: true });
+  return true;
+}
+
 /** Opens a Settings section from code (a link that points into it). */
 export function openFold(el: Element | null | undefined): void {
   const d = el?.closest('details.fold') ?? (el instanceof HTMLDetailsElement ? el : null);

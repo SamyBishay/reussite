@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningClock, newCardSheet, importSample, noSideways, goTab, goNotifications, undoLast, openMenu, expandSheet, addCard } from './helpers';
+import { carryOne, morningClock, newCardSheet, importSample, noSideways, goTab, goNotifications, undoLast, openMenu, expandSheet, addCard } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 
@@ -359,11 +359,7 @@ test('what is waiting is behind the bell: Home has a dot, the page lists it with
   await n.getByRole('button').click();
   await expect(page.getByTestId('carried-sheet')).toBeVisible(); // no bulk carry: the steps are asked one at a time
   expect((await live(page, 'days')).map(d => JSON.stringify(d.plan)).join()).toBe(before);
-  while (await page.getByTestId('carried-today').isVisible()) {
-    const title = await page.getByTestId('carried-card').innerText();
-    await page.getByTestId('carried-today').click();
-    await expect(page.getByTestId('carried-card').filter({ hasText: title })).toHaveCount(0);
-  }
+  while (await page.getByTestId('carried-today').isVisible()) await carryOne(page);
   await expect(page.getByTestId('carry-nudge')).toHaveCount(0);
   await expect(page.getByTestId('notifications-empty')).toBeVisible();
   await goTab(page, 'home');

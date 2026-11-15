@@ -1,7 +1,7 @@
 // Two-state buttons (request of 29 Oct, never verified until 10 Nov): "Drop it" → "Yes" and the other confirm buttons. When the button
 // is armed its label never wraps and nothing beside it moves, at 320 and 390, in English and French. Every confirm button is measured here.
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { expandSettings, goTab, openMenu, noSideways, setLanguage, PHONES, LANGS } from './helpers';
+import { carryAll, expandSettings, goTab, openMenu, noSideways, setLanguage, PHONES, LANGS } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const NOW = new Date(2026, 9, 26, 15, 0, 0);
@@ -108,11 +108,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await expect(page.getByTestId('ci-yesterday')).toBeVisible();
     await armed(page, page.getByTestId('carried-drop'), 'carried');
     // Answer the rest of the cards to reach the missed item.
-    for (let i = 0; i < 6; i++) {
-      if (await sheet(page).getByTestId('missed-remove').count()) break;
-      const today = page.getByTestId('carried-today');
-      if (await today.count()) await today.click(); else break;
-    }
+    await carryAll(page, sheet(page).getByTestId('missed-remove'));
     await armed(page, sheet(page).getByTestId('missed-remove'), 'missed');
   });
 

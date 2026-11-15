@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import './clock';
 import { sampleExport } from './fixture';
 
@@ -109,15 +109,25 @@ export async function importSample(page: Page) {
   await expect(page.getByTestId('first')).toContainText('Doctolib');
 }
 
-/** The ritual's first screens: each step left open yesterday is carried to today, one tap on its own card (nothing moves by itself now), until the shape screen. */
-export async function carryAll(page: Page) {
-  const card = page.getByTestId('carried-card'), shape = page.getByTestId('ci-shape');
+/** Today on the carried card shown, then wait until that card has gone, as a person waits for the next one: the answer is written first,
+ *  so the card stays a moment after the tap. (Matching it by its text instead never matched, so the next tap could land on the card
+ *  already answered and wait for ever when no card came after it: Android Chrome, every run, before 15 Nov.) */
+export async function carryOne(page: Page) {
+  const card = page.getByTestId('carried-card');
+  const answered = await card.elementHandle();
+  await card.getByTestId('carried-today').click();
+  await page.waitForFunction(el => !el?.isConnected, answered);
+  await answered?.dispose();
+}
+
+/** The ritual's first screens: each step left open yesterday is carried to today, one tap on its own card (nothing moves by itself now),
+ *  until `until` shows (the shape screen; a missed item's card comes before it when a fixed time has passed). */
+export async function carryAll(page: Page, until: Locator = page.getByTestId('ci-shape')) {
+  const card = page.getByTestId('carried-card');
   for (;;) {
-    await expect(card.or(shape)).toBeVisible();
-    if (await shape.isVisible()) return;
-    const title = await card.innerText();
-    await page.getByTestId('carried-today').click();
-    await expect(card.filter({ hasText: title })).toHaveCount(0);
+    await expect(card.or(until)).toBeVisible();
+    if (await until.isVisible()) return;
+    await carryOne(page);
   }
 }
 

@@ -3,7 +3,7 @@
 // kept, swapped or skipped with a tap; a short exchange adjusts it; it ends in one change-set on the existing review screen. The ritual
 // (src/flows/checkin.tsx) is one tap away and unchanged.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { today, projects, here } from '../app/store';
+import { today, projects, here, settings } from '../app/store';
 import { placeName } from '../app/sheets';
 import { T, proposalFor, rawPlan, personal, planEst } from '../app/model';
 import { dayPatch, planDaySlots } from '../app/actions';
@@ -25,6 +25,7 @@ import { prepareReview, ReviewList } from '../ai/Review';
 import type { Plan as ChangePlan } from '../ai/apply';
 import type { ChangeSet } from '../ai/changeset';
 import { openCheckin } from './checkin';
+import { openQuickDeal } from './quickdeal';
 import { t, fmtMin, lang, type Key } from '../i18n';
 
 const WHY: Record<MustWhy, Key | null> = { fixed: null, overdue: 'mornWhyOverdue', dueToday: 'mornWhyDueToday', urgent: 'mornWhyUrgent', carried: 'mornWhyCarried', check: 'mornWhyCheck' };
@@ -34,9 +35,12 @@ const ritual = () => { openCheckin(); };
 export function openMorning() {
   openSheet(<Morning key={'mo' + Date.now()} />, true);
 }
-/** "Plan the day" on Home and the morning push: the conversation when an AI is set up, else the ritual. */
+/**
+ * "Plan the day" on Home and the morning push: the conversation when an AI is set up; else, on a new install (the simple start, src/domain/start.ts),
+ * the quick deal on one screen, with the ritual one tap away; else the ritual, as an install from before always had it.
+ */
 export function openPlanDay() {
-  if (aiOn.value) openMorning(); else ritual();
+  if (aiOn.value) openMorning(); else if (settings.value.simpleSince) openQuickDeal(); else ritual();
 }
 
 function Morning() {

@@ -22,7 +22,7 @@ import { withTime, minutesBetween, shiftTime } from '../domain/calendar';
 import { dayOrder, dayLoad, type FixedItem } from '../domain/dayOrder';
 import { wallOf } from '../domain/zone';
 import { plan as makePlan, totalOf, pillarsOf, PILLARS, type PStep, type Plan, type PlanItem, type Preset, type Role } from '../domain/planner';
-import type { SuitId, Task } from '../data/schema';
+import type { Day, SuitId, Task } from '../data/schema';
 import { ask } from '../ai/ask';
 import { PlanReply, readAiPlan, planChangeSet, type PlanFault } from '../ai/features';
 import { planPrompt } from '../ai/prompts';
@@ -72,12 +72,44 @@ export function planInput(k: string, shape: { start: string; preset: Preset; fix
   };
 }
 
+/**
+ * Put a hand on the day: each standing item is copied for the day, a one-off with its time keeps its place on the list if it had one, the
+ * other cards join the list in order (`before` first), and the day is stamped dealt (`checkin`) with its first card, then its slots are laid out.
+ * The ritual's last screen and the quick deal (src/flows/quickdeal.tsx) both deal through it. Returns the first card.
+ */
+export async function dealHand(k: string, items: readonly PlanItem[], o: { before?: string[]; offers?: Record<string, OfferChoice>; patch?: Partial<Day> } = {}): Promise<string | null> {
+  const plan: string[] = [...(o.before ?? [])];
+  const optional: string[] = [];
+  let first: string | null = null;
+  for (const it of items) {
+    if (it.role === 'obligation' || (it.role === 'fixed' && T(it.id)?.template)) {
+      const nid = await cloneTemplate(it.id, k, it.at, offerFieldsFor(o.offers?.[it.id]));
+      if (nid) plan.push(nid);
+    } else if (it.role === 'fixed') {
+      // A one-off with its time: it keeps its place on the day's list if it had one.
+      if (rawPlan(k).includes(it.id)) plan.push(it.id);
+    } else {
+      plan.push(it.id);
+      if (it.role === 'optional') optional.push(it.id);
+      else first ??= it.id;
+    }
+  }
+  const done = rawPlan(k).filter(id => T(id)?.status === 'done');
+  const finalPlan = [...done.filter(id => !plan.includes(id)), ...plan];
+  await dayPatch(k, {
+    plan: finalPlan, checkin: new Date().toISOString(), optional,
+    first: first ? { id: first, title: T(first)?.title ?? '' } : null, ...o.patch,
+  }, plan); // what the plan puts on the day leaves any other day's list (a card is on one list)
+  await planDaySlots(k); // the plan's time: a slot for each planned step, never an `at`
+  return first;
+}
+
 type Screen = 'yesterday' | 'missed' | 'shape' | 'pillars' | 'plan' | 'first';
 interface FixedIn { title: string; at: string; dur: number }
 
 const STEPS = 4;
 /** The default start: now, to the next five minutes, but not before the day starts. */
-const startNow = (): string => {
+export const startNow = (): string => {
   const d = new Date(), m = Math.ceil((d.getHours() * 60 + d.getMinutes()) / 5) * 5;
   const hm = String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   return hm < settings.value.dayStart ? settings.value.dayStart : hm;
@@ -357,29 +389,10 @@ function Checkin() {
     await addSession(pid, minutes, 'done', 'timer', k);
     plan.push(pid);
     for (const f of fixed) await createDoc<Task>('tasks', newTaskDoc(f.title, 'C', 'inbox', { at: f.at, dur: f.dur, due: k, fixed: true, src: 'checkin', important: false }));
-    const optional: string[] = [];
-    let first: string | null = null;
-    for (const it of items) {
-      if (it.role === 'obligation' || (it.role === 'fixed' && T(it.id)?.template)) {
-        const nid = await cloneTemplate(it.id, k, it.at, offerFieldsFor(offers[it.id]));
-        if (nid) plan.push(nid);
-      } else if (it.role === 'fixed') {
-        // A one-off with its time: it keeps its place on the day's list if it had one.
-        if (rawPlan(k).includes(it.id)) plan.push(it.id);
-      } else {
-        plan.push(it.id);
-        if (it.role === 'optional') optional.push(it.id);
-        else first ??= it.id;
-      }
-    }
-    const done = rawPlan(k).filter(id => T(id)?.status === 'done');
-    const finalPlan = [...done.filter(id => !plan.includes(id)), ...plan];
-    await dayPatch(k, {
-      plan: finalPlan, checkin: new Date().toISOString(), shape: { start, end: until, preset }, optional,
-      ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}),
-      first: first ? { id: first, title: T(first)?.title ?? '' } : null, load: p.total.est,
-    }, plan); // what the plan puts on the day leaves any other day's list (a card is on one list)
-    await planDaySlots(k); // the plan's time: a slot for each planned step, never an `at`
+    const first = await dealHand(k, items, {
+      before: plan, offers,
+      patch: { shape: { start, end: until, preset }, ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}), load: p.total.est },
+    });
     // The first step alone: the one the day's order puts first now, which a fixed-time item close at hand may be.
     setFirstId(dayOrderOf(k).order[0]?.id ?? first);
     setBusy(false);

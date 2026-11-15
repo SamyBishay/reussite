@@ -52,7 +52,7 @@ export const frCore: Partial<Strings> = {
   listPlayed: 'Main jouée',
   allDone: 'Toutes les cartes de la main du jour sont jouées.',
   addOneOrClose: 'Ajoutez-en une, ou clôturez la journée.',
-  carryText: 'Des cartes d’hier sont encore ouvertes. Rien ne bouge tant que vous ne dites pas.',
+  carryText: 'Des cartes d’hier sont encore ouvertes. Rien ne bouge tant que vous ne le dites pas.',
   carryButton: 'Les décider une par une',
   start: 'Départ',
   add: 'Ajouter',

@@ -158,8 +158,9 @@
 .btn.twostate{display:inline-grid;justify-items:center;align-items:center;white-space:nowrap}
 .btn.twostate>span,.btn.twostate::after{grid-area:1/1}
 .btn.twostate::after{content:attr(data-other);visibility:hidden;height:0;overflow:hidden}
-/* The running card opens its sheet from a tap on its body; the sheet repeats the timer, Pause and Done at its top. */
-.first.running,.row.running{cursor:pointer}
+/* Start here (and a running row) opens its sheet from a tap on its body; the sheet repeats the timer, Pause and Played at its top. */
+.first.tap,.row.running{cursor:pointer}
+.pickfrom{margin-top:var(--s2)}
 .runstrip{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2) var(--s3);margin:var(--s2) 0}
 /* The Matrix's search field: full width at the top, the clear button inside its right end (a 44px target). */
 .matrixsearch{position:relative;margin:0 0 var(--s3)}

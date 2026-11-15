@@ -29,6 +29,8 @@ export const flows = {
   breakDown: (_id: string) => {},
   decide: (_decisionId: string | null, _link?: { taskId?: string; projectId?: string }) => {},
   stuck: (_id?: string) => {},
+  /** Deal the day (the morning, src/flows/morning.tsx). */
+  planDay: () => {},
   /** The after-visit screen (Addresses and people). */
   visit: (_addressId: string, _o: { stepId: string; day: string }) => {},
 };

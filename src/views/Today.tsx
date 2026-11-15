@@ -2,9 +2,9 @@
 // which edits any day's plan and first step (brief §5, Days).
 import { signal } from '@preact/signals';
 import { today, settings, currentStay, places, hereZone } from '../app/store';
-import { T, dayCards, dayDoc, whereOf, candidates, carriedOn, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, nudges, type T as Tk } from '../app/model';
+import { T, dayCards, dayDoc, whereOf, candidates, carriedOn, cardsOn, minutesOn, isOpen, decisionsToCheck, personal, planEst, isWaiting, dayOrderOf, hasLogged, nudges, type T as Tk } from '../app/model';
 import { startTask, addToday, setPlanOrder, reopen, removeToday, movePlan, setFirst } from '../app/actions';
-import { openTask, openDone, pauseTimer, openSwap, openPick, openStartedEarlier, flows, DropButton } from '../app/sheets';
+import { openTask, openDone, pauseTimer, openPick, openMove, openNote, flows, DropButton } from '../app/sheets';
 import { Title, Meta, GoLink, timerLabel } from '../app/ui';
 import { ChainFold } from '../app/ChainFold';
 import { DoneFold } from '../app/DoneFold';
@@ -62,14 +62,19 @@ function PlanGroupList({ g, k, optional, from, first, many, testid, proj, shown 
   );
 }
 
+/**
+ * Start here (15 Nov: fewer buttons on the face). One main row: Start (Continue once time is logged; Pause while it runs) and Played; one quiet row:
+ * Note, Move, Drop, and I'm stuck only for a card that was paused or carried over. A tap on the card opens its sheet, which holds the rest
+ * (Swap, I started earlier, I'm stuck, the whole form). `tests/e2e/taps.spec.ts` keeps every quick change within the taps it took before.
+ */
 function FirstCard({ tk }: { tk: Tk }) {
   const run = !!tk.started;
   const hasGo = !!tk.link || !!tk.prompt || !!tk.app;
+  const stuckOnFace = !run && (hasLogged(tk.id) || !!tk.resume || (tk.carried || 0) > 0);
   return (
-    <section class={'first' + (run ? ' running' : ' focus')} data-testid="first" data-task={tk.id} onClick={run ? openFromBody(tk.id) : undefined}>
+    <section class={'first tap' + (run ? ' running' : ' focus')} data-testid="first" data-task={tk.id} onClick={openFromBody(tk.id, true)} tabIndex={0} onKeyDown={openOnKey(tk.id, true)}>
       <div class="top">
         <p class="eyebrow">{run ? t('running') : t('startHere')}</p>
-        {!run && <div class="edits"><button class="btn" type="button" onClick={() => openSwap()}>{t('swap')}</button><button class="btn" type="button" onClick={() => openTask(tk.id)}>{t('edit')}</button></div>}
       </div>
       <p class="t"><Title s={tk.title} /></p>
       {tk.starter && !run && <p class="starter">{t('starterIs', { s: tk.starter })}</p>}
@@ -81,21 +86,22 @@ function FirstCard({ tk }: { tk: Tk }) {
           <>
             <span class="timerbox"><TimerRings tk={tk} /><Clock tk={tk} big /></span>
             <button class="btn" type="button" data-testid="pause-timer" onClick={() => pauseTimer(tk.id)}>{t('pause')}</button>
-            <button class="btn primary" type="button" onClick={() => openDone(tk.id)}>{t('done')}</button>
+            <button class="btn primary" type="button" data-testid="start-played" onClick={() => openDone(tk.id)}>{t('done')}</button>
             <GoLink tk={tk} variant="small" />
           </>
         ) : (
           <>
             {hasGo && <GoLink tk={tk} variant="big" />}
             <button class={'btn' + (hasGo ? '' : ' primary')} type="button" data-testid="go-timer" onClick={() => startTask(tk.id)}>{timerLabel(tk, hasGo ? 'justStart' : 'start')}</button>
-            <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
+            <button class="btn" type="button" data-testid="start-played" onClick={() => openDone(tk.id)}>{t('done')}</button>
           </>
         )}
       </div>
       <div class="go quiet">
-        {!run && <button class="btn small ghost" type="button" onClick={() => openStartedEarlier(tk.id)}>{t('startedEarlier')}</button>}
-        <button class="btn small ghost" type="button" onClick={() => flows.stuck(tk.id)} data-testid="stuck">{t('imStuck')}</button>
+        <button class="btn small ghost" type="button" data-testid="first-note" onClick={() => openNote(tk.id)}>{t('note')}</button>
+        {!run && <button class="btn small ghost" type="button" data-testid="first-move" onClick={() => openMove(tk.id)}>{t('moveShort')}</button>}
         {!run && <DropButton key={tk.id} tk={tk} />}
+        {stuckOnFace && <button class="btn small ghost" type="button" onClick={() => flows.stuck(tk.id)} data-testid="stuck">{t('imStuck')}</button>}
       </div>
       {!run && hasGo && <p class="hint">{t('openingStartsTimer')}</p>}
     </section>
@@ -105,17 +111,17 @@ function FirstCard({ tk }: { tk: Tk }) {
 /** Start here when a fixed-time item has taken over (src/domain/dayOrder.ts): its time, when to leave, and what can be done with it. A standing item not yet placed on the day has a card to edit only. */
 function FixedFirst({ tk, time, leave }: { tk: Tk; time: string; leave: string }) {
   return (
-    <section class="first focus" data-testid="first" data-task={tk.id} data-fixed="1">
+    <section class="first focus tap" data-testid="first" data-task={tk.id} data-fixed="1" onClick={openFromBody(tk.id)} tabIndex={0} onKeyDown={openOnKey(tk.id)}>
       <div class="top">
         <p class="eyebrow">{t('startHere')}</p>
-        <div class="edits"><button class="btn" type="button" onClick={() => openTask(tk.id)}>{t('edit')}</button></div>
+        {tk.template && <div class="edits"><button class="btn" type="button" onClick={() => openTask(tk.id)}>{t('edit')}</button></div>}
       </div>
       <p class="t" data-testid="first-fixed-line"><Title s={withTime(tk.title, time)} /> · {t('leaveAtLine', { t: leave })}</p>
       <p class="meta"><Meta tk={tk} /></p>
       {!tk.template && (
         <div class="go">
           <button class="btn primary" type="button" onClick={() => startTask(tk.id)} data-testid="go-timer">{timerLabel(tk)}</button>
-          <button class="btn" type="button" onClick={() => openDone(tk.id)}>{t('alreadyDone')}</button>
+          <button class="btn" type="button" data-testid="start-played" onClick={() => openDone(tk.id)}>{t('done')}</button>
         </div>
       )}
     </section>
@@ -146,10 +152,16 @@ function SuggestCard({ tk, played }: { tk: Tk; played: boolean }) {
   );
 }
 
-/** A tap on the body of the running card opens its sheet; the timer keeps running. Buttons, links and fields inside it keep their own meaning. */
-const openFromBody = (id: string) => (e: MouseEvent) => {
+/** A tap on the body of Start here (running or not) or of a running row opens its sheet; a timer keeps running. Buttons, links and fields inside it keep their own meaning. */
+const openFromBody = (id: string, first = false) => (e: MouseEvent) => {
   if ((e.target as Element).closest('button, a, input, select, textarea, summary, label, .grip')) return;
-  openTask(id);
+  openTask(id, 'matrix', first);
+};
+/** The same from the keyboard: Enter or Space on the card itself (it takes the focus, as its Edit button did). */
+const openOnKey = (id: string, first = false) => (e: KeyboardEvent) => {
+  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault();
+  openTask(id, 'matrix', first);
 };
 
 function Row({ tk, n, k, optional, at, shown }: { tk: Tk; n: number; k: string; optional?: boolean; at?: string; shown?: readonly string[] }) {
@@ -237,13 +249,6 @@ function OtherDay({ k }: { k: string }) {
           </label>
         </section>
       )}
-      {!past && (
-        <div class="adders">
-          <button class="btn" type="button" onClick={() => openPick('list', k)}>{t('fromYourList')}</button>
-          <button class="btn" type="button" onClick={() => openPick('standing', k)}>{t('leisurePeople')}</button>
-        </div>
-      )}
-      
       <h2 class="sec">{t('dayList')}</h2>
       {plan.length ? <PlanLists ids={sd.open} k={k} optional={optional} from={0} /> : <p class="hint">{t('emptyDay')}</p>}
       <DoneFold n={sd.done.length}><ol class="tableau">{sd.done.map(id => <Row key={id} tk={T(id)!} n={0} k={k} />)}</ol></DoneFold>
@@ -313,13 +318,7 @@ export function Today() {
         <div class="carry" data-testid="carry-card"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried} data-testid="carry-open">{t('carryButton')}</button></div>
       )}
       <div class="after-first">
-        <div class="adders" data-testid="adders">
-          {plan.length > 0 && !d?.checkin && <button class="btn" type="button" onClick={openPlanDay}>{t('planTheDay')}</button>}
-          <button class="btn" type="button" onClick={() => openPick('list')}>{t('fromYourList')}</button>
-          <button class="btn" type="button" onClick={() => openPick('standing')}>{t('leisurePeople')}</button>
-          {open.length > 0 && <button class="btn" type="button" onClick={() => flows.stuck()}>{t('imStuck')}</button>}
-        </div>
-        
+        {/* No row of adders (15 Nov): the round plus adds, and its sheet offers From your deck and Leisure & people. */}
         {rest.length > 0 && (
           <>
             <h2 class="sec">{fid ? t('then') : t('todaysList')} <span class="hint-inline">

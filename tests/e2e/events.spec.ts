@@ -11,7 +11,7 @@ const day = appDay; // the app's day, which starts at 05:00: before that it is s
 async function makeChain(page: Page, event = EVENT, nudge?: string, sideways = false) {
   await page.goto('/#today');
   await addCard(page, 'Ask the bellman');
-  await page.getByTestId('first').getByRole('button', { name: 'Edit' }).click();
+  await page.getByTestId('first').locator('p.t').click();
   await sheet(page).getByRole('button', { name: 'Break it down' }).click();
   await page.getByTestId('bd-first').getByRole('textbox').first().fill('Phone the bellman');
   await page.getByTestId('bd-first').getByRole('button', { name: 'Next' }).click();
@@ -50,7 +50,7 @@ test('something I’m waiting for: made in Break it down, listed under Waiting f
 
   // The first step done: the event is next in the chain but dormant, so nothing else appears on the list.
   await goTab(page, 'today');
-  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
+  await page.getByTestId('first').getByTestId('start-played').click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.locator('main')).not.toContainText(EVENT);
   await expect(page.locator('main')).not.toContainText('Book the tailor');
@@ -80,7 +80,7 @@ test('a nudge shows from its day, with three answers; a step can be turned into 
   await page.goto('/#today');
   await addCard(page, 'Hear back from the bank');
   // Turn it into something waited for, with a nudge a day ago: the time, estimate and quadrant fields go.
-  await page.getByTestId('first').getByRole('button', { name: 'Edit' }).click();
+  await page.getByTestId('first').locator('p.t').click();
   await sheet(page).getByTestId('task-more').locator('summary').click();
   await sheet(page).getByTestId('kind').selectOption('event');
   await expect(sheet(page).locator('input[name=est]')).toHaveCount(0);

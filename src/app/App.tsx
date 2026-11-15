@@ -37,7 +37,7 @@ import { t, lang } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
 import { aiReady } from '../ai/ask';
-import { openMorning } from '../flows/morning';
+import { openMorning, openPlanDay } from '../flows/morning';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
 import { decideOnboarding, onboarding } from './onboarding';
@@ -51,6 +51,7 @@ flows.breakDown = openBreakDown;
 flows.stuck = openStuck;
 flows.decide = (id, link) => void openDecision(id, link);
 flows.visit = openVisit;
+flows.planDay = openPlanDay;
 
 effect(() => { applyTheme(settings.value); });
 // "By time of day" re-checks every minute.

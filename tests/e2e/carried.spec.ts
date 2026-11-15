@@ -1,7 +1,7 @@
 // Carried and missed, one at a time (plan 2 Nov, S3): yesterday's open steps are each decided on their own card, a timed item whose
 // time passed gets Move / Remove, and nothing moves until the person answers. The clock is fixed to Monday 26 October, 15:00.
 import { test, expect, type Page } from '@playwright/test';
-import { expandSettings, noSideways } from './helpers';
+import { expandSettings, noSideways, dealTheDay } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const NOW = new Date(2026, 9, 26, 15, 0, 0);
@@ -41,7 +41,7 @@ async function start(page: Page, tab = 'today', extra: Record<string, Record<str
   await page.getByTestId('tab-' + tab).click();
 }
 async function ritual(page: Page) {
-  await page.locator('main').getByRole('button', { name: 'Deal the day' }).first().click();
+  await dealTheDay(page);
   await expect(page.getByTestId('ci-yesterday')).toBeVisible();
 }
 

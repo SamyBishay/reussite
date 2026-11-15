@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet, addCard, newCardSheet, morningDate } from './helpers';
+import { noSideways, openMenu, goTab, calEvent, expandSettings, expandSheet, addCard, newCardSheet, morningDate, dealTheDay } from './helpers';
 
 // Areas inside places, half days and people's pages (phase 4b). Every name here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -200,7 +200,7 @@ test('the morning check-in can say "afternoon in Heliopolis": the plan puts them
     await sheet(page).getByRole('button', { name: 'Save', exact: true }).click();
     await expect(sheet(page)).toBeHidden();
   }
-  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
+  await dealTheDay(page);
   await expect(page.getByTestId('ci-shape')).toBeVisible();
   await page.getByTestId('ci-start-at').fill('09:30'); // the start is now by default; the morning's area needs a morning start
   await page.getByTestId('ci-more').evaluate(d => { (d as HTMLDetailsElement).open = true; });

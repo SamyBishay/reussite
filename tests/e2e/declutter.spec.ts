@@ -14,11 +14,14 @@ test('a task sheet shows only the essentials until More is opened', async ({ pag
   await expect(s.locator('input[name=urgent]')).toBeVisible();
   await expect(s.locator('input[name=est]')).toBeVisible();
   await expect(s.locator('input[name=due]')).toBeVisible();
-  for (const hidden of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('select[name=project]'), s.locator('input[name=link]'), s.locator('input[name=app]')]) await expect(hidden).toBeHidden();
+  // The first move and the suit come first (15 Nov), with the title, the note, the due date and the estimate.
+  await expect(s.locator('input[name=starter]')).toBeVisible();
+  await expect(s.locator('select[name=suit]')).toBeVisible();
+  for (const hidden of [s.getByTestId('label'), s.locator('select[name=project]'), s.locator('input[name=link]'), s.locator('input[name=app]')]) await expect(hidden).toBeHidden();
   await expect(s.locator('textarea[name=note]')).toBeVisible(); // the note is never folded (30 Oct)
   await expect(s.getByTestId('task-more')).not.toHaveAttribute('open', '');
   await s.getByTestId('task-more').locator('summary').click();
-  for (const shown of [s.getByTestId('label'), s.locator('input[name=starter]'), s.locator('select[name=project]'), s.locator('input[name=link]')]) await expect(shown).toBeVisible();
+  for (const shown of [s.getByTestId('label'), s.locator('select[name=project]'), s.locator('input[name=link]')]) await expect(shown).toBeVisible();
 });
 
 test('More says how many hidden fields have a value', async ({ page }) => {
@@ -34,7 +37,7 @@ test('More says how many hidden fields have a value', async ({ page }) => {
   await expect(sheet(page)).toBeHidden();
   // Added by hand with nothing running, it is the first card.
   await expect(page.getByTestId('first')).toContainText('plumber');
-  await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByTestId('first').locator('p.t').click();
   await expect(sheet(page).getByTestId('task-more').locator('summary')).toHaveText('More · 2 set');
   // The fold stays closed (a count is a hint, not a surprise) and opens with a tap.
   await expect(sheet(page).getByTestId('task-more')).not.toHaveAttribute('open', '');

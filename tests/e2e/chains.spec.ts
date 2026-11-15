@@ -7,7 +7,7 @@ const sheet = (page: Page) => page.getByTestId('sheet');
 async function makeChain(page: Page) {
   await page.goto('/#today');
   await addCard(page, 'Gather papers');
-  await page.getByTestId('first').getByRole('button', { name: 'Edit' }).click();
+  await page.getByTestId('first').locator('p.t').click();
   await sheet(page).getByRole('button', { name: 'Break it down' }).click();
   await page.getByTestId('bd-first').getByRole('textbox').first().fill('Open the drawer');
   await page.getByTestId('bd-first').getByRole('button', { name: 'Next' }).click();
@@ -50,7 +50,7 @@ test('a chain is one card: +2 after on Today and the Matrix, unfolding, and the 
   await page.keyboard.press('Escape');
 
   await goTab(page, 'today');
-  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
+  await page.getByTestId('first').getByTestId('start-played').click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.getByTestId('first')).toContainText('Fill the form');
   await expect(page.getByTestId('first').getByTestId('chain-toggle')).toHaveText(/\+1 after/);

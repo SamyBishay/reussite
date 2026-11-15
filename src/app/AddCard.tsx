@@ -9,13 +9,17 @@ import { t } from '../i18n';
 const VIEWS = ['home', 'today', 'matrix', 'projects'];
 
 
-/** The round plus on Home, Today and the Matrix: the task sheet for a new step. On Today the step joins the day shown (not a past one). */
+/**
+ * The round plus on Home, Today and the Matrix: the task sheet for a new card. On Today the card joins the day shown (not a past one), and the
+ * sheet also offers that day's From your deck and Leisure & people: the plus is Today's one way to add (15 Nov; the row of adders is gone).
+ */
 export function AddCard() {
   if (!VIEWS.includes(view.value)) return null;
   const add = () => {
     if (view.value === 'projects') return openNewProject();
     const k = view.value === 'today' && dayView.value ? dayView.value : today.value;
-    openNewTask({}, view.value === 'today' && k >= today.value ? id => void addByHand(id, false, k) : undefined);
+    const onDay = view.value === 'today' && k >= today.value;
+    openNewTask({}, onDay ? id => void addByHand(id, false, k) : undefined, onDay ? k : undefined);
   };
   return (
     <button type="button" class="fab" onClick={add} aria-label={t('addCard')} title={t('addCard')} data-testid="add-card">

@@ -35,10 +35,10 @@ for (const width of [320, 375, 430]) {
     await goTab(page, 'today');
     const sheets: [string, () => Promise<void>][] = [
       ['task details', () => page.getByTestId('details').first().click()],
-      ['how long', () => page.getByTestId('first').getByRole('button', { name: 'Already played' }).click()],
-      ['swap', () => page.getByTestId('first').getByRole('button', { name: 'Swap' }).click()],
-      ['from your list', () => page.getByRole('button', { name: '+ From your deck' }).click()],
-      ['leisure', () => page.getByRole('button', { name: '+ Leisure & people' }).click()],
+      ['how long', () => page.getByTestId('first').getByTestId('start-played').click()],
+      ['swap', async () => { await page.getByTestId('first').locator('p.t').click(); await page.getByTestId('task-swap').click(); }],
+      ['from your list', async () => { await page.getByTestId('add-card').click(); await page.getByTestId('add-from-deck').click(); }],
+      ['leisure', async () => { await page.getByTestId('add-card').click(); await page.getByTestId('add-from-standing').click(); }],
       ['place', () => page.locator('.here').click()],
     ];
     for (const [name, open] of sheets) {
@@ -61,7 +61,7 @@ for (const width of [320, 375, 430]) {
 
 test('marking an untimed step done asks how long it took', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
+  await page.getByTestId('first').getByTestId('start-played').click();
   await expect(page.getByTestId('sheet')).toContainText('How long did it take?');
   // Estimate 10 min: ¼× 2.5 → 5, ½× → 5, 1× 10, 1½× 15, 2× 20
   await expect(page.getByTestId('dur')).toHaveText(['5 min', '10 min', '15 min', '20 min']);
@@ -73,7 +73,7 @@ test('marking an untimed step done asks how long it took', async ({ page }) => {
 
 test('the wheel and "didn’t time it" also finish the step', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('first').getByRole('button', { name: 'Already played' }).click();
+  await page.getByTestId('first').getByTestId('start-played').click();
   await page.getByRole('button', { name: 'I didn’t time it' }).click();
   await expect(page.getByTestId('first')).not.toContainText('Doctolib');
 });

@@ -212,7 +212,7 @@ test('with an AI: the review of a goal is a proposal; flip one answer, skip one,
   await expect(row('th2')).toContainText('Now: Not said');
   await expect(row('th3')).toHaveAttribute('data-moves', 'no');
   await expect(row('th3')).toContainText('Doesn’t belong to this goal');
-  expect(await ai.innerText()).not.toMatch(/\b(card|suit)s?\b/i);
+  expect(await ai.innerText()).not.toMatch(/\b(steps?|pillars?)\b/i);
 
   // Flip the references to "No"; skip the proposal to drop the old threads.
   await row('th2').getByTestId('goalai-moves-no').click();

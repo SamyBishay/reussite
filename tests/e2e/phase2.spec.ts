@@ -244,7 +244,7 @@ test('Plan my day: a plan with two Protect steps is set aside; a valid one is us
   await page.getByTestId('ai-send').click();
   await expect(page.getByTestId('ai-plan-rejected')).toContainText('it had more than one Protect card, so here is the hand the rules dealt');
   expect(await page.getByTestId('plan-items').innerText()).toBe(rulePlan);
-  expect(userText(seen)).toContain('The rule-based plan');
+  expect(userText(seen)).toContain('The hand the rules dealt');
   expect(userText(seen)).toContain('Calibration:');
 
   answer.text = 'Here you go:\n' + JSON.stringify({

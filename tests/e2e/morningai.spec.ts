@@ -104,7 +104,7 @@ test('the five sections show; skip a pillar item, swap a goal’s first step, ac
   // "Show me what's sent": the five sections go out as candidates, with the person's own names for the pillars.
   await expect(page.getByTestId('ai-preview')).toBeVisible();
   await expect(page.getByTestId('ai-user')).toContainText('1. Must happen');
-  await expect(page.getByTestId('ai-user')).toContainText('S = Work; D = Papers; C = Family; H = Life');
+  await expect(page.getByTestId('ai-user')).toContainText('S = Work (♠); D = Papers (♦); C = Family (♣); H = Life (♥)');
   await page.getByTestId('ai-send').click();
 
   await expect(page.getByTestId('morning-note')).toContainText('Dentist at 14:00');
@@ -124,8 +124,8 @@ test('the five sections show; skip a pillar item, swap a goal’s first step, ac
   await expect(page.getByTestId('morning-pillar-D').getByTestId('morning-new')).toBeVisible();
   await expect(page.getByTestId('morning-pillar-C')).toContainText('For family: text Mum about Sunday');
   await expect(page.getByTestId('morning-here')).toContainText('buy printer paper');
-  // The jargon of the app is not in what the person reads.
-  expect(await page.getByTestId('morning').innerText()).not.toMatch(/\b(card|suit)s?\b/i);
+  // The screen speaks the solitaire's words (14 Nov): never the old steps or pillars.
+  expect(await page.getByTestId('morning').innerText()).not.toMatch(/\b(steps?|pillars?)\b/i);
   await expect(page.getByTestId('morning-first')).toContainText('Open the tax site');
   const free = await page.getByTestId('morning-free').innerText();
   expect(free).toMatch(/^.+ of .+ free\.$/);

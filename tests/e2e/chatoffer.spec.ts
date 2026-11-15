@@ -87,7 +87,7 @@ test('in French the offer and its sentence are French, and fit at 320px', async 
   await expect(page.locator('#topbar')).toContainText('Réglages');
   await goNotifications(page);
   const offer = page.getByTestId('home-plan-chat');
-  await expect(offer).toHaveText('La planifier dans votre chat IA');
+  await expect(offer).toHaveText('La distribuer dans votre chat IA');
   await offer.click();
   await expect(page.locator('.toast')).toContainText('dites « Distribue ma journée avec Réussite »');
   await noSideways(page, 'home with the offer, 320px');

@@ -48,7 +48,7 @@ const SETUP = [
   { op: 'place.create', set: { name: 'Library' } },
 ];
 const ASKING = { say: 'What does a usual week look like for you?', changes: [] };
-const PROPOSAL = { say: 'You are finishing a thesis, you have two kids, and you want time for your sister. Here are four pillars and two places.', changes: SETUP };
+const PROPOSAL = { say: 'You are finishing a thesis, you have two kids, and you want time for your sister. Here are four suits and two places.', changes: SETUP };
 
 const placeCount = (page: Page) => page.evaluate(() => new Promise<number>(res => { const r = indexedDB.open('reussite'); r.onsuccess = () => { const q = r.result.transaction('places').objectStore('places').count(); q.onsuccess = () => res(q.result); }; }));
 
@@ -300,7 +300,7 @@ test.describe('with an AI, from Settings', () => {
     await page.getByTestId('ob-chat-send').click();
     // The proposal: its words, then every change with a tick.
     await expect(page.getByTestId('review')).toBeVisible();
-    await expect(page.getByTestId('ob-chat-you').last()).toContainText('four pillars and two places');
+    await expect(page.getByTestId('ob-chat-you').last()).toContainText('four suits and two places');
     expect(text(seen[before + 1]!)).toContain('usual week'); // the exchange so far goes with it
     await expect(page.getByTestId('chg')).toHaveCount(3);
     await expect(page.getByTestId('review')).toContainText('Suit 1');

@@ -19,8 +19,10 @@ export function FirstPlayed() {
   const played = tk?.status === 'done';
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (played) refreshPushState(); }, [played]);
-  // A first card that was dropped or is gone has nothing to say.
-  useEffect(() => { if (id && (!tk || tk.status === 'dropped')) dismissFirstCard(); }, [id, tk?.status]);
+  // A first card that was dropped has nothing to say. One the store does not hold is not put away: right after set-up the store has not yet
+  // caught up with the database (it follows it a moment later), and putting it away then lost the played card for good; a card that is
+  // gone shows nothing anyway.
+  useEffect(() => { if (id && tk?.status === 'dropped') dismissFirstCard(); }, [id, tk?.status]);
   if (!played) return null;
   const st = pushState.value;
   const ask = st === 'default' || (st === 'granted' && !pushOn.value);

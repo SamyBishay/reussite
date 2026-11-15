@@ -35,7 +35,7 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     // Finishing a card with logged time uses that total and never asks how long.
     await goTab(page, 'today');
     await expect(page.getByTestId('first').getByTestId('go-timer')).toHaveText(CONTINUE[lang]);
-    await page.getByTestId('first').getByRole('button', { name: lang === 'fr' ? 'Déjà jouée' : 'Already played' }).click();
+    await page.getByTestId('first').getByTestId('start-played').click();
     await expect(page.getByTestId('sheet')).toBeHidden();
     await page.goto('/#task/' + id);
     await expect(page.getByTestId('done-day')).toBeVisible();

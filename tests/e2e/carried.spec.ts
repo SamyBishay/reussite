@@ -1,7 +1,7 @@
 // Carried and missed, one at a time (plan 2 Nov, S3): yesterday's open steps are each decided on their own card, a timed item whose
 // time passed gets Move / Remove, and nothing moves until the person answers. The clock is fixed to Monday 26 October, 15:00.
 import { test, expect, type Page } from '@playwright/test';
-import { carryOne, expandSettings, noSideways } from './helpers';
+import { carryOne, expandSettings, noSideways, dealTheDay } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const NOW = new Date(2026, 9, 26, 15, 0, 0);
@@ -50,7 +50,7 @@ async function carryThree(page: Page) {
   await carryOne(page);
 }
 async function ritual(page: Page) {
-  await page.locator('main').getByRole('button', { name: 'Deal the day' }).first().click();
+  await dealTheDay(page);
   await expect(page.getByTestId('ci-yesterday')).toBeVisible();
 }
 

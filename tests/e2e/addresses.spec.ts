@@ -46,13 +46,13 @@ const card = (page: Page, title: string) => page.locator('[data-task]').filter({
 async function markDone(page: Page, title: string) {
   const c = card(page, title);
   if (await c.getByTestId('row-done').count()) await c.getByTestId('row-done').click();
-  else await c.getByRole('button', { name: 'Already played' }).click();
+  else await c.getByTestId('start-played').click();
   await sheet(page).getByRole('button', { name: 'I didn’t time it' }).click();
 }
 async function openStep(page: Page, title: string) {
   const c = card(page, title);
   if (await c.getByTestId('details').count()) await c.getByTestId('details').click();
-  else await c.getByRole('button', { name: 'Edit', exact: true }).click();
+  else await c.locator('p.t').click();
 }
 const dayKey = () => {
   const d = new Date();

@@ -1,11 +1,11 @@
 // Moving a step (to a quadrant, or onto a day), swapping the first step, picking from the list or a standing item, and a suit pile.
 import { useState } from 'preact/hooks';
 import { today, toast } from './store';
-import { T, planOf, cardsOn, candidates, minutesOnFor, byOrder, inPlace, isOpen, quad, type T as Tk } from './model';
+import { T, planOf, rawPlan, cardsOn, candidates, minutesOnFor, byOrder, inPlace, isOpen, isEvent, quad, type T as Tk } from './model';
 import { tasks } from './store';
-import { patchTask, addByHand, cloneTemplate, setFirst, planOn, dueOn, moveDone } from './actions';
+import { patchTask, addByHand, cloneTemplate, setFirst, planOn, dueOn, moveDone, removeToday } from './actions';
 import { closeSheet, openSheet, Title, Meta, Suit, suitName, quadName } from './ui';
-import { DayPick } from './due';
+import { DayPick, DayChips } from './due';
 import { t, fmtMin, fmtDate, lang } from '../i18n';
 import { ended } from '../domain/standing';
 import { moveTo } from '../domain/moves';
@@ -16,7 +16,7 @@ import { rankOf } from './sheetBase';
 import { openTask } from './taskSheet';
 
 // ---------- moving a step ----------
-/** Matrix: to another quadrant. Calendar: plan it on a day, or make a day its due date. */
+/** Matrix (every move but the Calendar's): to another quadrant, or to another day or off today. Calendar: plan it on a day, or make a day its due date. */
 export function openMove(id: string, mode: 'matrix' | 'calendar' = 'matrix') {
   openSheet(<MoveSheet key={'move' + id + mode} id={id} mode={mode} />);
 }
@@ -49,6 +49,9 @@ function MoveSheet({ id, mode }: { id: string; mode: 'matrix' | 'calendar' }) {
     );
   }
   const cur = isOpen(tk) ? quad(tk) : null;
+  // An open card can also go to another day (and off today's hand): one sheet for every move, from Start here, a row's sheet or the Matrix.
+  const days = isOpen(tk) && !tk.template && !isEvent(tk);
+  const onToday = days && rawPlan(k).includes(id);
   return (
     <div data-testid="move">
       <h3>{t('moveTo')}</h3>
@@ -61,9 +64,19 @@ function MoveSheet({ id, mode }: { id: string; mode: 'matrix' | 'calendar' }) {
           </>}
         </div>
       ) : (
-        <div class="quadpick">
-          {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" class="btn" disabled={cur === q} onClick={() => go(q)} data-testid={'to-q' + q}>{quadName(q)}</button>)}
-        </div>
+        <>
+          <div class="quadpick">
+            {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" class="btn" disabled={cur === q} onClick={() => go(q)} data-testid={'to-q' + q}>{quadName(q)}</button>)}
+          </div>
+          {days && (
+            <>
+              <h4 class="move-sub">{t('planItOn')}</h4>
+              <DayChips from={k} testid="move-days" onPick={d => { closeSheet(); void planOn(id, d); toast(t('plannedOn', { date: fmtDate(d) })); }}>
+                {onToday && <button type="button" data-testid="move-off-today" onClick={() => { closeSheet(); void removeToday(id); toast(t('takenOffToday')); }}>{t('takeOffToday')}</button>}
+              </DayChips>
+            </>
+          )}
+        </>
       )}
     </div>
   );

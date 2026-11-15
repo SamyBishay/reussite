@@ -1,7 +1,7 @@
 // The task sheet: the form for a step (place, repeat, waits for, goes to, dates, slots), a new step, and the places for a select.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { settings, projects, today, places, toast, stays, here } from './store';
-import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
+import { T, addressesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayCards, isWaiting, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
 import { patchTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, skipThisTime, stopRepeating, addPlace, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists } from './actions';
 import { openHappened } from './EventUi';
@@ -22,9 +22,9 @@ import { dueBeforeEnd, isArea } from '../domain/places';
 import { placeRows } from '../domain/areas';
 import { SUIT_ORDER } from '../data/settings';
 import type { Repeat, Task } from '../data/schema';
-import { openMove } from './moveSheets';
+import { openMove, openSwap, openPick } from './moveSheets';
 import { flows, placeName } from './sheetBase';
-import { Sessions, openDone, openDoneOn, pauseTimer } from './timerSheets';
+import { Sessions, openDone, openDoneOn, pauseTimer, openStartedEarlier } from './timerSheets';
 
 /** The places for a select: each followed by its areas, indented ("Cairo › Heliopolis"), then Anywhere. */
 export const placeOptions = () => [
@@ -58,13 +58,17 @@ export function PlaceSelect({ value, onChange, name }: { value: string; onChange
 /** `moveMode` 'calendar': from the Calendar, the sheet's Move to… offers "Plan it on…" and "Due on…" in place of the quadrants. */
 export { DropButton };
 
-export function openTask(id: string, moveMode: 'matrix' | 'calendar' = 'matrix') {
-  openSheet(<TaskSheet key={id + Date.now()} id={id} moveMode={moveMode} />);
+/** `first`: opened from Start here, so the sheet also holds what left its face (Swap, I started earlier, I'm stuck). */
+export function openTask(id: string, moveMode: 'matrix' | 'calendar' = 'matrix', first = false) {
+  openSheet(<TaskSheet key={id + Date.now()} id={id} moveMode={moveMode} first={first} />);
 }
-/** A new step in the task sheet, filled from `prefill`. Nothing is written until Save; then `onSaved` gets the new id. */
-export function openNewTask(prefill: Partial<Task> = {}, onSaved?: (id: string) => void) {
+/**
+ * A new step in the task sheet, filled from `prefill`. Nothing is written until Save; then `onSaved` gets the new id. `pickOn` (Today's round plus,
+ * with the day shown): the sheet also offers that day's From your deck and Leisure & people, which used to be buttons on Today.
+ */
+export function openNewTask(prefill: Partial<Task> = {}, onSaved?: (id: string) => void, pickOn?: string) {
   const { title = '', suit = null, project = null, ...extra } = prefill;
-  openSheet(<TaskForm key={'new' + Date.now()} tk={{ ...newTaskDoc(title, suit, project, extra), id: '' }} draft onSaved={onSaved} />);
+  openSheet(<TaskForm key={'new' + Date.now()} tk={{ ...newTaskDoc(title, suit, project, extra), id: '' }} draft onSaved={onSaved} pickOn={pickOn} />);
 }
 
 const REPEAT_KINDS = ['never', 'day', 'week', 'month', 'custom'] as const;
@@ -162,13 +166,43 @@ function FeedsField({ where, value, onChange, onWhere }: { where: string; value:
   );
 }
 
-function TaskSheet({ id, moveMode }: { id: string; moveMode: 'matrix' | 'calendar' }) {
+function TaskSheet({ id, moveMode, first }: { id: string; moveMode: 'matrix' | 'calendar'; first: boolean }) {
   const tk = T(id);
-  return tk ? <TaskForm tk={tk} moveMode={moveMode} /> : null;
+  return tk ? <TaskForm tk={tk} moveMode={moveMode} first={first} /> : null;
+}
+
+/** The note's box: shown in full (it grows to its text) when it opens and as it is typed. The card's form and the note sheet share it. */
+export function NoteField({ value, onInput }: { value: string; onInput?: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = () => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 2 + 'px'; } };
+  useEffect(() => { fit(); requestAnimationFrame(fit); }, []);
+  return <label class="field note-field"><span>{t('note')}</span><textarea ref={ref} name="note" data-testid="note" defaultValue={value} onInput={e => { onInput?.((e.target as HTMLTextAreaElement).value); fit(); }} /></label>;
+}
+
+/** Note, on Start here's face: the card's note alone, and Save. */
+export function openNote(id: string) {
+  openSheet(<NoteSheet key={'note' + id + Date.now()} id={id} />);
+}
+function NoteSheet({ id }: { id: string }) {
+  const tk = T(id);
+  if (!tk) return null;
+  const submit = (e: Event) => {
+    e.preventDefault();
+    const v = ((e.currentTarget as HTMLFormElement).elements.namedItem('note') as HTMLTextAreaElement).value;
+    closeSheet();
+    if (v !== (tk.note || '')) { void patchTask(id, { note: v }); toast(t('saved')); }
+  };
+  return (
+    <form onSubmit={submit} data-testid="note-sheet">
+      <h3><Title s={tk.title} /></h3>
+      <NoteField value={tk.note || ''} />
+      <div class="actions"><button class="btn primary" type="submit" data-testid="note-save">{t('save')}</button></div>
+    </form>
+  );
 }
 
 /** The sheet's body. A `draft` is a step not yet written: the same form, and Save creates it. */
-function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void; moveMode?: 'matrix' | 'calendar' }) {
+function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix', first = false, pickOn }: { tk: Tk; draft?: boolean; onSaved?: (id: string) => void; moveMode?: 'matrix' | 'calendar'; first?: boolean; pickOn?: string }) {
   const id = tk.id;
   const [estV, setEstV] = useState(tk.est ? String(tk.est) : '');
   const [where, setWhere] = useState(whereOf(tk));
@@ -191,10 +225,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   // A time written in the title or the note, with no fixed time set: offer to set it.
   const [titleV, setTitleV] = useState(tk.title);
   const [noteV, setNoteV] = useState(tk.note || '');
-  // The note is shown in full when the sheet opens: the box grows to its text.
-  const noteRef = useRef<HTMLTextAreaElement>(null);
-  const fitNote = () => { const el = noteRef.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 2 + 'px'; } };
-  useEffect(() => { fitNote(); requestAnimationFrame(fitNote); }, []);
   const [atV, setAtV] = useState(tk.at ?? '');
   // The end is picked on the clock like the start; the length (`dur`) is worked out from the two.
   const [endV, setEndV] = useState(tk.at && tk.dur ? shiftTime(tk.at, tk.dur) : '');
@@ -213,7 +243,9 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
   const measure = measureOf(proj);
   const asksGoal = !tk.template && !ev && !!proj && tk.project !== 'inbox' && (measure.kind !== 'none' || tk.advances != null);
   // Optional fields live under More; the summary counts the ones that have a value.
-  const hiddenSet = countSet(tk.label, tk.starter, tk.project !== 'inbox' ? tk.project : '', proj && proj.suit !== tk.suit, feed, kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
+  const hiddenSet = countSet(tk.label, tk.project !== 'inbox' ? tk.project : '', feed,kindV !== 'task', tk.template, tk.template ? tk.offer : '', after, tk.app, tk.link, tk.prompt, repeat, tk.template ? weekdays : [], tk.template ? untilV : '', rule);
+  // The place is asked only once there is a place other than Anywhere to pick (or the card already has one).
+  const placeShown = places.value.size > 0 || where !== 'any';
   const stayList = [...stays.value.values()].filter(s => s.to >= today.value).sort((a, b) => a.from.localeCompare(b.from));
 
   const write = (p: Partial<Task>) => {
@@ -367,10 +399,25 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
             {tk.repeat && <button class="btn small ghost" type="button" onClick={() => { void stopRepeating(id); closeSheet(); }}>{t('stopRepeating')}</button>}
           </>
         )}
+        {first && open && !wasEvent && (
+          <>
+            {!tk.started && <button class="btn small" type="button" data-testid="task-swap" onClick={() => openSwap()}>{t('swap')}</button>}
+            {!tk.started && <button class="btn small" type="button" data-testid="task-started-earlier" onClick={() => openStartedEarlier(id)}>{t('startedEarlier')}</button>}
+            <button class="btn small" type="button" data-testid="stuck" onClick={() => flows.stuck(id)}>{t('imStuck')}</button>
+          </>
+        )}
         {tk.status !== 'dropped' && !draft && (
           <DropButton tk={tk} onDrop={closeSheet} />
         )}
       </div>
+      {draft && pickOn && (
+        <div class="go quiet pickfrom" data-testid="add-from">
+          <button class="btn small ghost" type="button" data-testid="add-from-deck" onClick={() => openPick('list', pickOn)}>{t('fromYourList')}</button>
+          <button class="btn small ghost" type="button" data-testid="add-from-standing" onClick={() => openPick('standing', pickOn)}>{t('leisurePeople')}</button>
+          {/* The hand as Today shows it, fixed-time cards of the day included, as the row of adders had it. */}
+          {pickOn === today.value && dayCards(pickOn).some(x => !isWaiting(x)) && !dayDoc(pickOn)?.checkin && <button class="btn small ghost" type="button" data-testid="add-from-deal" onClick={() => { closeSheet(); flows.planDay(); }}>{t('planTheDay')}</button>}
+        </div>
+      )}
       <label class="field"><span>{t('stepField')}</span><input type="text" name="title" defaultValue={tk.title} required onInput={e => setTitleV((e.target as HTMLInputElement).value)} /></label>
       {ev && (
         <>
@@ -378,6 +425,9 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <p class="hint">{t('nudgeHint')}</p>
         </>
       )}
+      {/* First: the title, the first move, the note, the due date, the estimate and the suit (15 Nov); then the place, when there is one to pick. */}
+      {!ev && <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>}
+      <NoteField value={tk.note || ''} onInput={setNoteV} />
       {!ev && (
         <>
       <fieldset class="fieldgroup" data-testid="group-due"><legend>{t('fieldDue')}</legend>
@@ -387,6 +437,22 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         </div>
         <p class="hint">{t('dueFieldHint')}</p>
       </fieldset>
+      <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
+      {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
+        </>
+      )}
+      <label class="field"><span>{t('suit')}</span>
+        <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
+      </label>
+      {!ev && (
+        <>
+      {placeShown && <label class="field" data-testid="where-field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>}
+      <div class="field"><span>{t('urgImp')}</span>
+        <div class="toggles">
+          <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>
+          <label class="tog"><input type="checkbox" name="important" defaultChecked={!!tk.important} /> {t('importantLabel')}</label>
+        </div>
+      </div>
       <fieldset class="fieldgroup" data-testid="group-at"><legend>{t('fieldAt')}</legend>
       <div class="row2 timebox" data-testid="timebox">
         <label class="field"><span>{t('startField')}</span>
@@ -412,14 +478,6 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
         <p class="hint">{t('slotHint')}</p>
         <SlotLog tk={tk} />
       </fieldset>
-      <div class="field"><span>{t('urgImp')}</span>
-        <div class="toggles">
-          <label class="tog"><input type="checkbox" name="urgent" defaultChecked={!!tk.urgent} /> {t('urgentLabel')}</label>
-          <label class="tog"><input type="checkbox" name="important" defaultChecked={!!tk.important} /> {t('importantLabel')}</label>
-        </div>
-      </div>
-      <label class="field"><span>{t('estimateField')}</span><input type="number" name="est" min="1" max="600" inputMode="numeric" value={estV} onInput={e => setEstV((e.target as HTMLInputElement).value)} /></label>
-      <label class="field" data-testid="where-field"><span>{t('where')}</span><PlaceSelect value={where} onChange={setWhere} /></label>
       {asksGoal && (
         <div class="field" data-testid="moves-goal"><span>{t('movesGoal')}</span>
           <div class="seg small" role="group" aria-label={t('movesGoal')}>
@@ -435,24 +493,18 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix' }: { tk: Tk;
           <small class="hint">{t('movesGoalHint')}</small>
         </div>
       )}
-      {typed && open && <p class="hint pe" data-testid="personal">{pe && pe.value !== typed ? t('estUsually', { a: fmtMin(typed), b: fmtMin(pe.value), lo: fmtMin(pe.lo), hi: fmtMin(pe.hi) }) + ' · ' + basisLine({ ...tk, est: typed }) : pe ? basisLine({ ...tk, est: typed }) : learningLine()}</p>}
       {tk.prompt && <div class="actions" style="margin-top:var(--s2)"><button class="btn small" type="button" onClick={copy}>{t('copyPrompt')}</button><GoLink tk={tk} variant="small" /></div>}
       {!tk.prompt && <div class="actions" style="margin-top:var(--s3)"><GoLink tk={tk} variant="small" /></div>}
         </>
       )}
       {err && <p class="err">{err}</p>}
-      <label class="field note-field"><span>{t('note')}</span><textarea ref={noteRef} name="note" data-testid="note" defaultValue={tk.note || ''} onInput={e => { setNoteV((e.target as HTMLTextAreaElement).value); fitNote(); }} /></label>
       <More n={hiddenSet} testid="task-more">
       {!ev && (
         <>
           <label class="field"><span>{t('labelField')}</span><input type="text" name="label" defaultValue={tk.label ?? ''} placeholder={deriveLabel(titleV, tk.starter)} autocomplete="off" data-testid="label" /></label>
           <p class="hint">{t('labelHint')}</p>
-          <label class="field"><span>{t('starterField')}</span><input type="text" name="starter" defaultValue={tk.starter ?? ''} placeholder={t('starterPh')} autocomplete="off" /></label>
         </>
       )}
-      <label class="field"><span>{t('suit')}</span>
-        <select name="suit">{SUIT_ORDER.map(s => <option value={s} selected={s === tk.suit}>{settings.value.suits[s].glyph} {suitName(s, true)}</option>)}</select>
-      </label>
       <label class="field"><span>{t('project')}</span>
         <select name="project">{projs.map(p => <option value={p.id} selected={p.id === tk.project}>{(settings.value.suits[p.suit]?.glyph ?? '') + ' ' + p.name}</option>)}</select>
       </label>

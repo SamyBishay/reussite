@@ -52,6 +52,8 @@ export const frSteps: Partial<Strings> = {
   doneOnDay: 'Jouée le {date}.',
   moveTo: 'Déplacer vers…',
   movedTo: 'Déplacée vers {q}.',
+  moveShort: 'Déplacer',
+  takenOffToday: 'Retirée d’aujourd’hui.',
   breakItDown: 'La découper',
   openDecision: 'Travailler la décision',
   skipThisTime: 'Passer cette fois',

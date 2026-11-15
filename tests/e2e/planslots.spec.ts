@@ -1,7 +1,7 @@
 // Plan my day writes slots, never a time (plan 10 Nov): once the morning ritual's plan is accepted, each planned step has a slot at the time
 // the plan showed for it, a log entry "planned", and no `at`; an appointment is not given a slot. The clock is fixed to a Monday, 08:00.
 import { test, expect, type Page } from '@playwright/test';
-import { expandSettings, noSideways, PHONES, LANGS } from './helpers';
+import { expandSettings, noSideways, PHONES, LANGS, dealTheDay } from './helpers';
 
 const at = (hh: number, mm: number) => new Date(2026, 9, 26, hh, mm, 0); // Monday 26 October
 const DAY = '2026-10-26';
@@ -39,7 +39,7 @@ for (const language of LANGS) {
       await page.getByRole('button', { name: /^(Import|Importer)$/ }).click();
       await expect(page.getByTestId('sheet')).toBeHidden();
       await page.getByTestId('tab-today').click();
-      await page.locator('main').getByRole('button', { name: language === 'fr' ? 'Distribuer la journée' : 'Deal the day' }).click();
+      await dealTheDay(page);
       await expect(page.getByTestId('ci-shape')).toBeVisible();
       await page.getByTestId('ci-next').click();
       await page.getByTestId('ci-next').click();

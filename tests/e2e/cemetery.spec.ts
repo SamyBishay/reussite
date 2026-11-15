@@ -6,7 +6,7 @@ test('a dropped card leaves every list, waits in the Cemetery, and Restore bring
   await addCard(page, 'Buried errand');
   const row = page.locator('[data-task]', { hasText: 'Buried errand' });
   await expect(row).toHaveCount(1);
-  await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByTestId('first').locator('p.t').click();
   const sheet = page.getByTestId('sheet');
   await sheet.getByRole('button', { name: 'Drop it' }).click();
   await sheet.getByRole('button', { name: 'Yes' }).click();

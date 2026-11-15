@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningDate, appDay, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet, openAllProjects } from './helpers';
+import { morningDate, appDay, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSheet, addCard, newCardSheet, openAllProjects, dealTheDay, openStartHere, stuckOnStartHere } from './helpers';
 
 const iso = (n: number) => { const x = new Date(); x.setHours(12); x.setDate(x.getDate() + n - (new Date().getHours() < 5 ? 1 : 0)); return x.toISOString().slice(0, 10); };
 const sheet = (page: Page) => page.getByTestId('sheet');
@@ -27,7 +27,7 @@ test('a place can be added from the place switcher on a fresh start', async ({ p
 
 test('morning check-in: yesterday, shape, then a rule-based plan', async ({ page }) => {
   await importSample(page);
-  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
+  await dealTheDay(page);
   await expect(page.getByTestId('ci-yesterday')).toContainText('text Alex');
   await carryAll(page);
   await expect(page.getByTestId('ci-shape')).toBeVisible();
@@ -103,7 +103,8 @@ test('a stay switches the current place on its first day', async ({ page }) => {
 
 test('a forgotten timer is fixed in two taps', async ({ page }) => {
   await importSample(page);
-  await page.getByTestId('first').getByRole('button', { name: 'I started earlier' }).click();
+  await openStartHere(page);
+  await sheet(page).getByTestId('task-started-earlier').click();
   await sheet(page).locator('select').first().selectOption('2');
   await sheet(page).getByRole('button', { name: 'Started that long ago' }).click();
   await expect(page.getByTestId('still-banner')).toBeVisible();
@@ -216,7 +217,7 @@ test('the close of the day ends on St George: a tap skips it at once; Calm is a 
 test('an ordinary Done never brings St George; the day’s last card does', async ({ page }) => {
   await importSample(page);
   const sg = page.getByTestId('stgeorge');
-  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already played' });
+  const doneBtn = page.getByTestId('first').getByTestId('start-played');
   let seen = false;
   for (let i = 0; i < 12 && await doneBtn.count() > 0; i++) {
     await doneBtn.click();
@@ -237,7 +238,7 @@ test('St George’s pictures are fetched when one card is left, and the fight is
   const sg = page.getByTestId('stgeorge');
   let fetched = false;
   page.on('response', r => { if (/\/assets\/knight-[\w-]+\.webp$/.test(r.url()) && r.ok()) fetched = true; });
-  const doneBtn = page.getByTestId('first').getByRole('button', { name: 'Already played' });
+  const doneBtn = page.getByTestId('first').getByTestId('start-played');
   for (let i = 0; i < 12 && !fetched && await doneBtn.count() > 0; i++) {
     await doneBtn.click();
     await page.getByRole('button', { name: 'I didn’t time it' }).click();
@@ -270,7 +271,7 @@ for (const width of [320, 375, 430]) {
     await importSample(page);
     const check = async (name: string) => { await noSideways(page, name); };
     // Check-in, each screen.
-    await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
+    await dealTheDay(page);
     await check('check-in yesterday');
     await carryAll(page);
     await check('check-in shape');
@@ -288,7 +289,7 @@ for (const width of [320, 375, 430]) {
     await check('break it down');
     await page.keyboard.press('Escape');
     // I'm stuck.
-    await page.getByTestId('stuck').click();
+    await stuckOnStartHere(page);
     await check('stuck: friction');
     await sheet(page).getByRole('button', { name: /Can’t start/ }).click();
     await check('stuck: starter');

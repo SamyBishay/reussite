@@ -172,6 +172,31 @@ export async function noSideways(page: Page, where: string) {
 /** A calendar event (the library's own element) by its words, in the Calendar tab's grid. */
 export const calEvent = (page: Page, text: string | RegExp) => page.getByTestId('calendar-grid').locator('.sx__event', { hasText: text });
 
+/**
+ * Deal the day from Today: the button of a day with no hand yet (or of Start here's suggestion); once the hand has cards and the day is not dealt,
+ * it is in the round plus's sheet (15 Nov: Today has no row of adders).
+ */
+export async function dealTheDay(page: Page) {
+  await expect(page.getByTestId('first').first()).toBeVisible();
+  const own = page.locator('main').getByTestId('checkin').first();
+  if (await own.isVisible()) return own.click();
+  await page.getByTestId('add-card').click();
+  await page.getByTestId('sheet').getByTestId('add-from-deal').click();
+}
+
+/** Start here's sheet: a tap on the card (its title), which holds Swap, I started earlier and I'm stuck (15 Nov: no longer on its face). */
+export async function openStartHere(page: Page) {
+  await page.getByTestId('first').locator('p.t').first().click();
+  await expect(page.getByTestId('sheet').getByTestId('task-sheet')).toBeVisible();
+}
+/** I'm stuck on Start here's card: on its face once it was paused or carried over, otherwise in its sheet. */
+export async function stuckOnStartHere(page: Page) {
+  const face = page.getByTestId('first').getByTestId('stuck');
+  if (await face.count()) return face.click();
+  await openStartHere(page);
+  await page.getByTestId('sheet').getByTestId('stuck').click();
+}
+
 /** The round plus: opens the task sheet for a new step, with the title typed. */
 export async function newCardSheet(page: Page, title = '') {
   await page.getByTestId('add-card').click();

@@ -95,7 +95,7 @@ test('a fixed-time item rings at its minute: the relay posts a VAPID-signed push
   await addCard(page, 'Choir, Hill House 602');
   // Added by hand with nothing running, it goes to the top of what is left: it is the first card.
   const row = page.locator('.row', { hasText: 'Choir, Hill House 602' });
-  await page.getByTestId('first').getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByTestId('first').locator('p.t').click();
   await sheet(page).locator('details.more summary').click();
   await expandSheet(page);
   await sheet(page).locator('input[name=template]').check();

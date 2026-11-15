@@ -141,7 +141,8 @@ test('the Sunday review and the day\'s "Leisure & people" list offer too', async
   // Another day's "Leisure & people": choose, then Add.
   await page.goto('/#today');
   await page.getByTestId('next-day').click();
-  await page.getByRole('button', { name: 'Leisure & people' }).click();
+  await page.getByTestId('add-card').click();
+  await sheet(page).getByTestId('add-from-standing').click();
   await sheet(page).getByTestId('offer').filter({ hasText: 'Café Mokka' }).click();
   await sheet(page).getByRole('button', { name: 'Add', exact: true }).click();
   await expect(sheet(page).getByTestId('offers')).toHaveCount(0);

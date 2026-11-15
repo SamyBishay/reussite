@@ -27,11 +27,12 @@ test('each box shows its first three cards and a View all button only when there
     await expect(page.getByTestId('quad' + j).locator('.item')).toHaveCount(Math.min(m, 3));
     await expect(page.getByTestId('quad-all' + j)).toHaveCount(m > 3 ? 1 : 0);
   }
-  // Each box says what it is and how many it holds on one line; what it means is its tooltip. A card is compact: no buttons in it.
+  // Each box says what it is and how many it holds on one line; what it means is its tooltip. A card is compact: its suit, its title and ⇄ (15 Nov), no other button.
   await expect(box.locator('h3')).toBeVisible();
   await expect(box.locator('header')).toHaveAttribute('title', /.+/);
   await expect(box.locator('small')).toHaveCount(0);
   await expect(box.getByTestId('move-btn')).toHaveCount(0);
+  await expect(box.getByTestId('mini-move')).toHaveCount(3);
   const h = await box.locator('header').boundingBox(), c = await page.getByTestId('quad-count' + k).boundingBox();
   expect(Math.abs(c!.y + c!.height / 2 - (h!.y + h!.height / 2))).toBeLessThan(h!.height / 2);
 });

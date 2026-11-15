@@ -65,6 +65,8 @@ export const enSteps = {
   doneOnDay: 'Played on {date}.',
   moveTo: 'Move to…',
   movedTo: 'Moved to {q}.',
+  moveShort: 'Move',
+  takenOffToday: 'Taken off today.',
   breakItDown: 'Break it down',
   openDecision: 'Work through the decision',
   skipThisTime: 'Skip this time',

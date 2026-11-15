@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings, openTripSheet, NO_SERVICE_WORKER } from './helpers';
+import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings, openTripSheet, dealTheDay, stuckOnStartHere, NO_SERVICE_WORKER } from './helpers';
 
 // The AI is stubbed, and Plan this trip is opened after a reload (NO_SERVICE_WORKER says why).
 test.use(NO_SERVICE_WORKER);
@@ -227,7 +227,7 @@ async function aiSession(page: Page) {
 const userText = (seen: Record<string, unknown>[], i = -1) => String(((seen.at(i)!.body as { messages: { content: string }[] }).messages[0]!).content);
 async function toPlan(page: Page) {
   // With an AI on, Plan the day opens the AI morning and its request preview; these tests are about the ritual's plan, one tap away ("Plan it myself").
-  await page.locator('main').getByRole('button', { name: 'Deal the day' }).click();
+  await dealTheDay(page);
   await expect(page.getByTestId('ai-preview')).toBeVisible();
   await page.getByTestId('ai-preview').getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByTestId('ai-preview')).toHaveCount(0);
@@ -338,7 +338,7 @@ test('Decision help drafts the problem, options and items, and never weights', a
 test('Stuck: the AI proposes a smaller starter, which the person can edit', async ({ page }) => {
   const { answer } = await aiSession(page);
   answer.text = JSON.stringify({ starter: 'Open Doctolib and type “dentist”', note: 'Just the search.' });
-  await page.getByTestId('stuck').first().click();
+  await stuckOnStartHere(page);
   await sheet(page).getByRole('button', { name: /Can’t start/ }).click();
   await page.getByTestId('ai-stuck').click();
   await page.getByTestId('ai-send').click();
@@ -396,7 +396,7 @@ for (const w of [320, 375, 430]) {
     await noSideways(page, 'AI steps');
     await page.keyboard.press('Escape');
     answer.text = JSON.stringify({ starter: 'Open Doctolib and type the word dentist into the search box' });
-    await page.getByTestId('stuck').first().click();
+    await stuckOnStartHere(page);
     await sheet(page).getByRole('button', { name: /Can’t start/ }).click();
     await page.getByTestId('ai-stuck').click();
     await page.getByTestId('ai-send').click();

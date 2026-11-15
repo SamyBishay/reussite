@@ -1,7 +1,7 @@
 // Carried and missed, one at a time (plan 2 Nov, S3): yesterday's open steps are each decided on their own card, a timed item whose
 // time passed gets Move / Remove, and nothing moves until the person answers. The clock is fixed to Monday 26 October, 15:00.
 import { test, expect, type Page } from '@playwright/test';
-import { expandSettings, noSideways, dealTheDay } from './helpers';
+import { carryOne, expandSettings, noSideways, dealTheDay } from './helpers';
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const NOW = new Date(2026, 9, 26, 15, 0, 0);
@@ -39,6 +39,15 @@ async function start(page: Page, tab = 'today', extra: Record<string, Record<str
   await page.getByRole('button', { name: 'Import', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await page.getByTestId('tab-' + tab).click();
+}
+/** Today on each of yesterday's three open cards, waiting each time for the answered card to go and the next one to show. */
+async function carryThree(page: Page) {
+  const card = page.getByTestId('carried-card');
+  await carryOne(page);
+  await expect(card).toContainText('Tidy the desk');
+  await carryOne(page);
+  await expect(card).toContainText('Sort the receipts');
+  await carryOne(page);
 }
 async function ritual(page: Page) {
   await dealTheDay(page);
@@ -103,7 +112,8 @@ test('the ritual asks about each left-open step on its own, and nothing moves be
 test('Remove on a timed item drops it, on a second tap', async ({ page }) => {
   await start(page);
   await ritual(page);
-  for (let i = 0; i < 3; i++) await page.getByTestId('carried-today').click();
+  await carryThree(page);
+  await expect(sheet(page).getByTestId('missed-card')).toContainText('“Call the dentist” was at 14:00.');
   await sheet(page).getByTestId('missed-remove').click();
   expect((await doc(page, 'tasks', 'call')).status).toBe('open');
   await sheet(page).getByTestId('missed-remove').click();
@@ -126,7 +136,7 @@ test('Today and the bell offer the same cards, with no bulk carry', async ({ pag
   expect((await doc(page, 'days', TODAY)).plan).toEqual(['bank']);
   await page.getByTestId('carry-open').click();
   await expect(page.getByTestId('carried-sheet')).toBeVisible();
-  for (let i = 0; i < 3; i++) await page.getByTestId('carried-today').click();
+  await carryThree(page);
   await expect(sheet(page)).toBeHidden();
   await expect(page.getByTestId('carry-card')).toHaveCount(0);
   expect((await doc(page, 'days', TODAY)).plan).toEqual(['bank', 'a', 'b', 'c']);
@@ -167,8 +177,12 @@ for (const width of [320, 375, 430]) {
     await page.getByTestId('carried-other').click();
     await noSideways(page, 'carried days');
     await page.getByTestId('carried-days').locator('button').first().click();
-    await page.getByTestId('carried-today').click();
-    await page.getByTestId('carried-done').click();
+    const card = page.getByTestId('carried-card');
+    await expect(card).toContainText('Tidy the desk'); // the first card went to another day
+    await carryOne(page);
+    await expect(card).toContainText('Sort the receipts');
+    await card.getByTestId('carried-done').click();
+    await expect(card.getByRole('button', { name: '15', exact: true })).toBeVisible(); // how long it took
     await noSideways(page, 'already done');
   });
 }

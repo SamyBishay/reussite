@@ -481,6 +481,8 @@ export const enSteps = {
   calMoreOne: '+ 1 more',
   calNoEvents: 'Nothing on this day',
   calAllDay: 'All day',
+  /** Between two times, as an event's label reads to a screen reader: "14:00 to 15:00". */
+  calTo: 'to',
   calMoreLink: 'Show the {n} more on {date}',
   calMoreLinkOne: 'Show the 1 more on {date}',
   // phase 1: weekly review

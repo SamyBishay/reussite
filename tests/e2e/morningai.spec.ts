@@ -192,6 +192,9 @@ test('a short exchange adjusts it: what was skipped does not come back, and the 
   await expect(item(page, 'shop1')).toHaveAttribute('data-state', 'kept');
   // The tap targets for the common adjustments ask the AI too.
   await page.getByTestId('morning-toomuch').click();
+  // The note from the last reply is still on the screen while this one is asked, so it says nothing about the third request: wait for it.
+  await expect.poll(() => seen.length).toBe(3);
+  await expect(page.getByTestId('morning-busy')).toHaveCount(0);
   await expect(page.getByTestId('morning-note')).toBeVisible();
   expect(seen).toHaveLength(3);
   expect(userOf(seen[2]!)).toContain('That is too much');

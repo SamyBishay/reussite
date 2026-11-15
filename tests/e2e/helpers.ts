@@ -3,6 +3,14 @@ import './clock';
 import { sampleExport } from './fixture';
 
 /**
+ * For a spec that stubs a request to another origin (an AI provider, the relay) with `page.route` and reloads the page first: no service worker.
+ * After a reload the app's worker controls the page, and on WebKit a page's requests then go out through the worker, past `page.route` and
+ * `context.route` alike: the stub records nothing and the request reaches the real host (measured 15 Nov: Anthropic's own 401 for the test key).
+ * Firefox and Chrome still route them. The worker answers only the app's own files, so the app's requests are the same without it.
+ */
+export const NO_SERVICE_WORKER = { serviceWorkers: 'block' } as const;
+
+/**
  * Fix the clock at 09:00 on the app's today (the day starts at 05:00; fixtures are dated from the real date). Evening items (a standing 18:30 or 19:00
  * item, the day's end) take over Start here and empty the plan later in the day, so a test that is not about the hour calls this before it loads the app.
  */

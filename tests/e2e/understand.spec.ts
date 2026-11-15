@@ -3,7 +3,7 @@
 // On this device leaves the connector as it was. No copy and paste anywhere in set-up or Settings, and the Connect screen names the three chat
 // apps in order with who can use each (DECISIONS.md 2026-11-15).
 import { test, expect, type Page } from '@playwright/test';
-import { noSideways, PHONES, LANGS } from './helpers';
+import { noSideways, PHONES, LANGS, NO_SERVICE_WORKER } from './helpers';
 
 const NEW_DEVICE = { cookies: [], origins: [] };
 
@@ -46,7 +46,8 @@ const openSection = async (page: Page) => {
   await expect(page.getByTestId('understand-status')).toBeVisible();
 };
 
-test.use({ storageState: NEW_DEVICE });
+// The connector's state is stubbed and read again after a reload (NO_SERVICE_WORKER says why).
+test.use({ storageState: NEW_DEVICE, ...NO_SERVICE_WORKER });
 
 for (const [w, h] of PHONES) for (const lang of LANGS) {
   test(`one place for the choice, the status list and its links, no copy and paste, the three chat apps (${w}×${h}, ${lang})`, async ({ page }) => {

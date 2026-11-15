@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
-import { morningClock, noSideways, openMenu, expandSettings, goNotifications } from './helpers';
+import { morningClock, noSideways, openMenu, expandSettings, goNotifications, NO_SERVICE_WORKER } from './helpers';
+
+// The AI and the connector's state are stubbed after a reload (NO_SERVICE_WORKER says why).
+test.use(NO_SERVICE_WORKER);
 
 // Phase 4, step 3: the planner's offers (address or person) and "Plan this trip". Every name, link and number here is invented.
 const sheet = (page: Page) => page.getByTestId('sheet');

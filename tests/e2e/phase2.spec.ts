@@ -1,5 +1,8 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
-import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings, openTripSheet } from './helpers';
+import { morningClock, importSample, carryAll, noSideways, goTab, openWeeklyReview, expandSettings, openTripSheet, NO_SERVICE_WORKER } from './helpers';
+
+// The AI is stubbed, and Plan this trip is opened after a reload (NO_SERVICE_WORKER says why).
+test.use(NO_SERVICE_WORKER);
 
 const sheet = (page: Page) => page.getByTestId('sheet');
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';

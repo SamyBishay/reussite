@@ -137,7 +137,7 @@ describe('a line typed on Home', () => {
     expect(s[0]).toMatchObject({ taskId: 's1', m: 25, source: 'typed', why: 'done' });
     const ex = only();
     expect(ex.turns.map(x => x.kind)).toEqual(['done', 'duration']);
-    expect(receiptLine(ex)).toBe('Done: “Call the dentist”');
+    expect(receiptLine(ex)).toBe('Played: “Call the dentist”');
     expect(homeCard.value).toBeNull();
 
     await undoExchange(ex.id);
@@ -374,7 +374,7 @@ describe('a line the parser can’t read, with an AI set up', () => {
     const f = vi.fn(async () => new Response('nope', { status: 500 }));
     vi.stubGlobal('fetch', f);
     expect(await submitHome('what is the weather in Lyon tomorrow?')).toBe(true);
-    expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('problem'), action: { label: 'Add as a step' } });
+    expect(homeCard.value).toMatchObject({ kind: 'answer', text: expect.stringContaining('problem'), action: { label: 'Add as a card' } });
     expect(exchanges.value.size).toBe(0);
     settings.value = withDefaults({ aiProvider: 'anthropic', aiMonthlyCap: 0 });
     f.mockClear();

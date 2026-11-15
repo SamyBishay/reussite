@@ -64,14 +64,14 @@ describe('what is scheduled', () => {
 
   it('writes generic text by default, and titles when allowed', () => {
     const g = Object.fromEntries(build(w).map(i => [i.id, i.text]));
-    expect(g['checkin:2026-10-20']).toBe('Morning. A free day so far. Plan it?');
+    expect(g['checkin:2026-10-20']).toBe('Morning. A free day so far. Deal it?');
     expect(g['close:2026-10-19']).toBe('Close the day');
     expect(g['decision:d1:2026-10-21']).toBe('Decision check');
     expect(g['review:2026-10-25']).toBe('Weekly review');
     expect(Object.values(g).join('|')).not.toMatch(/report|Lyon|Choir/);
     const t = Object.fromEntries(build(w, settings({ notifyText: 'titles' })).map(i => [i.id, i.text]));
     expect(t['decision:d1:2026-10-21']).toBe('Decision check · Move to Lyon');
-    expect(t['checkin:2026-10-20']).toBe('Morning. A free day so far. Plan it?');
+    expect(t['checkin:2026-10-20']).toBe('Morning. A free day so far. Deal it?');
   });
 
   it('only the types switched on', () => {
@@ -116,23 +116,23 @@ describe('the morning push', () => {
   const text = (w: Parameters<typeof state>[0], s = settings()) => build(w, { ...s, notify: only('checkin').notify } as never).find(i => i.id === 'checkin:2026-10-20')!.text;
   it('names the fixed times and the room left from the push to the end of the day', () => {
     // 08:30 to 19:00 is 10 h 30; the dentist takes an hour: 9 h 30 left.
-    expect(text({ tasks: [dentist] }, settings({ notifyText: 'titles' }))).toBe('Morning. Today has the 10:00 Dentist and room for about 9 h 30. Plan it?');
+    expect(text({ tasks: [dentist] }, settings({ notifyText: 'titles' }))).toBe('Morning. Today has the 10:00 Dentist and room for about 9 h 30. Deal it?');
     // With the call (leave 13:30, until 14:30) too: 8 h 30.
-    expect(text({ tasks: [dentist, call] }, settings({ notifyText: 'titles' }))).toBe('Morning. Today has the 10:00 Dentist and 1 more, with room for about 8 h 30. Plan it?');
+    expect(text({ tasks: [dentist, call] }, settings({ notifyText: 'titles' }))).toBe('Morning. Today has the 10:00 Dentist and 1 more, with room for about 8 h 30. Deal it?');
   });
   it('says only how many in the generic text, and a free day when there are none', () => {
-    expect(text({ tasks: [dentist] })).toBe('Morning. Today has a fixed time and room for about 9 h 30. Plan it?');
-    expect(text({ tasks: [dentist, call] })).toBe('Morning. Today has 2 fixed times and room for about 8 h 30. Plan it?');
+    expect(text({ tasks: [dentist] })).toBe('Morning. Today has a fixed time and room for about 9 h 30. Deal it?');
+    expect(text({ tasks: [dentist, call] })).toBe('Morning. Today has 2 fixed times and room for about 8 h 30. Deal it?');
     expect(text({ tasks: [dentist, call] })).not.toMatch(/Dentist|Sara/);
-    expect(text({})).toBe('Morning. A free day so far. Plan it?');
+    expect(text({})).toBe('Morning. A free day so far. Deal it?');
   });
   it('rounds the room and uses the day’s end from the settings', () => {
     expect(roomText(190)).toBe('3 h');
     expect(roomText(200)).toBe('3 h 30');
     expect(roomText(47)).toBe('45 min');
-    expect(text({ tasks: [dentist] }, settings({ dayEnd: '12:00' }))).toBe('Morning. Today has a fixed time and room for about 2 h 30. Plan it?');
+    expect(text({ tasks: [dentist] }, settings({ dayEnd: '12:00' }))).toBe('Morning. Today has a fixed time and room for about 2 h 30. Deal it?');
     // Nothing left of the day: the plain question.
-    expect(text({ tasks: [dentist] }, settings({ dayEnd: '08:40' }))).toBe('Morning. Plan the day?');
+    expect(text({ tasks: [dentist] }, settings({ dayEnd: '08:40' }))).toBe('Morning. Deal the day?');
   });
 });
 

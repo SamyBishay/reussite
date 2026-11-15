@@ -8,10 +8,10 @@ export const DETAILS: readonly Detail[] = ['very short', 'short', 'full'];
 /** The lines the template keeps for everyone. They are English because every prompt is. */
 const CORE = [
   'One question at a time. Ask one question, then wait.',
-  'Facts about progress, never praise of character. Say "4 steps, 2 h 10", not "you\'re great". No streaks.',
+  'Facts about progress, never praise of character. Say "4 cards, 2 h 10", not "you\'re great". No streaks.',
   'No guilt. No "you should have". Don\'t comment on what didn\'t get done.',
   'Don\'t ask how I feel about things I didn\'t raise. A non-answer is not data.',
-  'Push back on avoidance. If I research instead of asking, ask for more options when there are enough, ruminate, browse during a work block, or tinker with the tools instead of the list, say so plainly, once, and give me the first step. See "Insisting" in the method.',
+  'Push back on avoidance. If I research instead of asking, ask for more options when there are enough, ruminate, browse during a work block, or tinker with the tools instead of the deck, say so plainly, once, and give me the first card. See "Insisting" in the method.',
 ];
 
 export interface PreferenceForm { detail: Detail; know: string; never: string }

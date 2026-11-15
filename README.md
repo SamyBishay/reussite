@@ -26,7 +26,18 @@ Your data stays on your devices. If you turn sync on, it is encrypted on your de
 
 ## Learn more
 
-The manual is on the web at [/manual/](https://reussite.rudolphem.workers.dev/manual/), in [`docs/manual/en/`](docs/manual/en/index.md), and in the app under Settings → About. The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md). If you want to use your own AI, see [`docs/ai/`](docs/ai/): a plain prompt for the morning check-in works in any chatbot.
+The manual is on the web at [/manual/](https://reussite.rudolphem.workers.dev/manual/), in [`docs/manual/en/`](docs/manual/en/index.md), and in the app under Settings → About. The method is in [`docs/METHOD.en.md`](docs/METHOD.en.md).
+
+## With the AI chat app you already use
+
+Réussite has a connector: once it is added to your chat app, the app reads and edits your deck from inside the chat, and waits for your yes before anything bigger than one small change. Switch it on in Réussite, under Settings → How Réussite understands you → My AI chat app, through the connector; it gives the address to add and a pairing code. Add it on a computer:
+
+- **ChatGPT**, on chatgpt.com in a browser: Plugins (chatgpt.com/plugins), then +, then Add custom MCP server. OpenAI's pages don't say which plans can add one; ChatGPT's own settings show whether the option is there for you.
+- **Claude**, on claude.ai or the desktop app: Customize, then Connectors, then + Add, then Add custom connector. Every plan, Free included (Free allows one custom connector); on Team and Enterprise, an owner adds it first.
+- **Gemini**, on gemini.google.com: Settings, then Connected Apps (if it isn't there, open Personal Intelligence first), then Add a custom app. Personal Google accounts only, 18 or over, in the United States, in English, with Keep Activity on.
+- **Another app** that accepts MCP connectors: add a custom or remote connector with the address.
+
+[`docs/ai/`](docs/ai/) holds two sets of instructions for the chat app, [`today`](docs/ai/skills/today.md) (dealing the day, getting unstuck, closing the day, the weekly review) and [`decide`](docs/ai/skills/decide.md) (a decision, step by step through the method), as plain text and as skills ([`today/SKILL.md`](docs/ai/skills/today/SKILL.md), [`decide/SKILL.md`](docs/ai/skills/decide/SKILL.md)). They work through the connector.
 
 ## For developers
 

@@ -48,7 +48,7 @@ export function roomText(minutes: number): string {
 }
 
 /**
- * The morning push: what the day holds and the room it leaves ("Today has the 10:00 dentist and room for about 3 h. Plan it?"),
+ * The morning push: what the day holds and the room it leaves ("Today has the 10:00 dentist and room for about 3 h. Deal it?"),
  * from the day's fixed-time items against the time from the push to the end of the day. A day with none is "A free day so far".
  * Generic text says how many fixed times and not what they are.
  */

@@ -46,7 +46,7 @@ test('switching on subscribes, registers and uploads the schedule; switching off
   expect((await ids(page)).some(i => i.startsWith('checkin:'))).toBe(true);
   await expect(page.getByTestId('notify-held')).toContainText(/Waiting at the relay: \d+/);
   // generic by default: no title in any text
-  expect(await textOf((await held(page)).find(h => h.id.startsWith('checkin:'))!)).toMatch(/^Morning\. .*Plan (it|the day)\?$/);
+  expect(await textOf((await held(page)).find(h => h.id.startsWith('checkin:'))!)).toMatch(/^Morning\. .*Deal (it|the day)\?$/);
   expect((await ids(page)).some(i => /^(launch|still):/.test(i))).toBe(false);
   await page.getByTestId('notify-master').uncheck();
   await expect(page.getByTestId('notify-types')).toBeHidden();

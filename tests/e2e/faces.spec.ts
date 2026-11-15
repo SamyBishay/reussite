@@ -20,7 +20,7 @@ const world = (language: string, first: Record<string, unknown> = {}) => ({
   },
   projects: { inbox: { name: 'Inbox', suit: 'S', where: 'any', goal: null, goalBy: null, due: null, order: 99, status: 'active' } },
   days: { [TODAY]: { date: TODAY, plan: ['a', 'b', 'c', 'd'], launches: [], first: null, checkin: null, closed: null, summary: null } },
-  decisions: {}, meta: { settings: { here: 'home', language } },
+  decisions: {}, meta: { settings: { language } }, // no `here`: the importer would make it a place, and the form would ask for one
 });
 const sheet = (page: Page) => page.getByTestId('sheet');
 
@@ -102,6 +102,8 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     for (const m of await minis.all()) {
       const btn = m.getByTestId('mini-move');
       await expect(btn).toBeVisible();
+      // In the middle of the screen, as a person scrolls a card to look at it: at the bottom the round plus floats over the fourth box.
+      await btn.evaluate(el => el.scrollIntoView({ block: 'center' }));
       // The target: every point of a 44×44 square around the mark's centre reaches the button (its ::after reaches past the mark).
       const r = await btn.evaluate(el => {
         const b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;

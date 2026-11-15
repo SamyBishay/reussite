@@ -6,7 +6,7 @@ A decision is a problem you keep turning over. Réussite gives it a method of it
 
 ## Start one
 
-In the **Matrix** tab, under the four boxes, tap **+ New decision** (a new Réussite shows that tab once it has arrived: see [Getting started](getting-started.md)). Or, from any card, turn a card into a decision from its details ("A decision", then **Work through the decision**). One screen at a time:
+There are several ways in. In the **Matrix** tab, under the four boxes, tap **+ New decision**; a project's page has the same button. On a new Réussite the Matrix and Projects tabs arrive later (see [Getting started](getting-started.md)), and until then you start a decision from a card: open it, set its **Kind** under **More** to **A decision** and tap **Work through the decision**; or, when a card is carried over, tap **Make it a decision**; or tap **A decision** when you are stuck. The decisions themselves are listed on the Matrix, and one to check shows behind the bell. One screen at a time:
 
 1. **The problem.** What is happening, what should be happening, the gap, the constraints, the deadline, and what is in your control. If it's really two problems, tick "This is really two problems": the second becomes a draft.
 2. **Options.** Every option you can think of, yours first. Quantity first, no judging. Under "Often missing" you will find: do nothing, delay it, a smaller version, a combination, ask someone, hand it off, change the order. Mark an option **Impossible** only if it plainly is, and say why. Then **Close the list**. Reopen it only for a genuinely new fact.

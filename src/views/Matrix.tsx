@@ -1,5 +1,5 @@
 // The Eisenhower matrix (brief §5): four boxes in a 2x2 grid at every width, each showing its first cards, compact (the suit, a
-// two-line title, a dot when late or soon), and a small button for the rest, and the whole list folded at the bottom. Moves: drag on desktop and tablet; on phones, long-press or the "Move to…" menu. What is
+// two-line title, a dot when late or soon, ⇄ for the move sheet), and a small button for the rest, and the whole list folded at the bottom. Moves: ⇄ on every card; drag on desktop and tablet; long-press on phones. What is
 // shown follows the place menu's View (the page's place, one of its areas, or everywhere).
 import { Cemetery } from './Cemetery';
 import { Decisions } from './Decisions';
@@ -85,7 +85,7 @@ function Item({ tk, planned, quadTag }: { tk: T; planned: boolean; quadTag?: Qua
   );
 }
 
-/** A card in a box: the suit and the title (two lines at most), a dot when its date is late or near. Tap opens it; long-press and drag move it. */
+/** A card in a box: the suit and the title (two lines at most), a dot when its date is late or near, and ⇄. Tap opens it; ⇄ (its hit area 44px), long-press and drag move it. */
 function Mini({ tk, planned }: { tk: T; planned: boolean }) {
   const lp = useLongPress(() => openMove(tk.id));
   const { wasLong, ...handlers } = lp;
@@ -101,6 +101,7 @@ function Mini({ tk, planned }: { tk: T; planned: boolean }) {
         <span class="clamp">{tk.kind === 'decision' && '⚖ '}<Title s={tk.title} />{chain && <> <span class="chainbadge" data-testid="chain-count" title={t('chainAfter', { n: chain.after })}>+{chain.after}</span></>}</span>
       </button>
       {near && <span class="dot" role="img" aria-label={dueTitle} data-testid="mini-dot" />}
+      <button type="button" class="mini-move" onClick={() => openMove(tk.id)} aria-label={t('moveTo')} title={t('moveTo')} data-testid="mini-move"><span aria-hidden="true">⇄</span></button>
     </div>
   );
 }

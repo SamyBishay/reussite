@@ -11,6 +11,7 @@ import { Title, Meta } from './ui';
 import { flows } from './sheets';
 import { ConfirmButton, DropButton } from './ConfirmButton';
 import { addDays } from '../domain/dates';
+import { DayChips } from './due';
 import { wallOf } from '../domain/zone';
 import { t, fmtDate } from '../i18n';
 
@@ -46,12 +47,9 @@ export function CarriedCard({ tk, k, release, onNext }: { tk: Tk; k: string; rel
       {mode === 'day' && (
         <>
           <p class="hint">{t('carryWhichDay')}</p>
-          <div class="chips-pick small" data-testid="carried-days">
-            {Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(k, i + 1)).map((d, i) => (
-              <button type="button" data-day={d} onClick={() => void answer(async () => { await planOn(tk.id, d); toast(t('plannedOn', { date: fmtDate(d) })); })}>{i === 0 ? t('pickTomorrow') : dayLabel(d)}</button>
-            ))}
+          <DayChips from={k} testid="carried-days" onPick={d => void answer(async () => { await planOn(tk.id, d); toast(t('plannedOn', { date: fmtDate(d) })); })}>
             <button type="button" data-testid="carried-nodate" onClick={() => void answer(async () => { await shelve(tk.id, addDays(k, -1)); toast(t('carryShelved')); })}>{t('pickClear')}</button>
-          </div>
+          </DayChips>
           <div class="go quiet"><button class="btn ghost small" type="button" onClick={() => setMode('ask')}>{t('cancel')}</button></div>
         </>
       )}

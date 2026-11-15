@@ -1,14 +1,29 @@
 // Inline due dates (brief §5): today, tomorrow, +1 week, clear, or any date.
 import { useState } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import { today } from './store';
 import { openSheet, closeSheet } from './sheet';
 import { dueOn } from './actions';
 import { T } from './model';
-import { t } from '../i18n';
+import { t, fmtDate } from '../i18n';
 import { addDays } from '../domain/dates';
 
 export function openDue(id: string) {
   openSheet(<DueSheet key={'due' + id} id={id} />);
+}
+
+/** How many days after `from` a card can be put on with one tap: tomorrow, then five more. */
+const DAYS_AHEAD = 6;
+/** The next days as chips, "Tomorrow" then "Thu 12": a carried card's Another day and the move sheet's day row. `children` are more chips after them. */
+export function DayChips({ from, onPick, testid, children }: { from: string; onPick: (d: string) => void; testid?: string; children?: ComponentChildren }) {
+  return (
+    <div class="chips-pick small" data-testid={testid}>
+      {Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(from, i + 1)).map((d, i) => (
+        <button type="button" data-day={d} onClick={() => onPick(d)}>{i === 0 ? t('pickTomorrow') : fmtDate(d, { weekday: 'short', day: 'numeric' })}</button>
+      ))}
+      {children}
+    </div>
+  );
 }
 
 /** Quick picks plus a date input. Shared by the due sheet and every "which day?" question. */

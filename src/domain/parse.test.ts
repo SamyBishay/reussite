@@ -266,13 +266,18 @@ describe('plain lines and prefixes', () => {
     expect(made('envoyer les photos pour demain')).toEqual({ title: 'Envoyer les photos', due: '2026-10-21' });
     expect(made('tomorrow: call the bank')).toEqual({ title: 'Call the bank', due: '2026-10-21' });
   });
-  it('a title of more than eight words is not a plain line', () => {
+  it('a title of more than eight words is still a card, marked long (with an AI on, Home asks it instead); past thirty words it opens the sheet', () => {
     const eight = 'one two three four five six seven eight';
     expect(PLAIN_WORDS).toBe(8);
+    expect(run(eight)).not.toHaveProperty('long');
     expect(made(eight)).toEqual({ title: 'One two three four five six seven eight' });
-    const r = run('Open Doctolib and book the dentist for a cleaning appointment next month');
-    expect(r).toEqual({ kind: 'unknown', reason: 'long', prefill: { title: 'Open Doctolib and book the dentist for a cleaning appointment next month' } });
-    expect(run('Open Doctolib and book the dentist for a cleaning appointment tomorrow')).toMatchObject({ kind: 'unknown', reason: 'long', prefill: { due: '2026-10-21' } });
+    const r = run('Open Doctolib and book the dentist for a cleaning appointment in the spring');
+    expect(r).toMatchObject({ kind: 'changes', intent: 'add', long: true, title: 'Open Doctolib and book the dentist for a cleaning appointment in the spring' });
+    expect(made('Open Doctolib and book the dentist for a cleaning appointment tomorrow')).toEqual({ title: 'Open Doctolib and book the dentist for a cleaning appointment', due: '2026-10-21' });
+    // "Next month" is a day now: the first of it.
+    expect(made('Open Doctolib and book the dentist for a cleaning appointment next month')).toEqual({ title: 'Open Doctolib and book the dentist for a cleaning appointment', due: '2026-11-01' });
+    const para = Array.from({ length: 31 }, (_, i) => 'word' + i).join(' ');
+    expect(run(para)).toMatchObject({ kind: 'unknown', reason: 'long' });
   });
   it('only a time or a date opens the sheet with no title', () => {
     expect(run('19:00')).toEqual({ kind: 'sheet', prefill: { title: '', at: '19:00', due: '2026-10-20' } });
@@ -364,10 +369,10 @@ describe('what is not for the parser', () => {
     ['pourquoi le loyer', 'question'],
     ['is the rent paid?', 'question'],
     ['how do I file the form', 'question'],
-    ['call the bank; email Alex', 'several'],
-    ['call the bank\nemail Alex', 'several'],
-    ['call the bank and then email Alex', 'several'],
-    ['appeler la banque puis écrire à Alex', 'several'],
+    // Several things, one of which the parser cannot read: the whole line goes on as it was.
+    ['call the bank; what is next?', 'several'],
+    ['call the bank\nIbrahim is back at work', 'several'],
+    ['appeler la banque puis quand est la chorale ?', 'several'],
     ['Ibrahim is back at work', 'memory'],
     ['Ibrahim est malade', 'memory'],
     ['Marie a un chat', 'memory'],
@@ -377,6 +382,19 @@ describe('what is not for the parser', () => {
     ['R:', 'empty'],
   ])('%s → %s', (text, reason) => {
     expect(run(text)).toMatchObject({ kind: 'unknown', reason });
+  });
+  it.each([
+    ['call the bank; email Alex', ['Call the bank', 'Email Alex']],
+    ['call the bank\nemail Alex', ['Call the bank', 'Email Alex']],
+    ['call the bank and then email Alex', ['Call the bank', 'Email Alex']],
+    ['appeler la banque puis écrire à Alex', ['Appeler la banque', 'Écrire à Alex']],
+  ])('%s is several cards in one change-set, which waits for a yes', (text, titles) => {
+    const r = run(text);
+    if (r.kind !== 'changes') throw new Error(text + ' → ' + r.kind);
+    expect(r.intent).toBe('several');
+    expect(r.cs.changes.map(c => (c.op === 'task.create' ? c.set.title : c.op))).toEqual(titles);
+    // More than one change is never applied at once (`isLowRisk` wants exactly one).
+    expect(isLowRisk(r.cs, { items: [] })).toBe(false);
   });
   it('a question or a statement opens the sheet with the words as they were', () => {
     expect(run('what does Ibrahim have on')).toEqual({ kind: 'unknown', reason: 'question', prefill: { title: 'what does Ibrahim have on' } });

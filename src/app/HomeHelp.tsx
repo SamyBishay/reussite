@@ -3,11 +3,16 @@
 import { t } from '../i18n';
 import { closeSheet } from './ui';
 
-const GROUPS: { title: 'homeHelpAdd' | 'homeHelpDone' | 'homeHelpMove' | 'homeHelpDrop' | 'homeHelpWhen' | 'homeHelpWhere' | 'homeHelpRepeat'; ex: string[] }[] = [
+type Group = 'homeHelpAdd' | 'homeHelpSeveral' | 'homeHelpDone' | 'homeHelpMove' | 'homeHelpDrop' | 'homeHelpNote' | 'homeHelpTimer' | 'homeHelpWaiting' | 'homeHelpWhen' | 'homeHelpWhere' | 'homeHelpRepeat';
+const GROUPS: { title: Group; ex: string[] }[] = [
   { title: 'homeHelpAdd', ex: ['call the bank tomorrow', 'dentist Friday 14h', 'appeler la banque demain'] },
+  { title: 'homeHelpSeveral', ex: ['call the bank; buy bread friday', 'call the bank and book the dentist', 'appeler la banque puis acheter du pain'] },
   { title: 'homeHelpDone', ex: ['done the report', 'fini le rapport', 'done the report yesterday'] },
   { title: 'homeHelpMove', ex: ['move the photos to Monday', 'reporter le dentiste à vendredi'] },
   { title: 'homeHelpDrop', ex: ['drop the games', 'abandonner les jeux'] },
+  { title: 'homeHelpNote', ex: ['note on the rent: the landlord wants a transfer', 'note sur le loyer : par virement'] },
+  { title: 'homeHelpTimer', ex: ['start the report', 'pause', 'the report took 40 min', 'j’ai passé 1h30 sur le rapport'] },
+  { title: 'homeHelpWaiting', ex: ['waiting for the parcel friday', 'en attente du colis'] },
   { title: 'homeHelpWhen', ex: ['tomorrow', 'in 3 days', 'next friday', '26 oct', 'dans 2 semaines', '19h30', '7pm', 'for 45 min', '14h-15h30'] },
   { title: 'homeHelpWhere', ex: ['piano at Hill House', 'dentiste chez Martin'] },
   { title: 'homeHelpRepeat', ex: ['choir every Wednesday 19:30', 'chorale chaque mercredi 19h30'] },

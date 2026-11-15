@@ -4,7 +4,9 @@
 // to the AI when there is one. Pure and deterministic. It reads English and French whatever the
 // app's language is: the person may mix them, and dictation does.
 import type { ChangeSet } from '../ai/changeset';
-import type { Task } from '../data/schema';
+import type { SuitId, Task } from '../data/schema';
+import { findProject, guessSuit, type SuitHistory } from './guess';
+import { opensWithVerb } from './verbs';
 import { addDays, type DayKey } from './dates';
 import { findByName, norm, type Named } from './names';
 import { isoDow, type Repeat } from './repeat';
@@ -13,7 +15,18 @@ import { atOnDay } from './zone';
 export interface ParseContext {
   today: DayKey;
   places: Named[];
-  tasks: { id: string; title: string; status: string; template?: boolean }[];
+  /** `note`: what the card's note holds now (a line added to it goes after). `running`: its timer runs. */
+  tasks: { id: string; title: string; status: string; template?: boolean; note?: string; running?: boolean }[];
+  /** The open projects: a line that names one makes its card there, in the project's suit. */
+  projects?: { id: string; name: string; suit: SuitId }[];
+  /** The four suits as the person named and described them, in both languages: what a card's words are matched against to guess its suit. */
+  suits?: Record<SuitId, { name: { en: string; fr: string }; desc?: { en?: string; fr?: string } }>;
+  /** Which suit the person's own cards went to, by word (src/domain/guess.ts, `suitHistory`): it outranks the suits' descriptions. */
+  history?: SuitHistory;
+  /** The first move to write on a new card, from its title (the app gives the sentence in its language; src/domain/firstMove.ts picks which). */
+  firstMove?: (title: string) => string | null;
+  /** The card the person picked when asked "which one?": the line is read again and means that card, however it names it. */
+  only?: string;
   /** Names and aliases of the memory notes that may be shown to an AI (a line starting with one and a verb is a statement about them). */
   notes?: string[];
   /** Now (ms), the day-start rule and the time zone: a time with no date that has passed today means tomorrow. Without `now`, it is today. */
@@ -22,14 +35,17 @@ export interface ParseContext {
   zone?: string;
 }
 
-export type Intent = 'add' | 'standing' | 'done' | 'move' | 'drop';
+/** `note`: a line added to a card's note. `several`: more than one thing in the line. */
+export type Intent = 'add' | 'standing' | 'done' | 'move' | 'drop' | 'note' | 'several';
 export type Unknown = 'empty' | 'question' | 'several' | 'memory' | 'long' | 'nomatch';
 
 export type HomeParse =
   /** One change-set (`by: 'me'`), ready for `planChanges`; `title` is the step it adds or acts on. */
-  | { kind: 'changes'; cs: ChangeSet; intent: Intent; title: string }
-  /** The target of a done, move or drop matches several open steps. */
-  | { kind: 'pick'; intent: 'done' | 'move' | 'drop'; candidates: Named[] }
+  | { kind: 'changes'; cs: ChangeSet; intent: Intent; title: string; long?: true }
+  /** The card a line names matches several open cards, or only nearly matches one: the person says which. */
+  | { kind: 'pick'; intent: 'done' | 'move' | 'drop' | 'note' | 'start' | 'spent'; candidates: Named[] }
+  /** The timer, which is no change to the list: start a card (`id`), pause the one that runs, or time spent on a card said after the fact (`min`). */
+  | { kind: 'act'; act: 'start' | 'pause' | 'spent'; id?: string; min?: number; title: string }
   /** Understood, but it needs the task sheet (a repeat, or a time with a repeat the schedule can't hold). */
   | { kind: 'sheet'; prefill: Partial<Task> }
   /** Not for the parser. `prefill` is what the task sheet opens with when no AI is set up. */
@@ -109,19 +125,35 @@ const clock = (h: number, m: number, ap?: string): string | null => {
 const FOR_RE = /(?:for|pendant|during|about|around|environ|approx\.?|approximately|takes?|prend|~)\s*$/u;
 const AT_RE = /(?:at|a|vers|around|@|from|de|des)\s*$/u;
 
-interface Tm { at: string; start: number; end: number }
+const HOUR_WORD: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+const HOUR_W = '(\\d{1,2}|' + Object.keys(HOUR_WORD).join('|') + ')';
+
+interface Tm { at: string; start: number; end: number; midnight?: boolean }
 /** Every clock time in `f`, in order. Folded text in, positions in it out; `s` tells "à" from "a". */
 function timesIn(f: string, s: string): Tm[] {
   const out: Tm[] = [];
-  const add = (m: RegExpExecArray, at: string | null) => {
+  const add = (m: RegExpExecArray, at: string | null, midnight = false) => {
     if (!at) return;
+    // A span another reading already took (the earlier reading is the more exact one).
+    if (out.some(o => m.index < o.end && m.index + m[0].length > o.start)) return;
     // A word before it ("at", "à", "vers") goes with it.
     const before = f.slice(0, m.index);
     const pre = /(?:at|a|vers|@|from|de|des)\s*$/u.exec(before);
     const aOk = !pre || pre[0].trimEnd() !== 'a' || s[m.index - pre[0].length] === 'à' || s[m.index - pre[0].length] === 'À';
     const start = pre && aOk && (m.index - pre[0].length === 0 || /[\s,;(]/.test(f[m.index - pre[0].length - 1] ?? ' ')) ? m.index - pre[0].length : m.index;
-    out.push({ at, start, end: m.index + m[0].length });
+    out.push({ at, start, end: m.index + m[0].length, ...(midnight ? { midnight } : {}) });
   };
+  // An hour said with no "am", "pm" or 24-hour figure ("at 3", "half past two", "à 8 heures"): the line's own words decide
+  // (morning, tonight), else one to six are the afternoon and seven to eleven the morning.
+  const spoken = (h: number): number | null => {
+    if (h < 0 || h > 23) return null;
+    if (h === 0 || h > 12) return h;
+    if (/(?<![\p{L}\p{N}])(?:morning|matin)(?![\p{L}\p{N}])/u.test(f)) return h % 12;
+    if (/(?<![\p{L}\p{N}])(?:tonight|evening|afternoon|soir|apres-midi|apres midi)(?![\p{L}\p{N}])/u.test(f)) return (h % 12) + 12;
+    return h === 12 ? 12 : h <= 6 ? h + 12 : h;
+  };
+  const shift = (h: number | null, min: number): string | null => (h === null ? null : hm(Math.floor(((h * 60 + min + 1440) % 1440) / 60), (h * 60 + min + 1440) % 60));
+  const num = (w: string): number => HOUR_WORD[w] ?? Number(w);
   for (const m of f.matchAll(new RegExp(NOT_WORD + '(\\d{1,2}):(\\d{2})(?:\\s?' + AMPM + ')?' + END, 'gu'))) add(m, clock(Number(m[1]), Number(m[2]), m[3]));
   for (const m of f.matchAll(new RegExp(NOT_WORD + '(\\d{1,2})\\s?' + AMPM + END, 'gu'))) add(m, clock(Number(m[1]), 0, m[2]));
   for (const m of f.matchAll(new RegExp(NOT_WORD + '(\\d{1,2})\\s?h(?:\\s?(\\d{2}))?' + END, 'gu'))) {
@@ -134,7 +166,29 @@ function timesIn(f: string, s: string): Tm[] {
     if (m[2] && /^\s*(?:min|mn|minute)/u.test(f.slice(m.index + m[0].length))) continue;
     add(m, clock(n, min));
   }
-  for (const m of f.matchAll(new RegExp(NOT_WORD + '(noon|midi)(?![\\p{L}\\p{N}-])', 'gu'))) add(m, '12:00');
+  for (const m of f.matchAll(new RegExp(NOT_WORD + '(?:noon|midi)(?:\\s+et\\s+(demie?|quart))?(?![\\p{L}\\p{N}-])', 'gu'))) add(m, m[1] ? (m[1] === 'quart' ? '12:15' : '12:30') : '12:00');
+  for (const m of f.matchAll(new RegExp(NOT_WORD + '(?:midnight|minuit)' + END, 'gu'))) add(m, '00:00', true);
+  // "half past two", "quarter to five", "3 o'clock".
+  for (const m of f.matchAll(new RegExp(NOT_WORD + '(half|quarter)\\s+(past|to)\\s+' + HOUR_W + END, 'gu'))) {
+    if (m[1] === 'half' && m[2] === 'to') continue;
+    add(m, shift(spoken(num(m[3]!)), (m[2] === 'to' ? -1 : 1) * (m[1] === 'half' ? 30 : 15)));
+  }
+  for (const m of f.matchAll(new RegExp(NOT_WORD + HOUR_W + "\\s?o'?clock" + END, 'gu'))) add(m, shift(spoken(num(m[1]!)), 0));
+  // "à 15 heures", "à 15 heures 30", "à 3 heures et demie", "à 5 heures moins le quart": a time only after "à" or "vers" (else it is a length).
+  for (const m of f.matchAll(new RegExp(NOT_WORD + '(\\d{1,2})\\s?heures?(?:\\s?(\\d{2})(?!\\s?(?:min|mn)))?(?:\\s+(et\\s+demie?|et\\s+quart|moins\\s+le\\s+quart))?' + END, 'gu'))) {
+    const before = f.slice(0, m.index);
+    if (FOR_RE.test(before) || !AT_RE.test(before)) continue;
+    const extra = m[3] ? (m[3].startsWith('moins') ? -15 : m[3].endsWith('quart') ? 15 : 30) : 0;
+    add(m, shift(spoken(Number(m[1])), (m[2] ? Number(m[2]) : 0) + extra));
+  }
+  // A bare hour after "at" or "à", when the line ends there or goes on with a day, a length or a comma: "dentist friday at 3", "drinks tonight at 8".
+  for (const m of f.matchAll(new RegExp(NOT_WORD + '(\\d{1,2})(?=\\s*$|\\s*[,;)]|\\s+(?:for|pendant|on|today|tomorrow|tonight|demain|ce\\s+soir|' + WD + ')' + END + ')', 'gu'))) {
+    const before = f.slice(0, m.index), pre = /(?:^|\s)(at|a|@)\s+$/u.exec(before);
+    if (!pre || (pre[1] === 'a' && s[m.index - pre[0].trimStart().length] !== 'à' && s[m.index - pre[0].trimStart().length] !== 'À')) continue;
+    const h = Number(m[1]);
+    if (h < 1 || h > 23) continue;
+    add(m, shift(spoken(h), 0));
+  }
   return out.sort((a, b) => a.start - b.start);
 }
 const mins = (at: string) => Number(at.slice(0, 2)) * 60 + Number(at.slice(3));
@@ -161,6 +215,8 @@ export function findTime(text: string): Found | null {
 // ---------- the pieces of a line ----------
 interface Recurrence { every: number; unit: 'day' | 'week' | 'month'; weekdays: number[] }
 const LIST = '(?:' + WD + 's?|' + WDA + ')(?:\\s*(?:,|&|/|and|et)\\s*(?:' + WD + 's?|' + WDA + '))*';
+/** Monday to Friday: "every weekday", "on weekdays", "tous les jours de la semaine", "en semaine". */
+const WEEKDAYS = new RegExp(NOT_WORD + "(?:(?:every|each)\\s+weekday|(?:on\\s+)?weekdays|(?:tous\\s+les|chaque)\\s+jours?\\s+(?:de\\s+(?:la\\s+)?semaine|ouvres|ouvrables)|en\\s+semaine)" + END, 'u');
 const RECUR = [
   new RegExp(NOT_WORD + '(?:every|each)\\s+(?:(\\d+|other)\\s+)?(?:(day|week|month)s?|(' + LIST + '))' + END, 'u'),
   new RegExp(NOT_WORD + "(?:chaque|tous\\s+les|toutes\\s+les)\\s+(?:(\\d+)\\s+)?(?:(jour|semaine|mois)s?|(" + LIST + '))' + END, 'u'),
@@ -170,6 +226,7 @@ const RECUR = [
 const UNIT: Record<string, Recurrence['unit']> = { day: 'day', jour: 'day', week: 'week', semaine: 'week', month: 'month', mois: 'month' };
 
 function takeRecurrence(w: Work): Recurrence | null {
+  if (w.take(WEEKDAYS)) return { every: 1, unit: 'week', weekdays: [1, 2, 3, 4, 5] };
   for (const re of RECUR) {
     const m = w.take(re);
     if (!m) continue;
@@ -184,9 +241,34 @@ function takeRecurrence(w: Work): Recurrence | null {
 const NUM = '(\\d+(?:[.,]\\d+)?)';
 const DURATION = new RegExp(NOT_WORD + '(?:(?:for|pendant|during|about|around|environ|approx\\.?|approximately|takes?|prend|~)\\s*)?' + NUM + '\\s?(?:(h|hrs?|hours?|heures?)(?:\\s?(\\d{1,2})(?:\\s?(?:min(?:ute)?s?|mn))?)?|(min(?:ute)?s?|mn))' + END, 'u');
 /** "10 min", "1h", "1 h 30", "2 hours", "for 45 minutes": minutes, 1 to 1440. */
+// A length in words. It is one only after a word that says so ("for an hour", "pendant une heure") or set apart by a comma or a bracket
+// ("tidy the desk, half an hour"): "book an hour with the coach" keeps its hour.
+const MIN_WORD: Record<string, number> = { five: 5, ten: 10, fifteen: 15, twenty: 20, thirty: 30, forty: 40, 'forty-five': 45, cinq: 5, dix: 10, quinze: 15, vingt: 20, trente: 30, quarante: 40, 'quarante-cinq': 45 };
+const HOURS_WORD: Record<string, number> = { two: 2, three: 3, four: 4, deux: 2, trois: 3, quatre: 4 };
+const WORD_LENGTHS: [string, (m: RegExpExecArray) => number][] = [
+  ["(?:an|one)\\s+hour\\s+and\\s+a\\s+half|une\\s+heure\\s+et\\s+demie", () => 90],
+  ["half\\s+an\\s+hour|(?:une\\s+)?demi[- ]heure", () => 30],
+  ["a\\s+quarter\\s+of\\s+an\\s+hour|un\\s+quart\\s+d'heure", () => 15],
+  ["(?:an|one)\\s+hour|une\\s+heure", () => 60],
+  ['(' + Object.keys(HOURS_WORD).join('|') + ')\\s+(?:hours|heures)', m => HOURS_WORD[m[1]!]! * 60],
+  ['(' + Object.keys(MIN_WORD).sort((a, b) => b.length - a.length).join('|') + ')\\s+(?:minutes?|mins?)', m => MIN_WORD[m[1]!]!],
+];
+const LENGTH_LEAD = '(?:' + NOT_WORD + '(?:for|pendant|during|about|around|environ)\\s+|[,(~]\\s*)';
+function takeWordLength(w: Work): number | null {
+  for (const [phrase, value] of WORD_LENGTHS) {
+    const m = new RegExp(LENGTH_LEAD + '(?:' + phrase + ')' + END, 'u').exec(w.f);
+    if (!m) continue;
+    // The captured group, if the phrase has one, is the first after the lead.
+    const inner = new RegExp(phrase, 'u').exec(m[0])!;
+    w.put(m.index, m[0].length, m[0].startsWith(',') ? ',' : m[0].startsWith('(') ? '(' : ' ');
+    return value(inner);
+  }
+  return null;
+}
+
 function takeDuration(w: Work): number | null {
   const m = DURATION.exec(w.f);
-  if (!m) return null;
+  if (!m) return takeWordLength(w);
   const n = Number(m[1]!.replace(',', '.'));
   const total = Math.round(m[2] ? n * 60 + Number(m[3] ?? 0) : n);
   if (!(total >= 1 && total <= 1440)) return null;
@@ -221,7 +303,7 @@ function takeTimes(w: Work): { at?: string; dur?: number; dueAt?: string } {
   for (const tm of timesIn(w.f, w.s)) {
     const d = deadlineWordBefore(w.f.slice(0, tm.start));
     if (!d) continue;
-    dueAt = tm.at;
+    dueAt = tm.midnight ? '23:59' : tm.at; // "by midnight" is the end of the day, not its first minute
     w.put(tm.start, tm.end - tm.start, ' '); // the time first, so the word's place has not moved
     w.put(d.at, d.len, ' ');
     break;
@@ -230,6 +312,7 @@ function takeTimes(w: Work): { at?: string; dur?: number; dueAt?: string } {
   return { ...(a ? { at: a.at, ...(a.dur ? { dur: a.dur } : {}) } : {}), ...(dueAt ? { dueAt } : {}) };
 }
 
+const COUNT_WORD: Record<string, number> = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, sept: 7, huit: 8, neuf: 9, dix: 10, quinze: 15 };
 // A word before a date that goes with it ("for Friday", "pour le 26/10", "by tomorrow").
 const PRE = '(?:(?:pour|avant|jusqu\'a|jusqu\'au|d\'ici|by|before|until|for|on|next|this|ce|cette|le|la|the)\\s+){0,2}';
 const MORN = '(?:\\s+(?:morning|evening|afternoon|night|matin|soir|apres-midi|apres midi))?';
@@ -242,10 +325,31 @@ function takeDate(w: Work, today: DayKey): DayKey | null {
   if (tryRe(new RegExp(NOT_WORD + PRE + '(?:the\\s+)?day\\s+after\\s+tomorrow' + END, 'u')) || tryRe(new RegExp(NOT_WORD + PRE + 'apres[- ]demain' + MORN + END, 'u'))) return addDays(today, 2);
   if (tryRe(new RegExp(NOT_WORD + PRE + '(?:tomorrow|tmrw|demain)' + MORN + END, 'u'))) return addDays(today, 1);
   if (tryRe(new RegExp(NOT_WORD + PRE + "(?:today|aujourd'hui|tonight|ce\\s+soir|ce\\s+matin|cet\\s+apres-midi|this\\s+(?:morning|evening|afternoon))" + END, 'u'))) return today;
-  if (tryRe(new RegExp(NOT_WORD + '(?:in|dans)\\s+(\\d+)\\s+(days?|jours?|weeks?|semaines?|months?|mois)' + END, 'u'))) {
-    const n = Number(m![1]), u = m![2]!;
+  if (tryRe(new RegExp(NOT_WORD + '(?:in|dans)\\s+(\\d+|' + Object.keys(COUNT_WORD).join('|') + ')\\s+(days?|jours?|weeks?|semaines?|months?|mois)' + END, 'u'))) {
+    const n = COUNT_WORD[m![1]!] ?? Number(m![1]), u = m![2]!;
+    // "Dans huit jours" is a week and "dans quinze jours" two, as French counts them.
+    if (u.startsWith('j') && (m![1] === 'huit' || m![1] === 'quinze')) return addDays(today, m![1] === 'huit' ? 7 : 14);
     return u.startsWith('d') || u.startsWith('j') ? addDays(today, n) : u.startsWith('w') || u.startsWith('s') ? addDays(today, 7 * n) : addMonths(today, n);
   }
+  const dow = isoDow(today);
+  // The weekend is its Saturday, or today once it has begun; "next weekend" said during one is the one after.
+  if (tryRe(new RegExp(NOT_WORD + PRE + 'week-?end(?:\\s+prochain)?' + END, 'u'))) {
+    const after = /next|prochain/.test(m![0]);
+    return dow >= 6 ? (after ? addDays(today, 13 - dow) : today) : addDays(today, 6 - dow);
+  }
+  // Next week is its Monday, next month its first day.
+  if (tryRe(new RegExp(NOT_WORD + '(?:next\\s+week|(?:la\\s+)?semaine\\s+prochaine)' + END, 'u'))) return addDays(today, 8 - dow);
+  if (tryRe(new RegExp(NOT_WORD + '(?:next\\s+month|(?:le\\s+)?mois\\s+prochain)' + END, 'u'))) return addMonths(today.slice(0, 8) + '01', 1);
+  // The end of the week is its Friday (its Sunday once Friday has gone), of the month its last day, of the year 31 December.
+  if (tryRe(new RegExp(NOT_WORD + PRE + "(?:end\\s+of\\s+(?:the\\s+)?|fin\\s+(?:de\\s+la\\s+|du\\s+|de\\s+l'|de\\s+)?)(week|month|year|semaine|mois|annee)" + END, 'u'))) {
+    const u = m![1]!;
+    if (u === 'week' || u === 'semaine') return dow <= 5 ? addDays(today, 5 - dow) : addDays(today, 7 - dow);
+    if (u === 'month' || u === 'mois') return today.slice(0, 8) + pad(daysIn(year(today), Number(today.slice(5, 7))));
+    return year(today) + '-12-31';
+  }
+  // "A week on Monday", "lundi en huit": the one after the next; "lundi en quinze", the one after that.
+  if (tryRe(new RegExp(NOT_WORD + 'a\\s+week\\s+(?:on|from)\\s+(' + WD + ')' + END, 'u'))) return addDays(nextWeekday(today, dowOf(m![1]!)), 7);
+  if (tryRe(new RegExp(NOT_WORD + PRE + '(' + WD + ')\\s+en\\s+(huit|quinze)' + END, 'u'))) return addDays(nextWeekday(today, dowOf(m![1]!)), m![2] === 'huit' ? 7 : 14);
   if (tryRe(new RegExp(NOT_WORD + PRE + '(\\d{1,2})/(\\d{1,2})(?:/(\\d{2,4}))?' + END, 'u')) || tryRe(new RegExp(NOT_WORD + PRE + '(\\d{1,2})\\.(\\d{1,2})\\.(\\d{2,4})?' + END, 'u'))) {
     let a = Number(m![1]), b = Number(m![2]);
     if (a <= 12 && b > 12) [a, b] = [b, a]; // 10/26: month first, only when that is the one way it reads
@@ -288,8 +392,11 @@ function takePlace(w: Work, places: Named[]): string | null {
     const words = norm(p.name).split(' ').filter(Boolean);
     if (!words.length) continue;
     const name = words.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("[^\\p{L}\\p{N}]+");
-    const m = w.take(new RegExp(NOT_WORD + "(?:at|a|in|dans|chez|au|aux|@)\\s+(?:(?:the|le|la)\\s+|l')?" + name + END, 'u'));
-    if (m) return p.id;
+    const m = new RegExp(NOT_WORD + "(?:at|a|in|dans|chez|au|aux|@)\\s+(?:(?:the|le|la)\\s+|l')?" + name + END, 'u').exec(w.f);
+    if (!m) continue;
+    // "at Hill House 602": the room is part of what the card says, so the words stay in the title; the place is set all the same.
+    if (!/^\s*\d/.test(w.f.slice(m.index + m[0].length))) w.put(m.index, m[0].length, ' ');
+    return p.id;
   }
   return null;
 }
@@ -303,7 +410,7 @@ function tidy(w: Work, hasTime: boolean): string {
     const m = /(?<=\s)(at|a)\s+(?=\S)/u.exec(w.f);
     if (m && (m[1] === 'at' || w.s[m.index] === 'à' || w.s[m.index] === 'À') && !ARTICLE.test(w.f.slice(m.index + m[0].length)) && w.f.slice(0, m.index).trim()) w.put(m.index, m[0].length, ', ');
   }
-  let s = w.s.replace(/\s+/g, ' ').replace(/\s+([,;:.])/g, '$1').replace(/([,;:])\s*(?:[,;:]\s*)+/g, '$1 ').trim();
+  let s = w.s.replace(/[(\[]\s*[)\]]/g, ' ').replace(/\s+/g, ' ').replace(/\s+([,;:.])/g, '$1').replace(/([,;:])\s*(?:[,;:]\s*)+/g, '$1 ').trim();
   for (;;) {
     const next = s.replace(/^[\s,;:.\-–—]+/, '').replace(/[\s,;:.\-–—]+$/, '').replace(/[\s,]+$/, '');
     const f = fold(next);
@@ -338,12 +445,18 @@ function extract(text: string, ctx: ParseContext): Parts {
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 const QUESTION = /^(?:what|what's|whats|who|whom|whose|when|why|how|which|qui|quoi|quand|pourquoi|comment|quel|quels|quelle|quelles|combien|est-ce)(?![\p{L}\p{N}])/u;
-const SEVERAL = /[;\n]| and then | then | puis | et puis /u;
 const STATEMENT = /^\p{Lu}[\p{L}'-]*\s+(?:is|was|has|had|likes|lives|works|est|etait|a|aime|habite|travaille)\s/u;
 
-/** The text without an "R:" prefix, or a leading "add"/"ajouter"/"remind me to". */
+const BULLET = /^\s*(?:[-*•·–—]\s+|\d{1,2}[.)]\s+|\[[ xX]?\]\s*)/u;
+const POLITE = /^(?:i (?:need|have|want|ought) to|i must|i should|i gotta|need to|have to|remember to|don't forget to|do not forget to|je dois|il faut|il faudrait|penser a|ne pas oublier de|ne pas oublier d')\s*/u;
+/** The text without a list's bullet or number, an "R:" prefix, or a leading "add"/"ajouter"/"remind me to". */
+const stripPrefix = (text: string): string =>
+  text.replace(BULLET, '').replace(/^\s*r\s*:\s*/i, '').replace(/^\s*(?:add|ajouter|ajoute|new step|todo|to-do|to do|remind me to|rappelle[- ]moi de|rappelle[- ]moi)\s*[:\-]?\s+/iu, '').trim();
+/** And without a polite opening ("I need to", "je dois"). */
 function stripLead(text: string): string {
-  return text.replace(/^\s*r\s*:\s*/i, '').replace(/^\s*(?:add|ajouter|ajoute|new step|todo|to-do|to do|remind me to|rappelle[- ]moi de|rappelle[- ]moi)\s*[:\-]?\s+/iu, '').trim();
+  const s = stripPrefix(text);
+  const m = POLITE.exec(fold(s));
+  return m && s.length > m[0].length ? s.slice(m[0].length).trim() : s;
 }
 
 /** Open, ordinary steps a done, move or drop may name. A standing obligation is not one: `planChanges` leaves it alone for update and drop, and "done" would close the series. */
@@ -370,12 +483,34 @@ function findTarget(q: string, pool: Named[]): Target {
 }
 
 // The keyword is a word of its own: "finish the essay" and "terminer le rapport" are things to do, not done.
+const DONE_WORD = '(?:done|finished|completed?|fait|faite|faits|faites|fini|finie|finis|finies|termine|terminee|termines|terminees)';
 const DONE_PRE = /^(?:(?:done|finished|fait|fini|finie|termine|terminee|j'ai fini|j'ai fait|c'est fait)(?:\s*[:\-]\s*|\s+)|[✓✔☑]\s*[:\-]?\s*)(.+)$/u;
-const DONE_SUF = /^(.+?)\s+(?:done|finished|fait|fini|finie|termine|terminee)$/u;
+const DONE_SUF = new RegExp('^(.+?)\\s+(?:(?:is|are|est|sont)\\s+)?' + DONE_WORD + '$', 'u');
+// Said as something that happened: "I paid the rent", "just finished the photos", "j'ai payé le loyer". Done only when the rest names a card.
+const DID = [
+  /^(?:i|i've|i have|we|we've|we have)\s+(?:just\s+|already\s+|finally\s+)?(?!need\s|feed\s|speed\s)(?:[a-z]+ed|paid|sent|done|made|bought|wrote|written|did|got|read|took|gave|went|built|sold|found|met)\s+(.+)$/u,
+  /^just\s+(?:finished|did|done|completed)\s+(.+)$/u,
+  /^j'ai\s+(?:deja\s+|enfin\s+|bien\s+)?\p{L}+(?:e|i|u|it|is)\s+(.+)$/u,
+];
 const DROP = /^(?:drop|abandon|scrap|supprime|supprimer|abandonne|abandonner)\s+(.+)$/u;
+// Softer words for the same: a drop only when the rest names a card ("cancel the gym" with no such card is a thing to do).
+const DROP_SOFT = /^(?:forget|cancel|remove|delete|laisser tomber|laisse tomber|annuler|annule|oublier|oublie|retirer|enlever)\s+(.+)$/u;
 const MOVE = /^(?:move|push|postpone|reschedule|defer|reporter|reporte|deplacer|deplace|repousser|repousse|decaler|decale)\s+(.+)$/u;
 const ARROW = /^(.+?)\s*(?:→|->|=>)\s*(.+)$/u;
 const MOVE_TO = /\s(?:to|until|till|a|au|pour|jusqu'a|jusqu'au|vers)\s/gu;
+// A move said as a fact: "the photos are for monday", "report tomorrow instead", "les impôts plutôt vendredi". Only when the rest names a card.
+const MOVE_FOR = /^(.+?)\s+(?:is|are|est|sont)\s+(?:for|pour)\s+(.+)$/u;
+const MOVE_INSTEAD = /^(.+)\s+(?:instead|plutot|finalement)$/u;
+const MOVE_RATHER = /^(.+?)\s+(?:plutot|finalement|rather)\s+(.+)$/u;
+// A line for a card's note: "note on the rent: …", "rent note: …", "note sur le loyer : …".
+const NOTE_PRE = /^(?:note|comment|commentaire|remarque)\s+(?:(?:on|for|about|sur|pour)\s+)?(.+?)\s*:\s*(.+)$/u;
+const NOTE_SUF = /^(.+?)\s+(?:note|comment|commentaire)\s*:\s*(.+)$/u;
+// The timer, in words.
+const PAUSE = /^(?:pause|stop|(?:pause|stop)\s+(?:the\s+)?timer|(?:arreter|arrete|stopper|stoppe|pause)\s+le\s+chrono|mettre\s+en\s+pause)$/u;
+const START = /^(?:start|begin|resume|continue|commencer|commence|demarrer|demarre|lancer|lance|reprendre|reprends)\s+(?:(?:the\s+)?timer\s+(?:on|for)\s+|le\s+chrono\s+(?:sur|pour)\s+)?(.+)$/u;
+const TOOK = /^(.+?)\s+(?:took|a\s+pris|m'a\s+pris)\s+(.+)$/u;
+const SPENT = /^(?:(?:i\s+)?spent|j'ai\s+passe)\s+(.+?)\s+(?:on|sur)\s+(.+)$/u;
+const LENGTH_ON = /^(.+?)\s+(?:on|sur)\s+(.+)$/u;
 
 const create = (set: Record<string, unknown>) => ({ op: 'task.create' as const, set: set as { title: string } });
 /** The day a time with no date is on: today, or tomorrow when it has already passed today (the day-start rule decides which calendar day "today" at 09:00 is). */
@@ -385,6 +520,7 @@ function dayOfTime(at: string, ctx: ParseContext): DayKey {
 }
 const csOf = (changes: ChangeSet['changes']): ChangeSet => ({ v: 1, note: '', changes, bad: 0, by: 'me' });
 const draft = (title: string): Partial<Task> => ({ title });
+const upper = (s: string): string => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 
 /** A date (and maybe a time) and nothing else: where a step moves to. */
 function whenOnly(text: string, ctx: ParseContext): { due: DayKey; at?: string } | null {
@@ -393,66 +529,196 @@ function whenOnly(text: string, ctx: ParseContext): { due: DayKey; at?: string }
   const due = takeDate(w, ctx.today);
   return due && !tidy(w, false) ? { due, ...(at ? { at: at.at } : {}) } : null;
 }
+/** A length and nothing else ("40 min", "1h30"): minutes. */
+function lengthOnly(text: string): number | null {
+  const w = new Work(text);
+  const n = takeDuration(w);
+  return n && !tidy(w, false) ? n : null;
+}
 
-/** Done, move or drop: the target and what to do, or why not; 'no' when the line is none of these. */
+// ---------- a name that is nearly right ----------
+/** Edits between two words, a swap of two neighbours counting as one; stops caring past `max`. */
+function edits(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev2: number[] = [], prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(prev[j]! + 1, cur[j - 1]! + 1, prev[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2]! + 1);
+      cur.push(v);
+    }
+    prev2 = prev; prev = cur;
+  }
+  return prev[b.length]!;
+}
+const SMALL = new Set(['the', 'a', 'an', 'my', 'le', 'la', 'les', 'l', 'un', 'une', 'mon', 'ma', 'mes', 'des', 'du', 'de', 'd']);
+/** Cards whose title has every word asked for, one or more of them only nearly (a letter off in a word of four letters or more, two in one of seven; "f" for "ph"). Never the answer: an offer. */
+function nearly(q: string, pool: Named[]): Named[] {
+  const ws = norm(q).split(' ').filter(w => w && !SMALL.has(w));
+  if (!ws.length) return [];
+  const slack = (w: string) => (w.length >= 7 ? 2 : w.length >= 4 ? 1 : 0);
+  const sound = (w: string) => w.replace(/ph/g, 'f');
+  return pool.filter(p => {
+    const have = norm(p.name).split(' ');
+    return ws.every(w => have.includes(w) || (slack(w) > 0 && have.some(x => edits(sound(w), sound(x), slack(w)) <= slack(w))));
+  }).slice(0, 5);
+}
+
+/** Done, move, drop, a note, the timer: the card and what to do, or why not; 'no' when the line is none of these. */
 function command(text: string, f: string, ctx: ParseContext): HomeParse | 'no' {
   const pool = targets(ctx);
   const standing = ctx.tasks.filter(t => t.status === 'open' && t.template).map(t => ({ id: t.id, name: t.title }));
-  const aim = (intent: 'done' | 'move' | 'drop', q: string, change: (id: string) => ChangeSet['changes'][number]): HomeParse => {
+  type PickIntent = Extract<HomeParse, { kind: 'pick' }>['intent'];
+  const nomatch: HomeParse = { kind: 'unknown', reason: 'nomatch', prefill: draft(text) };
+  /** The card `q` names: its id, several to pick from, or nothing. `soft`: nothing is 'no' (the line is something else), not a card that was not found. */
+  const only = ctx.only;
+  const find = (intent: PickIntent, q: string, soft = false, from: Named[] = pool): { hit: string } | HomeParse | 'no' => {
+    if (only && from.some(p => p.id === only)) return { hit: only };
     // A line that also names a standing obligation may mean it, which the parser leaves alone: never a guess at another step.
-    if (findTarget(q, standing)) return { kind: 'unknown', reason: 'nomatch', prefill: draft(text) };
-    const r = findTarget(q, pool);
-    if (!r) return { kind: 'unknown', reason: 'nomatch', prefill: draft(text) };
-    if ('many' in r) return { kind: 'pick', intent, candidates: r.many };
-    return { kind: 'changes', cs: csOf([change(r.id)]), intent, title: pool.find(p => p.id === r.id)!.name };
+    if (from === pool && findTarget(q, standing)) return soft ? 'no' : nomatch;
+    const r = findTarget(q, from);
+    if (r && 'id' in r) return { hit: r.id };
+    if (r) return { kind: 'pick', intent, candidates: r.many };
+    const near = nearly(q, from);
+    if (near.length) return { kind: 'pick', intent, candidates: near };
+    return soft ? 'no' : nomatch;
+  };
+  const name = (id: string) => ctx.tasks.find(t => t.id === id)?.title ?? '';
+  const aim = (intent: 'done' | 'move' | 'drop', q: string, change: (id: string) => ChangeSet['changes'][number], soft = false): HomeParse | 'no' => {
+    const r = find(intent, q, soft);
+    return r === 'no' || !('hit' in r) ? r : { kind: 'changes', cs: csOf([change(r.hit)]), intent, title: name(r.hit) };
   };
   // A captured part as written: the folded text has the same length as the text.
   const sub = (m: RegExpExecArray, i: number): string => {
     const j = f.indexOf(m[i]!, m.index);
     return text.slice(j, j + m[i]!.length).trim();
   };
+  /** The last captured part, which ends the line, as written. */
+  const last = (m: RegExpExecArray, i: number): string => text.slice(text.length - m[i]!.length).trim();
   let m: RegExpExecArray | null;
-  // "done X", "X done", and a day it was done on: "yesterday" or "hier" at the end.
+
+  // The timer: pause the one that runs.
+  if (PAUSE.test(f)) return { kind: 'act', act: 'pause', title: '' };
+
+  // A line for a card's note. Any open card may have one, a standing obligation too.
+  if ((m = NOTE_PRE.exec(f)) || (m = NOTE_SUF.exec(f))) {
+    const open = ctx.tasks.filter(t => t.status === 'open').map(t => ({ id: t.id, name: t.title }));
+    const r = find('note', sub(m, 1), false, open);
+    if (r === 'no' || !('hit' in r)) return r;
+    const old = ctx.tasks.find(t => t.id === r.hit)?.note ?? '', line = upper(last(m, 2));
+    return { kind: 'changes', cs: csOf([{ op: 'task.update' as const, id: r.hit, set: { note: old ? old + '\n' + line : line } }]), intent: 'note', title: name(r.hit) };
+  }
+
+  // "done X", "X done", "X is done", and a day it was done on: "yesterday" or "hier" at the end.
   const y = /\s+(?:yesterday|hier)$/u.exec(f);
   const g = y ? f.slice(0, y.index) : f;
+  const day = y ? addDays(ctx.today, -1) : undefined;
+  const done = (id: string) => ({ op: 'task.done' as const, id, ...(day ? { day } : {}) });
   if ((m = DONE_PRE.exec(g)) || (m = DONE_SUF.exec(g))) {
-    const day = y ? addDays(ctx.today, -1) : undefined;
-    return aim('done', sub(m, 1), id => ({ op: 'task.done' as const, id, ...(day ? { day } : {}) }));
+    const q = sub(m, 1);
+    const one = aim('done', q, done);
+    // "done the report and the rent": each name its own card, or the line is not that.
+    if (one !== 'no' && one.kind === 'unknown') {
+      const names = q.split(/\s*,\s*(?:and\s+|et\s+)?|\s+(?:and|et|&)\s+/u).map(x => x.trim()).filter(Boolean);
+      const each = names.length > 1 ? names.map(n => find('done', n)) : [];
+      if (each.length && each.every((r): r is { hit: string } => r !== 'no' && 'hit' in r)) return { kind: 'changes', cs: csOf(each.map(r => done(r.hit))), intent: 'several', title: '' };
+    }
+    return one;
   }
+  for (const re of DID) if ((m = re.exec(g))) { const r = aim('done', sub(m, 1), done, true); if (r !== 'no') return r; }
+
   if ((m = DROP.exec(f))) return aim('drop', sub(m, 1), id => ({ op: 'task.drop' as const, id }));
+  if ((m = DROP_SOFT.exec(f))) { const r = aim('drop', sub(m, 1), id => ({ op: 'task.drop' as const, id }), true); if (r !== 'no') return r; }
+
+  // The timer: start a card that exists ("start the report"; with no such card the line is a thing to do), or time spent on one.
+  if ((m = START.exec(f))) {
+    const r = find('start', sub(m, 1), true);
+    if (r !== 'no') return 'hit' in r ? { kind: 'act', act: 'start', id: r.hit, title: name(r.hit) } : r;
+  }
+  const spent = (q: string, len: string): HomeParse | 'no' => {
+    const min = lengthOnly(len);
+    if (!min) return 'no';
+    const r = find('spent', q, true);
+    return r === 'no' ? 'no' : 'hit' in r ? { kind: 'act', act: 'spent', id: r.hit, min, title: name(r.hit) } : r;
+  };
+  if ((m = TOOK.exec(f))) { const r = spent(sub(m, 1), last(m, 2)); if (r !== 'no') return r; }
+  if ((m = SPENT.exec(f))) { const r = spent(last(m, 2), sub(m, 1)); if (r !== 'no') return r; }
+  if ((m = LENGTH_ON.exec(f)) && lengthOnly(sub(m, 1))) { const r = spent(last(m, 2), sub(m, 1)); if (r !== 'no') return r; }
+
   // Move: "move X to <day>", "reporter X à <jour>", "X → <day>". The day is whatever parses as one, from the right.
-  let pair: [string, string] | null = null;
+  const moveTo = (q: string, to: string, soft = false): HomeParse | 'no' => {
+    const when = whenOnly(to, ctx);
+    return when ? aim('move', q, id => ({ op: 'task.update' as const, id, set: { due: when.due, ...(when.at ? { at: when.at } : {}) } }), soft) : 'no';
+  };
   if ((m = MOVE.exec(f))) {
     const x = sub(m, 1), fx = fold(x);
     for (const c of [...fx.matchAll(MOVE_TO)].reverse()) {
       const to = x.slice(c.index + c[0].length);
-      if (x.slice(0, c.index).trim() && whenOnly(to, ctx)) { pair = [x.slice(0, c.index).trim(), to]; break; }
+      if (x.slice(0, c.index).trim() && whenOnly(to, ctx)) return moveTo(x.slice(0, c.index).trim(), to);
     }
-  } else if ((m = ARROW.exec(f)) && whenOnly(sub(m, 2), ctx)) pair = [sub(m, 1), sub(m, 2)];
-  const when = pair && whenOnly(pair[1], ctx);
-  if (pair && when) return aim('move', pair[0], id => ({ op: 'task.update' as const, id, set: { due: when.due, ...(when.at ? { at: when.at } : {}) } }));
+  } else if ((m = ARROW.exec(f)) && whenOnly(sub(m, 2), ctx)) return moveTo(sub(m, 1), sub(m, 2));
+  // Said as a fact, and only about a card that exists.
+  if ((m = MOVE_FOR.exec(f)) || (m = MOVE_RATHER.exec(f))) { const r = moveTo(sub(m, 1), last(m, 2), true); if (r !== 'no') return r; }
+  if ((m = MOVE_INSTEAD.exec(f))) {
+    // "report tomorrow instead": the day is the longest end of the rest that reads as one.
+    const ws = sub(m, 1).split(/\s+/);
+    for (let k = Math.min(4, ws.length - 1); k >= 1; k--) {
+      const r = moveTo(ws.slice(0, -k).join(' '), ws.slice(-k).join(' '), true);
+      if (r !== 'no') return r;
+    }
+  }
   return 'no';
 }
 
-/**
- * Read a line typed or dictated on Home. `changes` is one change-set the planner accepts (add a
- * step, or a standing obligation; done; move to a date; drop). An ordinary line of up to
- * `PLAIN_WORDS` words adds a step to the Inbox.
- */
-export function parseHome(input: string, ctx: ParseContext): HomeParse {
+// ---------- a new card ----------
+/** "urgent: …", "…, important", "… (urgent)", "… asap", "… !!": the ticks, and the line without them. An adjective inside the sentence stays in the title. */
+function takeFlags(text: string): { text: string; urgent: boolean; important: boolean } {
+  let s = text, urgent = false, important = false;
+  const mark = (w: string | undefined) => { if (w?.startsWith('urgent')) urgent = true; else if (w?.startsWith('important')) important = true; };
+  for (;;) {
+    const f = fold(s);
+    let m: RegExpExecArray | null;
+    if ((m = /^(urgente?|importante?)(?:\s+(?:and|et|&)\s+(urgente?|importante?))?\s*[:\-–—]\s*(?=\S)/u.exec(f))) { mark(m[1]); mark(m[2]); s = s.slice(m[0].length); continue; }
+    if ((m = /(?:,\s*|\s*\(\s*|\s+[-–—]\s+)(urgente?|importante?)(?:\s+(?:and|et|&)\s+(urgente?|importante?))?\s*\)?\s*$/u.exec(f)) && m.index > 0) { mark(m[1]); mark(m[2]); s = s.slice(0, m.index); continue; }
+    if ((m = /(?:\s+(?:asap|urgently|en urgence|d'urgence|de toute urgence)|\s*!!+)\s*$/u.exec(f)) && m.index > 0) { urgent = true; s = s.slice(0, m.index); continue; }
+    return { text: s.trim(), urgent, important };
+  }
+}
+
+// Something waited for, not a thing to do: "waiting for the bank to call back", "en attente de la réponse", "j'attends le devis".
+const WAITING = /^(?:waiting\s+(?:for|on)|wait\s+for|en\s+attente\s+(?:de\s+|d'|du\s+|des\s+)|j'attends|attendre)\s*(?=\S)/u;
+
+/** A title longer than this many words is not a card at all (a pasted paragraph): it opens the sheet, as it is. */
+const MAX_WORDS = 30;
+
+/** One thing: a command, or a new card. */
+function parseOne(input: string, ctx: ParseContext): HomeParse {
   const text = stripLead(input.normalize('NFC'));
   const f = fold(text);
   const unknown = (reason: Unknown, prefill: Partial<Task> = draft(text)): HomeParse => ({ kind: 'unknown', reason, prefill });
   if (!/[\p{L}\p{N}]/u.test(text)) return unknown('empty', {});
-  if (SEVERAL.test(f)) return unknown('several');
-  if (text.endsWith('?') || QUESTION.test(f)) return unknown('question');
+  const noted = /^comment\s+(?:on|for|about|sur|pour)\s.+:/u.test(f); // "comment on the photos: …" is a note, not the French for "how"
+  if (text.endsWith('?') || (QUESTION.test(f) && !noted)) return unknown('question');
   const cmd = command(text, f, ctx);
   if (cmd !== 'no') return cmd;
   const names = (ctx.notes ?? []).map(norm).filter(n => n.length > 1);
   const n = norm(text);
   if (STATEMENT.test(text) || names.some(x => n.startsWith(x + ' ') && /^(?:is|was|has|had|likes|lives|works|est|etait|a|aime|habite|travaille)$/.test(n.slice(x.length + 1).split(' ')[0]!))) return unknown('memory');
 
-  const p = extract(text, ctx);
+  // Something waited for: its name, and the day to be asked about it if the line gives one.
+  const wait = WAITING.exec(f);
+  if (wait) {
+    const w = new Work(text.slice(wait[0].length));
+    const nudge = takeDate(w, ctx.today);
+    const title = upper(tidy(w, false).replace(/[,;]?\s*(?:check|recheck|ask again|v[ée]rifier|relancer)$/iu, '').trim());
+    if (title) return { kind: 'changes', cs: csOf([create({ title, kind: 'event', ...(nudge ? { nudge } : {}) })]), intent: 'add', title };
+  }
+
+  // A project the line names, and the ticks it says.
+  const pj = ctx.projects?.length ? findProject(text, ctx.projects) : null;
+  const flags = takeFlags(pj ? pj.text : text);
+  const p = extract(flags.text, ctx);
   const prefill: Partial<Task> = { title: p.title };
   if (p.due) prefill.due = p.due;
   if (p.dueAt) { prefill.dueAt = p.dueAt; if (!p.due) prefill.due = dayOfTime(p.dueAt, ctx); } // a deadline's time: due that day, never an `at`
@@ -460,7 +726,14 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
   if (p.dur) prefill.dur = p.dur;
   if (p.est) { prefill.est = p.est; prefill.estBy = 'me'; }
   if (p.where) prefill.where = p.where;
+  if (flags.urgent) prefill.urgent = true;
+  if (flags.important) prefill.important = true;
   if (!p.title) return { kind: 'sheet', prefill };
+  /** The suit and the project the words point to (src/domain/guess.ts). */
+  const sorted = (set: Record<string, unknown>) => {
+    if (pj) { set.project = pj.project.id; set.suit = pj.project.suit; } else { const s = guessSuit(p.title, ctx.suits, ctx.history); if (s) set.suit = s; }
+    return set;
+  };
 
   if (p.recur) {
     const r = p.recur;
@@ -471,7 +744,7 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
       if (p.dur) set.dur = p.dur;
       if (p.where) set.where = p.where;
       if (p.until) set.until = p.until;
-      return { kind: 'changes', cs: csOf([create(set)]), intent: 'standing', title: p.title };
+      return { kind: 'changes', cs: csOf([create(sorted(set))]), intent: 'standing', title: p.title };
     }
     // A repeat with no time: the sheet's Repeats field holds it (a change-set has no way to say it).
     const rep: Repeat = { every: r.every, unit: r.unit, from: 'due' };
@@ -482,8 +755,58 @@ export function parseHome(input: string, ctx: ParseContext): HomeParse {
     return { kind: 'sheet', prefill: sheet };
   }
 
-  if (words(p.title) > PLAIN_WORDS) return unknown('long', prefill);
+  // A sentence, not a plain line: the words of a polite opening count ("I should probably … before the weekend" is one, as it always was).
+  const long = words(p.title) + words(stripPrefix(input.normalize('NFC'))) - words(text) > PLAIN_WORDS;
+  if (words(p.title) > MAX_WORDS) return unknown('long', prefill);
   const set: Record<string, unknown> = { title: p.title };
-  for (const k of ['due', 'dueAt', 'at', 'dur', 'est', 'where'] as const) if (prefill[k] != null) set[k] = prefill[k];
-  return { kind: 'changes', cs: csOf([create(set)]), intent: 'add', title: p.title };
+  for (const k of ['due', 'dueAt', 'at', 'dur', 'est', 'where', 'urgent', 'important'] as const) if (prefill[k] != null) set[k] = prefill[k];
+  const starter = ctx.firstMove?.(p.title);
+  if (starter) set.starter = starter;
+  return { kind: 'changes', cs: csOf([create(sorted(set))]), intent: 'add', title: p.title, ...(long ? { long: true as const } : {}) };
+}
+
+// ---------- several things in one line ----------
+const HARD = /\s*[;\n\r]+\s*|\s+(?:and then|et puis|et ensuite|then|puis|ensuite)\s+/gu;
+const SOFT = /\s*,\s*(?:(?:and|et)\s+)?|\s+(?:and|et|&)\s+/gu;
+const COMMAND_START = /^(?:done|finished|fait|fini|finie|termine|terminee|drop|abandon|move|push|postpone|reporter|deplacer|decaler|supprimer|abandonner)\s/u;
+// "Open Mail and reply to the agency" is one card, written the way the method asks; so is a second half that leans on the first ("… and send it").
+const ONE_ACTION = /^(?:open|ouvrir|ouvre|go to|aller sur|log in|sign in|se connecter)\s/u;
+const LEANS = /(?<![\p{L}\p{N}])(?:it|them|him|her)(?![\p{L}\p{N}])|-(?:le|la|les|lui|leur)(?![\p{L}\p{N}])/u;
+
+/** Cut `s` where `re` matches its folded form; the pieces as written, without the empty ones. */
+function cut(s: string, re: RegExp): string[] {
+  const f = fold(s), out: string[] = [];
+  let at = 0;
+  for (const m of f.matchAll(re)) { out.push(s.slice(at, m.index)); at = m.index + m[0].length; }
+  out.push(s.slice(at));
+  return out.map(x => x.trim()).filter(x => /[\p{L}\p{N}]/u.test(x));
+}
+
+/**
+ * The things a line holds. A semicolon, a new line, "then" and "puis" always part two things. A comma or an "and" parts them only when
+ * every piece is a thing to do of its own (it opens with a verb and has an object): "call the bank and book the dentist" is two cards,
+ * "buy milk and eggs" and "call Anna and Tom" are one.
+ */
+function pieces(text: string): string[] {
+  return cut(text, HARD).flatMap(part => {
+    const soft = cut(part, SOFT);
+    if (soft.length < 2) return [part];
+    const fs = soft.map(x => fold(stripLead(x)));
+    if (ONE_ACTION.test(fs[0]!) || fs.slice(1).some(x => LEANS.test(x))) return [part];
+    return fs.every(x => opensWithVerb(x) || COMMAND_START.test(x)) ? soft : [part];
+  });
+}
+
+/**
+ * Read a line typed or dictated on Home. `changes` is one change-set the planner accepts (new cards, or a standing obligation;
+ * done; move to a date; drop; a line for a card's note); `act` is the timer. A line that holds several things is read one thing
+ * at a time, and is one change-set if every one of them was read.
+ */
+export function parseHome(input: string, ctx: ParseContext): HomeParse {
+  const ps = pieces(input.normalize('NFC'));
+  if (ps.length < 2) return parseOne(ps[0] ?? input, ctx);
+  const each = ps.map(x => parseOne(x, ctx));
+  const changes = each.flatMap(r => (r.kind === 'changes' ? r.cs.changes : []));
+  if (each.every(r => r.kind === 'changes')) return { kind: 'changes', cs: csOf(changes), intent: 'several', title: '' };
+  return { kind: 'unknown', reason: 'several', prefill: draft(stripLead(input.normalize('NFC'))) };
 }

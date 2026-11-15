@@ -4,10 +4,10 @@
 // one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
-import { db, tasks, places, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
-import { T, addressesOn, spentOf } from './model';
-import { addSession } from './actions';
-import { openNewTask, flows } from './sheets';
+import { db, tasks, places, projects, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
+import { T, addressesOn, spentOf, running } from './model';
+import { addSession, addToday, startTask } from './actions';
+import { openNewTask, flows, pauseTimer } from './sheets';
 import { fieldsOf, type Stored } from '../data/doc';
 import { normExchange } from '../data/normalize';
 import type { Exchange, ExchangeTurn, Task, UndoDoc } from '../data/schema';
@@ -15,6 +15,8 @@ import { parseHome, type HomeParse, type Intent, type ParseContext } from '../do
 import { parseMinutes } from '../domain/duration';
 import { norm, type Named } from '../domain/names';
 import { visitPromptFor } from '../domain/offers';
+import { suitHistory } from '../domain/guess';
+import { suggestFirstMove } from '../domain/firstMove';
 import { planChanges, applyPlanned, isLowRisk } from '../ai/apply';
 import { appWriter, snapshot, gen } from '../ai/writer';
 import { openChangeReview } from '../ai/Review';
@@ -37,7 +39,7 @@ const DAY_MS = 86_400_000;
  */
 export type HomeCard =
   /** "done the dentist" matched several steps: which one? */
-  | { kind: 'pick'; text: string; intent: 'done' | 'move' | 'drop'; candidates: Named[]; at: number }
+  | { kind: 'pick'; text: string; intent: Extract<HomeParse, { kind: 'pick' }>['intent']; candidates: Named[]; at: number }
   /** A step was just ticked done without a timer: how long did it take? The session joins the same Undo. */
   | { kind: 'duration'; task: string; exchange: string; cs: string; at: number }
   /** A change-set waiting for the person's yes in the review ("3 changes · Review"). */
@@ -79,7 +81,9 @@ export function lineOf(undo: UndoDoc[], title: string, n: number, turn: TurnKind
 }
 
 // ---------- exchanges ----------
-export type TurnKind = Intent | 'changes';
+/** What a turn is kept as. A note added and several things at once are kept as `changes`: the stored kinds are unchanged. */
+export type TurnKind = Exclude<Intent, 'note' | 'several'> | 'changes';
+const turnOf = (i: Intent): TurnKind => (i === 'note' || i === 'several' ? 'changes' : i);
 
 export const lastAt = (ex: Pick<Exchange, 'at' | 'turns'>): number => Date.parse(ex.turns[ex.turns.length - 1]?.at ?? ex.at) || 0;
 const hasLive = (ex: Exchange): boolean => ex.changes.some(c => !ex.undone.includes(c));
@@ -195,8 +199,14 @@ function parseContext(): ParseContext {
     zone: hereZone.value,
     places: [...places.value.values()].map(p => ({ id: p.id, name: p.name })),
     // Something waited for is not a step to name ("done X"): it is answered with "It happened".
-    tasks: [...tasks.value.values()].filter(x => x.kind !== 'event').map(x => ({ id: x.id, title: x.title, status: x.status, template: x.template })),
+    tasks: [...tasks.value.values()].filter(x => x.kind !== 'event').map(x => ({ id: x.id, title: x.title, status: x.status, template: x.template, note: x.note ?? '', running: !!x.started })),
     notes: [...memory.value.values()].filter(n => !n.private).flatMap(n => [n.name, ...n.aliases]),
+    // What a new card's suit, project and first move are guessed from (src/domain/guess.ts, firstMove.ts): the open projects, the suits as the
+    // person named them, the suits their own cards went to, and the first move's sentence in the app's language.
+    projects: [...projects.value.values()].filter(p => p.status === 'active' && p.id !== 'inbox').map(p => ({ id: p.id, name: p.name, suit: p.suit })),
+    suits: settings.value.suits,
+    history: suitHistory([...tasks.value.values()].filter(x => x.status !== 'dropped' && !x.template && x.kind !== 'event' && x.src !== 'home').map(x => ({ title: x.title, suit: x.suit }))),
+    firstMove: title => { const k = suggestFirstMove(title); return k ? t(k) : null; },
   };
 }
 
@@ -230,19 +240,52 @@ export async function submitHome(raw: string): Promise<boolean> {
   homeCard.value = null;
   const p = parseHome(text, parseContext());
   switch (p.kind) {
-    case 'changes': return run(text, p.cs, p.intent, p.title);
+    case 'changes': {
+      // A long sentence is a card as it stands; with an AI on, the AI reads it instead, as it always did.
+      const first = p.cs.changes[0];
+      if (p.long && aiOn.value && first?.op === 'task.create') return askHome(text, first.set as Partial<Task>);
+      // A note the person wrote on their own card goes in at once, like a new card: they are its words.
+      return run(text, p.cs, turnOf(p.intent), p.title, p.intent === 'note');
+    }
+    case 'act': return act(text, p);
     case 'pick': homeCard.value = { kind: 'pick', text, intent: p.intent, candidates: p.candidates, at: Date.now() }; return true;
     case 'sheet': openNewTask(p.prefill); return true;
     case 'unknown': return routeUnknown(text, p);
   }
 }
 
+/** The timer, said in words: start a card (it joins today's hand, and Today shows it running), pause the one that runs, or log time spent on a card. */
+async function act(text: string, p: Extract<HomeParse, { kind: 'act' }>): Promise<boolean> {
+  if (p.act === 'pause') {
+    const cur = running();
+    if (!cur) { showAnswer(t('homeNoTimer')); return true; }
+    pauseTimer(cur.id);
+    return true;
+  }
+  const tk = p.id ? T(p.id) : undefined;
+  if (!tk) return false;
+  if (p.act === 'start') {
+    await addToday(tk.id, true);
+    await startTask(tk.id);
+    // Today is where a timer shows. (Asked for here: `nav` reads the address bar when it loads, which this module's tests have none of.)
+    void import('./nav').then(nav => nav.go('today'));
+    return true;
+  }
+  const { undo } = await recordWrites(() => addSession(tk.id, p.min!, null, 'typed'));
+  await addTurn({ at: new Date().toISOString(), text, kind: 'duration', reply: tk.title }, { cs: gen.id('c'), undo });
+  homeLine.value = { kind: 'changed', title: tk.title, id: tk.id, n: 1 };
+  toast(t('homeTimeSaved', { t: fmtMin(p.min!) }));
+  return true;
+}
+
 /** The person tapped (or named) one of the candidates: read the same line again with only that step to find. */
 export async function choose(card: Extract<HomeCard, { kind: 'pick' }>, pick: Named): Promise<boolean> {
   const ctx = parseContext();
-  const p = parseHome(card.text, { ...ctx, tasks: ctx.tasks.filter(x => x.id === pick.id) });
+  // The line is read again and means the picked card, however it named it (a name that was only nearly right, too).
+  const p = parseHome(card.text, { ...ctx, only: pick.id });
   homeCard.value = null;
-  return p.kind === 'changes' ? run(card.text, p.cs, p.intent, p.title) : false;
+  if (p.kind === 'act') return act(card.text, p);
+  return p.kind === 'changes' ? run(card.text, p.cs, turnOf(p.intent), p.title, p.intent === 'note') : false;
 }
 
 /**
@@ -288,7 +331,7 @@ export function showAnswer(text: string, action?: { label: string; run: () => vo
  * Apply a change-set the person's words (or an AI's reply) made: one low-risk change goes in at once, with a
  * receipt and Undo; anything else opens the review, with its Undo recorded and its receipt written once applied.
  */
-export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: string): Promise<boolean> {
+export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: string, atOnce = false): Promise<boolean> {
   const plan = planChanges(cs, snapshot(), gen);
   if (!plan.items.length) { toast(cs.note || t('chgNoneLeft')); return false; }
   const first = cs.changes[0];
@@ -305,7 +348,7 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
     const fed = done ? T(done) : undefined, a = fed && visitPromptFor(fed, addresses.value);
     if (fed && a && addressesOn()) flows.visit(a, { stepId: fed.id, day: fed.doneDay ?? today.value });
   };
-  if (isLowRisk(cs, plan)) {
+  if (atOnce || isLowRisk(cs, plan)) {
     const { result: n, undo } = await recordWrites(() => applyPlanned(plan, () => true, appWriter));
     if (n) await record(n, undo); else toast(t('chgNothing'));
     return true;

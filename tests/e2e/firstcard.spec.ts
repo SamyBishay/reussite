@@ -5,6 +5,10 @@ import { test, expect, type Page } from '@playwright/test';
 import { noSideways, PHONES, LANGS, morningClock } from './helpers';
 
 test.use({ storageState: { cookies: [], origins: [] } });
+// Chrome's headless shell (Playwright's default for the android project) reports Notification.permission as "denied" on a new site (measured 15 Nov), like a
+// browser where the person blocked notifications, so the played card could never offer its reminder there; the full Chromium in headless mode
+// reports "default", as Chrome on a phone does (push.android.spec.ts uses it for the same reason).
+test.use({ channel: async ({ browserName }, use) => use(browserName === 'chromium' ? 'chromium' : undefined) });
 
 const WORDS = {
   en: { pitch: /card game patience/, play: 'Play your first card', suits: 'The four suits', what: 'call the bank tomorrow', title: 'Call the bank', move: 'Open the Phone app', moveLabel: 'First move: ', coach: 'This is your first card', played: 'First card played', remind: 'Yes, remind me' },

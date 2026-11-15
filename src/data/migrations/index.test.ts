@@ -6,6 +6,9 @@ import { runMigrations, migrateData, upgradeEntries, goalsReport, type Migration
 import { ZERO } from '../hlc';
 import { merge } from '../doc';
 import { SCHEMA_VERSION } from '../schema';
+import { withDefaults, EVERYTHING_ON, type Settings } from '../settings';
+import { fieldsOf } from '../doc';
+import { ALL_TABS, GROW_TABS, factsOf, featureOn, reviewWaits, tabShown } from '../../domain/start';
 
 let n = 0;
 const fresh = () => new ReussiteDb('test-' + n++);
@@ -154,6 +157,8 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7, 7 → 8 and 8 
       expect(await db.local.get('schema')).toEqual({ key: 'schema', value: SCHEMA_VERSION });
       expect((await db.backups.toArray()).map(b => b.schema)).toEqual([from]);
       expect(await runMigrations(db)).toEqual({ status: 'current' });
+      // The simple start (2026-11-15) changes nothing for it: its settings read every tab, Places and trips, Addresses and people and the review as on.
+      expectEverythingOn(await db.meta.get('settings'), await db.tasks.toArray());
     });
   }
 
@@ -328,5 +333,39 @@ describe('migrations 2 → 3, 3 → 4, 4 → 5, 5 → 6, 6 → 7, 7 → 8 and 8 
     expect(up[3]!.d).toEqual({ id: 't2', _v: SCHEMA_VERSION, _hlc: { note: 'h8' }, note: 'from schema 3' });
     const current = { c: 'addresses', d: { id: 'a1', _v: SCHEMA_VERSION, _hlc: { name: 'h9' }, name: 'Now' } };
     expect(upgradeEntries([current])[0]).toBe(current);
+  });
+});
+
+/** What an install from before reads after the update: no simple start, every tab, both switches on, the review on its day. */
+function expectEverythingOn(stored: unknown, tasks: Record<string, unknown>[] = []) {
+  const s = withDefaults(stored ? fieldsOf(stored as never) as Partial<Settings> : undefined);
+  expect({ simpleSince: s.simpleSince, tabs: s.tabs, placesTrips: s.placesTrips, addressesPeople: s.addressesPeople }).toEqual(EVERYTHING_ON);
+  const empty = factsOf([], [], []);
+  for (const x of GROW_TABS) expect(tabShown(x, s.tabs, empty)).toBe(true);
+  expect(featureOn(s.placesTrips, s.simpleSince, false)).toBe(true);
+  expect(featureOn(s.addressesPeople, s.simpleSince, false)).toBe(true);
+  expect(reviewWaits(s.simpleSince, '2026-11-15', factsOf(tasks as never, [], []))).toBe(false);
+}
+
+describe('the simple start leaves every install from before as it was', () => {
+  // Settings as each earlier version stored them: sparse (only what the person changed), never with the simple start's keys.
+  for (let v = 1; v <= SCHEMA_VERSION; v++) {
+    it(`schema ${v}: settings, cards and projects migrate to everything on`, () => {
+      const data = {
+        meta: [{ id: 'settings', _v: v, _hlc: { language: 'h1', here: 'h1', reviewDay: 'h1' }, language: 'fr', here: 'home', reviewDay: 7 }],
+        tasks: [{ id: 't1', _v: v, _hlc: { title: 'h1' }, title: 'Old card', status: 'open', created: '2026-09-01T09:00:00Z' }],
+        projects: [],
+      };
+      const after = migrateData(data, v);
+      expectEverythingOn(after.meta![0], after.tasks);
+    });
+  }
+  it('a database with no settings document at all (nothing ever changed) reads everything on', () => {
+    expectEverythingOn(undefined);
+  });
+  it('a choice made before stays: Addresses and people switched off stays off, even with addresses stored', () => {
+    const s = withDefaults({ addressesPeople: false });
+    expect(featureOn(s.addressesPeople, s.simpleSince, true)).toBe(false);
+    expect(s.tabs).toEqual(ALL_TABS);
   });
 });

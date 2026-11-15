@@ -21,6 +21,7 @@ import { showsInArea } from './areas';
 import { en } from '../i18n/en';
 import { t as tr, type Key } from '../i18n';
 import { outcomeOf } from '../domain/goal';
+import { factsOf, featureOn, reviewWaits } from '../domain/start';
 
 export type T = WithId<Task>;
 
@@ -248,8 +249,19 @@ export function lineInputNow(): LineInput {
 }
 
 // ---------- addresses and people (phase 4) ----------
-/** The module is on (Settings → Addresses & People). Off hides the screens and the offers; what is stored stays. */
-export const addressesOn = () => settings.value.addressesPeople !== false;
+/**
+ * The module is on (Settings → Addresses & People). Off hides the screens and the offers; what is stored stays. Off is a new install's start
+ * (src/domain/start.ts): there, an address or a person that arrives (sync, an import, the connector) turns it on.
+ */
+export const addressesOn = () => featureOn(settings.value.addressesPeople, settings.value.simpleSince, addresses.value.size > 0 || people.value.size > 0);
+/** Places and trips are on (Settings → Method → Places): the place pill and menu, the place field, stays and Plan this trip. Off on a new install until turned on or until a place or a stay exists. */
+export const placesOn = () => featureOn(settings.value.placesTrips, settings.value.simpleSince, places.value.size > 0 || stays.value.size > 0);
+
+// ---------- the simple start (src/domain/start.ts) ----------
+/** The deck as the simple start's rules count it. */
+export const deckFacts = computed(() => factsOf(tasks.value.values(), projects.value.values(), days.value.values()));
+/** A new install's weekly review waits (no box, no nudge) until the deck is a week old and holds ten cards. Never on an install from before. */
+export const reviewWaitsOn = (day: string): boolean => reviewWaits(settings.value.simpleSince, day, deckFacts.value);
 
 /** A category's name: what the person typed, else the app's word for it in the current language, else its id. */
 export function categoryName(id: string): string {

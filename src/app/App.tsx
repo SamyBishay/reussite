@@ -9,7 +9,7 @@ import { SheetHost, suitName } from './ui';
 import { OverlayHost } from './sheet';
 import { openPile, openTask, rankOf, flows, moment } from './sheets';
 
-import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, TABS, calMode, type View } from './nav';
+import { view, go, fromHash, taskFromHash, planFromHash, clearTaskHash, calMode, type View } from './nav';
 import { startKeyboard } from './keyboard';
 import { startSync } from './sync';
 import { startFeed } from './feed';
@@ -41,6 +41,7 @@ import { openMorning, openPlanDay } from '../flows/morning';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
 import { decideOnboarding, onboarding } from './onboarding';
+import { shownTabs, watchStart } from './simpleStart';
 import { Onboarding } from '../flows/onboarding';
 import { AddCard } from './AddCard';
 import { Footer } from './Footer';
@@ -87,14 +88,14 @@ const TAB_ICON: Record<string, string> = {
   projects: 'M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
 };
-/** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. */
+/** The five places, at the bottom (brief §5): no counts or badges. Settings, Memory and History belong to Home. A new install starts with Home and Today, and the others arrive (src/app/simpleStart.ts). */
 function Tabs() {
   const v = view.value;
   const current = (x: View) => (x === 'home' ? v === 'home' || v === 'settings' || v === 'memory' || v === 'history' || v === 'addresses' || v === 'notifications' || v === 'waiting' : v === x);
   return (
     <nav class="tabbar" aria-label={t('views')} data-testid="tabbar">
       <div class="tabbar-in">
-        {TABS.map(x => (
+        {shownTabs().map(x => (
           <button class="tab" type="button" aria-current={current(x) ? 'page' : undefined} onClick={() => go(x)} data-testid={'tab-' + x}>
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={TAB_ICON[x]} /></svg>
             <span>{t(TAB_KEY[x]!)}</span>
@@ -148,7 +149,7 @@ async function openLinkedPlan() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); watchStart(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   // Home and the Calendar never scroll (the page is one screen tall, what is inside scrolls), and the phone's rubber band is off while they are shown (html.home-lock, src/styles/app.css).
   // First-run set-up is none of them: it is a stack of pages that scroll, though the view behind it is Home (so the lock was on and the pages could not move).

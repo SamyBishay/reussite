@@ -4,8 +4,9 @@
 import { useEffect } from 'preact/hooks';
 import { signal } from '@preact/signals';
 import { Rings } from '../app/Rings';
-import { today, settings, readOnly, viewingElsewhere } from '../app/store';
-import { dayDoc, decisionsToCheck, carriedOn, greetingNow, missedOn } from '../app/model';
+import { today, readOnly, viewingElsewhere } from '../app/store';
+import { decisionsToCheck, carriedOn, greetingNow, missedOn } from '../app/model';
+import { reviewDue } from '../app/ReviewBanner';
 import { openCarried, MissedCard } from '../app/CarryUi';
 import { KeyCard } from '../app/SyncSettings';
 import { syncOn, keySaved } from '../app/sync';
@@ -15,12 +16,14 @@ import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { ChatOffer } from '../app/ChatOffer';
 import { NextStepsCard, nextLinesNow } from '../app/NextSteps';
+import { tabNews, dismissTabNews } from '../app/simpleStart';
+import { go } from '../app/nav';
+import type { GrowTab } from '../domain/start';
 import { StillBanner, stillRunning, ReadOnlyBanner, SyncStaleBanner, syncIsStale, ViewingBanner } from '../app/Banners';
 import { UpdateBanner, updateReady } from '../app/UpdateBanner';
 import { aiOn } from '../ai/ask';
 import { openDecisionPage } from '../flows/decision';
-import { isoDow } from '../domain/repeat';
-import { t } from '../i18n';
+import { t, type Key } from '../i18n';
 import type { ComponentChild } from 'preact';
 
 export interface Entry { key: string; node: ComponentChild }
@@ -39,7 +42,7 @@ export function entries(): Entry[] {
   if (carriedOn(k).length) add('carry:' + k, <div class="banner" data-testid="carry-nudge"><p>{t('carryText')}</p><button class="btn small" type="button" onClick={openCarried}>{t('carryButton')}</button></div>);
   const missed = missedOn(k)[0];
   if (missed) add('missed:' + missed, <MissedCard key={missed} id={missed} onNext={() => {}} />);
-  if (isoDow(k) === settings.value.reviewDay && !dayDoc(k)?.review) add('review:' + k, <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button><ChatOffer what="review" small testid="review-chat" /></div>);
+  if (reviewDue(k)) add('review:' + k, <div class="banner" data-testid="review-card"><p>{t('reviewToday')}</p><button class="btn small" type="button" onClick={startReview}>{t('startReview')}</button><ChatOffer what="review" small testid="review-chat" /></div>);
   const g = greetingNow.value;
   if (g?.kind === 'plan') {
     add('plan:' + k, (
@@ -64,9 +67,25 @@ export function entries(): Entry[] {
     ));
   }
   if (viewingElsewhere.value) add('viewing', <ViewingBanner />);
+  if (tabNews.value.length) add('tabs:' + tabNews.value.join(','), <TabNews />);
   const next = nextLinesNow();
   if (next.length) add('next:' + next.join(','), <NextStepsCard />);
   return out;
+}
+
+const NEW_TAB: Record<GrowTab, Key> = { calendar: 'tabNewCalendar', projects: 'tabNewProjects', matrix: 'tabNewMatrix' };
+/** A tab arrived on this device (src/app/simpleStart.ts): one line each, said once; OK clears them. Never a pop-up. */
+function TabNews() {
+  return (
+    <section class="banner tabnews" data-testid="tab-news">
+      <ul class="picklist menu">
+        {tabNews.value.map(x => (
+          <li key={x}><button type="button" class="linklike" onClick={() => { void dismissTabNews(); go(x); }} data-testid={'tab-news-' + x}><b>{t(NEW_TAB[x])}</b></button></li>
+        ))}
+      </ul>
+      <button class="btn small ghost" type="button" onClick={() => void dismissTabNews()} data-testid="tab-news-ok">{t('ok')}</button>
+    </section>
+  );
 }
 
 // ---------- seen

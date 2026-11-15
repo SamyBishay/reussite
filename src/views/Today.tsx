@@ -15,6 +15,8 @@ import { Rings, TimerRings } from '../app/Rings';
 import { openPlanDay } from '../flows/morning';
 import { openClose } from '../flows/close';
 import { PeriodNav } from '../app/PeriodNav';
+import { DeckFold } from './Matrix';
+import { tabOn } from '../app/simpleStart';
 import { ReviewBanner } from '../app/ReviewBanner';
 import { openDecisionPage } from '../flows/decision';
 import { t, fmtMin, fmtDate } from '../i18n';
@@ -329,6 +331,8 @@ export function Today() {
           </>
         )}
         <DoneFold n={sd.done.length}><ol class="tableau" data-testid="done-list">{sd.done.map(id => <Row key={id} tk={T(id)!} n={0} k={k} />)}</ol></DoneFold>
+        {/* A new install: until the Matrix tab arrives, the deck is here, under today's hand. */}
+        {!tabOn('matrix') && <DeckFold />}
         <CommandBox scope={{ kind: 'today' }} />
         <button class="btn primary close-day" type="button" onClick={openClose}>{d?.closed ? t('closeAgain') : t('closeTheDay')}</button>
       </div>

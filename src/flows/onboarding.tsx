@@ -30,7 +30,7 @@ import { ReviewList, prepareReview } from '../ai/Review';
 import { setupPrompt, SetupReply, readSetup, type Turn } from '../ai/setup';
 import { shortName, type Plan } from '../ai/apply';
 import { lang, t, type Key } from '../i18n';
-import { SUIT_ORDER, NEW_USER_SUITS, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
+import { SUIT_ORDER, NEW_USER_SUITS, NEW_USER_START, DEFAULT_SETTINGS, type AiProvider, type Settings } from '../data/settings';
 import type { Place, SuitId, Task } from '../data/schema';
 import type { ChangeSet } from '../ai/changeset';
 import { deviceZone } from '../domain/zones';
@@ -102,7 +102,7 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   const guided = !!entry;
   const [id, setId] = useState<Id>(entry === 'key' ? 'key' : entry === 'connector' ? 'link' : 'language');
   const [trail, setTrail] = useState<Id[]>([]);
-  const [draft, setDraft] = useState<Draft>({ s: guided ? {} : { suits: NEW_USER_SUITS }, places: [] });
+  const [draft, setDraft] = useState<Draft>({ s: guided ? {} : { suits: NEW_USER_SUITS, ...NEW_USER_START }, places: [] });
   const [busy, setBusy] = useState(false);
   const path: Path = entry ?? 'hand';
   const [provider, setProvider] = useState<Provider>('openai');
@@ -144,7 +144,8 @@ export function Onboarding({ entry, onExit }: { entry?: Entry; onExit?: () => vo
   /** Write what was drafted (unless the space on another device is the source of truth), record that set-up is over, and go Home. */
   const finish = async (how: 'done' | 'skipped' | 'paired' = 'done', card?: { title: string; starter: string; suit: SuitId; fields: Partial<Task> }) => {
     setBusy(true);
-    if (how !== 'paired') await applyDraft(draft, lang.value, { want: false, provider, has: false });
+    // A new install starts small (src/domain/start.ts): two tabs, no places or addresses, from now. A device that paired writes none of it.
+    if (how !== 'paired') await applyDraft({ ...draft, s: { ...draft.s, simpleSince: new Date().toISOString() } }, lang.value, { want: false, provider, has: false });
     await finishedOnboarding(how === 'skipped' ? 'skipped' : 'done');
     draftProvider.value = null;
     // The first card is dealt into today's hand, and Today shows it under Start here.

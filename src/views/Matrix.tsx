@@ -36,9 +36,8 @@ const searchFields = (x: T): (string | null | undefined)[] => {
 };
 
 /** The open cards on the page (the view's place and area), and in each quadrant in priority order. */
-function pageCards(): { all: T[]; qs: Record<number, T[]> } {
+function pageCards(q = filters.value.q): { all: T[]; qs: Record<number, T[]> } {
   // A step that waits for another is inside its head's card ("+n after"), not a card of its own.
-  const q = filters.value.q;
   const all = [...tasks.value.values()].filter(x => isOpen(x) && !isObligation(x) && !blocked(x) && inPlace(x) && showsInArea('matrix', x) && matchesQuery(q, searchFields(x)));
   const qs: Record<number, T[]> = { 1: [], 2: [], 3: [], 4: [] };
   all.forEach(x => qs[quad(x)]!.push(x));
@@ -157,6 +156,20 @@ function AllCards({ qs, planSet }: { qs: Record<number, T[]>; planSet: Set<strin
       </div>
       {list.length === 0 ? <p class="hint">{t('allCardsNone')}</p> : <ul class="items" data-testid="all-cards-list">{list.map(([k, x]) => <li key={x.id}><Item tk={x} planned={planSet.has(x.id)} quadTag={k} /></li>)}</ul>}
     </div>
+  );
+}
+
+/**
+ * The deck under today's hand on Today while the Matrix tab has not arrived (a new install, src/app/simpleStart.ts): the same All cards list and
+ * filters, folded, with no search (that field is the Matrix's).
+ */
+export function DeckFold() {
+  const [open, setOpen] = useState(false);
+  const { all, qs } = pageCards('');
+  return (
+    <Fold title={t('deckTitle', { n: all.length })} testid="deck-fold" onToggle={setOpen}>
+      {open && <AllCards qs={qs} planSet={new Set(rawPlan(today.value))} />}
+    </Fold>
   );
 }
 

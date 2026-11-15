@@ -5,6 +5,7 @@ import { parse } from './hlc';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
 import type { FeedDetail } from '../domain/calItems';
 import type { FeedShare } from '../feed/protocol';
+import { ALL_TABS, NO_TABS, type TabsShown } from '../domain/start';
 
 export type ThemeMode = 'system' | 'light' | 'dark' | 'time';
 export type Celebrations = 'off' | 'calm' | 'lively';
@@ -84,6 +85,13 @@ export interface Settings {
   /** Sound on completed steps and at the close of the day. */
   sound: boolean;
   volume: number;
+  // The simple start (2026-11-15, src/domain/start.ts). An install from before stored none of these, and reads them as everything on.
+  /** When this install's set-up wrote the simple start (an ISO time); empty for an install from before, or a deck that turned out to hold older cards. */
+  simpleSince: string;
+  /** The tabs shown beside Home and Today. A tab once shown stays (nothing sets one back to false but set-up). */
+  tabs: TabsShown;
+  /** Places and trips (the place pill and menu, the place field, stays, Plan this trip). Off hides them; nothing stored is touched. */
+  placesTrips: boolean;
   // Addresses and people (brief §5, phase 4)
   /** The module (Addresses and People) is on. Switching it off hides the screens and offers; nothing stored is touched. */
   addressesPeople: boolean;
@@ -121,6 +129,14 @@ export const NEW_USER_SUITS: Record<SuitId, SuitSetting> = {
   C: { name: { en: 'Personal projects', fr: 'Projets personnels' }, short: { en: 'Projects', fr: 'Projets' }, glyph: '♣', desc: { en: 'Side projects, chores, research', fr: 'Projets perso, corvées, recherches' } },
   H: { name: { en: 'Interpersonal obligations', fr: 'Obligations envers les autres' }, short: { en: 'Others', fr: 'Autres' }, glyph: '♥', desc: { en: 'Functions and services for family and friends', fr: 'Fonctions et services pour la famille et les amis' } },
 };
+
+/**
+ * What set-up writes for a new install (with `simpleSince`, the time it is written): two tabs, and Places and trips and Addresses and people off.
+ * They are not `DEFAULT_SETTINGS`, which stays what installs from before read when they stored nothing (as with `NEW_USER_SUITS`).
+ */
+export const NEW_USER_START: Pick<Settings, 'tabs' | 'placesTrips' | 'addressesPeople'> = { tabs: NO_TABS, placesTrips: false, addressesPeople: false };
+/** What a deck that holds older cards is given, and what an install from before reads: everything on, as before the simple start. */
+export const EVERYTHING_ON: Pick<Settings, 'simpleSince' | 'tabs' | 'placesTrips' | 'addressesPeople'> = { simpleSince: '', tabs: ALL_TABS, placesTrips: true, addressesPeople: true };
 
 /** Ids stay fixed (addresses keep them); the names come from the strings `addressCat_<id>` until the person edits them. */
 export const DEFAULT_ADDRESS_CATEGORIES: AddressCategory[] = ['food', 'cafe', 'shopping', 'sight', 'museum', 'park', 'outing', 'other'].map(id => ({ id, name: '' }));
@@ -166,6 +182,9 @@ export const DEFAULT_SETTINGS: Settings = {
   feedShared: null,
   sound: true,
   volume: 0.6,
+  simpleSince: '',
+  tabs: ALL_TABS,
+  placesTrips: true,
   addressesPeople: true,
   addressCategories: DEFAULT_ADDRESS_CATEGORIES,
   aiProvider: 'none',

@@ -17,7 +17,8 @@ import type { Place, SuitId } from '../data/schema';
 import { addDays } from '../domain/dates';
 import { ZONES } from '../domain/zones';
 import { addCategory, moveCategory, removeCategory, renameCategory } from '../domain/categories';
-import { categoryName, addressesOn } from '../app/model';
+import { categoryName, addressesOn, placesOn } from '../app/model';
+import { everyTabShown, showEveryTab } from '../app/simpleStart';
 import { openTrip } from '../ai/ui';
 const PRESET_NAME: Record<string, 'presetLilacSea' | 'presetInkCoral' | 'presetForestAmber' | 'presetClassic'> = { 'lilac-sea': 'presetLilacSea', 'ink-coral': 'presetInkCoral', 'forest-amber': 'presetForestAmber', classic: 'presetClassic' };
 import { openReview } from '../flows/review';
@@ -147,8 +148,12 @@ function PlacesEditor() {
     await addPlace(name);
     toast(t('placeAdded', { name }));
   };
+  const on = placesOn(), forced = on && settings.value.placesTrips === false;
   return (
     <div class="field" data-testid="places"><span>{t('places')}</span>
+      <label class="tog"><input type="checkbox" checked={on} disabled={forced} onChange={e => set({ placesTrips: (e.target as HTMLInputElement).checked })} data-testid="places-switch" /> {t('placesSwitch')}</label>
+      <p class="hint">{forced ? t('placesForced') : t('placesSwitchHint')}</p>
+      {on && <>
       <p class="hint">{t('placesHint')}</p>
       <p class="hint">{t('areasHint')}</p>
       {ps.map(p => (
@@ -172,6 +177,7 @@ function PlacesEditor() {
         </select>
       </label>
       <p class="hint">{t('currentPlaceHint')}</p>
+      </>}
     </div>
   );
 }
@@ -221,6 +227,8 @@ export function StaysEditor() {
 function AddressesSettings() {
   const s = settings.value;
   const list = s.addressCategories;
+  // A new install starts with the module off; addresses or people that arrive (sync, an import, the connector) keep it on (src/domain/start.ts).
+  const on = addressesOn(), forced = on && s.addressesPeople === false;
   const save = (next: S['addressCategories']) => set({ addressCategories: next });
   const add = (e: Event) => {
     e.preventDefault();
@@ -234,9 +242,9 @@ function AddressesSettings() {
   };
   return (
     <div class="field" data-testid="addresses-settings"><span>{t('addrTitle')}</span>
-      <label class="tog"><input type="checkbox" checked={s.addressesPeople} onChange={e => set({ addressesPeople: (e.target as HTMLInputElement).checked })} data-testid="addresses-switch" /> {t('addrSwitch')}</label>
-      <p class="hint">{t('addrSwitchHint')}</p>
-      {s.addressesPeople && (
+      <label class="tog"><input type="checkbox" checked={on} disabled={forced} onChange={e => set({ addressesPeople: (e.target as HTMLInputElement).checked })} data-testid="addresses-switch" /> {t('addrSwitch')}</label>
+      <p class="hint">{forced ? t('addrForced') : t('addrSwitchHint')}</p>
+      {on && (
         <>
           <p class="field-label">{t('addrCategories')}</p>
           <ul class="catlist" data-testid="categories">
@@ -258,6 +266,17 @@ function AddressesSettings() {
         </>
       )}
     </div>
+  );
+}
+
+/** Show every tab: on a new install, while some tab has not arrived yet (src/app/simpleStart.ts). Once every tab shows, there is nothing to switch. */
+function TabsSettings() {
+  if (everyTabShown()) return null;
+  return (
+    <Fold title={t('tabsTitle')} testid="tabs-settings">
+      <label class="tog"><input type="checkbox" checked={false} onChange={() => void showEveryTab()} data-testid="tabs-every" /> {t('tabsEvery')}</label>
+      <p class="hint">{t('tabsEveryHint')}</p>
+    </Fold>
   );
 }
 
@@ -284,7 +303,7 @@ function Method() {
         </select>
       </label>
       <div class="actions"><button class="btn small ghost" type="button" data-testid="start-review-now" onClick={openReview}>{t('startReview')}</button>{aiOn.value && <button class="btn small ghost" type="button" data-testid="start-review-ai" onClick={openGoalReview}>{t('reviewGoalsAi')}</button>}</div>
-      <More n={changedFrom(s, ['urgencyDays', 'planningMin', 'suits', 'obligationAt', 'reviewTime', 'morningAt', 'eveningAt', 'addressesPeople', 'addressCategories']) + placeCount + stayCount} testid="method-more">
+      <More n={changedFrom(s, ['urgencyDays', 'planningMin', 'suits', 'obligationAt', 'reviewTime', 'morningAt', 'eveningAt', 'placesTrips', 'addressesPeople', 'addressCategories']) + placeCount + stayCount} testid="method-more">
         <div class="row2">
           <NumberField label={t('urgencyWindow')} value={s.urgencyDays} min={1} max={120} onSave={n => set({ urgencyDays: n })} />
           <NumberField label={t('planningTime')} value={s.planningMin} min={0} max={120} onSave={n => set({ planningMin: n })} />
@@ -309,7 +328,7 @@ function Method() {
           ))}
         </div>
         <PlacesEditor />
-        <StaysEditor />
+        {placesOn() && <StaysEditor />}
         <AddressesSettings />
       </More>
     </Fold>
@@ -404,6 +423,7 @@ export function Settings() {
   return (
     <div data-testid="settings">
       <Appearance />
+      <TabsSettings />
       <Method />
       <NotifySettings />
       <CalendarSettings />

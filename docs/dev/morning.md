@@ -1,6 +1,6 @@
 # The morning with an AI
 
-With an AI set up (`aiOn`: a provider and its key on this device), Home's **Deal the day**, the small **Deal the day** in the Start here row, and the morning notification open a planning exchange: the AI proposes the day in five sections, the person keeps, swaps or skips each item, a short exchange adjusts it, and it ends in one change-set on the existing review screen. Plan 2 Nov, "Morning" point 3 (the owner's words of 31 Oct: the AI proposes and the person chooses). With no AI, nothing changes: `openPlanDay` opens the ritual (`src/flows/checkin.tsx`), and the ritual stays one tap away (**Plan it myself**, on Home beside Plan the day and inside the exchange).
+With an AI set up (`aiOn`: a provider and its key on this device), Home's **Deal the day**, the small **Deal the day** in the Start here row, the one in the round plus's sheet on Today (a hand not yet dealt), and the morning notification open a planning exchange: the AI proposes the day in five sections, the person keeps, swaps or skips each item, a short exchange adjusts it, and it ends in one change-set on the existing review screen. Plan 2 Nov, "Morning" point 3 (the owner's words of 31 Oct: the AI proposes and the person chooses). With no AI, nothing changes: `openPlanDay` opens the ritual (`src/flows/checkin.tsx`), and the ritual stays one tap away (**Plan it myself**, on Home beside Plan the day and inside the exchange).
 
 ## With the connector on and no key: Deal it in your AI chat
 

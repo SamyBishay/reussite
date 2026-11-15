@@ -125,7 +125,7 @@ test('a line with no verb the list knows leaves the first move empty; a typed on
   await expect(page.getByTestId('first')).toContainText('First move: Open the draft at chapter 2');
 });
 
-test('with reminders available, the played card offers one for the morning', async ({ page }) => {
+test('the played card offers a reminder for the morning where this device can have one, and the Home Screen steps on an iPhone in the browser', async ({ page }, info) => {
   await morningClock(page);
   await toFirst(page, 'en');
   await page.getByTestId('ob-first-input').fill('do the dishes');
@@ -136,9 +136,15 @@ test('with reminders available, the played card offers one for the morning', asy
   await page.getByTestId('dur').first().click();
   const played = page.getByTestId('first-played');
   await expect(played).toBeVisible({ timeout: 15_000 });
-  // This browser can have reminders (the test build has a key and a relay): the question and its button show.
-  await expect(played).toContainText('A reminder tomorrow morning to deal your hand?');
-  await expect(page.getByTestId('first-remind')).toBeVisible();
+  if (info.project.name === 'iphone') {
+    // An iPhone in Safari has no reminders until Réussite is on the Home Screen: the card says how, and asks nothing it cannot do.
+    await expect(page.getByTestId('first-install')).toContainText('Add Réussite to your Home Screen first');
+    await expect(page.getByTestId('first-remind')).toHaveCount(0);
+  } else {
+    // This browser can have reminders (the test build has a key and a relay): the question and its button show.
+    await expect(played).toContainText('A reminder tomorrow morning to deal your hand?');
+    await expect(page.getByTestId('first-remind')).toBeVisible();
+  }
   await page.getByTestId('first-done').click();
   await expect(played).toHaveCount(0);
 });

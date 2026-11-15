@@ -47,4 +47,4 @@ The celebration places the dragon and the knight on the disc where the painting 
 
 ## Checking
 
-Freeze a frame in the dev server's console: `const m = await import('/src/app/stgeorge.ts'); await m.preloadStGeorge(); m.playStGeorge({ title: 'List played' }, 'lively'); for (const a of document.getAnimations()) { a.pause(); a.currentTime = 1100; }` (the hit is at 1.04 s to 1.2 s).
+Freeze a frame in the dev server's console: `const m = await import('/src/app/stgeorge.ts'); await m.preloadStGeorge(); m.playStGeorge({ title: 'Hand played' }, 'lively'); for (const a of document.getAnimations()) { a.pause(); a.currentTime = 1100; }` (the hit is at 1.04 s to 1.2 s).

@@ -93,7 +93,7 @@ Two pure things in `src/domain/greeting.ts`, both run on the 30-second clock tic
 **The card** is `greeting()` (`greetingNow` in `src/app/model.ts`), and it is only ever one of two, or none. **Start here, the running step, the clock with Pause and tomorrow's first step are Today's alone** (`FirstCard` in `Today.tsx`; no other tab and not Home carries a Start here bar or a running bar; "Still on…?" is the one banner that stays on every tab, because it fixes data). In this order, the first that applies:
 
 1. **A running timer, or a closed day**: no card, only the line.
-2. **Nothing on today's list yet** (a fixed-time item that is first does not count as a list): Plan the day (with an AI on, it opens the morning proposal, `docs/dev/morning.md`, and Plan it myself opens the ritual; with the connector on and no key, a second button opens the AI chat).
+2. **Nothing on today's list yet** (a fixed-time item that is first does not count as a list): Deal the day (with an AI on, it opens the morning proposal, `docs/dev/morning.md`, and Plan it myself opens the ritual; with the connector on and no key, a second button opens the AI chat).
 3. **Everything on it done** (the list holds cards and nothing is left to start): a line saying so, with Close the day.
 4. **Otherwise** (the plan is open, something is left to start): no card; the person starts it on Today.
 
@@ -133,7 +133,7 @@ One pure module, `src/ai/undo.ts`; the relay's connector uses it too. In the app
 - Changes go through `run`, like a typed line: one low-risk change at once, else the review.
 - No changes: the answer is the change-set's `note`, shown on the card and kept as an `answer` turn, so History lists it and a follow-up within ten minutes has the context.
 - **`outside: true`** is an optional field of the envelope that only Home's prompt asks for: the request is not about the list, the memory or the method, and the reply is one line pointing to their usual AI. The card then shows that line alone, with no button (the screens no longer offer Ask any AI). It is read when there are no changes, and it is **not** in `docs/CHANGESET.md`: an outside AI is never told about it, and the contract stays version 1.
-- If the AI fails, or the monthly limit is reached, the card says one plain sentence with **Add as a step**, which opens the task sheet prefilled. Cancel in the preview leaves the text in the input. Nothing is written.
+- If the AI fails, or the monthly limit is reached, the card says one plain sentence with **Add as a card**, which opens the card's form prefilled. Cancel in the preview leaves the text in the input. Nothing is written.
 
 "Show me what's sent" applies as everywhere, and lists the memory notes sent (private notes are never among them).
 

@@ -8,6 +8,8 @@ for (const width of [320, 375, 430]) {
   test(`a new step opens the task sheet as a draft, offers the time it finds, and is written on Save at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    // 09:00, so that the card fixed at 14:30 is a row of the list: from about 14:00 it is Start here, which opens from its body and has no Details button.
+    await morningClock(page);
     await importSample(page);
     const row = page.locator('[data-task]', { hasText: 'Dentist 14:30' });
 
@@ -30,7 +32,7 @@ for (const width of [320, 375, 430]) {
     await expect(sheet(page)).toBeHidden();
     await expect(row).toHaveCount(1);
 
-    // Saved with its time, and on today's list (Start here, or a row, whatever the clock says).
+    // Saved with its time, and on today's list: a row at 09:00.
     await row.getByRole('button', { name: /^(Edit|Details)$/ }).click();
     await sheet(page).locator('details.more summary').click();
     await expect(sheet(page).locator('input[name=at]')).toHaveValue('14:30');

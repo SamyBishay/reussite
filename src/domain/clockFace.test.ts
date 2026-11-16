@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ringFractions, phraseOf, piePath, turnPoint, secondOf } from './clockFace';
+import { ringFractions, phraseOf, turnPoint, secondOf } from './clockFace';
 
 describe('the pie and the rings', () => {
   it('fill with the hour on a 12-hour dial, the minutes round the hour and the seconds round the minute', () => {
@@ -30,24 +30,12 @@ describe('the seconds', () => {
   });
 });
 
-describe('the pie', () => {
-  it('is empty at zero and a whole disc at one', () => {
-    expect(piePath(50, 50, 24, 0)).toBe('');
-    expect(piePath(50, 50, 24, 1)).toContain('A24 24 0 1 1');
-  });
-  it('runs from twelve clockwise: a quarter ends at three, a half at six, three quarters at nine, with the large arc flag past half', () => {
-    expect(piePath(50, 50, 24, 0.25)).toBe('M50 50L50 26A24 24 0 0 1 74 50Z');
-    expect(piePath(50, 50, 24, 0.5)).toBe('M50 50L50 26A24 24 0 0 1 50 74Z');
-    expect(piePath(50, 50, 24, 0.75)).toBe('M50 50L50 26A24 24 0 1 1 26 50Z');
-  });
-});
-
 describe('the seconds dot', () => {
   it('starts at twelve and goes clockwise', () => {
-    expect(turnPoint(50, 50, 33, 0)).toEqual({ x: 50, y: 17 });
-    expect(turnPoint(50, 50, 33, 0.25)).toEqual({ x: 83, y: 50 });
-    expect(turnPoint(50, 50, 33, 0.5)).toEqual({ x: 50, y: 83 });
-    expect(turnPoint(50, 50, 33, 0.75)).toEqual({ x: 17, y: 50 });
+    expect(turnPoint(50, 50, 45, 0)).toEqual({ x: 50, y: 5 });
+    expect(turnPoint(50, 50, 45, 0.25)).toEqual({ x: 95, y: 50 });
+    expect(turnPoint(50, 50, 45, 0.5)).toEqual({ x: 50, y: 95 });
+    expect(turnPoint(50, 50, 45, 0.75)).toEqual({ x: 5, y: 50 });
   });
 });
 

@@ -119,7 +119,7 @@ html.home-lock,html.home-lock body{overflow:hidden;overscroll-behavior:none}
 .homecards:empty{display:none}
 .dclock{display:block;flex:none}
 .dclock circle{fill:none}
-.dclock .clk-disc{fill:var(--clk-track)}.dclock .clk-pie{fill:var(--clk-hour)}
+.dclock .clk-hr{stroke:var(--clk-hour);stroke-width:6}
 .dclock .clk-track{stroke:var(--clk-track)}
 .dclock .clk-ring{stroke-width:6}
 .dclock .clk-fill{stroke-linecap:round}

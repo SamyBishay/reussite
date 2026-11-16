@@ -1,5 +1,5 @@
 // Home's clock, drawn like the timer (src/app/Rings.tsx): colour fills, no hands, no marks. Two shapes in the painting's colours (The Dove, Hilma af Klint, 1915):
-// the hour is a pie that fills clockwise from twelve on a 12-hour dial, and round it the minutes ring fills. In the channel between them one small dot goes round with
+// the hour is a ring that fills clockwise from twelve on a 12-hour dial, and round it the minutes ring fills. Outside both, one small dot goes round with
 // the seconds. The colours are `--clk-*` (src/styles/tokens.css, both themes). It reads the time where the person is.
 // The dot moves once a second, only while the page is visible, and not at all when the person (or their device) asks for less motion: then it is not
 // drawn and the clock moves once a minute, when `clockNow` ticks (every 30 s).
@@ -7,7 +7,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { clockNow, hereZone, settings } from './store';
 import { partsIn } from '../domain/dates';
 import { validZone } from '../domain/zone';
-import { ringFractions, piePath, turnPoint, secondOf, phraseOf } from '../domain/clockFace';
+import { ringFractions, turnPoint, secondOf, phraseOf } from '../domain/clockFace';
 import { t, type Key } from '../i18n';
 
 /** The time in words, in the language of the app ("ten past three", "trois heures et quart"). */
@@ -25,8 +25,8 @@ export function clockWords(hh: number, mm: number): string {
   }
 }
 
-// The dial, in a 100 x 100 box: the hour pie inside r 26, the minutes ring (6 thick) at r 43, and the seconds dot (r 2.6) half-way between them, at r 33.
-const R_PIE = 26, R_MIN = 43, R_SEC = 33;
+// The dial, in a 100 x 100 box: the hour ring (6 thick) at r 25, the minutes ring (6 thick) at r 35, and the seconds dot (r 3) outside both, at r 45.
+const R_HOUR = 25, R_MIN = 35, R_SEC = 45;
 const ring = (r: number, f: number, cls: string) => {
   const len = 2 * Math.PI * r;
   // Nothing at zero: a round cap on an empty dash would still leave a dot.
@@ -83,11 +83,11 @@ export function DoveClock({ size = 40, at }: { size?: number; at?: { hh: number;
     <svg class="dclock" viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={t('clockLabel', { time: clockWords(now.hh, now.mm) })}
       data-testid="home-clock" data-time={String(now.hh).padStart(2, '0') + ':' + String(now.mm).padStart(2, '0')} data-hour={hour.toFixed(4)} data-minute={minute.toFixed(4)}
       data-second={showSec ? String(Math.floor(ss)) : ''}>
-      <circle class="clk-disc" cx="50" cy="50" r={R_PIE} />
-      {hour > 0 && <path class="clk-pie" d={piePath(50, 50, R_PIE, hour)} />}
+      <circle class="clk-track clk-ring" cx="50" cy="50" r={R_HOUR} />
+      {ring(R_HOUR, hour, 'clk-hr')}
       <circle class="clk-track clk-ring" cx="50" cy="50" r={R_MIN} />
       {ring(R_MIN, minute, 'clk-min')}
-      {showSec && <circle class="clk-sec" cx={dot.x} cy={dot.y} r="2.6" />}
+      {showSec && <circle class="clk-sec" cx={dot.x} cy={dot.y} r="3" />}
     </svg>
   );
 }

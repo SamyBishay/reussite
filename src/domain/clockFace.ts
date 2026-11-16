@@ -1,8 +1,8 @@
-// The Dove clock's arithmetic (src/app/DoveClock.tsx): how far round each part is filled, where its pie and its seconds dot go, and how the time is said. Pure.
+// The Dove clock's arithmetic (src/app/DoveClock.tsx): how far round each part is filled, where its seconds dot goes, and how the time is said. Pure.
 
 /**
- * How far round each part is, 0 to 1, clockwise from twelve. Inside, the hour is a pie on a 12-hour dial (it creeps with the minutes and is empty at twelve); round it, the minutes
- * ring (empty on the hour); between the two, the seconds, a dot that goes round once a minute. Each moves in whole steps: the hour and the minutes with the minute, the seconds with the second.
+ * How far round each part is, 0 to 1, clockwise from twelve. Inside, the hour is a ring on a 12-hour dial (it creeps with the minutes and is empty at twelve); round it, the minutes
+ * ring (empty on the hour); outside both, the seconds, a dot that goes round once a minute. Each moves in whole steps: the hour and the minutes with the minute, the seconds with the second.
  */
 export function ringFractions(hh: number, mm: number, ss = 0): { hour: number; minute: number; second: number } {
   const h = ((hh % 12) + 12) % 12, m = ((mm % 60) + 60) % 60, s = ((Math.floor(ss) % 60) + 60) % 60;
@@ -14,15 +14,6 @@ export const secondOf = (ms: number): number => Math.floor((((ms % 60_000) + 60_
 
 const pt = (cx: number, cy: number, r: number, turn: number) => ({ x: cx + r * Math.sin(2 * Math.PI * turn), y: cy - r * Math.cos(2 * Math.PI * turn) });
 const n2 = (x: number) => Number(x.toFixed(2));
-
-/** The path of a pie of radius `r` about (cx, cy), from twelve clockwise through `f` of a turn: empty ("") at zero, a whole disc at one or more. */
-export function piePath(cx: number, cy: number, r: number, f: number): string {
-  if (!(f > 0)) return '';
-  const top = pt(cx, cy, r, 0);
-  if (f >= 1) { const bot = pt(cx, cy, r, 0.5); return `M${n2(top.x)} ${n2(top.y)}A${r} ${r} 0 1 1 ${n2(bot.x)} ${n2(bot.y)}A${r} ${r} 0 1 1 ${n2(top.x)} ${n2(top.y)}Z`; }
-  const e = pt(cx, cy, r, f);
-  return `M${cx} ${cy}L${n2(top.x)} ${n2(top.y)}A${r} ${r} 0 ${f > 0.5 ? 1 : 0} 1 ${n2(e.x)} ${n2(e.y)}Z`;
-}
 
 /** The point `f` of a turn clockwise from twelve on the circle of radius `r` about (cx, cy): where the seconds dot sits. */
 export function turnPoint(cx: number, cy: number, r: number, f: number): { x: number; y: number } {

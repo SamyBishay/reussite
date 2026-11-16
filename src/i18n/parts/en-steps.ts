@@ -70,6 +70,8 @@ export const enSteps = {
   breakItDown: 'Break it down',
   openDecision: 'Work through the decision',
   skipThisTime: 'Skip this time',
+  skipDay: 'Skip {date}',
+  skipDayDone: 'Not on {date}. The series goes on.',
   skipped: 'Skipped. The next one is in the deck.',
   stopRepeating: 'Stop repeating',
   dropSeries: 'Drop it (stops repeating)',

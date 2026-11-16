@@ -1,13 +1,13 @@
-// Home's clock, drawn like the timer (src/app/Rings.tsx): colour fills, no hands. From the middle out, in the painting's colours (The Dove, Hilma af Klint, 1915):
-// the hour is a pie that fills clockwise from twelve on a 12-hour dial, ringed by twelve hour ticks so that it reads as a clock face; round it the minutes ring fills;
-// and the thinnest ring, outermost, fills with the seconds. The colours are `--clk-*` (src/styles/tokens.css, both themes). It reads the time where the person is.
-// The seconds move once a second, only while the page is visible, and not at all when the person (or their device) asks for less motion: then the seconds ring is not
+// Home's clock, drawn like the timer (src/app/Rings.tsx): colour fills, no hands, no marks. Two shapes in the painting's colours (The Dove, Hilma af Klint, 1915):
+// the hour is a pie that fills clockwise from twelve on a 12-hour dial, and round it the minutes ring fills. In the channel between them one small dot goes round with
+// the seconds. The colours are `--clk-*` (src/styles/tokens.css, both themes). It reads the time where the person is.
+// The dot moves once a second, only while the page is visible, and not at all when the person (or their device) asks for less motion: then it is not
 // drawn and the clock moves once a minute, when `clockNow` ticks (every 30 s).
 import { useEffect, useState } from 'preact/hooks';
 import { clockNow, hereZone, settings } from './store';
 import { partsIn } from '../domain/dates';
 import { validZone } from '../domain/zone';
-import { ringFractions, piePath, hourTicks, secondOf, phraseOf } from '../domain/clockFace';
+import { ringFractions, piePath, turnPoint, secondOf, phraseOf } from '../domain/clockFace';
 import { t, type Key } from '../i18n';
 
 /** The time in words, in the language of the app ("ten past three", "trois heures et quart"). */
@@ -25,9 +25,8 @@ export function clockWords(hh: number, mm: number): string {
   }
 }
 
-// The dial, in a 100 x 100 box: the hour pie inside r 24, its ticks between r 26 and 33, the minutes ring (8 thick) at r 40, the seconds ring (3.5 thick) at r 47.5.
-const R_PIE = 24, R_MIN = 40, R_SEC = 47.5;
-const TICKS = hourTicks(50, 50, 29, 33, 26);
+// The dial, in a 100 x 100 box: the hour pie inside r 26, the minutes ring (6 thick) at r 43, and the seconds dot (r 2.6) half-way between them, at r 33.
+const R_PIE = 26, R_MIN = 43, R_SEC = 33;
 const ring = (r: number, f: number, cls: string) => {
   const len = 2 * Math.PI * r;
   // Nothing at zero: a round cap on an empty dash would still leave a dot.
@@ -79,17 +78,16 @@ export function DoveClock({ size = 40, at }: { size?: number; at?: { hh: number;
   const showSec = motion && (at ? at.ss !== undefined : true);
   const ss = at ? at.ss ?? 0 : secondOf(moment);
   const { hour, minute, second } = ringFractions(now.hh, now.mm, ss);
+  const dot = turnPoint(50, 50, R_SEC, second);
   return (
     <svg class="dclock" viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={t('clockLabel', { time: clockWords(now.hh, now.mm) })}
       data-testid="home-clock" data-time={String(now.hh).padStart(2, '0') + ':' + String(now.mm).padStart(2, '0')} data-hour={hour.toFixed(4)} data-minute={minute.toFixed(4)}
       data-second={showSec ? String(Math.floor(ss)) : ''}>
       <circle class="clk-disc" cx="50" cy="50" r={R_PIE} />
       {hour > 0 && <path class="clk-pie" d={piePath(50, 50, R_PIE, hour)} />}
-      {TICKS.map(k => <line class={'clk-tick' + (k.quarter ? ' q' : '')} x1={k.x1} y1={k.y1} x2={k.x2} y2={k.y2} />)}
       <circle class="clk-track clk-ring" cx="50" cy="50" r={R_MIN} />
       {ring(R_MIN, minute, 'clk-min')}
-      {showSec && <circle class="clk-track clk-secring" cx="50" cy="50" r={R_SEC} />}
-      {showSec && ring(R_SEC, second, 'clk-sec')}
+      {showSec && <circle class="clk-sec" cx={dot.x} cy={dot.y} r="2.6" />}
     </svg>
   );
 }

@@ -12,7 +12,7 @@ The tab is one screen tall, like Home: the page itself never scrolls, only the g
 
 The calendar is for things **at a fixed time**. Your day’s cards and what is due are in [Today](daily-loop.md). Every item on the calendar is also a card in its day's hand in Today: the same card, so a change in one is a change in the other.
 
-- **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays, up to its last day if it has one.
+- **Things with a time** sit on the hour grid, from the hour they start, with their length. If there is no length, the estimate is used, or an hour. A standing item (the choir on Mondays) shows on its weekdays, up to its last day if it has one. When one day of it is not happening (no choir this Monday), open the standing item and press **Skip** with that day's date: that day has no card, nothing on the calendar and no reminder, and the series goes on the week after. With an AI chat app, say it ("no choir this Monday").
 - **Slots** are time you set aside to work on a card (see [Today](daily-loop.md)). They show in every view, set apart from appointments: a dashed outline instead of a solid block, and the word “slot” before the name. Drag one on the hour grid to move it; it stays a slot. They are not in the feed.
 - Past days show the same; a played one is struck through.
 - A **stay** is a coloured band over its days. A **half day** you chose when dealing the day shows as a small label: "Afternoon · Heliopolis".

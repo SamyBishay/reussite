@@ -6,6 +6,7 @@ import type { Collection, Day, Project, Session, Stay, Task } from '../../../src
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../../../src/domain/effects';
 import { seenAfter } from '../../../src/domain/offers';
 import { releaseFrom } from '../../../src/domain/lists';
+import { copyId, openCopiesOn, skippedCopy } from '../../../src/domain/standing';
 import type { Edits } from './space';
 import type { View } from './view';
 
@@ -69,6 +70,19 @@ export function docWriter(e: Edits, view: View, now: () => Date = () => new Date
       e.update('tasks', id, { status: 'dropped', started: null });
       const plan = e.get('days', today)?.plan;
       if (Array.isArray(plan) && plan.includes(id)) dayPatch(today, { plan: plan.filter((x: string) => x !== id) });
+    },
+    async skip(id, k) {
+      const tpl = task(id);
+      if (!tpl?.template) return;
+      const open = openCopiesOn(liveTasks(), id, k);
+      for (const c of open) {
+        e.update('tasks', c.id, { status: 'dropped', started: null });
+        const plan = e.get('days', k)?.plan;
+        if (Array.isArray(plan) && plan.includes(c.id)) dayPatch(k, { plan: plan.filter((x: string) => x !== c.id) });
+      }
+      if (open.length || task(copyId(id, k))) return;
+      const t = now();
+      create('tasks', newTaskFields(tpl.title, tpl.suit, tpl.project, { where: tpl.where, ...skippedCopy(tpl, id, k) }, projectsNow(), t.toISOString(), t.getTime()), copyId(id, k));
     },
     async day(k, patch) { dayPatch(k, patch); },
     async read(c, id) { return e.get(c, id); },

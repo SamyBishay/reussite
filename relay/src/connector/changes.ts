@@ -14,7 +14,8 @@ import { b64uDecode } from '../../../src/sync/bytes';
 import { decryptJson, sealToText } from '../../../src/sync/crypto';
 import type { Env } from '../env';
 import { Edits, NeedCold, needsCold, type Loaded, type UndoDoc } from './space';
-import { describe } from './render';
+import { describe, standingNames } from './render';
+import { copyId } from '../../../src/domain/standing';
 import { resolveChanges } from './resolve';
 import { writeWarnings } from './warn';
 import type { View } from './view';
@@ -205,11 +206,24 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
     return row?.applied_at != null ? already(row.undo_id) : err(`${noWrite} It was applied by another call; check with query_tasks.`);
   }
   const made = writer.made.filter(m => m.collection !== 'sessions' && m.collection !== 'days');
+  // The hand as it now stands, for every day whose hand this wrote: the answer is the read-back, so "Done" is never taken on trust.
+  const hands: string[] = [];
+  for (const k of new Set(plan.items.flatMap(it => it.ops).flatMap(op => (op.t === 'day' && Array.isArray(op.patch.plan) ? [op.k] : [])))) {
+    const ids = edits.get('days', k)?.plan;
+    const list = (Array.isArray(ids) ? (ids as string[]) : []).map((id, i) => {
+      const t = edits.get('tasks', id);
+      return `${i + 1}. ${oneLine(String(t?.title ?? id))}${t && t.status !== 'open' ? ` [${String(t.status)}]` : ''}`;
+    });
+    hands.push(`Hand of ${k} as written (${list.length}):${list.length ? '\n' + list.join('\n') : ' empty.'}`);
+    const series = standingNames(c.v, k).filter(x => !edits.get('tasks', copyId(x.id, k)));
+    if (series.length) hands.push(`Coming into that hand by itself (a standing card, placed by the app at its time): ${series.map(x => `${x.title} (${x.id})`).join('; ')}. To call one off for that day only: task.drop with its id and "day": "${k}".`);
+  }
   return {
     text: [
       `Done: ${how}.`,
       ...lines.map(l => '- ' + l),
       ...(made.length ? [`Created: ${made.map(m => m.id).join(', ')}`] : []),
+      ...hands,
       ...notes,
       ...warnings,
       `Undo id: ${undoId} (call undo with it to put things back). It reaches the person's devices at their next sync.`,

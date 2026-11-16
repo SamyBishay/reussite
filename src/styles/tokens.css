@@ -47,7 +47,7 @@
   color-scheme:light;
   --sat:env(safe-area-inset-top,0px);  /* the room the top of a screen leaves for the status bar and the island */
   /* Home's clock (src/app/DoveClock.tsx), in the painting's colours on a faint track: the hour pie in rose, the minutes ring in teal (blue in the dark), the seconds ring in gold, the hour ticks in grey. */
-  --clk-hour:#9C4560;--clk-min:#3F8A84;--clk-sec:#9A7420;--clk-tick:#7C8886;--clk-track:#D3DAD6;
+  --clk-hour:#9C4560;--clk-min:#3F8A84;--clk-sec:#9A7420;--clk-track:#D3DAD6;
 }
 /* An iPhone's home-screen app (src/app/ios.ts) whose page runs under the status bar but reports an inset of 0 (seen under a Dynamic Island, WebKit bug 301994): leave 86px, an island is 59 to 62px tall and the
    status bar's blur fades out about 83px down (measured on the owner's phone, 2026-11-11). Where the inset is reported, the top edge (`#topbar`, app.css) pads by exactly that. */
@@ -60,7 +60,7 @@
     --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
     --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
     --shadow:0 1px 2px rgba(0,0,0,.4);
-    --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-tick:#8A8397;--clk-track:#2A2538;
+    --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-track:#2A2538;
     color-scheme:dark;
   }
 }
@@ -71,6 +71,6 @@
   --pc:#211D2D;--pc-ink:#86C2BC;--pc-red:#EC9DB8;--pc-edge:#3A3548;--pc-text:#ECE8F0;
   --red:#EF7373;--warn:#CDB98C;--warn-soft:#2B2414;--scrim:rgba(0,0,0,.6);
   --shadow:0 1px 2px rgba(0,0,0,.4);
-  --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-tick:#8A8397;--clk-track:#2A2538;
+  --clk-hour:#EC9DB8;--clk-min:#6A96D7;--clk-sec:#CDB98C;--clk-track:#2A2538;
   color-scheme:dark;
 }

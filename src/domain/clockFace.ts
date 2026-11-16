@@ -1,8 +1,8 @@
-// The Dove clock's arithmetic (src/app/DoveClock.tsx): how far round each part is filled, where its hour ticks and its pie go, and how the time is said. Pure.
+// The Dove clock's arithmetic (src/app/DoveClock.tsx): how far round each part is filled, where its pie and its seconds dot go, and how the time is said. Pure.
 
 /**
  * How far round each part is, 0 to 1, clockwise from twelve. Inside, the hour is a pie on a 12-hour dial (it creeps with the minutes and is empty at twelve); round it, the minutes
- * ring (empty on the hour); outermost, the seconds ring (empty on the minute). Each moves in whole steps: the hour and the minutes with the minute, the seconds with the second.
+ * ring (empty on the hour); between the two, the seconds, a dot that goes round once a minute. Each moves in whole steps: the hour and the minutes with the minute, the seconds with the second.
  */
 export function ringFractions(hh: number, mm: number, ss = 0): { hour: number; minute: number; second: number } {
   const h = ((hh % 12) + 12) % 12, m = ((mm % 60) + 60) % 60, s = ((Math.floor(ss) % 60) + 60) % 60;
@@ -24,12 +24,10 @@ export function piePath(cx: number, cy: number, r: number, f: number): string {
   return `M${cx} ${cy}L${n2(top.x)} ${n2(top.y)}A${r} ${r} 0 ${f > 0.5 ? 1 : 0} 1 ${n2(e.x)} ${n2(e.y)}Z`;
 }
 
-/** The twelve hour ticks, ending at `r2` about (cx, cy) and starting at `r1`; the quarters (twelve, three, six, nine) start further in, at `rq`. */
-export function hourTicks(cx: number, cy: number, r1: number, r2: number, rq: number): { x1: number; y1: number; x2: number; y2: number; quarter: boolean }[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const quarter = i % 3 === 0, a = pt(cx, cy, quarter ? rq : r1, i / 12), b = pt(cx, cy, r2, i / 12);
-    return { x1: n2(a.x), y1: n2(a.y), x2: n2(b.x), y2: n2(b.y), quarter };
-  });
+/** The point `f` of a turn clockwise from twelve on the circle of radius `r` about (cx, cy): where the seconds dot sits. */
+export function turnPoint(cx: number, cy: number, r: number, f: number): { x: number; y: number } {
+  const p = pt(cx, cy, r, f);
+  return { x: n2(p.x), y: n2(p.y) };
 }
 
 /**

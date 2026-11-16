@@ -11,7 +11,7 @@ Use the ids from the lines you were given (`t…` cards, `p…` projects, places
 | `task.create` | `ref?`, `set` (needs `title`) |
 | `task.update` | `id`, `set` |
 | `task.done` | `id`, `day?` (the day it was played; default today; on a card of `kind` `event`, the day it happened) |
-| `task.drop` | `id` |
+| `task.drop` | `id`, `day?` (a standing card only: that one day of the series is called off, the series goes on; without it the series ends) |
 | `task.reorder` | `ids` (a project's cards in their new order) |
 | `project.create` | `ref?`, `set` (needs `name`) |
 | `project.update` | `id`, `set` (the goal: `outcome`, `measure`, `start`, `due`; see Project `set`) |

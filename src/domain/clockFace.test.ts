@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ringFractions, phraseOf, piePath, hourTicks, secondOf } from './clockFace';
+import { ringFractions, phraseOf, piePath, turnPoint, secondOf } from './clockFace';
 
 describe('the pie and the rings', () => {
   it('fill with the hour on a 12-hour dial, the minutes round the hour and the seconds round the minute', () => {
@@ -42,20 +42,12 @@ describe('the pie', () => {
   });
 });
 
-describe('the hour ticks', () => {
-  const ticks = hourTicks(50, 50, 29, 33, 26);
-  it('are twelve, the quarters longer', () => {
-    expect(ticks).toHaveLength(12);
-    expect(ticks.filter(k => k.quarter).length).toBe(4);
-    const len = (k: (typeof ticks)[number]) => Math.hypot(k.x2 - k.x1, k.y2 - k.y1);
-    expect(len(ticks[0]!)).toBeCloseTo(7, 1);
-    expect(len(ticks[1]!)).toBeCloseTo(4, 1);
-  });
-  it('start at twelve and go clockwise', () => {
-    expect(ticks[0]).toMatchObject({ x1: 50, y1: 24, x2: 50, y2: 17, quarter: true });
-    expect(ticks[3]).toMatchObject({ x1: 76, y1: 50, x2: 83, y2: 50 });
-    expect(ticks[6]!.y2).toBeCloseTo(83, 1);
-    expect(ticks[9]!.x2).toBeCloseTo(17, 1);
+describe('the seconds dot', () => {
+  it('starts at twelve and goes clockwise', () => {
+    expect(turnPoint(50, 50, 33, 0)).toEqual({ x: 50, y: 17 });
+    expect(turnPoint(50, 50, 33, 0.25)).toEqual({ x: 83, y: 50 });
+    expect(turnPoint(50, 50, 33, 0.5)).toEqual({ x: 50, y: 83 });
+    expect(turnPoint(50, 50, 33, 0.75)).toEqual({ x: 17, y: 50 });
   });
 });
 

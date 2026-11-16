@@ -3,7 +3,8 @@
 // wouldn't change anything, and prepares low-level writes. `applyPlanned` runs only the ticked
 // ones through a Writer (store.ts and actions.ts in the app, a fake in tests).
 // AI-originated fields are marked `by`/`estBy`/`goalBy`/`smartBy: 'ai'`; weights are always 3.
-import { eventClash, eventClashes, NUDGE_ONLY, UNTIL_STANDING, DUE_AT_NEEDS_DUE, type Change, type ChangeSet, type TaskSet } from './changeset';
+import { copyId, openCopiesOn, standingDay } from '../domain/standing';
+import { eventClash, eventClashes, NUDGE_ONLY, UNTIL_STANDING, DUE_AT_NEEDS_DUE, SKIP_NOT_ITS_DAY, SKIP_NOT_STANDING, type Change, type ChangeSet, type TaskSet } from './changeset';
 import type { Address, Day, Decision, Place, Project, Smart, Stay, Task, Collection, Launch, MemoryLine, MemoryNote } from '../data/schema';
 import { COLUMNS, type Column, type Item, type Option } from '../domain/decision';
 import { normDecision } from '../data/normalize';
@@ -55,6 +56,8 @@ export type Op =
   | { t: 'update'; c: Collection; id: string; patch: Record<string, unknown>; delta?: Delta; ifMissing?: Record<string, unknown> }
   | { t: 'finish'; id: string; day: string }
   | { t: 'drop'; id: string }
+  /** One day of a standing series called off (`skippedCopy`); the series itself is untouched. */
+  | { t: 'skip'; id: string; day: string }
   | { t: 'day'; k: string; patch: Partial<Day> }
   | { t: 'stay'; id: string | null; ref?: string; fields: Stay }
   /** A write to the settings document (the app's own, S9). */
@@ -323,8 +326,19 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         break;
       }
       case 'task.drop': {
-        const tk = s.tasks.get(c.id);
+        let tk = s.tasks.get(c.id);
+        // A day names one occurrence: a copy of the series, named by the title they share, stands for its series.
+        if (c.day && tk?.from && s.tasks.get(tk.from)?.template) tk = s.tasks.get(tk.from);
         if (!tk || tk.status === 'dropped') break;
+        if (c.day && tk.template) {
+          // One day of a series called off: the series goes on, and that day's copy is dropped (made dropped if it was not placed yet).
+          if (c.day < s.today || !standingDay(tk, c.day)) { refused.push({ at: ci, text: SKIP_NOT_ITS_DAY }); break; }
+          const gone = s.tasks.get(copyId(tk.id, c.day));
+          if (gone && gone.status !== 'open' && !openCopiesOn(s.tasks.values(), tk.id, c.day).length) break;
+          items.push({ target: 'task', kind: 'drop', title: tk.title, diffs: [{ field: 'day', before: c.day, after: null }], ops: [{ t: 'skip', id: tk.id, day: c.day }] });
+          break;
+        }
+        if (c.day) { refused.push({ at: ci, text: SKIP_NOT_STANDING }); break; }
         items.push({ target: 'task', kind: 'drop', title: tk.title, diffs: [], ops: [{ t: 'drop', id: tk.id }] });
         break;
       }
@@ -680,6 +694,8 @@ export interface Writer {
   update(c: Collection, id: string, patch: Record<string, unknown>): Promise<void>;
   finish(id: string, day: string): Promise<void>;
   drop(id: string): Promise<void>;
+  /** Call off one day of a standing series: drop its open copies on that day, or make the day's copy dropped so that none is placed. */
+  skip?(id: string, day: string): Promise<void>;
   day(k: string, patch: Partial<Day>): Promise<void>;
   stay(id: string | null, s: Stay): Promise<string>;
   /** Settings the app writes (a `settings.update`); a Writer without it (the connector's) never gets one. */
@@ -742,6 +758,7 @@ export async function applyPlanned(plan: Plan, ticked: (i: number) => boolean, w
         case 'settings': await w.settings?.(op.patch); break;
         case 'finish': await w.finish(op.id, op.day); break;
         case 'drop': await w.drop(op.id); break;
+        case 'skip': await w.skip?.(op.id, op.day); break;
         case 'day': {
           const p = subst(op.patch) as Partial<Day>;
           if (p.first && !p.first.id) delete p.first;

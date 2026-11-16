@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { agenda, clockOf, fixedOnDay, standingToPlace } from './agenda';
-import { copyId, ended, standingDay, thingKey } from './standing';
+import { copyId, ended, nextComing, skippedCopy, standingDay, thingKey } from './standing';
 import { choir, day, decision, place, settings, state, stay, task, iso } from './agenda.fixture';
 
 const S = settings();
@@ -231,5 +231,16 @@ describe('standingToPlace: what the app puts on today’s list', () => {
     expect(put({ tasks: [choir()] }, Date.parse('2026-10-19T17:50:00Z'))).toEqual(['choir']); // 19:50 in Paris: still going on
     expect(put({ tasks: [choir({ offer: 'person' })] })).toEqual([]);
     expect(put({ tasks: [choir({ status: 'dropped' })] })).toEqual([]);
+  });
+  it('a day called off is not placed and is in no fixed times, and the next week is untouched', () => {
+    const off = task(copyId('choir', '2026-10-19'), { title: 'Choir, Hill House 602', ...skippedCopy(choir(), 'choir', '2026-10-19') });
+    expect(off).toMatchObject({ from: 'choir', status: 'dropped', due: '2026-10-19', at: '19:00' });
+    expect(put({ tasks: [choir(), off] })).toEqual([]);
+    expect(fixedOnDay(state({ tasks: [choir(), off] }), S, '2026-10-19')).toEqual([]);
+    expect(fixedOnDay(state({ tasks: [choir(), off] }), S, '2026-10-26').map(e => e.id)).toEqual(['fixed:choir:2026-10-26']);
+    const all = new Map([choir(), off].map(t => [t.id, t]));
+    expect(nextComing(all, choir(), '2026-10-19')).toBe('2026-10-26');
+    expect(nextComing(new Map([[choir().id, choir()]]), choir(), '2026-10-19')).toBe('2026-10-19');
+    expect(nextComing(all, choir({ until: '2026-10-20' }), '2026-10-19')).toBeNull();
   });
 });

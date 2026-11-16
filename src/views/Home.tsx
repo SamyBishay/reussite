@@ -21,7 +21,7 @@ import { nextSteps } from '../app/onboarding';
 import { refreshPushState } from '../app/push';
 import { Mark } from '../app/Mark';
 import { DoveClock } from '../app/DoveClock';
-import { eligibleLines, greetingLine, seedOf, type GreetingKey } from '../domain/greeting';
+import { eligibleLines, greetingLine, type GreetingKey } from '../domain/greeting';
 import { t, fmtDate } from '../i18n';
 
 function HomeMenu() {
@@ -54,7 +54,7 @@ function GreetingLine() {
   const input = lineInputNow();
   let line = chosen.current ? eligibleLines(input).find(l => l.key === chosen.current) : undefined;
   if (!line) {
-    line = greetingLine(input, shownGreetings(day), seedOf(day)) ?? undefined;
+    line = greetingLine(input, shownGreetings(day), Math.floor(Math.random() * 0x100000000)) ?? undefined;
     chosen.current = line?.key ?? null;
     if (line) rememberGreeting(day, line.key);
   }

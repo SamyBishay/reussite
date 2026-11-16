@@ -65,6 +65,9 @@ function standingOn(v: View, k: string): TaskW[] {
     .map(e => v.tasks.get(e.taskId!)!);
 }
 
+/** The same, as ids and titles: what apply_changes names after it wrote a day's hand. */
+export const standingNames = (v: View, k: string): { id: string; title: string }[] => standingOn(v, k).map(t => ({ id: t.id, title: oneLine(t.title) }));
+
 /** A step as a line; a chain's head says "+n after" and its chain's date, a step that waits says so, a standing step when it comes back. */
 export const line = (v: View, t: TaskW) => {
   const ix = chains(v), c = ix.chains.get(t.id);
@@ -154,7 +157,7 @@ export function dayText(v: View, k: string): string {
   if (day?.shape?.start) L.push(`Shape: from ${day.shape.start}${day.shape.end ? ` until ${day.shape.end}` : ''} (${day.shape.preset} day).`);
   if (day?.areas?.length) L.push('Half days: ' + day.areas.map(a => `${a.half === 'am' ? 'morning' : 'afternoon'} in ${v.places.get(a.placeId)?.name ?? a.placeId}`).join(', '));
   const fixed = fixedOn(d, k), series = standingOn(v, k);
-  if (fixed.length || series.length) L.push('Fixed times:\n' + [...fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`), ...series.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)} [no card on the day yet: the app puts it in the hand when it opens; do not add a copy]`)].sort().join('\n'));
+  if (fixed.length || series.length) L.push('Fixed times:\n' + [...fixed.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)}`), ...series.map(t => `${t.at}${t.dur ? ' (' + mins(t.dur) + ')' : ''} ${line(v, t)} [no card on the day yet: the app puts it in the hand when it opens; do not add a copy. Not happening that day: task.drop with its id and day]`)].sort().join('\n'));
   // Things the person waits for whose check date has come: asked from that day until answered, as Today does. Not steps, never on the list.
   if (k >= v.today) {
     const checks = nudgesDue(v.tasks.values(), k);

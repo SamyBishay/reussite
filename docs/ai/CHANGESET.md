@@ -19,7 +19,7 @@ When something in my deck should change, send it through Réussite's connector: 
 | --- | --- |
 | `task.create` | `ref?`, `set` (needs `title`) |
 | `task.update` | `id`, `set` |
-| `task.done` / `task.drop` | `id`; `task.done` also takes `day?` (the day it was played; for a waiting-for card, the day it happened) |
+| `task.done` / `task.drop` | `id`; `task.done` also takes `day?` (the day it was played; for a waiting-for card, the day it happened); `task.drop` takes `day?` on a standing card only: that one day is called off and the series goes on |
 | `task.reorder` | `ids` (a project's cards, in order) |
 | `project.create` / `project.update` | `ref?` or `id`, `set` (`name`, `suit`, `outcome` (the goal in one sentence; `goal` still works), `measure`, `start`, `due`, `status`) |
 | `day.update` | `date`, and any of `plan` (the whole hand, in order: how to write a day's hand, which may already hold cards; read the day first), `add` (adds to a hand on purpose, e.g. a trip's new days), `remove`, `first` (`launches` is accepted and stored but the app no longer uses launch points: leave it out) |

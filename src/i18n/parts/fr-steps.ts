@@ -57,6 +57,8 @@ export const frSteps: Partial<Strings> = {
   breakItDown: 'La découper',
   openDecision: 'Travailler la décision',
   skipThisTime: 'Passer cette fois',
+  skipDay: 'Passer le {date}',
+  skipDayDone: 'Pas le {date}. La série continue.',
   skipped: 'Passée. La suivante est dans le paquet.',
   stopRepeating: 'Ne plus répéter',
   dropSeries: 'L’abandonner (arrête la répétition)',

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { settings, projects, today, places, toast, stays, here } from './store';
 import { T, addressesOn, placesOn, addressesIn, peopleIn, addressById, personById, rawPlan, dayCards, isWaiting, dayDoc, whereOf, spentOf, byOrder, sessionsOf, personal, isOpen, isEvent, slotStateOf, type T as Tk } from './model';
 import { tasks } from './store';
-import { patchTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, skipThisTime, stopRepeating, addPlace, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists } from './actions';
+import { patchTask, stopTimer, addByHand, removeToday, movePlan, cloneTemplate, reopen, skipThisTime, skipStanding, stopRepeating, addPlace, moveDone, syncDueRules, createTask, newTaskDoc, leaveLists } from './actions';
 import { openHappened } from './EventUi';
 import { DropButton } from './ConfirmButton';
 import { Clock } from './Clock';
@@ -12,6 +12,7 @@ import { SlotFields, SlotLog, slotFromForm } from './SlotUi';
 import { readSlot, writeSlot } from '../domain/slots';
 import { More, countSet } from './More';
 import { t, fmtMin, fmtDate, lang, type Key } from '../i18n';
+import { nextComing } from '../domain/standing';
 import { isAllowedLink } from '../domain/links';
 import { minutesBetween, shiftTime } from '../domain/calendar';
 import { findTime } from '../domain/parse';
@@ -232,6 +233,8 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix', first = fal
   const seen = atV ? null : findTime(titleV) ?? findTime(noteV);
   const inPlan = !draft && rawPlan(today.value).includes(id);
   const projs = [...projects.value.values()].filter(p => p.status !== 'dropped').sort((a, b) => SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit) || byOrder(a, b));
+  // The next day a series still comes on: the one Skip calls off (the series goes on).
+  const nextDay = tk.template ? nextComing(tasks.value, { ...tk, id }, today.value) : null;
   const hint: Key = ev ? 'hintEvent' : tk.kind === 'decision' ? 'hintDecision' : tk.template ? 'hintStanding' : 'hintStep';
   const spent = spentOf(id);
   const open = tk.status === 'open';
@@ -370,7 +373,10 @@ function TaskForm({ tk, draft = false, onSaved, moveMode = 'matrix', first = fal
       <div class="actionbar" data-testid="task-actions">
         <button class="btn small primary" type="submit">{t('save')}</button>
         {draft ? null : tk.template ? (
-          <button class="btn small" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
+          <>
+            <button class="btn small" type="button" onClick={() => { void cloneTemplate(id); closeSheet(); }}>{t('addToToday')}</button>
+            {open && nextDay && <button class="btn small" type="button" data-testid="skip-day" onClick={() => { void skipStanding(id, nextDay); toast(t('skipDayDone', { date: fmtDate(nextDay, { weekday: 'short', day: 'numeric', month: 'short' }) })); closeSheet(); }}>{t('skipDay', { date: fmtDate(nextDay, { weekday: 'short', day: 'numeric', month: 'short' }) })}</button>}
+          </>
         ) : open && wasEvent ? (
           <button class="btn small primary" type="button" onClick={() => openHappened(id)} data-testid="task-happened">{t('happenedBtn')}</button>
         ) : open ? (

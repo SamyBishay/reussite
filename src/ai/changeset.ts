@@ -65,6 +65,8 @@ export const eventClashes = (set: Partial<TaskSet>): string[] => EVENT_NO.filter
 export const eventClash = (fields: string[]) => `an event (kind "event", something the person waits for) has no ${fields.join(', ')}; leave ${fields.length === 1 ? 'it' : 'them'} out, or make it a card (kind "task")`;
 export const UNTIL_STANDING = 'until is the last day of a standing card (template, weekdays and at); this card is not standing, so no end date was set';
 export const DUE_AT_NEEDS_DUE = 'dueAt is the time of a deadline and needs a due date; none was set, so no time was kept';
+export const SKIP_NOT_ITS_DAY = 'task.drop with a day calls off one day of a standing card; the card does not come on that day (or the day is past), so nothing was dropped';
+export const SKIP_NOT_STANDING = 'task.drop with a day is for a standing card (one day of the series); this card is not standing, so nothing was dropped. Leave the day out to drop the card';
 export const NUDGE_ONLY = 'nudge is the check date of an event (kind "event"); a card has none';
 /** `creating`: with no `kind` a new step is a task, so a nudge on it is a mistake; an update with no kind leaves that to the step it names. */
 const eventRules = (creating: boolean) => (set: TaskSet, ctx: z.RefinementCtx) => {
@@ -169,7 +171,8 @@ export const ChangeSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('task.create'), ref, set: newTaskSet }),
   z.object({ op: z.literal('task.update'), id, set: taskUpdateSet }),
   z.object({ op: z.literal('task.done'), id, day: day.optional() }),
-  z.object({ op: z.literal('task.drop'), id }),
+  /** `day` on a standing card calls off that one day (the series goes on); without it the card, or the whole series, is dropped. */
+  z.object({ op: z.literal('task.drop'), id, day: day.optional() }),
   z.object({ op: z.literal('task.reorder'), ids: z.array(id).min(2) }),
   z.object({ op: z.literal('project.create'), ref, set: projectSet.extend({ name: text(120).pipe(z.string().min(1)) }) }),
   z.object({ op: z.literal('project.update'), id, set: projectSet }),

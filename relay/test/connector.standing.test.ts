@@ -122,3 +122,50 @@ describe('apply_changes and standing steps', () => {
     expect(await seen('get_task', { id: 'wa' })).toContain('status: dropped');
   });
 });
+
+// One day of a series is called off (2026-11-16): the series goes on, and that day has nothing of it. The owner's AI could only leave the
+// card out of the hand, and the app put it back at its time.
+describe('one day of a series called off', () => {
+  const TOMORROW = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+  const AFTER = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+
+  it('task.drop with the series and a day drops that day only, after the yes; undo brings it back', async () => {
+    app.device.add('tasks', 'yoga', task('Yoga in the park', { template: true, weekdays: [1, 2, 3, 4, 5, 6, 7], at: '08:00', dur: 45 }));
+    await app.sync();
+    expect(await seen('get_day', { date: TOMORROW })).toContain('Yoga in the park');
+    expect(await seen('get_day', { date: TOMORROW })).toContain('task.drop with its id and day');
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.drop', id: 'Yoga in the park', day: TOMORROW }] });
+    expect(r.text).toContain(`Drop "Yoga in the park" (day ${TOMORROW} → -)`);
+    const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
+    const done = await tool(access, 'apply_changes', { confirm: id });
+    expect(done.isError).toBe(false);
+    expect(await seen('get_day', { date: TOMORROW })).not.toContain('Yoga in the park');
+    expect(await seen('get_day', { date: AFTER })).toContain('Yoga in the park');
+    await app.sync();
+    expect(app.device.get('tasks', 'yoga')!.status).toBe('open');
+    expect(app.device.get('tasks', 'yoga-' + TOMORROW)).toMatchObject({ from: 'yoga', status: 'dropped', due: TOMORROW, at: '08:00' });
+    // A second call finds nothing to do.
+    expect((await tool(access, 'apply_changes', { changes: [{ op: 'task.drop', id: 'yoga', day: TOMORROW }] })).text).not.toContain('"confirm"');
+    const undo = /Undo id: (u\w+)/.exec(done.text)![1]!;
+    expect((await tool(access, 'undo', { id: undo })).isError).toBe(false);
+    expect(await seen('get_day', { date: TOMORROW })).toContain('Yoga in the park');
+  });
+
+  it('a day the series does not come on, or a card that is not a series, is refused with the reason', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'task.drop', id: 'one', day: TOMORROW }] });
+    expect(r.text).toContain('is for a standing card');
+    expect(r.text).not.toContain('"confirm"');
+    await app.sync();
+    expect(app.device.get('tasks', 'one')!.status).toBe('open');
+  });
+
+  it('writing a hand answers with the hand as written, and names the series that still comes into it', async () => {
+    const r = await tool(access, 'apply_changes', { changes: [{ op: 'day.update', date: TOMORROW, plan: ['one'] }] });
+    const id = /"confirm": "(c\w+)"/.exec(r.text)![1]!;
+    const done = await tool(access, 'apply_changes', { confirm: id });
+    expect(done.text).toContain(`Hand of ${TOMORROW} as written (1):\n1. Call the agency`);
+    expect(done.text).toContain('Coming into that hand by itself');
+    expect(done.text).toContain('Yoga in the park (yoga)');
+    expect(done.text).toContain(`"day": "${TOMORROW}"`);
+  });
+});

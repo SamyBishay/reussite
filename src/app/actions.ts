@@ -9,7 +9,7 @@ import { normAddress } from '../data/normalize';
 import { seenAfter, visitPromptFor } from '../domain/offers';
 import { addDays } from '../domain/dates';
 import { standingToPlace } from '../domain/agenda';
-import { copyId } from '../domain/standing';
+import { copyId, openCopiesOn, skippedCopy } from '../domain/standing';
 import { parentProblem } from '../domain/places';
 import { liveNextHeads, nudgeAfter } from '../domain/events';
 import { releaseFrom } from '../domain/lists';
@@ -307,6 +307,18 @@ export async function placeStandingToday(): Promise<void> {
     placing.add(id);
     try { await cloneTemplate(tpl.id, k, undefined, {}, id); } finally { placing.delete(id); }
   }
+}
+/**
+ * Call off one day of a standing series ("no choir this Monday"): its open copies on that day are dropped; when the day has no copy yet,
+ * one is made dropped under the day's id (`copyId`), so that nothing places it and no calendar, feed or reminder shows it. The series goes on.
+ */
+export async function skipStanding(id: string, k: string): Promise<void> {
+  const tk = T(id);
+  if (!tk?.template) return;
+  const open = openCopiesOn(tasks.value.values(), id, k);
+  for (const c of open) await dropTask(c.id);
+  if (open.length || T(copyId(id, k))) return;
+  await createDoc('tasks', newTaskDoc(tk.title, tk.suit, tk.project, { where: whereOf(tk), ...skippedCopy(tk, id, k) }), copyId(id, k));
 }
 /**
  * Carry steps to a day's list; each carry counts (at 3, the step is too big or hides a decision). `release` false

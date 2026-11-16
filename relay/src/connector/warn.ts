@@ -42,6 +42,8 @@ export function writeWarnings(cs: ChangeSet, plan: Plan, v: View): string[] {
     } else if (op.t === 'finish') {
       const cur = get(op.id);
       if (cur) eff.set(op.id, { ...cur, status: 'done' });
+    } else if (op.t === 'skip') {
+      for (const c of v.tasks.values()) if (c.from === op.id && c.due === op.day && c.status === 'open') eff.set(c.id, { ...(get(c.id) ?? c), status: 'dropped' });
     } else if (op.t === 'drop') {
       const cur = get(op.id);
       if (cur) eff.set(op.id, { ...cur, status: 'dropped' });

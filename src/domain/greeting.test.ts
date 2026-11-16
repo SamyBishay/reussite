@@ -77,9 +77,20 @@ describe('the line: no repeat within a day', () => {
   it('a template that is no longer eligible does not stand in the way', () => {
     expect(pickGreeting(['greetMorning1'], ['greetMorning2', 'greetNight1'], 5)).toBe('greetMorning1');
   });
-  it('a day has its own order', () => {
-    const orders = new Set(['2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05'].map(d => pickGreeting(all, [], seedOf(d))));
-    expect(orders.size).toBeGreaterThan(1);
+  it('a seed has its own order: many seeds open with many different hellos', () => {
+    const firsts = new Set(Array.from({ length: 300 }, (_, n) => pickGreeting(all, [], seedOf('s' + n))));
+    expect(firsts.size).toBeGreaterThan(all.length / 2);
+  });
+  it('neighbours in the list do not come out one after the other', () => {
+    const num = (k: string) => Number(k.match(/\d+$/)![0]);
+    let adjacent = 0, pairs = 0;
+    for (const seed of [0, 1, 42, 2026, seedOf('2026-11-14'), seedOf('2026-11-16')]) {
+      const shown: string[] = [];
+      for (let n = 0; n < GREETING_KEYS.any.length; n++) shown.push(pickGreeting(GREETING_KEYS.any, shown, seed)!);
+      for (let n = 1; n < shown.length; n++, pairs++) if (Math.abs(num(shown[n]!) - num(shown[n - 1]!)) === 1) adjacent++;
+    }
+    // A fair shuffle of 80 puts about 2 neighbours side by side in 79; the old hash put most of them.
+    expect(adjacent / pairs).toBeLessThan(0.1);
   });
   it('greetingLine fills the slots of the pick', () => {
     const i = line();
@@ -112,6 +123,16 @@ describe('every template', () => {
   });
   it('never mentions what was missed or carried', () => {
     for (const s of [...templates(en), ...templates(fr)]) expect(s, s).not.toMatch(/missed|carried|overdue|late|behind|manqu|report|retard/i);
+  });
+  it('does not lean on one opener: no first word opens more than three lines for any time of day, bar the plain hellos', () => {
+    for (const [dict, plain] of [[en, /^(hello|welcome|good)$/], [fr, /^(bonjour|salut|bienvenue)$/]] as const) {
+      const count = new Map<string, number>();
+      for (const k of GREETING_KEYS.any) {
+        const w = String((dict as Record<string, unknown>)[k]).toLowerCase().match(/[\p{L}’'-]+/u)![0];
+        count.set(w, (count.get(w) ?? 0) + 1);
+      }
+      for (const [w, n] of count) if (!plain.test(w)) expect(n, w).toBeLessThanOrEqual(3);
+    }
   });
   it('is plain: no call to action, no question, nothing to type, add, move or tick off', () => {
     for (const s of templates(en)) expect(s, s).not.toMatch(/type|box|below|\badd\b|\bmove\b|tick|\?/i);

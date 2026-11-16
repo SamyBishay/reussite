@@ -1,4 +1,4 @@
-// Home's top and its clock (2026-11-01): the wordmark and the date on the left, the Dove clock (an hour pie with twelve ticks, a minutes ring and a seconds ring, no hands)
+// Home's top and its clock (2026-11-01): the wordmark and the date on the left, the Dove clock (an hour pie, a minutes ring and a seconds dot between them; no hands, no marks)
 // small beside the wordmark, the mark centred above the greeting, and the iPhone home-screen app's room for the island.
 import { test, expect } from '@playwright/test';
 import { stubNow, noSideways } from './helpers';
@@ -39,30 +39,32 @@ test('the clock says the time, in words, and follows the minute', async ({ page 
   // no hands: the inner pie is the hour on a 12-hour dial (a quarter and a little past three: 3.25 of 12), the ring round it the minutes (a quarter)
   await expect(clock).toHaveAttribute('data-hour', '0.2708');
   await expect(clock).toHaveAttribute('data-minute', '0.2500');
-  await expect(clock.locator('.clk-hand, .clk-dot')).toHaveCount(0);
+  // no hands and no marks round the dial (2026-11-16): a pie, a ring and its track, the seconds dot, and nothing else
+  await expect(clock.locator('.clk-hand, .clk-tick, line')).toHaveCount(0);
   await expect(clock.locator('.clk-pie')).toHaveCount(1);
-  await expect(clock.locator('.clk-tick')).toHaveCount(12);
-  await expect(clock.locator('.clk-tick.q')).toHaveCount(4);
+  await expect(clock.locator('*')).toHaveCount(5);
   await page.evaluate(() => localStorage.setItem('e2e.now', String(new Date(2026, 10, 1, 21, 50, 0).getTime())));
   await expect(clock).toHaveAttribute('data-time', '21:50', { timeout: 10_000 });
   await expect(clock).toHaveAttribute('aria-label', 'Clock: ten to ten');
 });
 
-test('the seconds ring fills with the second, and follows it while the page is visible', async ({ page }) => {
+test('the seconds dot goes round with the second, and follows it while the page is visible', async ({ page }) => {
   await stubNow(page, new Date(2026, 10, 1, 15, 15, 30));
   await page.goto('/#home');
   const clock = page.getByTestId('home-clock');
   await expect(clock).toHaveAttribute('data-second', '30');
-  const dash = () => clock.locator('.clk-sec').getAttribute('stroke-dasharray');
-  const half = parseFloat((await dash())!.split(' ')[0]!), total = 2 * Math.PI * 47.5;
-  expect(half / total).toBeCloseTo(0.5, 2);
-  await page.evaluate(() => localStorage.setItem('e2e.now', String(new Date(2026, 10, 1, 15, 16, 7).getTime())));
-  await expect(clock).toHaveAttribute('data-second', '7', { timeout: 3000 });
+  const dot = clock.locator('.clk-sec');
+  // half past the minute: straight under the middle, between the pie (r 26) and the ring (inner edge r 40)
+  expect(Number(await dot.getAttribute('cx'))).toBeCloseTo(50, 1);
+  expect(Number(await dot.getAttribute('cy'))).toBeCloseTo(83, 1);
+  await page.evaluate(() => localStorage.setItem('e2e.now', String(new Date(2026, 10, 1, 15, 16, 15).getTime())));
+  await expect(clock).toHaveAttribute('data-second', '15', { timeout: 3000 });
   await expect(clock).toHaveAttribute('data-time', '15:16');
-  // on the minute the ring is empty: nothing drawn, not a dot
+  expect(Number(await dot.getAttribute('cx'))).toBeCloseTo(83, 1);
+  // on the minute it is at twelve
   await page.evaluate(() => localStorage.setItem('e2e.now', String(new Date(2026, 10, 1, 15, 17, 0).getTime())));
   await expect(clock).toHaveAttribute('data-second', '0', { timeout: 3000 });
-  await expect(clock.locator('.clk-sec')).toHaveCount(0);
+  expect(Number(await dot.getAttribute('cy'))).toBeCloseTo(17, 1);
 });
 
 test('with reduced motion there are no seconds: the clock keeps to the minute', async ({ page }) => {
@@ -72,7 +74,7 @@ test('with reduced motion there are no seconds: the clock keeps to the minute', 
   const clock = page.getByTestId('home-clock');
   await expect(clock).toHaveAttribute('data-time', '15:15');
   await expect(clock).toHaveAttribute('data-second', '');
-  await expect(clock.locator('.clk-sec, .clk-secring')).toHaveCount(0);
+  await expect(clock.locator('.clk-sec')).toHaveCount(0);
   await expect(clock.locator('.clk-min')).toHaveCount(1);
 });
 

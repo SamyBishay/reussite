@@ -4,7 +4,7 @@
 //    Nothing else: Start here, the running step and tomorrow's first step live on Today alone (DECISIONS.md), and Home shows no card
 //    while a step runs, a plan is open or the day is closed.
 // 2. The line above it (`eligibleLines`, `pickGreeting`): a hello, picked from a long list of greetings (src/i18n) for any time of
-//    day and a few for the hour. It says nothing about the day and asks for nothing. A greeting is not repeated within a day while
+//    day and a few for the hour. It says nothing about the day and asks for nothing. It is drawn at random; a greeting is not repeated within a day while
 //    another is eligible, and it works without an AI: the line stays the same with an AI on.
 
 export interface GreetingInput {
@@ -39,7 +39,7 @@ export function greeting(i: GreetingInput): Greeting | null {
  * its own lines under the same keys: the French ones are not translations of the English.
  */
 export const GREETING_KEYS = {
-  any: ['greetAny1', 'greetAny2', 'greetAny3', 'greetAny4', 'greetAny5', 'greetAny6', 'greetAny7', 'greetAny8', 'greetAny9', 'greetAny10', 'greetAny11', 'greetAny12', 'greetAny13', 'greetAny14', 'greetAny15', 'greetAny16', 'greetAny17', 'greetAny18', 'greetAny19', 'greetAny20', 'greetAny21', 'greetAny22', 'greetAny23', 'greetAny24', 'greetAny25', 'greetAny26', 'greetAny27', 'greetAny28', 'greetAny29', 'greetAny30', 'greetAny31', 'greetAny32', 'greetAny33', 'greetAny34', 'greetAny35', 'greetAny36', 'greetAny37', 'greetAny38', 'greetAny39', 'greetAny40', 'greetAny41', 'greetAny42', 'greetAny43', 'greetAny44', 'greetAny45', 'greetAny46', 'greetAny47', 'greetAny48', 'greetAny49', 'greetAny50', 'greetAny51', 'greetAny52', 'greetAny53', 'greetAny54', 'greetAny55', 'greetAny56', 'greetAny57', 'greetAny58', 'greetAny59', 'greetAny60', 'greetAny61', 'greetAny62', 'greetAny63', 'greetAny64', 'greetAny65', 'greetAny66', 'greetAny67', 'greetAny68'],
+  any: ['greetAny1', 'greetAny2', 'greetAny3', 'greetAny4', 'greetAny5', 'greetAny6', 'greetAny7', 'greetAny8', 'greetAny9', 'greetAny10', 'greetAny11', 'greetAny12', 'greetAny13', 'greetAny14', 'greetAny15', 'greetAny16', 'greetAny17', 'greetAny18', 'greetAny19', 'greetAny20', 'greetAny21', 'greetAny22', 'greetAny23', 'greetAny24', 'greetAny25', 'greetAny26', 'greetAny27', 'greetAny28', 'greetAny29', 'greetAny30', 'greetAny31', 'greetAny32', 'greetAny33', 'greetAny34', 'greetAny35', 'greetAny36', 'greetAny37', 'greetAny38', 'greetAny39', 'greetAny40', 'greetAny41', 'greetAny42', 'greetAny43', 'greetAny44', 'greetAny45', 'greetAny46', 'greetAny47', 'greetAny48', 'greetAny49', 'greetAny50', 'greetAny51', 'greetAny52', 'greetAny53', 'greetAny54', 'greetAny55', 'greetAny56', 'greetAny57', 'greetAny58', 'greetAny59', 'greetAny60', 'greetAny61', 'greetAny62', 'greetAny63', 'greetAny64', 'greetAny65', 'greetAny66', 'greetAny67', 'greetAny68', 'greetAny69', 'greetAny70', 'greetAny71', 'greetAny72', 'greetAny73', 'greetAny74', 'greetAny75', 'greetAny76', 'greetAny77', 'greetAny78', 'greetAny79', 'greetAny80'],
   morning: ['greetMorning1', 'greetMorning2', 'greetMorning3', 'greetMorning4', 'greetMorning5', 'greetMorning6', 'greetMorning7', 'greetMorning8'],
   afternoon: ['greetAfternoon1', 'greetAfternoon2', 'greetAfternoon3', 'greetAfternoon4', 'greetAfternoon5', 'greetAfternoon6'],
   evening: ['greetEvening1', 'greetEvening2', 'greetEvening3', 'greetEvening4', 'greetEvening5', 'greetEvening6'],
@@ -66,17 +66,22 @@ export function eligibleLines(i: LineInput): GreetingLine[] {
   return [...GREETING_KEYS.any, ...GREETING_KEYS[partOfDay(i.clock, i.dayStart)]].map(key => ({ key, slots: {} }));
 }
 
-/** A small stable hash of a word and a seed: the order templates come in is the same all day for the same seed. */
+/**
+ * A hash of a word and a seed, mixed at the end (murmur3's finalizer) so that keys that differ by a digit land far apart: without it
+ * neighbours in the list came out one after the other ("Ahoy." then "Ahoy-hoy.", 2026-11-16).
+ */
 function hash(s: string, seed: number): number {
   let h = (2166136261 ^ seed) >>> 0;
   for (let n = 0; n < s.length; n++) h = Math.imul(h ^ s.charCodeAt(n), 16777619) >>> 0;
-  return h;
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  return (h ^ (h >>> 16)) >>> 0;
 }
 
 /**
- * The template to say: the first of the candidates, in the seeded order, that was not shown today. When every one was shown,
- * the list starts over with the one shown longest ago, so the same sentence never comes twice in a row while another exists.
- * `shownToday` is in the order they were shown.
+ * The template to say: among the candidates not shown today, the one the seed draws. When every one was shown, the one shown longest
+ * ago, so the same sentence never comes twice in a row while another exists. `shownToday` is in the order they were shown. The seed
+ * is the caller's draw: Home takes a new random one each time it opens, so no day starts with the same hello on every device.
  */
 export function pickGreeting<K extends string>(candidates: readonly K[], shownToday: readonly string[], seed: number): K | null {
   const keys = [...new Set(candidates)];
@@ -93,5 +98,5 @@ export function greetingLine(i: LineInput, shownToday: readonly string[], seed: 
   return key ? lines.find(l => l.key === key)! : null;
 }
 
-/** A number for the seed from a day key, so a day has its own order. */
-export const seedOf = (day: string): number => hash(day, 0);
+/** A number for the seed from a word. */
+export const seedOf = (word: string): number => hash(word, 0);

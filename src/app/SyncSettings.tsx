@@ -4,7 +4,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { saveSettings, settings, toast, readOnly, tasks, getClock } from './store';
 import { openSheet, closeSheet } from './sheet';
 import { QrCode, QrScanner } from './qr';
-import { connector, backupDue, backupText, confirmKeySaved, deleteEverywhere, deviceName, devices, joinSync, keySaved, lastSyncAt, probeKey, recoveryKeyText, refreshDevices, relayBase, renameDevice, setupSync, snoozeBackupReminder, spaceGone, syncBusy, syncError, syncNow, syncOn, turnOffSync, defaultDeviceName } from './sync';
+import { connector, backupDue, backupText, confirmKeySaved, deleteEverywhere, deviceName, devices, joinSync, keySaved, lastSyncAt, probeKey, recoveryKeyText, refreshDevices, approveRelay, relayBase, relayUnapproved, renameDevice, setupSync, snoozeBackupReminder, spaceGone, syncBusy, syncError, syncNow, syncOn, turnOffSync, defaultDeviceName } from './sync';
 import { RecoveryKeyError } from '../sync/keys';
 import { RelayError } from '../sync/client';
 import { saveFile } from '../data/backup';
@@ -240,10 +240,16 @@ export function SyncSettings() {
   const base = relayBase();
   return (
     <Fold title={t('syncSection')} testid="sync">
+          {relayUnapproved() && (
+            <div class="err" role="alert" data-testid="sync-relay-unapproved">
+              <p>{t('syncRelayUnapproved', { url: s.relayUrl.trim() })}</p>
+              <button class="btn small" type="button" onClick={() => void approveRelay()} data-testid="sync-relay-approve">{t('syncRelayApprove')}</button>
+            </div>
+          )}
       {!syncOn.value ? (
         <>
           <p class="hint">{t('syncIntro')}</p>
-          {!base && <p class="err" data-testid="sync-no-relay">{s.relayUrl.trim() ? t('syncRelayBad') : t('syncNoRelay')}</p>}
+          {!base && !relayUnapproved() && <p class="err" data-testid="sync-no-relay">{s.relayUrl.trim() ? t('syncRelayBad') : t('syncNoRelay')}</p>}
           <div class="actions">
             <button class="btn primary" type="button" disabled={!base || readOnly.value} onClick={() => openSheet(<SetUpSheet key={'su' + Date.now()} />, true)} data-testid="sync-setup">{t('syncSetUp')}</button>
             <button class="btn" type="button" disabled={!base || readOnly.value} onClick={() => openSheet(<JoinSheet key={'sj' + Date.now()} />, true)} data-testid="sync-join">{t('syncJoin')}</button>
@@ -251,7 +257,7 @@ export function SyncSettings() {
           <More open={!base} n={countSet(s.relayUrl !== DEFAULT_SETTINGS.relayUrl && s.relayUrl.trim())} testid="sync-more">
             <label class="field"><span>{t('syncRelayLabel')}</span>
               <input type="url" inputMode="url" value={s.relayUrl} autocomplete="off" spellcheck={false} data-testid="sync-relay"
-                onChange={e => void saveSettings({ relayUrl: (e.target as HTMLInputElement).value.trim() })} />
+                onChange={e => void saveSettings({ relayUrl: (e.target as HTMLInputElement).value.trim() }).then(approveRelay)} />
               <small class="hint">{t('syncRelayHint')}</small>
             </label>
           </More>

@@ -6,6 +6,11 @@ import { create } from './doc';
 import { SCHEMA_VERSION } from './schema';
 
 describe('backup', () => {
+  it('never carries the device-local approvals, so a restore cannot approve an address', async () => {
+    const a = new ReussiteDb('bk-trust');
+    await a.local.put({ key: 'trust.relay', value: 'https://mine.example' });
+    expect(JSON.stringify(await makeBackup(a))).not.toContain('mine.example');
+  });
   it('round-trips through JSON, deletions included', async () => {
     const a = new ReussiteDb('bk-a');
     await a.tasks.put(create<Record<string, unknown>>('t1', { title: 'x' }, 1, '0000000000001:0000:a'));

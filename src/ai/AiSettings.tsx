@@ -9,7 +9,7 @@ import { t } from '../i18n';
 import { More, countSet } from '../app/More';
 import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
 import { DEFAULT_PREFERENCES } from '../domain/preferences';
-import { ask, getKey, setKey, forgetSeen, spent, loadSpent } from './ask';
+import { ask, getKey, setKey, forgetSeen, spent, loadSpent, baseUnapproved, approveBase } from './ask';
 import { monthTokens } from './prices';
 
 const set = (p: Parameters<typeof saveSettings>[0]) => void saveSettings(p);
@@ -117,6 +117,12 @@ export function AiKeyPanel() {
             <button type="button" aria-pressed={p === v} onClick={() => set({ aiProvider: v })} data-testid={'ai-' + v}>{t(k)}</button>)}
         </div>
       </div>
+      {baseUnapproved() && (
+        <div class="err" role="alert" data-testid="ai-base-unapproved">
+          <p>{t('aiBaseUnapproved', { url: s.aiBaseUrl })}</p>
+          <button class="btn small" type="button" onClick={() => void approveBase()} data-testid="ai-base-approve">{t('aiBaseApprove')}</button>
+        </div>
+      )}
       {models && (
         <>
           {p !== 'none' && <KeyField p={p} onHas={onHas} />}
@@ -130,7 +136,7 @@ export function AiKeyPanel() {
       <More n={countSet(models && (models.quick !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].quick || models.thinking !== DEFAULT_SETTINGS.aiModels[p as Exclude<AiProvider, 'none'>].thinking), p === 'openai' && s.aiBaseUrl !== DEFAULT_SETTINGS.aiBaseUrl, s.aiPreferences !== DEFAULT_SETTINGS.aiPreferences, s.aiAlwaysShow, s.aiMonthlyCap)} testid="ai-more">
         {p === 'openai' && (
           <label class="field"><span>{t('aiBaseUrl')}</span>
-            <input type="url" inputMode="url" value={s.aiBaseUrl} onChange={e => set({ aiBaseUrl: (e.target as HTMLInputElement).value.trim() || DEFAULT_SETTINGS.aiBaseUrl })} data-testid="ai-base" />
+            <input type="url" inputMode="url" value={s.aiBaseUrl} onChange={e => { set({ aiBaseUrl: (e.target as HTMLInputElement).value.trim() || DEFAULT_SETTINGS.aiBaseUrl }); void approveBase(); }} data-testid="ai-base" />
             <small class="hint">{t('aiBaseUrlHint')}</small>
           </label>
         )}

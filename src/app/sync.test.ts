@@ -8,7 +8,7 @@ import { RelayClient } from '../sync/client';
 import { SCHEMA_VERSION } from '../data/schema';
 import { fakeRelay } from '../sync/testing';
 import { buildDiagnostics } from './diagnostics';
-import { backupText, joinSync, lastSyncAt, probeKey, readBackupFile, recoveryKeyText, relayBase, setupSync, startSync, syncError, syncNow, syncOn, turnOffSync } from './sync';
+import { backupText, joinSync, lastSyncAt, approveRelay, probeKey, readBackupFile, relayUnapproved, recoveryKeyText, relayBase, setupSync, startSync, syncError, syncNow, syncOn, turnOffSync } from './sync';
 import { isEncryptedBackup } from '../sync/backup';
 
 const relay = fakeRelay();
@@ -23,18 +23,33 @@ beforeAll(() => {
 afterEach(() => { readOnly.value = false; });
 
 describe('sync in the app', () => {
-  it('only accepts https, or http on this computer', () => {
+  it('only accepts https, or http on this computer', async () => {
     for (const [u, ok] of [['http://localhost:8787', true], ['https://relay.example/', true], ['http://relay.example', false], ['', false], ['nonsense', false]] as const) {
       settings.value = withDefaults({ relayUrl: u });
+      await approveRelay();
       expect(!!relayBase()).toBe(ok);
     }
     settings.value = withDefaults({ relayUrl: 'http://localhost:8787' });
+    await approveRelay();
+  });
+
+  it('a relay address that came with a restore or a sync is not used until this device approves it', async () => {
+    await approveRelay();
+    expect(relayBase()).toBe('http://localhost:8787');
+    settings.value = withDefaults({ relayUrl: 'https://elsewhere.example' });
+    expect(relayBase()).toBe('');
+    expect(relayUnapproved()).toBe(true);
+    await approveRelay();
+    expect(relayBase()).toBe('https://elsewhere.example');
+    settings.value = withDefaults({ relayUrl: 'http://localhost:8787' });
+    await approveRelay();
   });
 
   it('sets up, pushes everything, shows the key, keeps it out of the data, and turns off', async () => {
     const { start } = await import('./store');
     await start();
     await saveSettings({ relayUrl: 'http://localhost:8787' });
+    await approveRelay();
     await vi.waitFor(() => expect(relayBase()).toBeTruthy());
     await createDoc('tasks', { title: 'Zebra invoice' }, 'tz1');
     await startSync();

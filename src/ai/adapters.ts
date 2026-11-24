@@ -5,7 +5,7 @@ import type { AiProvider } from '../data/settings';
 
 export type Slot = 'quick' | 'thinking';
 /** Every way a call can fail, each with one plain sentence in en.ts (`aiErr…`). */
-export type ErrorKind = 'off' | 'noKey' | 'noCredit' | 'rateLimit' | 'auth' | 'network' | 'invalid' | 'refused' | 'server' | 'cancelled' | 'cap';
+export type ErrorKind = 'off' | 'noKey' | 'noCredit' | 'rateLimit' | 'auth' | 'network' | 'invalid' | 'refused' | 'server' | 'cancelled' | 'cap' | 'untrusted';
 
 /**
  * The system prompt: one string, or two parts. `stable` has the same bytes in every feature (the method,

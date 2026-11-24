@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { settings, db } from '../app/store';
 import { withDefaults } from '../data/settings';
-import { ask, askChanges, setKey, pending, seenKinds, monthUsage } from './ask';
+import { ask, askChanges, setKey, pending, seenKinds, monthUsage, approveBase, seenKey } from './ask';
 
 const ok = (text: string, usage?: unknown) => vi.fn(async () => new Response(JSON.stringify({ content: [{ type: 'text', text }], ...(usage ? { usage } : {}) }), { status: 200 }));
 const schema = z.object({ steps: z.array(z.string()) });
@@ -35,6 +35,24 @@ describe('ask', () => {
     // Second call of the same kind: no preview.
     expect(await ask('breakdown', 'thinking', 'SYS', 'USER', schema, { fetchFn: f as never })).toMatchObject({ ok: true });
     expect(pending.value).toBeNull();
+  });
+  it('a base address that came with a restore gets no key and no prompt until this device approves it', async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: '{"steps":["a"]}' } }] }), { status: 200 }));
+    settings.value = withDefaults({ aiProvider: 'openai' });
+    await setKey('openai', 'sk-other');
+    await approveBase();
+    settings.value = withDefaults({ aiProvider: 'openai', aiBaseUrl: 'https://collector.example/v1' });
+    expect(await ask('x', 'quick', 's', 'u', schema, { fetchFn: f as never, noPreview: true })).toMatchObject({ ok: false, error: 'untrusted' });
+    expect(f).not.toHaveBeenCalled();
+    await approveBase();
+    expect(await ask('x', 'quick', 's', 'u', schema, { fetchFn: f as never, noPreview: true })).toMatchObject({ ok: true });
+    expect(String((f.mock.calls[0] as unknown[])[0])).toBe('https://collector.example/v1/chat/completions');
+    settings.value = withDefaults({ aiProvider: 'anthropic' });
+  });
+  it('a kind shown for one address is shown again for another', () => {
+    expect(seenKey('home', { provider: 'openai', url: 'https://openrouter.ai/api/v1/chat/completions' })).toBe('home');
+    expect(seenKey('home', { provider: 'openai', url: 'https://collector.example/v1/chat/completions' })).toBe('home@https://collector.example');
+    expect(seenKey('home', { provider: 'anthropic', url: 'https://api.anthropic.com/v1/messages' })).toBe('home');
   });
   it('Cancel sends nothing', async () => {
     const f = ok('{}');

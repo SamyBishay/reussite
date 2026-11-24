@@ -113,6 +113,10 @@ The space id, a hash of the auth secret, the size, time and device id of every b
 - `src/app/SyncSettings.tsx`, `src/app/qr.tsx`: Settings → Sync & devices, the guided flows, the cards on Today, QR drawing and scanning.
 - Old-schema documents are upgraded by `upgradeEntries` (migrations) before merging; `SyncStore.upgrade` is optional. A round with `stopIfGone` stops when the relay has no space for a device that had pulled before (deleted elsewhere); `full` pushes every field.
 
+## Where credentials go
+
+The relay address (`relayUrl`) and the AI base address (`aiBaseUrl`) are settings, so a restored backup or a synced edit can change them. The sync bearer, the calendar and push secrets and the AI key must not follow such a change. Each is sent only to an address that is **approved on this device** (`src/data/trust.ts`): the build's default, this computer (`localhost`, `127.0.0.1`), the one the person typed on this device (typing in the field approves), or the one the device already had when it first started with this rule (`trust.relay`, `trust.ai` in the device-local table, which no backup or sync carries). Anything else is shown in Settings with "Use this address", and until then `relayBase()` is empty (sync, push, feed and the connector stop) and `ask` answers `untrusted` (no key, no prompt leaves). "Show me what's sent" is remembered per address: a kind seen for one OpenAI-compatible address is shown again for another (`seenKey`). A second device gets the proposed address through sync and asks the same question; a device that had a custom address before this rule keeps it, unless a restore changed it first.
+
 ## Running the relay
 
 `npm run relay:dev` (local D1, localhost origins allowed), `npm run relay:test` (Workers runtime, in-memory D1). Deploying needs the real Worker name and D1 id in `relay/wrangler.jsonc`, then `wrangler d1 migrations apply`.

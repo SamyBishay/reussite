@@ -5,6 +5,8 @@
 import { computed, signal } from '@preact/signals';
 import { db, getClock, onLocalWrite, putMerged, readOnly, settings } from './store';
 import { getLocal, setLocal } from '../data/db';
+import { DEFAULT_SETTINGS } from '../data/settings';
+import { approved, destination, firstUse } from '../data/trust';
 import { dexieSyncStore, STATE_KEY } from '../data/syncstore';
 import { makeBackup, type BackupFile } from '../data/backup';
 import { SYNCED_COLLECTIONS, collectOutgoing } from '../sync/engine';
@@ -25,6 +27,7 @@ const K = {
   key: 'sync.key', saved: 'sync.keySaved', last: 'sync.lastAt', err: 'sync.lastError', full: 'sync.full',
   name: 'sync.deviceName', touched: 'sync.touchedAt', devices: 'sync.deviceCount',
   conOn: 'connector.on', conUsed: 'connector.lastUsed',
+  relayOk: 'trust.relay',
   backupAt: 'backup.lastAt', backupSnooze: 'backup.snoozedAt', firstSeen: 'app.firstSeen',
 } as const;
 const DAY = 86_400_000;
@@ -76,14 +79,28 @@ export const dropBase = signal<string | null>(null);
 let session: { recovery: Bytes; keys: SpaceKeys; inbox?: InboxKeys | null } | null = null;
 const store = dexieSyncStore(db, getClock, putMerged);
 
-/** The relay address if it is one we can use: https, or http on this computer. */
-export function relayBase(): string {
+/** The relay address this device approved (typed here, or what it had before approvals); undefined until read. Device-local: a backup or sync never carries it. */
+const relayOk = signal<string | null | undefined>(undefined);
+const proposedRelay = (): string => {
   const raw = settings.value.relayUrl.trim();
   try {
     const u = new URL(raw);
     const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1';
     return u.protocol === 'https:' || (u.protocol === 'http:' && local) ? u.origin + u.pathname.replace(/\/+$/, '') : '';
   } catch { return ''; }
+};
+/** The relay address if it is one we can use: https, or http on this computer, and approved on this device (docs/dev/sync.md). */
+export function relayBase(): string {
+  const p = proposedRelay();
+  return p && approved(p, DEFAULT_SETTINGS.relayUrl, relayOk.value) ? p : '';
+}
+/** The setting names a relay this device hasn't approved (a restored backup or another device changed it): nothing is sent to it. */
+export const relayUnapproved = () => !!proposedRelay() && !relayBase();
+/** The person approves the address now in the setting (typing it here does too). */
+export async function approveRelay(): Promise<void> {
+  const d = destination(settings.value.relayUrl);
+  await setLocal(db, K.relayOk, d); relayOk.value = d;
+  if (session) void syncNow();
 }
 const client = () => new RelayClient(relayBase(), session!.keys);
 
@@ -394,6 +411,12 @@ export async function startSync() {
     state: session ? ((await getLocal<boolean>(db, K.conOn)) ? 'on' : 'off') : 'off',
     'last used': (await getLocal<number | null>(db, K.conUsed)) ? new Date((await getLocal<number>(db, K.conUsed))!).toISOString() : null,
   }));
+  {
+    const kept = await getLocal<string>(db, K.relayOk);
+    const first = firstUse(settings.value.relayUrl, kept);
+    if (first) await setLocal(db, K.relayOk, first);
+    relayOk.value = kept ?? first;
+  }
   deviceName.value = (await getLocal<string>(db, K.name)) ?? '';
   lastSyncAt.value = (await getLocal<number>(db, K.last)) ?? null;
   syncError.value = (await getLocal<string | null>(db, K.err)) ?? null;

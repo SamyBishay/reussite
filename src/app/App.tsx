@@ -36,7 +36,7 @@ import { openDecision } from '../flows/decision';
 import { t, lang } from '../i18n';
 import { SUIT_ORDER } from '../data/settings';
 import { PreviewHost } from '../ai/ui';
-import { aiReady } from '../ai/ask';
+import { aiReady, loadBaseOk } from '../ai/ask';
 import { openMorning, openPlanDay } from '../flows/morning';
 import { DropHost, InboxHost } from './Drop';
 import { pruneExchanges } from './home';
@@ -149,7 +149,7 @@ async function openLinkedPlan() {
 }
 
 export function App() {
-  useEffect(() => { void start().then(async () => { await decideOnboarding(); watchStart(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([startSync(), startPush()]); }); }, []);
+  useEffect(() => { void start().then(async () => { await decideOnboarding(); watchStart(); openLinkedTask(); void openLinkedPlan(); void pruneExchanges(); void startFeed(); watchStanding(); watchBigMoments(); return Promise.all([loadBaseOk(), startSync(), startPush()]); }); }, []);
   useEffect(() => { startKeyboard(); }, []);
   // Home and the Calendar never scroll (the page is one screen tall, what is inside scrolls), and the phone's rubber band is off while they are shown (html.home-lock, src/styles/app.css).
   // First-run set-up is none of them: it is a stack of pages that scroll, though the view behind it is Home (so the lock was on and the pages could not move).

@@ -316,6 +316,8 @@ export const enCore = {
   syncIntro: 'Keep your deck on more than one device. It is scrambled on this device before it is sent, and only your devices hold the key. Sync is optional: Réussite works fully on one device.',
   syncNoRelay: 'Sync isn’t available in this copy of Réussite, because it has no relay address. Type one below if you run your own.',
   syncRelayBad: 'That address can’t be used. It must start with https:// (or http://localhost for testing).',
+  syncRelayUnapproved: 'The sync address is now {url}, which this device hasn’t approved (a restored backup or another device may have changed it). Nothing is sent there until you approve it.',
+  syncRelayApprove: 'Use this address',
   syncRelayLabel: 'Relay address',
   syncRelayHint: 'Where your scrambled deck is kept in between. Leave it as it is unless you run your own relay.',
   syncSetUp: 'Set up sync',

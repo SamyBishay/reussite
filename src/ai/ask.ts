@@ -12,7 +12,8 @@ import { buildRequest, masked, send, type AiConfig, type AiRequest, type ErrorKi
 import { addUsage, capReached, dollars, emptyMonth, type MonthUsage } from './prices';
 import { extractJson } from './json';
 import { readChangeSet, ChangeSetSchema, type ChangeSet } from './changeset';
-import type { AiProvider } from '../data/settings';
+import { DEFAULT_SETTINGS, type AiProvider } from '../data/settings';
+import { approved, destination } from '../data/trust';
 
 export type { Slot, ErrorKind, AiRequest };
 export type AskResult<T> = { ok: true; data: T; text: string } | { ok: false; error: ErrorKind; message: string };
@@ -25,7 +26,7 @@ export const aiOn = computed(() => { const p = settings.value.aiProvider; return
 
 const ERR: Record<ErrorKind, Key> = {
   off: 'aiErrOff', noKey: 'aiErrNoKey', noCredit: 'aiErrNoCredit', rateLimit: 'aiErrRateLimit', auth: 'aiErrAuth',
-  network: 'aiErrNetwork', invalid: 'aiErrInvalid', refused: 'aiErrRefused', server: 'aiErrServer', cancelled: 'aiErrCancelled', cap: 'aiErrCap',
+  network: 'aiErrNetwork', invalid: 'aiErrInvalid', refused: 'aiErrRefused', server: 'aiErrServer', cancelled: 'aiErrCancelled', cap: 'aiErrCap', untrusted: 'aiErrUntrusted',
 };
 export const errorText = (e: ErrorKind) => t(ERR[e]);
 const fail = (error: ErrorKind): { ok: false; error: ErrorKind; message: string } => ({ ok: false, error, message: errorText(error) });
@@ -52,12 +53,32 @@ export async function aiReady(): Promise<boolean> {
  */
 export const draftProvider = signal<Exclude<AiProvider, 'none'> | null>(null);
 
+// ---------- where the key may go: device-local approval ----------
+// `aiBaseUrl` is a setting, so a restored backup or another device can change it; the key and the prompt go only to the
+// default address or one approved on this device (typed here, or the one this device already had: `trust.ai`).
+const OK = 'trust.ai';
+/** The base address approved on this device; undefined until read. */
+const baseOk = signal<string | null | undefined>(undefined);
+export async function loadBaseOk(): Promise<void> {
+  const kept = await getLocal<string>(db, OK);
+  const now = destination(settings.value.aiBaseUrl);
+  if (kept === undefined && now) await setLocal(db, OK, now);
+  baseOk.value = kept ?? (now || null);
+}
+/** The setting names a base address this device has not approved (it only matters with an OpenAI-compatible provider). */
+export const baseUnapproved = () => settings.value.aiProvider === 'openai' && !approved(settings.value.aiBaseUrl, DEFAULT_SETTINGS.aiBaseUrl, baseOk.value);
+export async function approveBase(): Promise<void> { const d = destination(settings.value.aiBaseUrl); await setLocal(db, OK, d); baseOk.value = d; }
+
 export async function config(): Promise<AiConfig | ErrorKind> {
   const s = settings.value;
   const p = draftProvider.value ?? s.aiProvider;
   if (p === 'none') return 'off';
   const key = await getKey(p);
   if (!key) return 'noKey';
+  if (p === 'openai') {
+    if (baseOk.value === undefined) await loadBaseOk();
+    if (baseUnapproved()) return 'untrusted';
+  }
   return { provider: p, baseUrl: s.aiBaseUrl, models: s.aiModels[p], key };
 }
 
@@ -94,11 +115,20 @@ export function preview(req: AiRequest, kind: string, notes?: string[]): Promise
     pending.value = { req: masked(req), kind, notes, done: ok => { pending.value = null; res(ok); } };
   });
 }
+/** A kind is "seen" for one destination: the default keeps the bare name, another address adds its origin, so a changed address is shown again. */
+export const seenKey = (kind: string, req: Pick<AiRequest, 'provider' | 'url'>): string => {
+  if (req.provider !== 'openai') return kind;
+  let o = '', d = '';
+  try { o = new URL(req.url).origin; } catch { /* keep '' */ }
+  try { d = new URL(DEFAULT_SETTINGS.aiBaseUrl).origin; } catch { /* keep '' */ }
+  return o === d ? kind : kind + '@' + o;
+};
 async function mayShow(req: AiRequest, kind: string, notes?: string[]): Promise<boolean> {
   const seen = await seenKinds();
-  if (!settings.value.aiAlwaysShow && seen.includes(kind)) return true;
+  const key = seenKey(kind, req);
+  if (!settings.value.aiAlwaysShow && seen.includes(key)) return true;
   const ok = await preview(req, kind, notes);
-  if (ok && !seen.includes(kind)) await setLocal(db, SEEN, [...seen, kind]);
+  if (ok && !seen.includes(key)) await setLocal(db, SEEN, [...seen, key]);
   return ok;
 }
 

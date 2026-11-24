@@ -137,10 +137,11 @@ for (const [w, h] of PHONES) for (const lang of LANGS) {
     await page.getByTestId('connector-guided').click();
     await expect(page.getByTestId('ob-link')).toBeVisible();
     const who = page.getByTestId('ob-link').getByTestId('conn-apps-who').locator('li');
-    await expect(who).toHaveCount(4);
-    for (const [i, name] of ['ChatGPT', 'Claude', 'Gemini'].entries()) await expect(who.nth(i)).toContainText(new RegExp('^' + name));
+    await expect(who).toHaveCount(5);
+    for (const [i, name] of ['ChatGPT', 'Claude', 'Gemini', 'Le Chat'].entries()) await expect(who.nth(i)).toContainText(new RegExp('^' + name));
     await expect(page.getByTestId('ob-link').getByTestId('conn-app-chatgpt')).toContainText(W.chatgpt);
     await expect(page.getByTestId('ob-link').getByTestId('conn-app-gemini')).toContainText(W.gemini);
+    await expect(page.getByTestId('ob-link').getByTestId('conn-app-lechat')).toContainText(/administrat/);
     await expect(page.getByTestId('ob-link').getByTestId('conn-app-other')).toContainText('MCP');
     expect(await wordsOf(page, '.ob'), 'connect').not.toMatch(PASTE);
     await noSideways(page, 'connect: who can use it');

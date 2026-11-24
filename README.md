@@ -35,6 +35,7 @@ Réussite has a connector: once it is added to your chat app, the app reads and 
 - **ChatGPT**, on chatgpt.com in a browser: Plugins (chatgpt.com/plugins), then +, then Add custom MCP server. OpenAI's pages don't say which plans can add one; ChatGPT's own settings show whether the option is there for you.
 - **Claude**, on claude.ai or the desktop app: Customize, then Connectors, then + Add, then Add custom connector. Every plan, Free included (Free allows one custom connector); on Team and Enterprise, an owner adds it first.
 - **Gemini**, on gemini.google.com: Settings, then Connected Apps (if it isn't there, open Personal Intelligence first), then Add a custom app. Personal Google accounts only, 18 or over, in the United States, in English, with Keep Activity on.
+- **Le Chat (Mistral)**, on chat.mistral.ai: Connectors, then + Add Connector, then the Custom MCP Connector tab. A name with no spaces, the address in Server URL. Adding one is an administrator's job; on Free, Pro and Student the account owner is the administrator.
 - **Another app** that accepts MCP connectors: add a custom or remote connector with the address.
 
 [`docs/ai/`](docs/ai/) holds two sets of instructions for the chat app, [`today`](docs/ai/skills/today.md) (dealing the day, getting unstuck, closing the day, the weekly review) and [`decide`](docs/ai/skills/decide.md) (a decision, step by step through the method), as plain text and as skills ([`today/SKILL.md`](docs/ai/skills/today/SKILL.md), [`decide/SKILL.md`](docs/ai/skills/decide/SKILL.md)). They work through the connector.

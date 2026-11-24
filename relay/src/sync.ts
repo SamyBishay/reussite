@@ -103,11 +103,8 @@ async function pushBatch(req: Request, env: Env, space: string): Promise<Respons
 
 /** Append an encrypted batch to a space (counts against the space's minute); its seq, or null when over the limit. */
 export async function appendBatch(env: Env, space: string, device: string, blob: string): Promise<number | null> {
-  const now = Date.now();
-  const seq = await spaceSlot(env, space, now, 1);
-  if (seq === null) return null;
-  await env.DB.prepare('INSERT INTO batches (space, seq, device, blob, size, at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)').bind(space, seq, device, blob, sizeOf(blob), now).run();
-  return seq;
+  const r = await appendBatchWith(env, space, device, blob, {});
+  return r === 'skipped' ? null : r;
 }
 
 /** What the connector adds to an append, so that the batch and what must not exist without it are one D1 batch (one transaction). */
@@ -125,21 +122,43 @@ export interface AppendWith {
   then?: (seq: number) => D1PreparedStatement[];
 }
 
+const SEQ_TRIES = 8;
+
 /**
- * `appendBatch` with extras in one transaction (D1 runs a `batch()` as one). What stays outside it is the seq
- * allocation, the rate-limit statement `spaceSlot`: a request killed between the two leaves a number unused, a gap
- * that readers ignore (they read `seq > after`), and nothing else. The connector writes through here.
+ * Append a batch with extras, and take its seq, in one transaction (D1 runs a `batch()` as one, and statements of
+ * different requests never interleave). The seq is `head + 1` as read just before; the insert and the bump of
+ * `spaces.head` both hold only while `head` is still what was read, so a writer that lost a race changes nothing and
+ * tries again with the new head. A batch therefore becomes visible in the same instant as its seq: a reader can never
+ * see a higher seq while a lower one is still on its way, which is what its cursor and snapshot pruning rely on
+ * (docs/dev/sync.md, "Order"). The rate-limit count of the space's minute is in the same two statements.
+ * Returns the seq, null over the limit (or still losing races after 8 tries), `'skipped'` when `when` no longer holds.
  */
 export async function appendBatchWith(env: Env, space: string, device: string, blob: string, o: AppendWith): Promise<number | null | 'skipped'> {
-  const now = Date.now();
-  const seq = await spaceSlot(env, space, now, 1);
-  if (seq === null) return null;
-  const res = await env.DB.batch([
-    env.DB.prepare(`INSERT INTO batches (space, seq, device, blob, size, at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE ${o.when?.sql ?? '1'}`)
-      .bind(space, seq, device, blob, sizeOf(blob), now, ...(o.when?.args ?? [])),
-    ...(o.then?.(seq) ?? []),
-  ]);
-  return res[0]!.meta.changes ? seq : 'skipped';
+  const limit = spaceLimit(env);
+  const args = o.when?.args ?? [];
+  const winAt = 7 + args.length; // ?winAt the minute, ?winAt+1 the limit
+  let head = (await env.DB.prepare('SELECT head FROM spaces WHERE id = ?1').bind(space).first<{ head: number }>())?.head;
+  for (let i = 0; i < SEQ_TRIES && head !== undefined; i++) {
+    const now = Date.now();
+    const win = Math.floor(now / MINUTE);
+    const seq = head + 1;
+    const open = `(win <> ?${winAt} OR n < ?${winAt + 1})`;
+    const res = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO batches (space, seq, device, blob, size, at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 FROM spaces WHERE id = ?1 AND head = ?2 - 1 AND ${open} AND ${o.when?.sql ?? '1'}`)
+        .bind(space, seq, device, blob, sizeOf(blob), now, ...args, win, limit),
+      env.DB.prepare(`UPDATE spaces SET win = ?3, n = CASE WHEN win = ?3 THEN n + 1 ELSE 1 END, last_write = ?4, head = ?2 WHERE id = ?1 AND head = ?2 - 1 AND EXISTS (SELECT 1 FROM batches WHERE space = ?1 AND seq = ?2)`)
+        .bind(space, seq, win, now),
+      ...(o.then?.(seq) ?? []),
+    ]);
+    if (res[0]!.meta.changes) return seq;
+    // Nothing written: another writer took the seq, the minute is full, or `when` fails.
+    const row = await env.DB.prepare('SELECT head, win, n FROM spaces WHERE id = ?1').bind(space).first<{ head: number; win: number; n: number }>();
+    if (!row) return null;
+    if (row.head !== head) { head = row.head; continue; } // lost the race: go again from the head just read
+    if (row.win === win && row.n >= limit) return null;
+    return 'skipped';
+  }
+  return null;
 }
 
 async function changes(req: Request, env: Env, space: string): Promise<Response> {

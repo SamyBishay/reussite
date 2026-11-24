@@ -7,7 +7,7 @@ Tout se règle à un seul endroit : Réglages → **Comment Réussite vous com
 1. **Sur cet appareil** (par défaut). Réussite lit lui-même les lignes que vous tapez sur l’accueil : une carte, une heure, une durée, plusieurs cartes dans une ligne. Rien ne quitte cet appareil, et c’est gratuit. Tout dans l’appli marche ainsi.
 2. **Une IA dans le cloud.** Une IA sur les serveurs d’un fournisseur lit aussi ce que l’appli ne comprend pas, distribue la journée avec vous et aide pour vos cartes. Il y a deux façons, et vous pouvez utiliser l’une, l’autre ou les deux :
    - **Ma propre clé.** Choisissez OpenRouter (ou tout service compatible OpenAI), ou Anthropic, et mettez votre clé dans la case. La clé reste sur cet appareil. Elle n’est jamais synchronisée ni mise dans les sauvegardes. Touchez **Tester la connexion**. **Obtenir une clé, pas à pas** vous guide.
-   - **Mon appli de chat IA, par le connecteur.** Une appli de chat IA que vous utilisez déjà (ChatGPT, Claude, Gemini, ou une autre appli qui accepte les connecteurs de type MCP) lit et modifie votre paquet pendant que vous discutez. Il demande la synchronisation. Voir plus bas.
+   - **Mon appli de chat IA, par le connecteur.** Une appli de chat IA que vous utilisez déjà (ChatGPT, Claude, Gemini, Le Chat, ou une autre appli qui accepte les connecteurs de type MCP) lit et modifie votre paquet pendant que vous discutez. Il demande la synchronisation. Voir plus bas.
 
 Choisir **Sur cet appareil** désactive la clé. Cela ne désactive pas le connecteur : votre appli de chat reste connectée jusqu’à ce que vous désactiviez vous-même le connecteur, et la section le dit, avec l’interrupteur à côté.
 
@@ -51,6 +51,7 @@ Le connecteur permet à une appli de chat IA de lire votre paquet et de la modif
 - **ChatGPT** : les pages d’OpenAI ne disent pas quelles formules peuvent ajouter un connecteur personnalisé, ce n’est donc pas confirmé. Les réglages de ChatGPT montrent si l’option est là pour vous.
 - **Claude** : toutes les formules, Free comprise (Free permet un seul connecteur personnalisé). Sur Team et Enterprise, un propriétaire l’ajoute d’abord, puis vous vous connectez.
 - **Gemini** : comptes Google personnels seulement (pas professionnels ni scolaires), 18 ans ou plus, aux États-Unis, en anglais, avec la conservation de l’activité activée.
+- **Le Chat (Mistral)** : ajouter un connecteur personnalisé est un geste d’administrateur ; avec un compte Free, Pro ou Student, le propriétaire du compte est l’administrateur.
 - **Une autre appli** qui accepte les connecteurs MCP : si elle permet d’ajouter un connecteur personnalisé ou distant, cela fonctionne de la même façon.
 
 À la main :
@@ -60,10 +61,11 @@ Le connecteur permet à une appli de chat IA de lire votre paquet et de la modif
    - ChatGPT, sur chatgpt.com dans un navigateur : Plugins, puis +, puis Add custom MCP server ; donnez-lui un nom, mettez l’adresse dans Server URL, puis Create as a plugin.
    - Claude, sur claude.ai ou l’appli de bureau : Customize, puis Connectors, puis + Add, puis Add custom connector.
    - Gemini, sur gemini.google.com : les réglages, puis Connected Apps (ou d’abord Personal Intelligence), puis Add a custom app.
+   - Le Chat, sur chat.mistral.ai : Connectors, puis + Add Connector, puis l’onglet Custom MCP Connector ; un nom sans espaces, l’adresse dans Server URL.
    - Une autre appli : ajoutez un connecteur personnalisé ou distant avec l’adresse.
 3. Connectez-vous quand on vous le demande et saisissez le **code d’appairage** que montre Réussite. Il ne marche qu’une fois, pendant dix minutes.
 
-Une fois ajouté, Claude et Gemini l’utilisent aussi dans leurs applis pour téléphone ; pour celle de ChatGPT, ce n’est pas confirmé.
+Une fois ajouté, Claude et Gemini l’utilisent aussi dans leurs applis pour téléphone ; pour les applis de ChatGPT et de Le Chat, ce n’est pas confirmé.
 
 Sans clé sur cet appareil mais avec le connecteur activé, la carte **Distribuer la journée** de l’accueil propose aussi **La distribuer dans votre chat IA**, et la bannière de la revue de la semaine (dans Aujourd’hui, la matrice et la cloche) **La faire dans votre chat IA**. Elles copient une courte phrase (« Distribue ma journée avec Réussite ») à dire dans une nouvelle conversation de votre appli. Réussite ne fait aucun appel à une IA elle-même. Un petit changement (ajouter une carte, en jouer une, déplacer une date) passe directement, avec un moyen d’annuler. Tout le reste attend votre accord dans la conversation. **Désactiver** déconnecte toutes les applis d’IA d’un coup. Les notes que vous avez marquées Privées ne sont jamais lisibles par lui.
 

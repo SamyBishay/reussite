@@ -96,11 +96,12 @@ export function PairingCode({ code, onNew, busy }: { code: Code | null; onNew: (
   );
 }
 
-/** The three chat apps in a fixed order, with equal weight (no vendor first by preference), and any other app that takes MCP connectors. */
+/** The four chat apps in a fixed order, with equal weight (no vendor first by preference), and any other app that takes MCP connectors. */
 const APPS = [
   { id: 'chatgpt', who: 'connWhoChatgpt', how: 'connHowChatgpt' },
   { id: 'claude', who: 'connWhoClaude', how: 'connHowClaude' },
   { id: 'gemini', who: 'connWhoGemini', how: 'connHowGemini' },
+  { id: 'lechat', who: 'connWhoLechat', how: 'connHowLechat' },
 ] as const;
 
 /**

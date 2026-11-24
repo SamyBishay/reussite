@@ -7,7 +7,7 @@ Everything is set in one place: Settings → **How Réussite understands you**. 
 1. **On this device** (the default). Réussite reads the lines you type on Home by itself: a card, a time, a length, several cards in one line. Nothing leaves this device, and it costs nothing. Everything in the app works this way.
 2. **A cloud AI.** An AI on a provider's servers also reads what the app can't, deals the day with you and helps with your cards. There are two ways, and you can use one or both:
    - **My own key.** Choose OpenRouter (or any OpenAI-compatible service), or Anthropic, and put your key in the box. The key stays on this device. It is never synced or put in backups. Tap **Test the connection**. **Get a key, step by step** walks you through it.
-   - **My AI chat app, through the connector.** An AI chat app you already use (ChatGPT, Claude, Gemini, or another app that accepts connectors of the MCP kind) reads and edits your deck while you chat. It needs sync. See below.
+   - **My AI chat app, through the connector.** An AI chat app you already use (ChatGPT, Claude, Gemini, Le Chat, or another app that accepts connectors of the MCP kind) reads and edits your deck while you chat. It needs sync. See below.
 
 Choosing **On this device** turns the key off. It does not switch the connector off: your chat app stays signed in until you switch the connector off yourself, and the section says so, with the switch next to it.
 
@@ -51,6 +51,7 @@ The connector lets an AI chat app read your deck and edit it while you chat. It 
 - **ChatGPT**: OpenAI's pages don't say which plans can add a custom connector, so that isn't confirmed. ChatGPT's own settings show whether the option is there for you.
 - **Claude**: every plan, Free included (Free allows one custom connector). On Team and Enterprise, an owner adds it first, then you connect.
 - **Gemini**: personal Google accounts only (not work or school), 18 or over, in the United States, in English, with Keep Activity on.
+- **Le Chat (Mistral)**: adding a custom connector is an administrator's job; on Free, Pro and Student accounts the account owner is the administrator.
 - **Another app** that accepts MCP connectors: if it lets you add a custom or remote connector, it works the same way.
 
 By hand:
@@ -60,10 +61,11 @@ By hand:
    - ChatGPT, on chatgpt.com in a browser: Plugins, then +, then Add custom MCP server; give it a name, put the address in Server URL, then Create as a plugin.
    - Claude, on claude.ai or the desktop app: Customize, then Connectors, then + Add, then Add custom connector.
    - Gemini, on gemini.google.com: Settings, then Connected Apps (or Personal Intelligence first), then Add a custom app.
+   - Le Chat, on chat.mistral.ai: Connectors, then + Add Connector, then the Custom MCP Connector tab; a name with no spaces, the address in Server URL.
    - Another app: add a custom or remote connector with the address.
 3. Sign in when asked and type the **pairing code** Réussite shows. It works once, for ten minutes.
 
-Once added, Claude and Gemini use it in their phone apps too; for ChatGPT's phone app that isn't confirmed.
+Once added, Claude and Gemini use it in their phone apps too; for the phone apps of ChatGPT and Le Chat that isn't confirmed.
 
 With no key on this device but the connector on, Home’s **Deal the day** card also offers **Deal it in your AI chat**, and the weekly review banner (on Today, the Matrix and the bell) **Review in your AI chat**. They copy a short sentence (“Deal my day with Réussite”) to say in a new chat in your app. Réussite makes no AI call itself. One small change (adding a card, playing one, moving a date) goes straight in, with an undo. Anything else waits for your yes in the chat. **Switch off** signs every AI app out at once. Notes you marked Private are never readable by it.
 

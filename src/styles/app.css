@@ -361,8 +361,10 @@ textarea{min-height:84px;resize:vertical}
 .proposed{display:inline-block;font:600 11px/1 var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--warn);border:1px solid currentColor;border-radius:5px;padding:3px 5px;margin-left:var(--s2);vertical-align:2px}
 .next{font-size:14.5px;color:var(--ink-2)}
 details summary{cursor:pointer;color:var(--ink-2);font-weight:600;font-size:14px;padding:4px 0}
-.steps{list-style:none;padding:0;margin:var(--s2) 0 0;display:grid;gap:var(--s2)}
-.steps li{display:grid;grid-template-columns:1.1em minmax(0,1fr) auto;gap:var(--s2);align-items:baseline;font-size:14.5px}
+/* Flex, not grid: an iPhone drew long rows one line tall, on top of the next (2026-11-25) */
+.steps{list-style:none;padding:0;margin:var(--s2) 0 0;display:flex;flex-direction:column;gap:var(--s2)}
+.steps li{display:flex;gap:var(--s2);align-items:center;font-size:14.5px}
+.steps li>.g{flex:none;width:1.1em;text-align:center}
 .steps li.done .linklike{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1px}
 .addstep{display:grid;grid-template-columns:minmax(0,1fr) 5.5em auto;gap:var(--s2);margin-top:var(--s3)}
 .newproj{display:grid;gap:var(--s3)}

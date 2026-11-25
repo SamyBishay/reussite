@@ -129,9 +129,8 @@ input[type=search]{width:100%;border:1px solid var(--line);background:var(--card
 .proj h4 .frac{display:inline-flex;align-items:center;gap:var(--s2)}
 .left{font-size:14px;font-weight:700;color:var(--sea-deep)}
 .linked{list-style:none;margin:0;padding:0;font-size:14px;display:grid;gap:var(--s1)}
-.steps li{grid-template-columns:1.1em minmax(0,1fr) auto}
-.stept{min-width:0;overflow-wrap:anywhere}
-.stepctl{display:inline-flex;align-items:center;gap:var(--s1)}
+.stept{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.stepctl{flex:none;display:inline-flex;align-items:center;gap:var(--s1)}
 .shelf{margin-top:var(--s5)}
 .shelf>summary{font-weight:700;font-size:16px;min-height:44px;display:flex;align-items:center}
 .shelf-list{list-style:none;margin:var(--s2) 0 0;padding:0;display:grid;gap:var(--s3)}

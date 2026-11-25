@@ -137,9 +137,9 @@ export async function handleAuthorize(req: Request, env: Env): Promise<Response>
     // Guessing costs: per IP, and overall (a code doesn't say which space it belongs to).
     const now = Date.now();
     const ip = clientIp(req);
-    const okIp = await countKey(env, 'pair-ip:' + ip, now, pairIpLimit(env));
-    const okAll = await countKey(env, 'pair-all', now, pairAllLimit(env));
-    if (!okIp || !okAll) return plain(lang, t.tooMany, 429);
+    // The address's own gate first: an address that is over it must not use up the overall allowance, or one noisy source blocks everyone's pairing.
+    if (!(await countKey(env, 'pair-ip:' + ip, now, pairIpLimit(env)))) return plain(lang, t.tooMany, 429);
+    if (!(await countKey(env, 'pair-all', now, pairAllLimit(env)))) return plain(lang, t.tooMany, 429);
 
     const found = await codeSpace(env, String(data.get('code') ?? ''), now);
     if (!found) {

@@ -152,9 +152,10 @@ describe('rate limits', () => {
       results.push((await submitAuthorize(b, 'AAAA-AAAA', { ip: 'guesser-1', env: tight })).status);
     }
     expect(results).toEqual([400, 400, 400, 429, 429]);
-    // Another address is still allowed, until the overall budget runs out.
-    const b2 = await beginAuthorize(clientId);
-    expect((await submitAuthorize(b2, 'AAAA-AAAA', { ip: 'guesser-2', env: tight })).status).toBe(429);
+    // The refused attempts of guesser-1 did not use the overall allowance (3 of 5 used): other addresses can still try, until it runs out.
+    const more: number[] = [];
+    for (const ip of ['guesser-2', 'guesser-3', 'guesser-4']) more.push((await submitAuthorize(await beginAuthorize(clientId), 'AAAA-AAAA', { ip, env: tight })).status);
+    expect(more).toEqual([400, 400, 429]);
   });
 
   it('a limited address cannot use a correct code either', async () => {

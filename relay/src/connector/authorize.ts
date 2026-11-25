@@ -148,11 +148,12 @@ export async function handleAuthorize(req: Request, env: Env): Promise<Response>
     }
     const approved = await oauth.approveConsent(req, handle);
     if (!(await consumeCode(env, found.hash, now))) return plain(lang, t.wrong); // used by someone else a moment ago
-    if (!(await env.DB.prepare('SELECT 1 AS x FROM connector WHERE space = ?1').bind(found.space).first())) return plain(lang, t.off);
+    const on = await env.DB.prepare('SELECT activation FROM connector WHERE space = ?1').bind(found.space).first<{ activation: string }>();
+    if (!on) return plain(lang, t.off);
     if ((await spaceSlot(env, found.space, now, 0)) === null) return plain(lang, t.tooMany, 429); // per-space limit
 
     const { redirectTo } = await oauth.completeAuthorization({
-      request: approved.request, userId: found.space, metadata: { label: 'connector' }, scope: approved.request.scope, props: { spaceId: found.space },
+      request: approved.request, userId: found.space, metadata: { label: 'connector' }, scope: approved.request.scope, props: { spaceId: found.space, activation: on.activation },
     });
     approved.headers.set('Location', redirectTo);
     return new Response(null, { status: 302, headers: approved.headers });

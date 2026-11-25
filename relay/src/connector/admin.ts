@@ -2,7 +2,7 @@
 // space's auth secret, as for sync. Switching on hands the relay the space's raw encryption key;
 // the relay keeps it wrapped (wrap.ts) and lists itself as the device "Connector".
 import { authenticates, sealToText } from '../../../src/sync/crypto';
-import { b64uDecode } from '../../../src/sync/bytes';
+import { b64uDecode, b64uEncode } from '../../../src/sync/bytes';
 import { importEncKey } from '../../../src/sync/keys';
 import { type ConnectorCodeResponse, type ConnectorOffResponse, type ConnectorOnResponse, type ConnectorStatus } from '../../../src/sync/protocol';
 import type { Env } from '../env';
@@ -62,7 +62,8 @@ async function switchOn(req: Request, env: Env, space: string): Promise<Response
   const wrapped = await wrap(env, space, { k: key, a: bearer! });
   const label = await sealToText({ spaceId: space, encKey: await importEncKey(raw) }, { name: CONNECTOR_NAME });
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO connector (space, wrapped, created) VALUES (?1, ?2, ?3) ON CONFLICT (space) DO UPDATE SET wrapped = ?2').bind(space, wrapped, now),
+    // A new activation, unless it is already on: then the key is renewed and the grants stay.
+    env.DB.prepare('INSERT INTO connector (space, wrapped, created, activation) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (space) DO UPDATE SET wrapped = ?2').bind(space, wrapped, now, b64uEncode(crypto.getRandomValues(new Uint8Array(16)))),
     env.DB.prepare(
       'INSERT INTO devices (space, device, label_blob, last_seen) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (space, device) DO UPDATE SET label_blob = ?3, last_seen = ?4',
     ).bind(space, CONNECTOR_DEVICE, label, now),

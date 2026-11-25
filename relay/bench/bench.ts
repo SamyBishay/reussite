@@ -344,7 +344,7 @@ export async function main() {
   row('feed run: read hot + tail, then build the calendar text', await time(async () => feedOf(withFeed(await hot()), AT.getTime())), true);
 
   console.log('\nThe MCP layer (a stateless server is built for every request):');
-  const mcp = createMcpHandler(() => buildServer({} as never, 'space', { wrapped: '', wall: 0, counter: 0 }), { route: '/mcp', corsOptions: false, responseMode: 'json', allowedHostnames: ['relay.test'] });
+  const mcp = createMcpHandler(() => buildServer({} as never, 'space', { wrapped: '', wall: 0, counter: 0, activation: 'a' }), { route: '/mcp', corsOptions: false, responseMode: 'json', allowedHostnames: ['relay.test'] });
   const call = (method: string, params: unknown) => mcp(new Request('https://relay.test/mcp', {
     method: 'POST', headers: { Host: 'relay.test', 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),

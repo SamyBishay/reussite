@@ -54,8 +54,9 @@ function killable(kill: { batch: boolean }): Env {
 
 /** Call `applyChanges` the way the tool does, but with our own environment. */
 async function direct(app: App, withEnv: Env, input: Parameters<typeof applyChanges>[1]) {
-  const row = (await env.DB.prepare('SELECT hlc_wall, hlc_counter FROM connector WHERE space = ?1').bind(space(app)).first<{ hlc_wall: number; hlc_counter: number }>())!;
+  const row = (await env.DB.prepare('SELECT hlc_wall, hlc_counter, activation FROM connector WHERE space = ?1').bind(space(app)).first<{ hlc_wall: number; hlc_counter: number; activation: string }>())!;
   const s = await loadSpace(env as unknown as Env, space(app), app.keys, { wall: row.hlc_wall, counter: row.hlc_counter }, null);
+  s.activation = row.activation;
   s.own = new Set();
   const c: Ctx = { env: withEnv, s, v: new View(s.maps), full: async () => undefined };
   return applyChanges(c, input);

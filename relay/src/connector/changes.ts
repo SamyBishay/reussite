@@ -41,6 +41,8 @@ export interface Ctx {
 }
 
 const gen = (v: View) => ({ id: newId, now: () => new Date().toISOString(), zone: v.zone });
+/** This call's activation is still the connector's current one. */
+const stillOn = async (c: Ctx) => !!(await c.env.DB.prepare('SELECT 1 AS x FROM connector WHERE space = ?1 AND activation = ?2').bind(c.s.space, c.s.activation ?? 'legacy').first());
 const rid = (p: string) => p + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => (b % 36).toString(36)).join('');
 
 /** Check every change against the contract. All errors at once, so the AI can fix them in one go. */
@@ -202,6 +204,7 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
   if (flushed === 'empty') return { text: 'Nothing changed.' };
   if (flushed === 'skipped') {
+    if (!(await stillOn(c))) return err(`${noWrite} The connector was switched off while this ran.`);
     const row = pendingId ? await pendingRow(c, pendingId) : null; // another call applied it first
     return row?.applied_at != null ? already(row.undo_id) : err(`${noWrite} It was applied by another call; check with query_tasks.`);
   }
@@ -258,6 +261,7 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
     then: () => [del(c.env.DB)],
   });
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
+  if (flushed === 'skipped' && !(await stillOn(c))) return err('The connector was switched off while this ran; nothing was undone.');
   if (flushed === 'skipped') return err('Nothing to undo: that undo id is unknown, or it was already used.');
   if (flushed === 'empty') await del(c.env.DB).run();
   return { text: lines.length ? ['Undone.', ...lines].join('\n') : 'Nothing to put back: everything it touched has changed since.' };

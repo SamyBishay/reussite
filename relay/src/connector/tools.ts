@@ -32,7 +32,7 @@ A quick edit such as "R: choir Monday 19:00, Hill House 602" takes a single appl
 
 A card marked [waiting for] is something outside the person's hands (a call back, a reply): never deal, estimate or schedule it. Make one with kind "event" in a chain (and an optional check date, "nudge"); when it has happened, task.done with the day it did frees what waits for it.`;
 
-export interface Row { wrapped: string; wall: number; counter: number }
+export interface Row { wrapped: string; wall: number; counter: number; activation: string }
 
 class ToolError extends Error {}
 
@@ -53,6 +53,7 @@ function opener(env: Env, space: string, row: Row) {
     const keys = entry?.keys ?? { spaceId: space, encKey: await importEncKey(b64uDecode((await unwrap(env, space, row.wrapped)).k)) };
     const s = await loadSpace(env, space, keys, { wall: row.wall, counter: row.counter }, entry);
     s.wrapped = row.wrapped;
+    s.activation = row.activation;
     if (s.newer) throw new ToolError('The deck was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.');
     const c: Ctx = { env, s, v: viewOf(s), full: async () => { if (needsCold(s)) { await loadCold(env, s); if (s.newer) throw new ToolError('The deck was saved by a newer version of Réussite than this connector understands. Update the relay, then try again.'); } c.v = viewOf(s); } };
     // A stub of an old step: read the cold part now, and ask the maintenance cron to cut the hot part again so that the next

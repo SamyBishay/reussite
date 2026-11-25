@@ -75,6 +75,8 @@ export interface Loaded {
   coldRead: boolean;
   /** The wrapped key this was read under: what the cache is keyed on besides the space. */
   wrapped?: string;
+  /** The activation of the connector this call was accepted under: a write lands only while it is still the current one. */
+  activation?: string;
 }
 
 /** Not an error: the answer needs documents the cold part holds. Load it (`loadCold`) and ask again. */
@@ -315,8 +317,11 @@ export class Edits {
     const blob = await sealToText(this.s.keys, encodeBatch({ v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs }), { lean: true });
     if (blob.length > b64uLength(MAX_BATCH_BYTES)) throw new Error('This change is too big for one batch. Split it into smaller change-sets.');
     const { space, clock, coldRead } = this.s;
+    // The write boundary: a request that outlives a switch-off (or a switch-off and on) writes nothing.
+    const args = [...(o.when?.args ?? []), this.s.activation ?? 'legacy'];
+    const live = `EXISTS (SELECT 1 FROM connector WHERE space = ?1 AND activation = ?${6 + args.length})`;
     const seq = await appendBatchWith(env, space, CONNECTOR_DEVICE, blob, {
-      when: o.when,
+      when: { sql: o.when ? `${o.when.sql} AND ${live}` : live, args },
       then: n => [
         // The clock only ever moves forwards, so two overlapping calls can't wind it back.
         env.DB.prepare(

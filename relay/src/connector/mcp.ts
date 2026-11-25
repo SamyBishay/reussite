@@ -28,10 +28,11 @@ function mcp(env: Env) {
 
 export const mcpHandler = {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const space = (ctx as { props?: { spaceId?: string } }).props?.spaceId;
-    // One statement both checks that the connector is on and records the call.
+    const props = (ctx as { props?: { spaceId?: string; activation?: string } }).props;
+    const space = props?.spaceId;
+    // One statement checks that the connector is on under the activation this grant was paired in (a grant from before ids existed is 'legacy'), and records the call.
     const row = space
-      ? await env.DB.prepare('UPDATE connector SET last_used = ?1 WHERE space = ?2 RETURNING wrapped, hlc_wall AS wall, hlc_counter AS counter').bind(Date.now(), space).first<Row>()
+      ? await env.DB.prepare('UPDATE connector SET last_used = ?1 WHERE space = ?2 AND activation = ?3 RETURNING wrapped, hlc_wall AS wall, hlc_counter AS counter, activation').bind(Date.now(), space, props?.activation ?? 'legacy').first<Row>()
       : null;
     if (!space || !row) {
       return Response.json({ jsonrpc: '2.0', error: { code: -32001, message: OFF_MESSAGE }, id: null }, { status: 403, headers: { 'Cache-Control': 'no-store' } });

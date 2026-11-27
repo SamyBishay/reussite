@@ -1,6 +1,6 @@
 // Write-side actions. Every write goes through store.ts (createDoc, update, upsert, removeDoc).
 import { createDoc, update, upsert, removeDoc, today, toast, days, tasks, stays, places, people, addresses, settings, saveSettings, db, newId } from './store';
-import { T, slotsOfDay, rawPlan, dayDoc, whereOf, elapsedSec, running, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
+import { T, chains, slotsOfDay, rawPlan, dayDoc, whereOf, elapsedSec, running, isEvent, cardsOn, minutesOn, ratio, planOf, dayCards, type T as Tk } from './model';
 import { projects, decisions } from './store';
 import type { Address, By, Day, Person, Place, Project, Session, SessionSource, Slot, SlotLogEntry, Stay, Task, Verdict, Visit } from '../data/schema';
 import { writeSlot } from '../domain/slots';
@@ -12,6 +12,7 @@ import { standingToPlace } from '../domain/agenda';
 import { copyId, openCopiesOn, skippedCopy } from '../domain/standing';
 import { parentProblem } from '../domain/places';
 import { liveNextHeads, nudgeAfter } from '../domain/events';
+import { withChain } from '../domain/chains';
 import { releaseFrom } from '../domain/lists';
 import { insertAfterCurrent, reorderSubset, reslot } from '../domain/planOrder';
 import { dueRulePatches, finishEffects, newTaskFields, nextOccurrence, projectCompletes } from '../domain/effects';
@@ -214,7 +215,8 @@ export async function setPlanOrder(shown: string[], k = today.value) {
   const p = rawPlan(k), next = reorderSubset([...p, ...shown.filter(id => !p.includes(id))], shown);
   if (next.some((x, i) => x !== p[i])) await dayPatch(k, { plan: next });
 }
-export const removeToday = (id: string, k = today.value) => dayPatch(k, { plan: rawPlan(k).filter(x => x !== id) });
+/** Take a card off a day's list: a chain is one card, so every step of it leaves (else the head would stand in for a step left on it). */
+export const removeToday = (id: string, k = today.value) => { const off = new Set(withChain(chains.value, id)); return dayPatch(k, { plan: rawPlan(k).filter(x => !off.has(x)) }); };
 /** One place earlier or later. With `shown` (the open cards in the order they are shown, which is the day's order and may differ from the list's), it is one place among those. */
 export async function movePlan(id: string, dir: -1 | 1, k = today.value, shown?: readonly string[]) {
   if (shown) {

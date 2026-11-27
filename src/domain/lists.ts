@@ -88,8 +88,26 @@ export function releaseFrom(days: Iterable<[string, Pick<Day, 'plan'>]>, k: DayK
   for (const [k2, d] of days) if (k2 !== k && Array.isArray(d.plan) && d.plan.some(x => take.has(x))) out.push([k2, d.plan.filter(x => !take.has(x))]);
   return out;
 }
-/** A day's list without steps that no longer exist or were dropped, or that another day's list owns. */
-export const planOf = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey) => rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped' && !isEvent(d.tasks.get(id)) && ownerDay(d, id) === k);
+/** Each step in a chain to its chain's id (its head's): `ChainIndex.of` in src/domain/chains.ts, which imports this file. */
+export interface ChainHeads { of: ReadonlyMap<string, string> }
+/**
+ * A day's list without steps that no longer exist or were dropped, or that another day's list owns. With `chains`, it is the
+ * day's hand as cards: a chain is one card (DECISIONS 2026-10-23), so a step that waits in a chain stands for its chain and the
+ * head takes its place, once, where the first of its steps is. A head that is something waited for, or that another day's list
+ * holds, is not brought in; the waiting step is left as it is. Without this a list that held a waiting step and not its head
+ * showed the chain on no screen but the suit pile (27 Nov 2026).
+ */
+export function planOf(d: Pick<Data, 'days' | 'tasks'>, k: DayKey, chains?: ChainHeads): string[] {
+  const own = rawPlan(d.days, k).filter(id => d.tasks.has(id) && d.tasks.get(id)!.status !== 'dropped' && !isEvent(d.tasks.get(id)) && ownerDay(d, id) === k);
+  if (!chains?.of.size) return own;
+  const out: string[] = [], seen = new Set<string>();
+  for (const id of own) {
+    const h = chains.of.get(id);
+    const head = h && h !== id && d.tasks.has(h) && !isEvent(d.tasks.get(h)) && (ownerDay(d, h) ?? k) === k ? h : id;
+    if (!seen.has(head)) { seen.add(head); out.push(head); }
+  }
+  return out;
+}
 
 /** Fixed-time items on a day: commitments and timed steps due that day, and timed steps on its
  *  list with no due date (copies of timed standing items saved before they were given one). */
@@ -101,8 +119,8 @@ export const fixedOn = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): TaskW[] => 
 /** A day's cards: its list, with each of its fixed-time items that is not on it yet slotted in before the
  *  first timed card that comes later (else at the end). The calendar shows the timed ones; this is the same
  *  set of steps as a list, so a change to one is a change to the other. */
-export const dayCards = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey): string[] => {
-  const out = planOf(d, k);
+export const dayCards = (d: Pick<Data, 'days' | 'tasks'>, k: DayKey, chains?: ChainHeads): string[] => {
+  const out = planOf(d, k, chains);
   const on = new Set(out);
   for (const f of fixedOn(d, k)) {
     if (on.has(f.id)) continue;

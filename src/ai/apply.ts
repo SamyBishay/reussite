@@ -12,6 +12,7 @@ import { isAllowedLink } from '../domain/links';
 import { norm } from '../domain/names';
 import { isArea, parentProblem, zoneOfPlace } from '../domain/places';
 import { toEventFields } from '../domain/events';
+import { chainIndex, withChain, type ChainIndex } from '../domain/chains';
 import { readSlot, writeSlot } from '../domain/slots';
 import { mergeMilestones, measureOf, outcomeOf, sameMeasure } from '../domain/goal';
 import type { Measure } from '../data/schema';
@@ -136,6 +137,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
     if ('ref' in c && c.ref) refs.set(c.ref, { target: c.op.split('.')[0]!, title: 'set' in c ? String((c.set as { title?: string; name?: string }).title ?? (c.set as { name?: string }).name ?? '') : '' });
   }
   const refTitles = new Map([...refs].map(([k, v]) => [asRef(k), v.title]));
+  let ix: ChainIndex | undefined;
+  const chainsOf = () => (ix ??= chainIndex(s.tasks as ReadonlyMap<string, Task & { id: string }>));
   /** An existing id in `m`, or a ref to something of `target` created in this change-set. */
   const resolve = (v: string | undefined | null, m: Map<string, unknown>, target: string): string | undefined => {
     if (v == null) return undefined;
@@ -385,7 +388,8 @@ export function planChanges(cs: ChangeSet, s: Snapshot, gen: Gen): Plan {
         const okStep = (id: string) => { const r = taskId(id); if (!r) return undefined; const tk = s.tasks.get(r); return (tk ? tk.status !== 'dropped' && tk.kind !== 'event' : !eventRefs.has(r)) ? r : undefined; };
         let plan = c.plan ? c.plan.map(okStep).filter((x): x is string => !!x) : [...cur];
         for (const a of c.add ?? []) { const r = okStep(a); if (r && !plan.includes(r)) plan.push(r); }
-        const rm = new Set((c.remove ?? []).map(taskId).filter(Boolean));
+        // A chain is one card: taking one of its steps off takes the whole chain off (the head would stand in for a step left behind).
+        const rm = new Set((c.remove ?? []).map(taskId).filter((x): x is string => !!x).flatMap(x => withChain(chainsOf(), x)));
         plan = [...new Set(plan.filter(x => !rm.has(x)))];
         const patch: Partial<Day> = {};
         const diffs: Diff[] = [];

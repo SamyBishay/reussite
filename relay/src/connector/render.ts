@@ -135,7 +135,7 @@ export function dayText(v: View, k: string): string {
   const d = v.data;
   const day = v.days.get(k);
   const isToday = k === v.today;
-  const plan = planOf(d, k).filter(id => !isWaiting(chains(v), id)).map(id => v.tasks.get(id)!);
+  const plan = planOf(d, k, chains(v)).filter(id => !isWaiting(chains(v), id)).map(id => v.tasks.get(id)!);
   const optional = new Set(day?.optional ?? []);
   const open = plan.filter(t => isOpen(t));
   const work = open.filter(t => !optional.has(t.id));

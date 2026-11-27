@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { chainIndex, isWaiting, withChain } from './chains';
 import { byPriority, quadOf, dayCards, fixedOn, inPlace, isEvent, isObligation, isOpen, ownerDay, planOf, releaseFrom, splitDone, yesterdayOpen, type TaskW } from './lists';
 
 const tk = (id: string, o: Partial<TaskW> = {}) => ({ id, template: false, ...o }) as TaskW;
@@ -123,5 +124,38 @@ describe('a timed step due on a later day than the list that holds it', () => {
     expect(fixedOn(d, k)).toEqual([]);
     expect(fixedOn(d, n).map(t => t.id)).toEqual(['priest']);
     expect(dayCards(d, n)).toEqual(['priest']);
+  });
+});
+
+describe('a chain is one card in a day\'s hand', () => {
+  const k = '2026-11-27', n = '2026-11-28';
+  const step = (id: string, o: Partial<TaskW> = {}) => tk(id, { status: 'open', ...o } as Partial<TaskW>);
+  const data = (plans: Record<string, string[]>, ts: TaskW[]) => ({ days: new Map(Object.entries(plans).map(([d, plan]) => [d, { plan } as never])), tasks: new Map(ts.map(x => [x.id, x])) });
+  // 27 Nov: the head (decide where Girgis buys the parts) was off the hand, the step waiting on it (send him the sheet) still on it.
+  const ts = [step('elsouri'), step('parts'), step('sheet', { after: ['parts'] } as Partial<TaskW>), step('sarah')];
+  it('a waiting step on the list brings its head, in its place: the views that hide waiting steps and the suit pile agree', () => {
+    const d = data({ [k]: ['elsouri', 'sheet', 'sarah'] }, ts);
+    const ix = chainIndex(d.tasks);
+    const hand = planOf(d, k, ix);
+    expect(hand).toEqual(['elsouri', 'parts', 'sarah']);
+    expect(hand.filter(id => !isWaiting(ix, id))).toEqual(hand); // Today and get_day hide waiting steps: nothing left to hide
+    expect(dayCards(d, k, ix)).toEqual(hand);
+    expect(planOf(d, k)).toEqual(['elsouri', 'sheet', 'sarah']); // the stored list itself is not rewritten
+  });
+  it('the head and its step both on the list: the head once, where the first of them is', () => {
+    const d = data({ [k]: ['sheet', 'elsouri', 'parts'] }, ts);
+    expect(planOf(d, k, chainIndex(d.tasks))).toEqual(['parts', 'elsouri']);
+  });
+  it('a head on another day’s list, or something waited for, is not brought in', () => {
+    const later = data({ [k]: ['sheet'], [n]: ['parts'] }, ts);
+    expect(planOf(later, k, chainIndex(later.tasks))).toEqual(['sheet']);
+    const ev = data({ [k]: ['sheet'] }, [step('parts', { kind: 'event' } as Partial<TaskW>), ts[2]!]);
+    expect(planOf(ev, k, chainIndex(ev.tasks))).toEqual(['sheet']); // the event is no card: the step stays, waiting, as before
+    expect(isWaiting(chainIndex(ev.tasks), 'sheet')).toBe(true);
+  });
+  it('taking the card off takes the whole chain off', () => {
+    const ix = chainIndex(data({}, ts).tasks);
+    expect([...withChain(ix, 'parts')].sort()).toEqual(['parts', 'sheet']);
+    expect(withChain(ix, 'sarah')).toEqual(['sarah']);
   });
 });

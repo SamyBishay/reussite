@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createDoc, db, days, sessions, start, tasks, today } from './store';
-import { dropTask, finishTask, leaveLists, snoozeEvent, startTask, dayPatch } from './actions';
-import { T, cardsOn, allCards, isOpen, nudges, planOf, running, waiting, candidates } from './model';
+import { dropTask, finishTask, leaveLists, snoozeEvent, startTask, dayPatch, removeToday } from './actions';
+import { T, cardsOn, allCards, isOpen, nudges, planOf, rawPlan, running, waiting, candidates } from './model';
 import { toEventFields } from '../domain/events';
 import { newTaskFields } from '../domain/effects';
 
@@ -110,3 +110,19 @@ describe('event steps in the app', () => {
 });
 
 const rawIds = () => [...(days.value.get(today.value)?.plan ?? [])];
+
+describe('a chain in today\'s hand (27 Nov 2026)', () => {
+  it('a waiting step left on the hand shows its head; taking the card off takes the whole chain off', async () => {
+    await mk('h', 'Decide where Girgis buys the parts');
+    await mk('w', 'Send Girgis the sheet', { after: ['h'] });
+    await mk('o', 'Order for Sarah');
+    await settle();
+    await dayPatch(today.value, { plan: ['w', 'o'] }); // the head off the hand, the step that waits on it still on it
+    await settle();
+    expect(todayPlan()).toEqual(['h', 'o']);
+    await removeToday('h');
+    await settle();
+    expect(rawPlan(today.value)).toEqual(['o']);
+    expect(todayPlan()).toEqual(['o']);
+  });
+});

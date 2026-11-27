@@ -42,6 +42,8 @@ export const chainOf = (ix: ChainIndex, id: string): Chain | undefined => {
   const c = ix.of.get(id);
   return c === undefined ? undefined : ix.chains.get(c);
 };
+/** The steps that go with `id` when it is taken off a list: its whole chain (a chain is one card), else itself. */
+export const withChain = (ix: ChainIndex, id: string): readonly string[] => chainOf(ix, id)?.members ?? [id];
 /** The date that drives a chain's head: its own, or the chain's if that comes first. */
 export const effectiveDue = (ix: ChainIndex, id: string, own: string | null | undefined): string | null => {
   const c = ix.chains.get(id)?.due ?? null;

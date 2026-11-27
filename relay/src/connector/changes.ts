@@ -201,7 +201,7 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
       ];
     },
   });
-  if (flushed === 'storage_full') return err(`${noWrite} This space's encrypted sync storage is full. Try again after covered batches expire.`);
+  if (flushed === 'storage_full') return err(`${noWrite} This space's sync storage is full of changes no device has caught up with yet. Open Réussite on a device so it syncs, then try again.`);
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
   if (flushed === 'empty') return { text: 'Nothing changed.' };
   if (flushed === 'skipped') {
@@ -261,7 +261,7 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
     when: { sql: 'EXISTS (SELECT 1 FROM connector_undo WHERE id = ?7 AND space = ?1)', args: [id] },
     then: () => [del(c.env.DB)],
   });
-  if (flushed === 'storage_full') return err(`${noWrite} This space's encrypted sync storage is full. Try again after covered batches expire.`);
+  if (flushed === 'storage_full') return err(`${noWrite} This space's sync storage is full of changes no device has caught up with yet. Open Réussite on a device so it syncs, then try again.`);
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
   if (flushed === 'skipped' && !(await stillOn(c))) return err('The connector was switched off while this ran; nothing was undone.');
   if (flushed === 'skipped') return err('Nothing to undo: that undo id is unknown, or it was already used.');

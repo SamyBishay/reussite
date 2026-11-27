@@ -162,11 +162,28 @@ export async function appendBatchWith(env: Env, space: string, device: string, b
     const row = await env.DB.prepare('SELECT head, win, n, batch_bytes, batch_count FROM spaces WHERE id = ?1').bind(space).first<{ head: number; win: number; n: number; batch_bytes: number; batch_count: number }>();
     if (!row) return null;
     if (row.head !== head) { head = row.head; continue; } // lost the race: go again from the head just read
-    if (row.batch_bytes + size > MAX_SPACE_BATCH_BYTES || row.batch_count >= MAX_SPACE_BATCH_COUNT) return 'storage_full';
+    if (row.batch_bytes + size > MAX_SPACE_BATCH_BYTES || row.batch_count >= MAX_SPACE_BATCH_COUNT) {
+      // Kept history is only for diagnosis: at the cap its oldest rows go before a write is refused.
+      if (await evictHistory(env, space, row.batch_bytes + size - MAX_SPACE_BATCH_BYTES, row.batch_count + 1 - MAX_SPACE_BATCH_COUNT)) continue;
+      return 'storage_full';
+    }
     if (row.win === win && row.n >= limit) return null;
     return 'skipped';
   }
   return null;
+}
+
+/**
+ * Delete the oldest covered batches, enough to free `bytes` and `rows`, never one a stored hot or whole snapshot
+ * doesn't cover. False when the covered history alone can't free that much (then nothing is deleted).
+ */
+export async function evictHistory(env: Env, space: string, bytes: number, rows: number): Promise<boolean> {
+  const r = await env.DB.prepare(`DELETE FROM batches WHERE space = ?1 AND covered_at IS NOT NULL AND seq <= (
+      SELECT seq FROM (
+        SELECT seq, SUM(size) OVER (ORDER BY seq) AS freed, ROW_NUMBER() OVER (ORDER BY seq) AS n FROM batches
+        WHERE space = ?1 AND covered_at IS NOT NULL AND seq <= COALESCE((SELECT MAX(upto) FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0), 0)
+      ) WHERE freed >= ?2 AND n >= ?3 ORDER BY seq LIMIT 1)`).bind(space, Math.max(bytes, 0), Math.max(rows, 0)).run();
+  return r.meta.changes > 0;
 }
 
 async function changes(req: Request, env: Env, space: string): Promise<Response> {

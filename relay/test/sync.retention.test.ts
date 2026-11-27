@@ -79,3 +79,25 @@ it('rejects a batch over the per-space byte cap and accepts more after covered r
   await prune(bindings, Date.now() + BATCH_KEEP_MS);
   expect(await push(keys)).toMatchObject({ status: 201, body: { seq: 3 } });
 });
+
+it('at the cap, drops the oldest covered history to take a push, and never the live tail', async () => {
+  const keys = await newSpace();
+  for (let i = 0; i < 4; i++) expect((await push(keys)).status).toBe(201);
+  const space = keys.spaceId;
+  const blob = await blobOf(keys);
+  // Batches 1 to 3 are covered history, 4 is the live tail; together they fill the byte cap.
+  expect(await storeSnapshot(bindings, space, { upto: 3, blob })).toEqual({ upto: 3, pruned: 0 });
+  const third = Math.floor(MAX_SPACE_BATCH_BYTES / 4);
+  await env.DB.prepare('UPDATE batches SET size = ?2 WHERE space = ?1').bind(space, third).run();
+  await env.DB.prepare('UPDATE spaces SET batch_bytes = (SELECT SUM(size) FROM batches WHERE space = ?1) WHERE id = ?1').bind(space).run();
+  const seqs = async () => (await env.DB.prepare('SELECT seq FROM batches WHERE space = ?1 ORDER BY seq').bind(space).all<{ seq: number }>()).results.map(r => r.seq);
+
+  expect(await push(keys)).toMatchObject({ status: 201, body: { seq: 5 } });
+  expect(await seqs()).toEqual([2, 3, 4, 5]); // only the oldest covered row went
+
+  // A live tail over the cap is never dropped: the push is refused.
+  await env.DB.prepare('UPDATE batches SET size = ?2 WHERE space = ?1 AND seq = 5').bind(space, MAX_SPACE_BATCH_BYTES).run();
+  await env.DB.prepare('UPDATE spaces SET batch_bytes = (SELECT SUM(size) FROM batches WHERE space = ?1) WHERE id = ?1').bind(space).run();
+  expect(await push(keys)).toMatchObject({ status: 507, body: { error: 'storage_full' } });
+  expect(await seqs()).toEqual([2, 3, 4, 5]);
+});

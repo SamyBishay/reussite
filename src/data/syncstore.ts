@@ -8,8 +8,9 @@ import { merge } from './doc';
 import type { Clock } from './hlc';
 import { COLLECTIONS, type Collection } from './schema';
 import { upgradeEntries } from './migrations';
+import { attachCauses } from './writeCauses';
 import { INITIAL_STATE, type SyncState, type SyncStore } from '../sync/run';
-import type { DocSet } from '../sync/engine';
+import { collectOutgoing, type DocSet } from '../sync/engine';
 import type { StoredDoc } from '../sync/protocol';
 
 export const STATE_KEY = 'sync.state';
@@ -32,15 +33,23 @@ export async function writeMerged(db: ReussiteDb, writes: Write[]): Promise<void
 }
 
 export function dexieSyncStore(db: ReussiteDb, clock: () => Clock, put: (w: Write[]) => Promise<void> = w => writeMerged(db, w)): SyncStore {
+  const tables = COLLECTIONS.map(c => db.table_(c));
+  const all = async (): Promise<DocSet> => {
+    const out: DocSet = {};
+    for (const c of COLLECTIONS) out[c] = await db.table_(c).toArray();
+    return out;
+  };
   return {
     get clock() { return clock(); },
     loadState: async (): Promise<SyncState> => ({ ...INITIAL_STATE, ...((await getLocal<SyncState>(db, STATE_KEY)) ?? {}) }),
     saveState: s => setLocal(db, STATE_KEY, s),
-    all: async (): Promise<DocSet> => {
-      const out: DocSet = {};
-      for (const c of COLLECTIONS) out[c] = (await db.table_(c).toArray()) as StoredDoc[];
-      return out;
-    },
+    all,
+    outgoing: (watermark, full) => db.transaction('r', [...tables, db.local], async () => {
+      const everything = await all();
+      const out = collectOutgoing(everything, clock().node, watermark, { imported: watermark === '', all: full });
+      if (out.docs.length) await attachCauses(db, out.docs);
+      return { everything, out };
+    }),
     getMany: async (c, ids) => (await db.table_(c).bulkGet(ids)).filter((d): d is StoredDoc => !!d),
     putMany: put,
     upgrade: upgradeEntries,

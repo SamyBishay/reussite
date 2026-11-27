@@ -4,6 +4,8 @@
 import { COLLECTIONS, SCHEMA_VERSION } from '../schema';
 import { type ReussiteDb, dumpAll, getLocal, setLocal } from '../db';
 import { ZERO, after } from '../hlc';
+import { recordCause } from '../writeCauses';
+import type { StoredDoc } from '../../sync/protocol';
 import { normDecision } from '../normalize';
 import { goalFieldsFor } from '../../domain/goal';
 
@@ -189,13 +191,16 @@ export async function runMigrations(db: ReussiteDb, list = MIGRATIONS, target = 
   const before = await dumpAll(db, COLLECTIONS);
   await db.backups.add({ at: new Date().toISOString(), reason: 'before migration ' + found + '→' + target, schema: found, data: before });
   const after = migrateData(before as Data, found, target, list);
-  await db.transaction('rw', COLLECTIONS.map(c => db.table_(c)), async () => {
+  await db.transaction('rw', [db.local, ...COLLECTIONS.map(c => db.table_(c))], async () => {
     for (const c of COLLECTIONS) {
+      const previous = new Map((before[c] as StoredDoc[]).map(d => [d.id, d]));
+      const docs = (after[c] ?? []) as StoredDoc[];
       await db.table_(c).clear();
-      await db.table_(c).bulkPut((after[c] ?? []) as never[]);
+      await db.table_(c).bulkPut(docs);
+      for (const d of docs) await recordCause(db, c, previous.get(d.id), d, 'migration');
     }
+    await setLocal(db, 'schema', target);
   });
-  await setLocal(db, 'schema', target);
   // The goals migration (schema 7) says what it did; the app shows it once and Settings keeps it.
   if (found < 7 && target >= 7) {
     const goals = goalsReport(before as Data, after);

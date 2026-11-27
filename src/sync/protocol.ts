@@ -13,13 +13,20 @@ export type PartialStoredDoc = StoredDoc;
 
 // ---- Plaintext inside the blobs
 
-export interface ChangeDoc { c: Collection; d: PartialStoredDoc }
+export interface ChangeDoc {
+  c: Collection;
+  d: PartialStoredDoc;
+  /** A cause per HLC. A delta can contain fields from several local writes. */
+  causes?: Record<string, string>;
+}
 export interface ChangeBatch {
   /** The schema version the sender writes. */
   v: number;
   /** The sender's clock node. */
   device: string;
   docs: ChangeDoc[];
+  /** One cause shared by the whole batch, when written by a single action. */
+  cause?: string;
 }
 export interface Snapshot {
   v: number;
@@ -138,7 +145,7 @@ export const INBOX_ID = /^[A-Za-z0-9_-]{16,32}$/;
 
 export interface ErrorBody { error: ErrorCode }
 export type ErrorCode =
-  | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found'
+  | 'bad_request' | 'unauthorized' | 'forbidden' | 'unknown_space' | 'too_large' | 'storage_full' | 'rate_limited' | 'bad_upto' | 'origin_not_allowed' | 'not_found'
   | 'connector_off' | 'wrong_key' | 'connector_unavailable' | 'bad_parts';
 
 export const SPACE_ID = /^[A-Za-z0-9_-]{22}$/; // 16 bytes in base64url

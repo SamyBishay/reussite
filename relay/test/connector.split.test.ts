@@ -32,7 +32,7 @@ let oldDay: string;
 const space = () => app.keys.spaceId;
 const rows = (sql: string, ...args: unknown[]) => env.DB.prepare(sql).bind(...args).all<any>().then(r => r.results);
 const parts = () => rows('SELECT kind, part, upto FROM snapshots WHERE space = ?1 ORDER BY kind, part', space());
-const tailLength = async () => (await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1', space()))[0].n as number;
+const tailLength = async () => (await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND covered_at IS NULL', space()))[0].n as number;
 
 /** apply_changes, saying yes when it asks. */
 async function apply(changes: unknown[]) {
@@ -384,12 +384,12 @@ describe("the isolate's cache", () => {
     app.device.edit('tasks', open.id, { title: 'Edited out of band' });
     await syncOnce(app.device, app.client, { snapshotEvery: 1000 });
     expect((await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND seq > ?2', space(), warmHead))[0].n).toBeGreaterThan(0);
-    // The cron (it neither reads nor feeds the cache) folds that batch into a new hot part, and the batch is pruned.
+    // The cron (it neither reads nor feeds the cache) folds that batch into a new hot part.
     await env.DB.prepare('UPDATE connector SET compact_due = 1 WHERE space = ?1').bind(space()).run();
     expect(await maintain(space(), Date.now() + 10 * 3_600_000)).toEqual([expect.objectContaining({ job: 'compact', done: true })]);
     expect(cacheGet(space(), wrapped)!.head).toBe(warmHead); // still what it was
     expect((await parts()).find(r => r.kind === 'hot')!.upto).toBeGreaterThan(warmHead);
-    expect((await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND seq > ?2', space(), warmHead))[0].n).toBe(0); // the batch the cache lacks is gone
+    expect((await rows('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND seq > ?2 AND covered_at IS NOT NULL', space(), warmHead))[0].n).toBeGreaterThan(0);
     // So the cached copy is no longer enough, and the call reads the new snapshot instead of answering from the old one.
     const withCache = (await tool(access, 'query_tasks', { text: 'edited out of band' })).text;
     expect(withCache).toContain(open.id + ' | Edited out of band');
@@ -402,6 +402,8 @@ describe("the isolate's cache", () => {
     const warm = (await tool(access, 'query_tasks', { quadrant: 1 })).text;
     expect(cacheGet(space(), (await rows('SELECT wrapped FROM connector WHERE space = ?1', space()))[0].wrapped)).toBeDefined();
     const saved = await rows("SELECT * FROM snapshots WHERE space = ?1 AND kind = 'hot'", space());
+    // Simulate the archive having expired too, so a cold isolate has only the live tail.
+    await env.DB.prepare('DELETE FROM batches WHERE space = ?1 AND covered_at IS NOT NULL').bind(space()).run();
     await env.DB.prepare("DELETE FROM snapshots WHERE space = ?1 AND kind = 'hot'").bind(space()).run();
     try {
       expect((await tool(access, 'query_tasks', { quadrant: 1 })).text).toBe(warm);

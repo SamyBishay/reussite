@@ -26,7 +26,7 @@ import type { Plan as ChangePlan } from '../ai/apply';
 
 type D = Decision & { id: string };
 const get = (id: string): D | undefined => decisions.value.get(id) as D | undefined;
-const save = (id: string, p: Partial<Decision>) => update<Decision>('decisions', id, p);
+const save = (id: string, p: Partial<Decision>) => update<Decision>('decisions', id, p, 'decision');
 const scoresOf = (d: Pick<Decision, 'options'>) => Object.fromEntries(d.options.filter(o => !o.screened).map(o => [o.id, score(o)]));
 
 /** Open the wizard on a decision, or start a new one linked to a step or a project. */
@@ -36,7 +36,7 @@ export async function openDecision(id: string | null, link: { taskId?: string; p
   if (!did) {
     const tk = link.taskId ? T(link.taskId) : undefined;
     const fields = normDecision({ title: tk?.title ?? '', taskId: link.taskId ?? null, projectId: link.projectId ?? (tk && tk.project !== 'inbox' ? tk.project : null), status: 'draft' });
-    did = await createDoc<Decision>('decisions', fields);
+    did = await createDoc<Decision>('decisions', fields, undefined, 'decision');
   }
   const d = get(did);
   const start = screen || (d && d.status !== 'draft' ? 0 : d?.listClosedAt ? 2 : d?.options.length ? 1 : 0);
@@ -105,7 +105,7 @@ function ProblemScreen({ d, next }: { d: D; next: () => void }) {
   const [v, setV] = useState(0);
   const set = (k: keyof Problem, v: string) => void save(d.id, { problem: { ...d.problem, [k]: v } });
   const split = async () => {
-    await createDoc<Decision>('decisions', normDecision({ title: '', projectId: d.projectId, taskId: null, status: 'draft' }));
+    await createDoc<Decision>('decisions', normDecision({ title: '', projectId: d.projectId, taskId: null, status: 'draft' }), undefined, 'decision');
     toast(t('splitDone'));
   };
   const field = ([k, label, ph]: (typeof PROBLEM)[number]) => (
@@ -332,7 +332,7 @@ function StepsScreen({ d, back }: { d: D; back: () => void }) {
   const projs = [...projects.value.values()].filter(p => p.status !== 'done' && p.status !== 'dropped' && p.id !== 'inbox');
   const task = d.taskId ? T(d.taskId) : undefined;
   const newProject = async () => {
-    const id = await createDoc<Project>('projects', { name: d.title || d.chosen || t('decisions'), suit: task?.suit ?? 'S', where: task?.where ?? 'any', goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: today.value, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() });
+    const id = await createDoc<Project>('projects', { name: d.title || d.chosen || t('decisions'), suit: task?.suit ?? 'S', where: task?.where ?? 'any', goal: null, goalBy: null, outcome: null, measure: { kind: 'none' }, start: today.value, due: null, order: Date.now(), status: 'active', created: new Date().toISOString() }, undefined, 'decision');
     setPid(id);
     void save(d.id, { projectId: id });
   };

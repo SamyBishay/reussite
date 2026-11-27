@@ -155,22 +155,23 @@ export function missedOn(k: string = today.value): string[] {
  * cards, without the steps that wait for another, within Today's area filter, with its fixed-time items (standing ones not yet placed
  * too) laid out against the clock. Follows the clock for today; another day is laid out from its start. Its first item is Start here.
  */
-export function dayOrderOf(k: string = today.value): DayOrder {
+export function dayOrderOf(k: string = today.value, day = dayDoc(k)): DayOrder {
   const s = settings.value;
   const zone = dayZone(k);
-  const data = { tasks: tasks.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value };
+  const byDay = days.value;
+  const data = { tasks: tasks.value, days: day && day !== byDay.get(k) ? new Map(byDay).set(k, day) : byDay, decisions: decisions.value, places: places.value, stays: stays.value };
   const events = fixedOnDay(data, s, k).filter(e => e.taskId && T(e.taskId));
   const timed = new Set(events.map(e => e.taskId!));
   const fixed: FixedItem[] = events.filter(e => showsInArea('today', T(e.taskId!)!))
     .map(e => ({ id: e.taskId!, at: e.at, dur: e.dur, lead: e.lead, standing: !!e.template }));
-  const cards = dayCards(k).filter(id => !timed.has(id) && !isWaiting(id) && isOpen(T(id)) && showsInArea('today', T(id)!));
+  const cards = L.dayCards(data, k, chains.value).filter(id => !timed.has(id) && !isWaiting(id) && isOpen(T(id)) && showsInArea('today', T(id)!));
   const rid = [...fixed.map(f => f.id), ...cards].find(id => T(id)?.started);
   // The morning's shape: nothing is placed before the start it chose, and the day ends when it said (else at the setting's `dayEnd`).
-  const shape = dayDoc(k)?.shape, floor = atOnDay(k, s.dayStart, s.dayStart, zone);
+  const shape = day?.shape, floor = atOnDay(k, s.dayStart, s.dayStart, zone);
   const start = shape?.start ? Math.max(floor, atOnDay(k, shape.start, s.dayStart, zone)) : floor;
   return dayOrder({
     now: k === today.value ? Math.max(clockNow.value, floor) : floor, floor: start, end: atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone),
-    cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: startedWithLogged(T(rid)!) } : null, optional: new Set(dayDoc(k)?.optional ?? []),
+    cards, est: id => planEst(T(id)!), fixed, running: rid ? { id: rid, started: startedWithLogged(T(rid)!) } : null, optional: new Set(day?.optional ?? []),
   });
 }
 
@@ -178,9 +179,9 @@ export function dayOrderOf(k: string = today.value): DayOrder {
  * Plan my day's slots for a day: one per open planned step, at the start and for the length the day's one order gives it (`slotsFor`,
  * src/domain/slots.ts). Fixed-time items are not slots, and a step the day has no room left for gets none.
  */
-export function slotsOfDay(k: string = today.value): Map<string, Slot> {
-  const s = settings.value, zone = dayZone(k), shape = dayDoc(k)?.shape;
-  return slotsFor(dayOrderOf(k), k, atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone), zone);
+export function slotsOfDay(k: string = today.value, day = dayDoc(k)): Map<string, Slot> {
+  const s = settings.value, zone = dayZone(k), shape = day?.shape;
+  return slotsFor(dayOrderOf(k, day), k, atOnDay(k, shape?.end || s.dayEnd, s.dayStart, zone), zone);
 }
 
 /**

@@ -5,18 +5,18 @@ import { addressesOn } from '../app/model';
 import type { Snapshot, Writer } from './apply';
 import { fieldsOf, type Stored } from '../data/doc';
 
-export const appWriter: Writer = {
-  createTask: f => { const { title, suit, project, ...extra } = f; return createTask(newTaskDoc(title, suit ?? null, project ?? null, extra)); },
-  create: (c, fields) => createDoc(c, fields),
-  update: (c, id, patch) => update(c, id, patch),
-  finish: async (id, day) => { const tk = tasks.value.get(id); if (tk && tk.status === 'open') await finishTask(tk, null, day); },
-  drop: async id => { await dropTask(id); },
-  skip: (id, day) => skipStanding(id, day),
-  day: (k, patch) => dayPatch(k, patch).then(() => undefined),
-  stay: (id, s) => saveStay(id, s),
-  settings: p => saveSettings(p),
+export const appWriter = (cause = 'review'): Writer => ({
+  createTask: f => { const { title, suit, project, ...extra } = f; return createTask(newTaskDoc(title, suit ?? null, project ?? null, extra), cause); },
+  create: (c, fields) => createDoc(c, fields, undefined, cause),
+  update: (c, id, patch) => update(c, id, patch, cause),
+  finish: async (id, day) => { const tk = tasks.value.get(id); if (tk && tk.status === 'open') await finishTask(tk, null, day, undefined, cause); },
+  drop: async id => { await dropTask(id, cause); },
+  skip: (id, day) => skipStanding(id, day, cause),
+  day: (k, patch) => dayPatch(k, patch, undefined, cause).then(() => undefined),
+  stay: (id, s) => saveStay(id, s, cause),
+  settings: p => saveSettings(p, cause),
   read: async (c, id) => { const d = await db.table_(c).get(id); return d && !d._del ? fieldsOf(d as Stored<Record<string, unknown>>) : undefined; },
-};
+});
 
 export const snapshot = (): Snapshot => ({
   today: today.value, tasks: tasks.value, projects: projects.value, days: days.value, decisions: decisions.value, places: places.value, stays: stays.value, memory: memory.value,

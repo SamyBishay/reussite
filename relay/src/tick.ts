@@ -5,6 +5,7 @@
 // same run also prunes (docs/dev/push.md).
 import type { PushUrgency } from '../../src/push/protocol';
 import type { Env } from './env';
+import { BATCH_KEEP_MS } from './sync';
 import { checkEndpoint, loadSigner, sendWebPush, VapidHeaders } from './webpush';
 
 export const TICK_LIMIT = 36;
@@ -94,9 +95,12 @@ async function send(env: Env, now: number, deps: { fetch: typeof fetch }, result
   if (writes.length) await db.batch(writes);
 }
 
-/** Hourly: forget devices with no schedule write for 45 days, items past their TTL, items of no device, and calendar feeds not written for 60 days. */
+/** Hourly cleanup of expired push schedules, calendar feeds and covered sync history. */
 export async function prune(env: Env, now: number): Promise<void> {
   await env.DB.batch([
+    env.DB.prepare(`DELETE FROM batches WHERE covered_at <= ?1 AND seq <= (
+      SELECT MAX(upto) FROM snapshots WHERE space = batches.space AND kind IN ('full', 'hot') AND part = 0
+    )`).bind(now - BATCH_KEEP_MS),
     env.DB.prepare('DELETE FROM push_items WHERE pid IN (SELECT pid FROM push_devices WHERE updated < ?1)').bind(now - DEVICE_KEEP_MS),
     env.DB.prepare('DELETE FROM push_devices WHERE updated < ?1').bind(now - DEVICE_KEEP_MS),
     env.DB.prepare('DELETE FROM push_items WHERE at < ?1 AND at + ttl * 1000 < ?1').bind(now),

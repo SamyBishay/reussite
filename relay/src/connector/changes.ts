@@ -187,7 +187,7 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
   const undoBlob = await sealToText(c.s.keys, { docs: edits.undo });
   const { space } = c.s;
   const db = c.env.DB;
-  const flushed = await edits.flush(c.env, {
+  const flushed = await edits.flush(c.env, `connector:${pendingId ?? undoId}`, {
     when: pendingId ? { sql: 'EXISTS (SELECT 1 FROM connector_pending WHERE id = ?7 AND space = ?1 AND applied_at IS NULL)', args: [pendingId] } : undefined,
     then: seq => {
       const now = Date.now();
@@ -201,6 +201,7 @@ async function commit(c: Ctx, cs: ChangeSet, plan: Plan, how: string, notes: str
       ];
     },
   });
+  if (flushed === 'storage_full') return err(`${noWrite} This space's encrypted sync storage is full. Try again after covered batches expire.`);
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was written.');
   if (flushed === 'empty') return { text: 'Nothing changed.' };
   if (flushed === 'skipped') {
@@ -256,10 +257,11 @@ export async function undo(c: Ctx, id: string): Promise<Out> {
   }
   // The batch and the use of the undo id are one transaction: a kill leaves the id usable, and a second call can't undo twice.
   const del = (db: D1Database) => db.prepare('DELETE FROM connector_undo WHERE id = ?1 AND space = ?2').bind(id, c.s.space);
-  const flushed = edits.empty ? 'empty' : await edits.flush(c.env, {
+  const flushed = edits.empty ? 'empty' : await edits.flush(c.env, `connector:${id}`, {
     when: { sql: 'EXISTS (SELECT 1 FROM connector_undo WHERE id = ?7 AND space = ?1)', args: [id] },
     then: () => [del(c.env.DB)],
   });
+  if (flushed === 'storage_full') return err(`${noWrite} This space's encrypted sync storage is full. Try again after covered batches expire.`);
   if (flushed === 'limited') return err('Too many changes this minute. Wait a moment and try again; nothing was undone.');
   if (flushed === 'skipped' && !(await stillOn(c))) return err('The connector was switched off while this ran; nothing was undone.');
   if (flushed === 'skipped') return err('Nothing to undo: that undo id is unknown, or it was already used.');

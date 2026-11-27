@@ -1,6 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { b64uLength, MAX_BATCH_BYTES, MAX_SNAPSHOT_BYTES } from '../../src/sync/protocol';
+import type { Env } from '../src/env';
+import { BATCH_KEEP_MS } from '../src/sync';
+import { prune } from '../src/tick';
 import { APP, blobOf, call, newSpace, push, url, freshMinute } from './helpers';
 
 const count = async (table: string, space: string, col = 'space') => (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?`).bind(space).first<{ n: number }>())!.n;
@@ -100,13 +103,13 @@ describe('batches and changes', () => {
 });
 
 describe('snapshots', () => {
-  it('prunes covered batches; a pull returns the snapshot and only later batches', async () => {
+  it('keeps covered batches; a pull returns the snapshot and only later batches', async () => {
     const k = await newSpace();
     for (let i = 0; i < 5; i++) await push(k);
     const snap = await blobOf(k, { whole: 'space' });
     const put = await call('PUT', url(k, '/snapshot'), k, { body: { upto: 3, blob: snap } });
-    expect(put).toMatchObject({ status: 200, body: { upto: 3, pruned: 3 } });
-    expect(await count('batches', k.spaceId)).toBe(2);
+    expect(put).toMatchObject({ status: 200, body: { upto: 3, pruned: 0 } });
+    expect(await count('batches', k.spaceId)).toBe(5);
 
     const fresh = await call('GET', url(k, '/changes?after=0'), k);
     expect(fresh.body.snapshot).toMatchObject({ upto: 3, blob: snap });
@@ -120,6 +123,7 @@ describe('snapshots', () => {
 
     // seq keeps rising after everything is pruned
     await call('PUT', url(k, '/snapshot'), k, { body: { upto: 5, blob: snap } });
+    await prune(env as unknown as Env, Date.now() + BATCH_KEEP_MS);
     expect(await count('batches', k.spaceId)).toBe(0);
     expect((await push(k)).body.seq).toBe(6);
   });

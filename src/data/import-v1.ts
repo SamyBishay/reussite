@@ -1,6 +1,7 @@
 // Import a v1 export (brief §4). Accepts {collection: [docs]} or {collection: {id: doc}},
 // with or without each doc wrapped as {data, version}. Pure: returns the v2 documents and a
 // summary to show before anything is written.
+import { recordCause } from './writeCauses';
 import { create, merge, type Stored } from './doc';
 import { ZERO } from './hlc';
 import { SCHEMA_VERSION, type Collection } from './schema';
@@ -130,13 +131,15 @@ export function importV1(file: unknown, deviceZone = Intl.DateTimeFormat().resol
  */
 export async function writeImport(db: ReussiteDb, data: V2Data): Promise<void> {
   await db.backups.add({ at: new Date().toISOString(), reason: 'before v1 import', schema: SCHEMA_VERSION, data: await dumpAll(db, COLLECTIONS) });
-  await db.transaction('rw', COLLECTIONS.map(c => db.table_(c)), async () => {
+  await db.transaction('rw', [db.local, ...COLLECTIONS.map(c => db.table_(c))], async () => {
     for (const c of COLLECTIONS) {
       const docs = data[c] ?? [];
       if (!docs.length) continue;
       const table = db.table_(c);
       const existing = await table.bulkGet(docs.map(d => d.id));
-      await table.bulkPut(docs.map((d, i) => (existing[i] ? merge(existing[i]!, d) : d)));
+      const merged = docs.map((d, i) => (existing[i] ? merge(existing[i]!, d) : d));
+      await table.bulkPut(merged);
+      for (const [i, d] of merged.entries()) await recordCause(db, c, existing[i], d, 'import/restore');
     }
   });
 }

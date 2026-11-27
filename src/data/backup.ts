@@ -1,5 +1,6 @@
 // Backup files (brief §7, Data): every synced collection, deletions included, with clocks,
 // so restoring merges cleanly. Plain JSON in phase 0; encrypted export arrives with the keys in phase 3.
+import { recordCause } from './writeCauses';
 import { COLLECTIONS, SCHEMA_VERSION, type Collection } from './schema';
 import { type ReussiteDb, dumpAll } from './db';
 import { merge, type Stored } from './doc';
@@ -23,13 +24,15 @@ export async function restoreBackup(db: ReussiteDb, file: BackupFile): Promise<R
   const data = migrateData(file.data as Data, file.schema);
   await db.backups.add({ at: new Date().toISOString(), reason: 'before restoring a backup', schema: SCHEMA_VERSION, data: await dumpAll(db, COLLECTIONS) });
   const counts: Record<string, number> = {};
-  await db.transaction('rw', COLLECTIONS.map(c => db.table_(c)), async () => {
+  await db.transaction('rw', [db.local, ...COLLECTIONS.map(c => db.table_(c))], async () => {
     for (const c of COLLECTIONS as readonly Collection[]) {
       const docs = ((data[c] ?? []) as Stored<Record<string, unknown>>[]).filter(d => d && typeof d.id === 'string' && d._hlc);
       counts[c] = docs.length;
       if (!docs.length) continue;
       const existing = await db.table_(c).bulkGet(docs.map(d => d.id));
-      await db.table_(c).bulkPut(docs.map((d, i) => (existing[i] ? merge(existing[i]!, d) : d)));
+      const merged = docs.map((d, i) => (existing[i] ? merge(existing[i]!, d) : d));
+      await db.table_(c).bulkPut(merged);
+      for (const [i, d] of merged.entries()) await recordCause(db, c, existing[i], d, 'import/restore');
     }
   });
   return counts;

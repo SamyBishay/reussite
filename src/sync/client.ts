@@ -70,7 +70,7 @@ export class RelayClient {
     };
   }
 
-  /** Store a snapshot; the relay drops the batches it covers. */
+  /** Store a snapshot, starting the retention window for any batches it covers for the first time. */
   async putSnapshot(snapshot: Snapshot): Promise<SnapshotResponse> {
     const blob = await sealToText(this.keys, encodeSnapshot(snapshot), { lean: true });
     if (blob.length > b64uLength(MAX_SNAPSHOT_BYTES)) throw new RelayError(413, 'too_large');

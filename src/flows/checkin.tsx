@@ -83,7 +83,7 @@ export async function dealHand(k: string, items: readonly PlanItem[], o: { befor
   let first: string | null = null;
   for (const it of items) {
     if (it.role === 'obligation' || (it.role === 'fixed' && T(it.id)?.template)) {
-      const nid = await cloneTemplate(it.id, k, it.at, offerFieldsFor(o.offers?.[it.id]));
+      const nid = await cloneTemplate(it.id, k, it.at, offerFieldsFor(o.offers?.[it.id]), undefined, 'dealHand');
       if (nid) plan.push(nid);
     } else if (it.role === 'fixed') {
       // A one-off with its time: it keeps its place on the day's list if it had one.
@@ -99,8 +99,8 @@ export async function dealHand(k: string, items: readonly PlanItem[], o: { befor
   await dayPatch(k, {
     plan: finalPlan, checkin: new Date().toISOString(), optional,
     first: first ? { id: first, title: T(first)?.title ?? '' } : null, ...o.patch,
-  }, plan); // what the plan puts on the day leaves any other day's list (a card is on one list)
-  await planDaySlots(k); // the plan's time: a slot for each planned step, never an `at`
+  }, plan, 'dealHand'); // what the plan puts on the day leaves any other day's list (a card is on one list)
+  await planDaySlots(k, 'dealHand'); // the plan's time: a slot for each planned step, never an `at`
   return first;
 }
 
@@ -249,7 +249,7 @@ function Checkin() {
             {fo?.kind === 'fixed' && <p class="hint">{t('leaveAtLine', { t: wallOf(fo.start, dayZone(k)) })}</p>}
             <p class="meta"><Est tk={x} /></p>
             <div class="actions">
-              {!x.template && <button class="btn primary" type="button" onClick={() => { void startTask(x.id); closeSheet(); }} data-testid="ci-start">{timerLabel(x, 'plain')}</button>}
+              {!x.template && <button class="btn primary" type="button" onClick={() => { void startTask(x.id, undefined, 'dealHand'); closeSheet(); }} data-testid="ci-start">{timerLabel(x, 'plain')}</button>}
               <button class="btn ghost" type="button" onClick={closeSheet} data-testid="ci-later">{t('notYet')}</button>
             </div>
           </>
@@ -385,10 +385,10 @@ function Checkin() {
     const minutes = Math.max(1, Math.round((Date.now() - started) / 60000));
     const pid = await createDoc<Task>('tasks', newTaskDoc(t('planTheDay'), 'S', 'inbox', {
       src: 'plan', est: s.planningMin, est0: s.planningMin, estBy: 'me', status: 'done', doneDay: k, doneAt: new Date().toISOString(), important: true,
-    }));
-    await addSession(pid, minutes, 'done', 'timer', k);
+    }), undefined, 'dealHand');
+    await addSession(pid, minutes, 'done', 'timer', k, 'dealHand');
     plan.push(pid);
-    for (const f of fixed) await createDoc<Task>('tasks', newTaskDoc(f.title, 'C', 'inbox', { at: f.at, dur: f.dur, due: k, fixed: true, src: 'checkin', important: false }));
+    for (const f of fixed) await createDoc<Task>('tasks', newTaskDoc(f.title, 'C', 'inbox', { at: f.at, dur: f.dur, due: k, fixed: true, src: 'checkin', important: false }), undefined, 'dealHand');
     const first = await dealHand(k, items, {
       before: plan, offers,
       patch: { shape: { start, end: until, preset }, ...(dayHalves.length || dayDoc(k)?.areas?.length ? { areas: dayHalves } : {}), load: p.total.est },
@@ -407,7 +407,7 @@ function Checkin() {
       <h3>{t('ciPlan')}</h3>
       <p class="hint">{cutting ? t('ciCutHint') : swapping ? t('ciSwapHint') : t('ciPlanHint')}{!cutting && !swapping && items.some(i => i.role === 'fixed') ? ' ' + t('fixedHint') : ''}</p>
       {reviewing && proposed ? (
-        <ReviewList plan={proposed} note="" inline onApplied={n => { setReviewing(false); if (n) setProposed(null); }} />
+        <ReviewList cause="dealHand" plan={proposed} note="" inline onApplied={n => { setReviewing(false); if (n) setProposed(null); }} />
       ) : swapping ? picker : (
         <>
           {fault && <p class="ai-note" role="status" data-testid="ai-plan-rejected">{t('aiPlanRejected', { why: fault })}</p>}

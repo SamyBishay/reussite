@@ -1,5 +1,6 @@
 // App state: IndexedDB is the source of truth; signals mirror it for the views.
 // Every write goes through here, so it gets field clocks and respects read-only mode.
+import { recordCause } from '../data/writeCauses';
 import { signal, computed, batch, effect } from '@preact/signals';
 import { liveQuery } from 'dexie';
 import { ReussiteDb, getLocal, setLocal } from '../data/db';
@@ -203,32 +204,38 @@ export async function applyUndo(undo: UndoDoc[], at = Date.now()): Promise<{ res
             : false;
   let restored = 0, kept = 0;
   for (const u of undoWrites(undo, (c, id) => cur.get(c + '/' + id), { now: at, used })) {
-    if (u.remove) { await removeDoc(u.c, u.id); restored++; }
-    if (u.patch) { await update(u.c, u.id, u.patch); restored++; }
+    if (u.remove) { await removeDoc(u.c, u.id, 'undo'); restored++; }
+    if (u.patch) { await update(u.c, u.id, u.patch, 'undo'); restored++; }
     kept += (u.kept?.length ?? 0) + (u.inUse ? 1 : 0);
   }
   return { restored, kept };
 }
 
 /** Create a document; returns its id. Every field gets the same fresh clock. */
-export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!)): Promise<string> {
+export async function createDoc<T extends object>(c: Collection, fields: T, id = newId(c[0]!), cause = 'createDoc'): Promise<string> {
   if (!guard()) return id;
   const doc = create(id, fields, SCHEMA_VERSION, tick(clock));
-  await db.table_(c).put(doc as never);
+  const table = db.table_(c);
+  await db.transaction('rw', table, db.local, async () => {
+    const cur = await table.get(id);
+    await table.put(doc as never);
+    await recordCause(db, c, cur, doc as never, cause);
+  });
   recording?.created(c, id, doc as never);
   afterWrite();
   return id;
 }
 
-export async function update<T extends object>(c: Collection, id: string, changes: Partial<T>): Promise<void> {
+export async function update<T extends object>(c: Collection, id: string, changes: Partial<T>, cause = 'update'): Promise<void> {
   if (!guard()) return;
   try {
     let was: unknown, now: unknown;
-    await db.transaction('rw', db.table_(c), async () => {
+    await db.transaction('rw', db.table_(c), db.local, async () => {
       const cur = await db.table_(c).get(id);
       if (!cur) throw new Error('missing ' + c + '/' + id);
       const next = patch(cur, changes as Record<string, unknown>, clock, SCHEMA_VERSION);
-      await db.table_(c).put(next as never);
+      await db.table_(c).put(next);
+      await recordCause(db, c, cur, next, cause);
       was = cur; now = next;
     });
     recording?.updated(c, id, was as never, now as never, Object.keys(changes));
@@ -240,17 +247,25 @@ export async function update<T extends object>(c: Collection, id: string, change
 }
 
 /** Create the document if it's missing, otherwise patch it. */
-export async function upsert<T extends object>(c: Collection, id: string, fields: T): Promise<void> {
+export async function upsert<T extends object>(c: Collection, id: string, fields: T, cause = 'upsert'): Promise<void> {
   if (!guard()) return;
   const cur = await db.table_(c).get(id);
-  if (cur && !cur._del) await update(c, id, fields);
-  else await createDoc(c, fields, id);
+  if (cur && !cur._del) await update(c, id, fields, cause);
+  else await createDoc(c, fields, id, cause);
 }
 
-export async function removeDoc(c: Collection, id: string): Promise<void> {
+export async function removeDoc(c: Collection, id: string, cause = 'removeDoc'): Promise<void> {
   if (!guard()) return;
-  const cur = await db.table_(c).get(id);
-  if (cur) { await db.table_(c).put(remove(cur, clock) as never); recording?.removed(c, id); afterWrite(); }
+  const table = db.table_(c);
+  const removed = await db.transaction('rw', table, db.local, async () => {
+    const cur = await table.get(id);
+    if (!cur) return false;
+    const next = remove(cur, clock);
+    await table.put(next);
+    await recordCause(db, c, cur, next, cause);
+    return true;
+  });
+  if (removed) { recording?.removed(c, id); afterWrite(); }
 }
 
 /**
@@ -263,4 +278,4 @@ export async function putMerged(writes: Write[]): Promise<void> {
   await writeMerged(db, writes);
 }
 
-export const saveSettings = (changes: Partial<Settings>) => upsert('meta', 'settings', changes);
+export const saveSettings = (changes: Partial<Settings>, cause = 'saveSettings') => upsert('meta', 'settings', changes, cause);

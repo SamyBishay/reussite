@@ -311,10 +311,10 @@ export class Edits {
    * (maintain.ts). Returns the seq, `'limited'` over the rate limit, `'skipped'` when `o.when` no longer holds, and
    * `'empty'` when there was nothing to send.
    */
-  async flush(env: Env, o: AppendWith = {}): Promise<number | 'limited' | 'skipped' | 'empty'> {
+  async flush(env: Env, cause: string, o: AppendWith = {}): Promise<number | 'limited' | 'skipped' | 'empty' | 'storage_full'> {
     const docs = this.outgoing();
     if (!docs.length) return 'empty';
-    const blob = await sealToText(this.s.keys, encodeBatch({ v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs }), { lean: true });
+    const blob = await sealToText(this.s.keys, encodeBatch({ v: SCHEMA_VERSION, device: CONNECTOR_DEVICE, docs, cause }), { lean: true });
     if (blob.length > b64uLength(MAX_BATCH_BYTES)) throw new Error('This change is too big for one batch. Split it into smaller change-sets.');
     const { space, clock, coldRead } = this.s;
     // The write boundary: a request that outlives a switch-off (or a switch-off and on) writes nothing.
@@ -331,7 +331,7 @@ export class Edits {
       ],
     });
     if (seq === null) return 'limited';
-    if (seq === 'skipped') return 'skipped';
+    if (typeof seq === 'string') return seq;
     // Our batch follows what we read with nothing in between only if the numbers are consecutive.
     const contiguous = seq === this.s.readHead + 1;
     this.s.head = seq;

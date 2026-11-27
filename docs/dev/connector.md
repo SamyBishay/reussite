@@ -103,6 +103,8 @@ The tool texts (server instructions, `apply_changes`, `get_day`), `get_method` a
 
 AI-originated fields carry `by: "ai"` / `src: "ai"` as in the app. Weights are never taken from an AI.
 
+Connector writes carry the confirmation id, or the undo id for an immediate change, as a cause inside the encrypted sync batch. An undo batch carries the id it used. The relay retains covered batches for seven days (see [Sync protocol](sync.md#snapshots-and-pruning)). The connector has no history read tool yet. A current snapshot and the retained deltas alone cannot recover a field value overwritten before the first retained delta.
+
 ### `undo`
 
 Reverts one applied change-set by its undo id. Each document the change-set touched remembers, per field, the value it replaced and the value it wrote (encrypted with the space key, kept 30 days). Undo writes the old values back as **new** changes with fresh clocks, so they reach the app at its next sync. A field the person changed since (its current value isn't the one the change-set wrote) is left alone and named. A document the change-set created is undone with a tombstone (`_del`), never a hard delete, and only if nothing was written to it since (no field with a newer clock than the change-set's) and nothing made since refers to it (a session on a step, a step in a project); otherwise it stays and is named as left alone. A timer that the change-set stopped is not started again by an Undo made much later. An undo id works once: the undo's batch and the deletion of its record are one transaction, conditional on the record still being there, so a kill leaves the id usable and two undos at once write one batch.

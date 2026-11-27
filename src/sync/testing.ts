@@ -51,7 +51,7 @@ export class FakeDevice implements SyncStore {
 
 /**
  * An in-memory relay behind a `fetch`, speaking the real protocol (same URLs, same errors) without
- * pruning of anything but batches. Paging is not simulated. For tests of the app's sync; the real one is in `relay/`.
+ * hourly pruning or paging. For tests of the app's sync; the real one is in `relay/`.
  */
 export function fakeRelay() {
   interface Space { hash: string; batches: { seq: number; device: string; blob: string; at: number }[]; snapshot: { upto: number; blob: string; at: number } | null; cold: { upto: number; blob: string; at: number } | null; devices: Map<string, { label: string | null; lastSeen: number }> }
@@ -92,9 +92,7 @@ export function fakeRelay() {
       sp.snapshot = { upto: body.upto, blob: body.blob, at: Date.now() };
       if (body.part !== 'hot') sp.cold = null;
       else if (body.cold) sp.cold = { ...body.cold, at: Date.now() };
-      const before = sp.batches.length;
-      sp.batches = sp.batches.filter(b => b.seq > body.upto);
-      return reply(200, { upto: body.upto, pruned: before - sp.batches.length });
+      return reply(200, { upto: body.upto, pruned: 0 });
     }
     if (route === 'devices') {
       if (device) { sp.devices.set(device, { label: body.label ?? sp.devices.get(device)?.label ?? null, lastSeen: Date.now() }); return reply(200, { ok: true }); }

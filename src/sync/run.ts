@@ -5,7 +5,7 @@ import type { Clock } from '../data/hlc';
 import { SCHEMA_VERSION, type Collection } from '../data/schema';
 import { RelayError, type Pulled, type RelayClient } from './client';
 import { NewerFormatError } from './crypto';
-import { applyIncoming, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs } from './engine';
+import { applyIncoming, collectOutgoing, snapshotDocs, type DocSet, type LocalDocs, type Outgoing } from './engine';
 import type { ChangeDoc, Cut, StoredDoc } from './protocol';
 import { buildParts, lateExchanges, touchesCold } from './parts';
 
@@ -30,6 +30,8 @@ export interface SyncStore {
   saveState(s: SyncState): Promise<void>;
   /** Every document of the synced collections, deletions included. */
   all(): Promise<DocSet>;
+  /** Read the outgoing deltas and their attribution from the same stored state. */
+  outgoing?(watermark: string, full: boolean): Promise<{ everything: DocSet; out: Outgoing }>;
   /** The stored documents with these ids (missing ones are left out). */
   getMany(c: Collection, ids: string[]): Promise<StoredDoc[]>;
   /** Put merged documents. In the app this goes through store.ts (read-only mode, live signals). It must throw rather than drop a write. */
@@ -123,8 +125,12 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
   if (stopped) return stopped;
 
   // Push what changed here.
-  const everything = await store.all();
-  const out = collectOutgoing(everything, node, state.watermark, { imported: state.watermark === '', all: opts.full });
+  const readOutgoing = async () => {
+    const everything = await store.all();
+    const out = collectOutgoing(everything, node, state.watermark, { imported: state.watermark === '', all: opts.full });
+    return { everything, out };
+  };
+  const { everything, out } = await (store.outgoing?.(state.watermark, !!opts.full) ?? readOutgoing());
   // An edit to a document the cold part holds too leaves a reader with only the hot part looking at a stub:
   // snapshot as soon as our own batch has come back, rather than after 8 more.
   const late = out.docs.length > 0 && lateExchanges(out.docs, (opts.now ?? Date.now)());
@@ -157,7 +163,7 @@ export async function syncOnce(store: SyncStore, client: RelayClient, opts: Sync
     if (again) return again;
   }
 
-  // Now and then, a snapshot so new devices start fast and the relay can drop old batches. Two parts
+  // Now and then, a snapshot so new devices start fast and the relay can age out covered batches. Two parts
   // (src/sync/parts.ts): the hot one every time, the cold one when the cut is old or unknown.
   if (state.seq - state.snapshotSeq >= (opts.snapshotEvery ?? SNAPSHOT_EVERY) || (urgent && state.seq > state.snapshotSeq) || (state.owesFull && state.seq > 0)) {
     try {

@@ -1,8 +1,13 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { applyUndo, createDoc, db, exchanges, memory, projects, days, recordWrites, removeDoc, start, tasks, update } from './store';
-import { carry, finishTask, setFirst } from './actions';
+import { applyUndo, createDoc, db, exchanges, getClock, memory, projects, days, recordWrites, removeDoc, start, tasks, update } from './store';
+import { carry, finishTask, removeToday, setFirst } from './actions';
 import { newTaskFields } from '../domain/effects';
+import { dexieSyncStore } from '../data/syncstore';
+import { decodeBatch, encodeBatch } from '../sync/wire';
+import { openFromText, sealToText } from '../sync/crypto';
+import { deriveKeys, generateKey } from '../sync/keys';
+import { SCHEMA_VERSION } from '../data/schema';
 
 describe('memory and exchanges in the store', () => {
   it('mirrors notes and exchanges as signals, filled with defaults, and a removed one leaves the signal', async () => {
@@ -22,6 +27,28 @@ describe('memory and exchanges in the store', () => {
 });
 
 const settle = () => new Promise(r => setTimeout(r, 40));
+
+it('carries ordinary store and action causes through encrypted sync without mixing field clocks', async () => {
+  await start();
+  const id = '2026-11-27';
+  await createDoc('days', { date: id, plan: ['card'], closed: null }, id);
+  await settle();
+  await removeToday('card', id);
+  await update('days', id, { closed: '2026-11-27T18:00:00Z' });
+
+  const sync = dexieSyncStore(db, getClock);
+  const { out } = await sync.outgoing!('', false);
+  const docs = out.docs.filter(e => e.c === 'days' && e.d.id === id);
+  const keys = await deriveKeys(generateKey());
+  const blob = await sealToText(keys, encodeBatch({ v: SCHEMA_VERSION, device: getClock().node, docs }), { lean: true });
+  const decoded = decodeBatch(await openFromText(keys, blob)).docs[0]!;
+  expect(decoded.d.plan).toEqual([]);
+  expect(decoded.causes).toEqual({
+    [decoded.d._hlc.date!]: 'createDoc',
+    [decoded.d._hlc.plan!]: 'removeToday',
+    [decoded.d._hlc.closed!]: 'update',
+  });
+});
 
 describe('recording writes for Undo', () => {
   it('records a finished repeating step (the step, its session, the next one) and puts it all back', async () => {

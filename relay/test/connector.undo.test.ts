@@ -43,6 +43,17 @@ describe('undo', () => {
     expect(app.device.get('tasks', 't1')!.due).toBe(day(2));
   });
 
+  it('puts confirmation and undo attribution inside the encrypted connector batches', async () => {
+    const { app, tok } = await setup();
+    const proposed = await tool(tok, 'apply_changes', { changes: [{ op: 'task.update', id: 't1', set: { title: 'Renamed', note: 'Updated' } }] });
+    const confirm = /"confirm": "(c\w+)"/.exec(proposed.text)![1]!;
+    const applied = await tool(tok, 'apply_changes', { confirm });
+    const id = undoId(applied.text);
+    expect((await tool(tok, 'undo', { id })).isError).toBe(false);
+    const changes = await app.client.pull((await app.device.loadState()).seq);
+    expect(changes.batches.filter(b => b.batch.device === 'connector').map(b => b.batch.cause)).toEqual([`connector:${confirm}`, `connector:${id}`]);
+  });
+
   it('undoes a creation with a tombstone, never a hard delete', async () => {
     const { app, tok } = await setup();
     const r = await tool(tok, 'apply_changes', { changes: [{ op: 'task.create', set: { title: 'Choir', at: '19:00', due: day(3) } }] });

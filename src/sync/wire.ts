@@ -20,7 +20,7 @@ import type { ChangeBatch, ChangeDoc, Snapshot, StoredDoc } from './protocol';
 export const WIRE = 2;
 
 export type WireDoc = Record<string, unknown>;
-export interface WireBatch { f: typeof WIRE; v: number; device: string; docs: { c: Collection; d: WireDoc }[] }
+export interface WireBatch { f: typeof WIRE; v: number; device: string; cause?: string; docs: { c: Collection; d: WireDoc; causes?: ChangeDoc['causes'] }[] }
 export type WireSnapshot = Omit<Snapshot, 'docs'> & { f: typeof WIRE; docs: Record<string, WireDoc[]> };
 
 /** The clock most fields carry (the newest of any tie), or undefined if no field has one. */
@@ -79,7 +79,7 @@ export function decodeDoc(w: WireDoc, v: number): StoredDoc {
 }
 
 export function encodeBatch(b: ChangeBatch): WireBatch {
-  return { f: WIRE, v: b.v, device: b.device, docs: b.docs.map(x => ({ c: x.c, d: encodeDoc(x.d, b.v) })) };
+  return { ...b, f: WIRE, docs: b.docs.map(x => ({ ...x, d: encodeDoc(x.d, b.v) })) };
 }
 
 /** A decoded batch, whatever generation it was written in. */

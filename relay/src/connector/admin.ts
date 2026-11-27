@@ -30,7 +30,9 @@ export async function handleConnector(req: Request, env: Env, space: string, sub
 /** Does the key open what the space already holds? A space with nothing in it accepts any key. */
 async function keyFits(env: Env, space: string, raw: Uint8Array<ArrayBuffer>): Promise<boolean> {
   const keys = { spaceId: space, encKey: await importEncKey(raw) };
-  const batch = await env.DB.prepare('SELECT blob FROM batches WHERE space = ?1 ORDER BY seq DESC LIMIT 1').bind(space).first<{ blob: string }>();
+  const batch = await env.DB.prepare(`SELECT blob FROM batches WHERE space = ?1 AND seq > COALESCE((
+    SELECT MAX(upto) FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0
+  ), 0) ORDER BY seq DESC LIMIT 1`).bind(space).first<{ blob: string }>();
   if (batch) return authenticates(keys, b64uDecode(batch.blob));
   const parts = await env.DB.prepare("SELECT blob FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') ORDER BY part").bind(space).all<{ blob: string }>();
   if (parts.results.length) return authenticates(keys, b64uDecode(parts.results.map(p => p.blob).join('')));

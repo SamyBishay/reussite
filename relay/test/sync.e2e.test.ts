@@ -60,7 +60,7 @@ describe('sync through the relay', () => {
     expect(b.get('tasks', 't1')).toMatchObject({ title: 'Imported' });
   });
 
-  it('snapshots, prunes, and a device restored from the recovery key alone gets everything back', async () => {
+  it('snapshots, retains covered history, and a device restored from the recovery key alone gets everything back', async () => {
     const key = generateKey();
     const a = new FakeDevice('aaa');
     const ca = await clientFor(key);
@@ -69,8 +69,9 @@ describe('sync through the relay', () => {
     a.edit('tasks', 't1', { title: 'Renamed' });
     const last = await syncOnce(a, ca, { snapshotEvery: 3 });
     expect(last.state.snapshotSeq).toBeGreaterThan(0);
-    const left = (await env.DB.prepare('SELECT COUNT(*) AS n FROM batches').first<{ n: number }>())!.n;
-    expect(left).toBeLessThan(7);
+    const keys = await deriveKeys(key);
+    const left = await env.DB.prepare('SELECT COUNT(*) AS n FROM batches WHERE space = ?1 AND covered_at IS NOT NULL').bind(keys.spaceId).first<number>('n');
+    expect(left).toBe(last.state.snapshotSeq);
 
     // A new phone: only the typed-in recovery key.
     const typed = encodeRecoveryKey(key).toLowerCase().replace(/-/g, ' ');

@@ -67,7 +67,7 @@ function Resort({ tk }: { tk: Tk }) {
     <li>
       <div><p><Title s={tk.title} /></p>
         <div class="seg small" role="group" aria-label={t('moveTo')}>
-          {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" aria-pressed={quad(tk) === q} onClick={() => void patchTask(tk.id, moveTo(q).patch)}>{quadName(q)}</button>)}
+          {([1, 2, 3, 4] as Quadrant[]).map(q => <button type="button" aria-pressed={quad(tk) === q} onClick={() => void patchTask(tk.id, moveTo(q).patch, 'review')}>{quadName(q)}</button>)}
         </div>
       </div>
     </li>
@@ -98,7 +98,7 @@ function Review({ goals }: { goals?: boolean }) {
       break;
     case 'rv2': {
       const cands = open.filter(x => quad(x) >= 3);
-      body = <><p class="hint">{t('rv2Hint')}</p><ul class="picklist">{cands.map(x => <li><div><p><Title s={x.title} /></p><p class="meta">{quadName(quad(x))}</p></div><button class="btn small" type="button" onClick={() => void dropTask(x.id)}>{t('dropIt')}</button></li>)}</ul>{!cands.length && <p class="hint">{t('nothingHere')}</p>}</>;
+      body = <><p class="hint">{t('rv2Hint')}</p><ul class="picklist">{cands.map(x => <li><div><p><Title s={x.title} /></p><p class="meta">{quadName(quad(x))}</p></div><button class="btn small" type="button" onClick={() => void dropTask(x.id, 'review')}>{t('dropIt')}</button></li>)}</ul>{!cands.length && <p class="hint">{t('nothingHere')}</p>}</>;
       break;
     }
     case 'rv3': {
@@ -106,7 +106,7 @@ function Review({ goals }: { goals?: boolean }) {
       const projs = [...projects.value.values()].filter(p => p.status === 'active' && p.id !== 'inbox').sort(byOrder);
       body = <><p class="hint">{t('rv3Hint')}</p><ul class="picklist">{inbox.map(x => (
         <li><div><p><Title s={x.title} /></p></div>
-          <select aria-label={t('project')} value="inbox" onChange={e => void patchTask(x.id, { project: (e.target as HTMLSelectElement).value })}>
+          <select aria-label={t('project')} value="inbox" onChange={e => void patchTask(x.id, { project: (e.target as HTMLSelectElement).value }, 'review')}>
             <option value="inbox">{t('inbox')}</option>{projs.map(p => <option value={p.id}>{p.name}</option>)}
           </select></li>
       ))}</ul>{!inbox.length && <p class="hint">{t('inboxEmpty')}</p>}</>;
@@ -119,7 +119,7 @@ function Review({ goals }: { goals?: boolean }) {
         return (
           <details class="proj-rv">
             <summary><b>{p.name}</b>{outcomeOf(p) ? ' · ' + outcomeOf(p) : ''}</summary>
-            {nx ? <label class="field"><span>{t('nextStepField')}</span><input type="text" defaultValue={nx.title} onChange={e => void patchTask(nx.id, { title: (e.target as HTMLInputElement).value.trim() || nx.title })} /></label>
+            {nx ? <label class="field"><span>{t('nextStepField')}</span><input type="text" defaultValue={nx.title} onChange={e => void patchTask(nx.id, { title: (e.target as HTMLInputElement).value.trim() || nx.title }, 'review')} /></label>
               : <p class="hint">{t('noNextStep')}</p>}
             <ProjectAi id={p.id} />
           </details>
@@ -130,7 +130,7 @@ function Review({ goals }: { goals?: boolean }) {
     case 'rv5': {
       const prot = open.filter(x => quad(x) === 2);
       body = <><p class="hint">{t('rv5Hint')}</p><WeekStrip /><ul class="picklist">{prot.slice(0, 20).map(x => (
-        <li><div><p><Title s={x.title} /></p></div><DaySelect label={t('planItOn')} value={plannedDay(x.id)} onPick={k => void planOn(x.id, k)} /></li>
+        <li><div><p><Title s={x.title} /></p></div><DaySelect label={t('planItOn')} value={plannedDay(x.id)} onPick={k => void planOn(x.id, k, 'review')} /></li>
       ))}</ul></>;
       break;
     }
@@ -138,14 +138,14 @@ function Review({ goals }: { goals?: boolean }) {
       const obl = [...tasks.value.values()].filter(x => x.template && x.status !== 'dropped' && !ended(x, today.value) && inPlace(x, place)).sort(byOrder);
       body = <><p class="hint">{t('rv6Hint')}</p><WeekStrip /><ul class="picklist">{obl.map(x => (
         <li><div><p><Title s={x.title} /></p><OfferChips offer={x.offer} value={offers[x.id]} onChange={c => setOffers({ ...offers, [x.id]: c })} place={place} /></div>
-          <DaySelect label={t('planItOn')} value="" onPick={k => void cloneTemplate(x.id, k, x.at ?? settings.value.obligationAt, offerFieldsFor(offers[x.id]))} /></li>
+          <DaySelect label={t('planItOn')} value="" onPick={k => void cloneTemplate(x.id, k, x.at ?? settings.value.obligationAt, offerFieldsFor(offers[x.id]), undefined, 'review')} /></li>
       ))}</ul>{!obl.length && <p class="hint">{t('noObligations')}</p>}</>;
       break;
     }
     case 'rv7': {
       const decs = open.filter(x => x.kind === 'decision');
       body = <><p class="hint">{t('rv7Hint')}</p><ul class="picklist">{decs.map(x => (
-        <li><div><p><Title s={x.title} /></p>{x.due && <p class="meta">{fmtDate(x.due)}</p>}</div><DaySelect label={t('dueField')} value={week().includes(x.due ?? '') ? x.due! : ''} onPick={k => void dueOn(x.id, k)} /></li>
+        <li><div><p><Title s={x.title} /></p>{x.due && <p class="meta">{fmtDate(x.due)}</p>}</div><DaySelect label={t('dueField')} value={week().includes(x.due ?? '') ? x.due! : ''} onPick={k => void dueOn(x.id, k, undefined, 'review')} /></li>
       ))}</ul>{!decs.length && <p class="hint">{t('noDecisionSteps')}</p>}</>;
       break;
     }
@@ -163,9 +163,9 @@ function Review({ goals }: { goals?: boolean }) {
         {stale.length > 0 && <div class="notice"><p><b>{t('laterStale')}</b></p><ul class="picklist">{stale.map(x => (
           <li><div><p><Title s={x.title} /></p>
             <div class="go" style="margin-top:var(--s2)">
-              <button class="btn small" type="button" onClick={() => void patchTask(x.id, { important: true, laterOffers: 0 })}>{t('makeImportant')}</button>
-              <button class="btn small" type="button" onClick={() => void patchTask(x.id, { template: true, laterOffers: 0 })}>{t('makeObligation')}</button>
-              <button class="btn small ghost" type="button" onClick={() => void dropTask(x.id)}>{t('dropIt')}</button>
+              <button class="btn small" type="button" onClick={() => void patchTask(x.id, { important: true, laterOffers: 0 }, 'review')}>{t('makeImportant')}</button>
+              <button class="btn small" type="button" onClick={() => void patchTask(x.id, { template: true, laterOffers: 0 }, 'review')}>{t('makeObligation')}</button>
+              <button class="btn small ghost" type="button" onClick={() => void dropTask(x.id, 'review')}>{t('dropIt')}</button>
             </div></div></li>
         ))}</ul></div>}
         <ul class="picklist">{pool.filter(x => !stale.includes(x)).slice(0, 12).map(x => (
@@ -188,10 +188,10 @@ function Review({ goals }: { goals?: boolean }) {
         for (const [id, k] of Object.entries(later)) {
           if (!k) continue;
           const d = dayDoc(k);
-          await dayPatch(k, { optional: [...new Set([...(d?.optional ?? []), id])], plan: [...new Set([...(d?.plan ?? []), id])] });
+          await dayPatch(k, { optional: [...new Set([...(d?.optional ?? []), id])], plan: [...new Set([...(d?.plan ?? []), id])] }, undefined, 'review');
         }
-        for (const x of pool.slice(0, 12)) if (!later[x.id]) await patchTask(x.id, { laterOffers: (x.laterOffers || 0) + 1 });
-        await dayPatch(today.value, { review: new Date().toISOString() });
+        for (const x of pool.slice(0, 12)) if (!later[x.id]) await patchTask(x.id, { laterOffers: (x.laterOffers || 0) + 1 }, 'review');
+        await dayPatch(today.value, { review: new Date().toISOString() }, undefined, 'review');
         closeSheet();
       }} />;
   }
@@ -228,7 +228,7 @@ function GoalScreen({ id, onNext, onClosed }: { id: string; onNext: () => void; 
   const [closing, setClosing] = useState(false);
   if (!p) return null;
   const close = async (reached: boolean) => {
-    await patchProject(id, reached ? { status: 'done', doneAt: new Date().toISOString() } : { status: 'dropped', doneAt: null });
+    await patchProject(id, reached ? { status: 'done', doneAt: new Date().toISOString() } : { status: 'dropped', doneAt: null }, 'review');
     toast(t(reached ? 'rvClosedReached' : 'rvClosedLetGo', { name: p.name }));
     onClosed();
   };
@@ -269,8 +269,8 @@ function MovesScreen({ id }: { id: string }) {
         <li key={x.id} data-testid="rv-move" data-task={x.id}>
           <div><p><Title s={x.title} /></p>{x.advances == null && <p class="meta">{t('movesNotSaid')}</p>}</div>
           <div class="seg small" role="group" aria-label={t('movesGoal')}>
-            <button type="button" aria-pressed={x.advances === true} onClick={() => { if (x.advances !== true) void patchTask(x.id, { advances: true }); }} data-testid="rv-move-yes">{t('movesYes')}</button>
-            <button type="button" aria-pressed={x.advances === false} onClick={() => { if (x.advances !== false) void patchTask(x.id, { advances: false }); }} data-testid="rv-move-no">{t('movesNo')}</button>
+            <button type="button" aria-pressed={x.advances === true} onClick={() => { if (x.advances !== true) void patchTask(x.id, { advances: true }, 'review'); }} data-testid="rv-move-yes">{t('movesYes')}</button>
+            <button type="button" aria-pressed={x.advances === false} onClick={() => { if (x.advances !== false) void patchTask(x.id, { advances: false }, 'review'); }} data-testid="rv-move-no">{t('movesNo')}</button>
           </div>
         </li>
       ))}</ul>

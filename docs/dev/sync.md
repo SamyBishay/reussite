@@ -21,7 +21,7 @@ HKDF-SHA256 with the salt `reussite/sync/v1` and these `info` strings gives:
 
 ## What is encrypted
 
-- **Change batch**: `{ v, device, docs: [{ c: collection, d: partial doc }] }`. A partial doc is `{ id, _v, _hlc: {changed fields only}, ...those fields, _del? }`.
+- **Change batch**: `{ v, device, docs: [{ c: collection, d: partial doc, causes? }], cause? }`. A partial doc is `{ id, _v, _hlc: {changed fields only}, ...those fields, _del? }`. Optional causes are short action names inside the encrypted payload. An app delta maps its field and deletion clocks to labels. The connector puts one `connector:<confirmation or undo id>` on the batch. Older devices ignore the extra keys. Causes for app writes are device-local metadata until the delta is encrypted. Several edits to one field before a push still coalesce to the last delta.
 - **Snapshot**: `{ v, upto, docs: { collection: [whole docs, tombstones included] } }`, whole or in two parts, hot and cold (below). Part headers add `part`, `cut`, `cold`, `x`, `top`.
 
 ### Wire generation 2: clocks
@@ -52,11 +52,11 @@ A document with `_v` above the app's `SCHEMA_VERSION` (or a batch/snapshot with 
 
 ## Snapshots and pruning
 
-Once 8 batches (`SNAPSHOT_EVERY`) have piled up since the last snapshot, a device that has applied everything up to `seq` uploads a snapshot with `upto = seq`. The tail is kept short because every reader decrypts and folds it, about 0.1 to 0.3 ms of CPU a batch, and the connector has 10 ms. The relay stores it (replacing the old one), deletes the batches with `seq <= upto`, and an older snapshot never replaces a newer one. A new or restored device pulls the snapshot and the batches after it.
+Once 8 batches (`SNAPSHOT_EVERY`) have piled up since the last snapshot, a device that has applied everything up to `seq` uploads a snapshot with `upto = seq`. The tail is kept short because every reader decrypts and folds it, about 0.1 to 0.3 ms of CPU a batch, and the connector has 10 ms. The relay stores it (replacing the old one) and an older snapshot never replaces a newer one. The first covering snapshot marks each batch at `covered_at`. Hourly pruning deletes it after seven days if a stored hot or full snapshot still covers it. Batches with no covering snapshot stay. Writes that erase a field or forget a note still take effect in the current deck. Earlier encrypted batches containing the old value expire on the same schedule. A new or restored device pulls the snapshot and the batches after it.
 
 **Order.** A batch's seq is taken and the batch inserted in one transaction (`appendBatchWith`, relay/src/sync.ts), so a reader never sees a seq above one still on its way: a cursor that moves to the highest seq read, and pruning up to a snapshot's `upto`, can't skip a batch (`relay/test/sync.order.test.ts`).
 
-Two writers can't lose anything: a snapshot must contain everything up to its `upto`, so whoever writes one has pulled and applied up to `upto` first (a device uses its own `seq`, which its own later pushes don't raise; the connector uses the highest seq it read, or its own batch's if that followed directly). The connector writes its snapshots from the maintenance cron (docs/dev/connector.md, "Maintenance"), in an invocation of its own after reading the space again, and no longer inside a write call: the rule is the same, it has read up to its `upto`; a reader's cache that is behind the new snapshot's `upto` reads the snapshot instead of the batches the snapshot folded away. The relay refuses an `upto` above the head (409 `bad_upto`) and ignores one that isn't newer than the stored snapshot (the answer carries the stored `upto`, `pruned: 0`). The check is also inside the write: every statement of the (atomic) batch that replaces the snapshot is guarded by "no stored snapshot with `upto >=` mine", and pruning only deletes batches the stored snapshot covers, so two writers racing past the first check still can't put an older snapshot over a newer one.
+Two writers can't lose anything: a snapshot must contain everything up to its `upto`, so whoever writes one has pulled and applied up to `upto` first (a device uses its own `seq`, which its own later pushes don't raise; the connector uses the highest seq it read, or its own batch's if that followed directly). The connector writes its snapshots from the maintenance cron (docs/dev/connector.md, "Maintenance"), in an invocation of its own after reading the space again, and no longer inside a write call: the rule is the same, it has read up to its `upto`; a reader's cache that is behind the new snapshot's `upto` reads the snapshot instead of the covered batches. The relay refuses an `upto` above the head (409 `bad_upto`) and ignores one that isn't newer than the stored snapshot (the answer carries the stored `upto`, `pruned: 0`). The check is also inside the write: every statement of the (atomic) batch that replaces the snapshot is guarded by "no stored snapshot with `upto >=` mine", and pruning only deletes batches the stored snapshot covers, so two writers racing past the first check still can't put an older snapshot over a newer one.
 
 ### Hot and cold
 
@@ -81,9 +81,9 @@ JSON in, JSON out, blobs as base64url strings. `Authorization: Bearer <auth secr
 
 | | |
 | --- | --- |
-| `POST /batches` `{device, blob}` | The first write to an unknown space sets its auth hash. Returns `{seq}` (201). |
+| `POST /batches` `{device, blob}` | The first write to an unknown space sets its auth hash. Returns `{seq}` (201), or 507 `storage_full` if the space is at its batch cap. |
 | `GET /changes?after=N` | `{head, more, snapshot: {upto, blob, at} \| null, cold?: {upto, blob, at} \| null, batches: [{seq, device, blob, at}]}`. The snapshot (its hot part, or the whole one) comes only if `N < upto`, and `cold` only if `N <` its own `upto`; batches are those after `max(N, upto)`, in order, a page of up to 100 batches or about 4 MB. `more` means ask again from the last seq. |
-| `PUT /snapshot` `{upto, blob, part?, cold?, coldUpto?}` | `upto` must be between 1 and the highest seq (else 409 `bad_upto`). Without `part`: a whole snapshot, replacing everything (what apps before the split send). `part: 'hot'` with `cold: {upto, blob}`: both parts, replacing everything. `part: 'hot'` with `coldUpto`: the hot part only (409 `bad_parts` unless the stored cold part is at least that new). Returns `{upto, pruned}`; `upto` is the stored one when this wasn't newer. |
+| `PUT /snapshot` `{upto, blob, part?, cold?, coldUpto?}` | `upto` must be between 1 and the highest seq (else 409 `bad_upto`). Without `part`: a whole snapshot, replacing everything (what apps before the split send). `part: 'hot'` with `cold: {upto, blob}`: both parts, replacing everything. `part: 'hot'` with `coldUpto`: the hot part only (409 `bad_parts` unless the stored cold part is at least that new). Returns `{upto, pruned: 0}`; `upto` is the stored one when this wasn't newer. |
 | `POST /devices/:device` `{label?}` | Marks the device seen; `label` is an encrypted `{name}`. |
 | `GET /devices` | `{devices: [{device, label, lastSeen}]}` |
 | `DELETE /` | Deletes the whole space (delete everywhere). |
@@ -95,7 +95,7 @@ The connector's switch (`/connector`, `/connector/code`) is in [connector.md](co
 
 Errors are `{error: code}`: 400 `bad_request`, 401 `unauthorized`, 403 `forbidden` (wrong secret, nothing written) or `origin_not_allowed`, 404 `unknown_space` / `not_found`, 409 `bad_upto` / `bad_parts` / `wrong_key`, 409 `connector_off`, 413 `too_large`, 429 `rate_limited` (with `Retry-After`), 503 `connector_unavailable`.
 
-Limits: a batch blob is at most 1 MiB, each part of a snapshot 4 MiB (stored in 1 MB chunks, because a D1 row holds 2 MB). Writes are limited to 60 a minute per space and, per IP, 120 a minute counting writes and failed sign-ins (`RATE_SPACE_PER_MIN`, `RATE_IP_PER_MIN`). CORS: only origins matching `ALLOWED_ORIGINS`; `*` stands for one DNS label or a port.
+Limits: across covered and uncovered batches, a space holds up to 16 MiB of decoded batch data and 4,096 rows. At the cap, pushes return `storage_full` until covered rows expire. Pending edits stay on the writing device. If the live tail fills the cap, a caught-up device must upload a snapshot to start expiry. A batch blob is at most 1 MiB, each part of a snapshot 4 MiB (stored in 1 MB chunks, because a D1 row holds 2 MB). Writes are limited to 60 a minute per space and, per IP, 120 a minute counting writes and failed sign-ins (`RATE_SPACE_PER_MIN`, `RATE_IP_PER_MIN`). CORS: only origins matching `ALLOWED_ORIGINS`; `*` stands for one DNS label or a port.
 
 ## What the relay can see
 

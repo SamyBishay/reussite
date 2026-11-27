@@ -1,6 +1,6 @@
 // Sheets of the timer and of finishing a step: completing with its feedback, "Still on …?", done and how long it took, the duration picker, "I started earlier", sessions, pause.
 import { useState } from 'preact/hooks';
-import { settings, projects, today, toast, clockNow, hereZone } from './store';
+import { db, settings, projects, today, toast, clockNow, hereZone } from './store';
 import { T, addressesOn, rawPlan, planOf, cardsOn, spentOf, sessionsOf, personal, type T as Tk } from './model';
 import { tasks } from './store';
 import { patchTask, finishTask, stopTimer, startTask, addSession, editSession, deleteSession, type Finished } from './actions';
@@ -33,7 +33,11 @@ export async function complete(tk: Tk, typed: number | null, day = today.value, 
     // St George when celebrations are on (its words change if the last card's is already playing); else the banner.
     if (!bigMoment({ title: t('projectComplete'), sub: name })) showMoment('project', name);
   }
-  if (r.nextId) { const nx = T(r.nextId); if (nx?.due) toast(t('repeatNext', { date: fmtDate(nx.due) })); }
+  if (r.nextId) {
+    // The write has committed, and the live query can still be updating the signal.
+    const next = await db.tasks.get(r.nextId);
+    if (typeof next?.due === 'string') toast(t('repeatNext', { date: fmtDate(next.due) }));
+  }
   // A step that feeds an address asks how it was (skippable); nothing is written until the person answers.
   if (r.addressId && addressesOn()) flows.visit(r.addressId, { stepId: tk.id, day });
   // A step that moves its project's goal asks how much it added, or which milestone to tick (never over a finished project or an address's questions).

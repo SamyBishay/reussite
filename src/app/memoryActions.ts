@@ -16,38 +16,38 @@ async function current(id: string): Promise<MemoryNote | null> {
   return d && !d._del ? normNote(fieldsOf(d) as Record<string, unknown>) : null;
 }
 
-const edit = (id: string, changes: Partial<MemoryNote>) => update<MemoryNote>('memory', id, { ...changes, updated: stamp() });
+const edit = (id: string, changes: Partial<MemoryNote>, cause: string) => update<MemoryNote>('memory', id, { ...changes, updated: stamp() }, cause);
 
 /** A new, empty note; its id, or null when the name is empty. */
 export async function addNote(name: string, kind: MemoryKind): Promise<string | null> {
   const n = name.trim();
   if (!n) return null;
   const note: MemoryNote = { kind, name: n, aliases: [], lines: [], private: false, updated: stamp() };
-  return createDoc('memory', note);
+  return createDoc('memory', note, undefined, 'addNote');
 }
 
 export async function renameNote(id: string, name: string): Promise<void> {
   const n = name.trim();
-  if (n) await edit(id, { name: n });
+  if (n) await edit(id, { name: n }, 'renameNote');
 }
-export const setKind = (id: string, kind: MemoryKind) => edit(id, { kind });
-export const setPrivate = (id: string, on: boolean) => edit(id, { private: on });
+export const setKind = (id: string, kind: MemoryKind) => edit(id, { kind }, 'setKind');
+export const setPrivate = (id: string, on: boolean) => edit(id, { private: on }, 'setPrivate');
 
 export async function addAlias(id: string, alias: string): Promise<void> {
   const a = alias.trim(), cur = await current(id);
   if (!a || !cur || [cur.name, ...cur.aliases].some(x => norm(x) === norm(a))) return;
-  await edit(id, { aliases: [...cur.aliases, a] });
+  await edit(id, { aliases: [...cur.aliases, a] }, 'addAlias');
 }
 export async function removeAlias(id: string, alias: string): Promise<void> {
   const cur = await current(id);
-  if (cur) await edit(id, { aliases: cur.aliases.filter(a => a !== alias) });
+  if (cur) await edit(id, { aliases: cur.aliases.filter(a => a !== alias) }, 'removeAlias');
 }
 
 export async function addLine(id: string, text: string): Promise<void> {
   const t = text.trim(), cur = await current(id);
   if (!t || !cur) return;
   const line: MemoryLine = { id: newId('l'), text: t, at: stamp(), by: 'me' };
-  await edit(id, { lines: [...cur.lines, line] });
+  await edit(id, { lines: [...cur.lines, line] }, 'addLine');
 }
 
 /** The person's own words now, so the line is theirs (`by: 'me'`) even if an AI wrote it first. An empty text forgets the line. */
@@ -57,7 +57,7 @@ export async function editLine(id: string, lineId: string, text: string): Promis
   const old = cur.lines.find(l => l.id === lineId);
   if (!old || old.text === t) return;
   if (!t) return forgetLine(id, lineId);
-  await edit(id, { lines: cur.lines.map(l => (l.id === lineId ? { ...l, text: t, by: 'me' as const } : l)) });
+  await edit(id, { lines: cur.lines.map(l => (l.id === lineId ? { ...l, text: t, by: 'me' as const } : l)) }, 'editLine');
 }
 
 /**
@@ -73,7 +73,7 @@ async function scrubExchanges(id: string): Promise<void> {
     if (!Object.values(ex.undo).some(list => list.some(mine))) continue;
     const undo = Object.fromEntries(Object.entries(ex.undo).map(([cs, list]) => [cs, list.filter(u => !mine(u))]));
     const turns = ex.turns.map(({ reply: _, ...x }) => ({ ...x, text: '' }));
-    await update<Exchange>('exchanges', d.id, { text: '', turns, undo });
+    await update<Exchange>('exchanges', d.id, { text: '', turns, undo }, 'scrubExchanges');
   }
 }
 
@@ -81,21 +81,21 @@ async function scrubExchanges(id: string): Promise<void> {
 export async function forgetLine(id: string, lineId: string): Promise<void> {
   const cur = await current(id);
   if (!cur) return;
-  await edit(id, { lines: cur.lines.filter(l => l.id !== lineId) });
+  await edit(id, { lines: cur.lines.filter(l => l.id !== lineId) }, 'forgetLine');
   await scrubExchanges(id);
 }
 
 /** Forget a whole note: its text is emptied first, then the document is tombstoned (a tombstone keeps every field), and History's copies go. */
 export async function forgetNote(id: string): Promise<void> {
   if (!(await current(id))) return;
-  await update<MemoryNote>('memory', id, { name: '', aliases: [], lines: [], description: '', private: false, updated: stamp() });
-  await removeDoc('memory', id);
+  await update<MemoryNote>('memory', id, { name: '', aliases: [], lines: [], description: '', private: false, updated: stamp() }, 'forgetNote');
+  await removeDoc('memory', id, 'forgetNote');
   await scrubExchanges(id);
 }
 
 /** Write what an import's plan says: new notes, and the lines and aliases a matched note gains. */
 export async function applyImport(plan: MergePlan): Promise<void> {
-  for (const u of plan.updates) await update<MemoryNote>('memory', u.id, u.patch);
-  for (const c of plan.creates) await createDoc('memory', c);
+  for (const u of plan.updates) await update<MemoryNote>('memory', u.id, u.patch, 'import/restore');
+  for (const c of plan.creates) await createDoc('memory', c, undefined, 'import/restore');
 }
 

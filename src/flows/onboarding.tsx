@@ -60,12 +60,12 @@ export async function applyDraft(d: Draft, l: Settings['language'], choice: AiCh
     const name = r.name.trim();
     if (!name || taken.has(name.toLowerCase())) continue;
     taken.add(name.toLowerCase());
-    made.push(await createDoc<Place>('places', { name, timeZone: r.timeZone || deviceZone(), order: places.value.size + made.length }));
+    made.push(await createDoc<Place>('places', { name, timeZone: r.timeZone || deviceZone(), order: places.value.size + made.length }, undefined, 'onboarding'));
   }
   const patch: Partial<Settings> = { ...d.s, language: l };
   if (choice.want && choice.has) patch.aiProvider = choice.provider;
   if (made[0] ?? here) patch.here = (made[0] ?? here)!;
-  await saveSettings(patch);
+  await saveSettings(patch, 'onboarding');
 }
 
 function Frame({ id, n, of, title, hint, children, back, next, nextLabel = 'next_', nextDisabled, skip, extra, mark }: {

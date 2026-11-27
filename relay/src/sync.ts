@@ -18,6 +18,10 @@ import { revokeConnector } from './connector/oauth';
 const MINUTE = 60_000;
 const PART_CHARS = 1_000_000; // a D1 row holds at most 2 MB
 const MAX_LABEL_CHARS = 2048;
+/** Per-space limits on covered history plus the live tail, in decoded bytes and rows. */
+export const MAX_SPACE_BATCH_BYTES = 16 * MAX_BATCH_BYTES;
+export const MAX_SPACE_BATCH_COUNT = 4096;
+export const BATCH_KEEP_MS = 7 * 86_400_000;
 
 /** Tables that hold a space's rows: "delete everywhere" and switching the connector off clear them. */
 const SPACE_TABLES: { table: string; col: string }[] = [
@@ -98,11 +102,12 @@ async function pushBatch(req: Request, env: Env, space: string): Promise<Respons
   if (!auth.ok) return auth.res;
   const seq = await appendBatch(env, space, device, blob);
   if (seq === null) return limited();
+  if (seq === 'storage_full') return fail('storage_full', 507);
   return json({ seq } satisfies PushResponse, 201);
 }
 
 /** Append an encrypted batch to a space (counts against the space's minute); its seq, or null when over the limit. */
-export async function appendBatch(env: Env, space: string, device: string, blob: string): Promise<number | null> {
+export async function appendBatch(env: Env, space: string, device: string, blob: string): Promise<number | null | 'storage_full'> {
   const r = await appendBatchWith(env, space, device, blob, {});
   return r === 'skipped' ? null : r;
 }
@@ -131,10 +136,12 @@ const SEQ_TRIES = 8;
  * tries again with the new head. A batch therefore becomes visible in the same instant as its seq: a reader can never
  * see a higher seq while a lower one is still on its way, which is what its cursor and snapshot pruning rely on
  * (docs/dev/sync.md, "Order"). The rate-limit count of the space's minute is in the same two statements.
- * Returns the seq, null over the limit (or still losing races after 8 tries), `'skipped'` when `when` no longer holds.
+ * Returns the seq, null over the rate limit (or after 8 races), `'storage_full'` at the space cap,
+ * or `'skipped'` when `when` no longer holds.
  */
-export async function appendBatchWith(env: Env, space: string, device: string, blob: string, o: AppendWith): Promise<number | null | 'skipped'> {
+export async function appendBatchWith(env: Env, space: string, device: string, blob: string, o: AppendWith): Promise<number | null | 'skipped' | 'storage_full'> {
   const limit = spaceLimit(env);
+  const size = sizeOf(blob);
   const args = o.when?.args ?? [];
   const winAt = 7 + args.length; // ?winAt the minute, ?winAt+1 the limit
   let head = (await env.DB.prepare('SELECT head FROM spaces WHERE id = ?1').bind(space).first<{ head: number }>())?.head;
@@ -144,17 +151,18 @@ export async function appendBatchWith(env: Env, space: string, device: string, b
     const seq = head + 1;
     const open = `(win <> ?${winAt} OR n < ?${winAt + 1})`;
     const res = await env.DB.batch([
-      env.DB.prepare(`INSERT INTO batches (space, seq, device, blob, size, at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 FROM spaces WHERE id = ?1 AND head = ?2 - 1 AND ${open} AND ${o.when?.sql ?? '1'}`)
-        .bind(space, seq, device, blob, sizeOf(blob), now, ...args, win, limit),
+      env.DB.prepare(`INSERT INTO batches (space, seq, device, blob, size, at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 FROM spaces WHERE id = ?1 AND head = ?2 - 1 AND ${open} AND batch_bytes + ?5 <= ${MAX_SPACE_BATCH_BYTES} AND batch_count < ${MAX_SPACE_BATCH_COUNT} AND ${o.when?.sql ?? '1'}`)
+        .bind(space, seq, device, blob, size, now, ...args, win, limit),
       env.DB.prepare(`UPDATE spaces SET win = ?3, n = CASE WHEN win = ?3 THEN n + 1 ELSE 1 END, last_write = ?4, head = ?2 WHERE id = ?1 AND head = ?2 - 1 AND EXISTS (SELECT 1 FROM batches WHERE space = ?1 AND seq = ?2)`)
         .bind(space, seq, win, now),
       ...(o.then?.(seq) ?? []),
     ]);
     if (res[0]!.meta.changes) return seq;
     // Nothing written: another writer took the seq, the minute is full, or `when` fails.
-    const row = await env.DB.prepare('SELECT head, win, n FROM spaces WHERE id = ?1').bind(space).first<{ head: number; win: number; n: number }>();
+    const row = await env.DB.prepare('SELECT head, win, n, batch_bytes, batch_count FROM spaces WHERE id = ?1').bind(space).first<{ head: number; win: number; n: number; batch_bytes: number; batch_count: number }>();
     if (!row) return null;
     if (row.head !== head) { head = row.head; continue; } // lost the race: go again from the head just read
+    if (row.batch_bytes + size > MAX_SPACE_BATCH_BYTES || row.batch_count >= MAX_SPACE_BATCH_COUNT) return 'storage_full';
     if (row.win === win && row.n >= limit) return null;
     return 'skipped';
   }
@@ -228,8 +236,8 @@ export interface SnapshotWrite { upto: number; blob: string; part?: 'hot'; cold?
  * Store a snapshot (docs/dev/sync.md, "Snapshots and pruning"). Whole (no `part`): replaces
  * everything. 'hot' with `cold`: replaces both. 'hot' alone: replaces the hot part only, and only if
  * the stored cold part is at least as new as `coldUpto` (else 'bad_parts'). An `upto` that is not
- * newer than the stored one changes nothing (the answer carries the stored `upto`). Batches up to
- * `upto` are pruned. The connector's compaction calls this too, without the HTTP layer.
+ * newer than the stored one changes nothing (the answer carries the stored `upto`). The first
+ * snapshot covering a batch starts its retention window. The connector's compaction calls this too, without the HTTP layer.
  *
  * Every statement carries the same guard, so two writers racing past the first check can't leave an
  * older snapshot over a newer one (the batch is atomic and the guard is evaluated inside it). Parts
@@ -262,12 +270,14 @@ export async function storeSnapshot(env: Env, space: string, w: SnapshotWrite): 
       : env.DB.prepare(`DELETE FROM snapshots WHERE space = ?1 AND ${where}`).bind(space, w.upto),
     ...(w.cold ? chunks('cold', w.cold.upto, w.cold.blob) : []),
     ...chunks(w.part ?? 'full', w.upto, w.blob),
-    env.DB.prepare(`DELETE FROM batches WHERE space = ?1 AND seq <= ?2 AND EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0 AND upto >= ?2)`).bind(space, w.upto),
+    env.DB.prepare(`UPDATE batches SET covered_at = ?3 WHERE space = ?1 AND seq > ?4 AND seq <= ?2 AND covered_at IS NULL
+      AND EXISTS (SELECT 1 FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0 AND upto >= ?2)`)
+      .bind(space, w.upto, now, current?.upto ?? 0),
     env.DB.prepare(`SELECT upto FROM snapshots WHERE space = ?1 AND kind IN ('full', 'hot') AND part = 0`).bind(space),
   ];
   const res = await env.DB.batch(stmts);
   const stored = (res.at(-1)!.results as { upto: number }[])[0]?.upto ?? w.upto;
-  return { upto: stored, pruned: res.at(-2)!.meta.changes };
+  return { upto: stored, pruned: 0 };
 }
 
 async function touchDevice(req: Request, env: Env, space: string, device: string): Promise<Response> {

@@ -74,13 +74,14 @@ function Row({ it, on, toggle, refs }: { it: Planned; on: boolean; toggle: () =>
 }
 
 /** The tick list. In a sheet it closes the sheet; inside a flow (`inline`) it hands back to it. */
-export function ReviewList({ plan, note, request, onApplied, inline, record }: { plan: Plan; note: string; request?: string; onApplied?: (n: number, undo: UndoDoc[]) => void; inline?: boolean; record?: true }) {
+export function ReviewList({ plan, note, request, onApplied, inline, record, cause }: { plan: Plan; note: string; request?: string; onApplied?: (n: number, undo: UndoDoc[]) => void; inline?: boolean; record?: true; cause?: string | (() => Promise<string>) }) {
   const [on, setOn] = useState(() => plan.items.map(() => true));
   const [busy, setBusy] = useState(false);
   const n = on.filter(Boolean).length;
   const go = async () => {
     setBusy(true);
-    const apply = () => applyPlanned(plan, i => !!on[i], appWriter);
+    const writer = appWriter(typeof cause === 'function' ? await cause() : cause);
+    const apply = () => applyPlanned(plan, i => !!on[i], writer);
     // With `record`, the caller gets what the writes replaced, to keep as the change-set's Undo.
     const { result: done, undo } = record ? await recordWrites(apply) : { result: await apply(), undo: [] };
     if (!inline) closeSheet();
@@ -117,10 +118,10 @@ export function ReviewList({ plan, note, request, onApplied, inline, record }: {
  * Open the review screen for a change-set. Returns false (and says so) when nothing in it
  * would change anything. `request` is the person's words, shown as a reminder.
  */
-export function openChangeReview(cs: ChangeSet, o: { request?: string; onApplied?: (n: number, undo: UndoDoc[]) => void; record?: true } = {}): boolean {
+export function openChangeReview(cs: ChangeSet, o: { request?: string; onApplied?: (n: number, undo: UndoDoc[]) => void; record?: true; cause?: string | (() => Promise<string>) } = {}): boolean {
   const plan = prepareReview(cs);
   if (!plan) return false;
-  openSheet(<ReviewList key={'rv' + Date.now()} plan={plan} note={cs.note} request={o.request} onApplied={o.onApplied} record={o.record} />, true);
+  openSheet(<ReviewList key={'rv' + Date.now()} plan={plan} note={cs.note} request={o.request} onApplied={o.onApplied} record={o.record} cause={o.cause} />, true);
   return true;
 }
 

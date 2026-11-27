@@ -4,7 +4,7 @@
 // one is set up (`routeUnknown`), else to the task sheet. Every applied change-set lands in an exchange, which
 // keeps its Undo records, so Undo works from Home and from History, on any device.
 import { signal, computed } from '@preact/signals';
-import { db, tasks, places, projects, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
+import { db, newId, tasks, places, projects, memory, exchanges, addresses, today, settings, hereZone, toast, readOnly, clockNow, createDoc, update, removeDoc, recordWrites, applyUndo, getClock, type WithId } from './store';
 import { T, addressesOn, spentOf, running } from './model';
 import { addSession, addToday, startTask } from './actions';
 import { openNewTask, flows, pauseTimer } from './sheets';
@@ -124,14 +124,15 @@ async function continuing(): Promise<WithId<Exchange> | null> {
  * Add a turn (and its change-set's Undo records, if any) to the open exchange, or start one. Only Home's own
  * exchanges are continued: one from a link or the inbox (`src`) is always an exchange of its own.
  */
-export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }, src: Exchange['src'] = 'home'): Promise<{ exchange: string }> {
-  const ex = src === 'home' ? await continuing() : null;
+export async function addTurn(turn: ExchangeTurn, applied?: { cs: string; undo: UndoDoc[] }, src: Exchange['src'] = 'home', exchangeId?: string): Promise<{ exchange: string }> {
+  const ex = exchangeId ? await readExchange(exchangeId) : src === 'home' ? await continuing() : null;
   const changes = applied ? { changes: [...(ex?.changes ?? []), applied.cs], undo: { ...(ex?.undo ?? {}), [applied.cs]: applied.undo } } : {};
   if (ex) {
-    await update<Exchange>('exchanges', ex.id, { turns: [...ex.turns, turn], ...changes });
+    await update<Exchange>('exchanges', ex.id, { turns: [...ex.turns, turn], ...changes }, `home:${ex.id}`);
     return { exchange: ex.id };
   }
-  const id = await createDoc<Exchange>('exchanges', { at: turn.at, text: turn.text, turns: [turn], changes: [], undo: {}, undone: [], src, ...changes });
+  const id = exchangeId ?? newId('e');
+  await createDoc<Exchange>('exchanges', { at: turn.at, text: turn.text, turns: [turn], changes: [], undo: {}, undone: [], src, ...changes }, id, `home:${id}`);
   if (src === 'home') lastWritten = id;
   return { exchange: id };
 }
@@ -181,7 +182,7 @@ export async function undoExchange(id: string): Promise<void> {
   if (!ex || readOnly.value) return;
   // All its change-sets at once, so a step one of them made and a later one edited counts as untouched.
   const { kept } = await applyUndo(ex.changes.filter(cs => !ex.undone.includes(cs)).flatMap(cs => ex.undo[cs] ?? []));
-  await update<Exchange>('exchanges', id, { undone: [...ex.changes] });
+  await update<Exchange>('exchanges', id, { undone: [...ex.changes] }, 'undo');
   const c = homeCard.value;
   if (c && ((c.kind === 'duration' && c.exchange === id) || c.kind === 'review')) homeCard.value = null;
   homeLine.value = null;
@@ -193,8 +194,8 @@ export const canUndo = hasLive;
 export async function pruneExchanges(now = Date.now()): Promise<void> {
   for (const ex of [...exchanges.value.values()]) {
     if (now - lastAt(ex) < KEEP_DAYS * DAY_MS) continue;
-    await update<Exchange>('exchanges', ex.id, { text: '', turns: [], changes: [], undo: {}, undone: [] });
-    await removeDoc('exchanges', ex.id);
+    await update<Exchange>('exchanges', ex.id, { text: '', turns: [], changes: [], undo: {}, undone: [] }, 'pruneExchanges');
+    await removeDoc('exchanges', ex.id, 'pruneExchanges');
   }
 }
 
@@ -279,8 +280,9 @@ async function act(text: string, p: Extract<HomeParse, { kind: 'act' }>): Promis
     void import('./nav').then(nav => nav.go('today'));
     return true;
   }
-  const { undo } = await recordWrites(() => addSession(tk.id, p.min!, null, 'typed'));
-  await addTurn({ at: new Date().toISOString(), text, kind: 'duration', reply: tk.title }, { cs: gen.id('c'), undo });
+  const exchangeId = (await continuing())?.id ?? newId('e');
+  const { undo } = await recordWrites(() => addSession(tk.id, p.min!, null, 'typed', undefined, `home:${exchangeId}`));
+  await addTurn({ at: new Date().toISOString(), text, kind: 'duration', reply: tk.title }, { cs: gen.id('c'), undo }, 'home', exchangeId);
   homeLine.value = { kind: 'changed', title: tk.title, id: tk.id, n: 1 };
   toast(t('homeTimeSaved', { t: fmtMin(p.min!) }));
   return true;
@@ -345,10 +347,15 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
   const first = cs.changes[0];
   const done = cs.changes.length === 1 && first?.op === 'task.done' ? first.id : null;
   const timed = !!(done && (T(done)?.started || spentOf(done) > 0));
+  let exchangeId: string | undefined;
+  const cause = async () => {
+    exchangeId = (await continuing())?.id ?? newId('e');
+    return `home:${exchangeId}`;
+  };
   const record = async (n: number, undo: UndoDoc[]) => {
     homeCard.value = null;
     const id = gen.id('c');
-    const { exchange } = await addTurn({ at: new Date().toISOString(), text, kind: turn, reply: title || cs.note || undefined, n }, { cs: id, undo });
+    const { exchange } = await addTurn({ at: new Date().toISOString(), text, kind: turn, reply: title || cs.note || undefined, n }, { cs: id, undo }, 'home', exchangeId);
     homeLine.value = lineOf(undo, title, n, turn);
     // A step ticked done with no timer running: how long did it take? (With one, its time was saved.)
     if (done && !timed) homeCard.value = { kind: 'duration', task: done, exchange, cs: id, at: Date.now() };
@@ -357,12 +364,13 @@ export async function run(text: string, cs: ChangeSet, turn: TurnKind, title: st
     if (fed && a && addressesOn()) flows.visit(a, { stepId: fed.id, day: fed.doneDay ?? today.value });
   };
   if (atOnce || isLowRisk(cs, plan)) {
-    const { result: n, undo } = await recordWrites(() => applyPlanned(plan, () => true, appWriter));
+    const writer = appWriter(await cause());
+    const { result: n, undo } = await recordWrites(() => applyPlanned(plan, () => true, writer));
     if (n) await record(n, undo); else toast(t('chgNothing'));
     return true;
   }
   homeCard.value = { kind: 'review', cs, text, turn, title, at: Date.now() };
-  return openChangeReview(cs, { request: text, record: true, onApplied: (n, undo) => { if (n) void record(n, undo); } });
+  return openChangeReview(cs, { request: text, record: true, cause, onApplied: (n, undo) => { if (n) void record(n, undo); } });
 }
 
 /** Reopen the review a card holds. */
@@ -375,13 +383,13 @@ export async function saveDuration(card: Extract<HomeCard, { kind: 'duration' }>
   const tk = T(card.task);
   homeCard.value = null;
   if (!tk) return;
-  const { undo } = await recordWrites(() => addSession(tk.id, minutes, 'done', 'typed', tk.doneDay ?? today.value));
+  const { undo } = await recordWrites(() => addSession(tk.id, minutes, 'done', 'typed', tk.doneDay ?? today.value, `home:${card.exchange}`));
   const ex = await readExchange(card.exchange);
   if (ex) {
     await update<Exchange>('exchanges', ex.id, {
       undo: { ...ex.undo, [card.cs]: [...(ex.undo[card.cs] ?? []), ...undo] },
       turns: [...ex.turns, { at: new Date().toISOString(), text: said, kind: 'duration', reply: tk.title }],
-    });
+    }, `home:${ex.id}`);
   }
   toast(t('homeTimeSaved', { t: fmtMin(minutes) }));
 }

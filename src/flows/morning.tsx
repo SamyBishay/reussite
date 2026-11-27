@@ -92,15 +92,15 @@ function Morning() {
     await recordPlanning(review.cs, n, undo);
     const kept = draft ? keptItems(draft) : [];
     const load = kept.reduce((a, i) => a + ((i.id ? (T(i.id) ? planEst(T(i.id)!) : null) : i.step?.est) ?? 0), 0);
-    await dayPatch(k, { checkin: new Date().toISOString(), ...(load ? { load } : {}) });
-    await planDaySlots(k);
+    await dayPatch(k, { checkin: new Date().toISOString(), ...(load ? { load } : {}) }, undefined, 'dealHand');
+    await planDaySlots(k, 'dealHand');
     closeSheet();
   };
 
   if (review) return (
     <div class="flow" data-testid="morning-review">
       <h3>{t('planTheDay')}</h3>
-      <ReviewList plan={review.plan} note={review.cs.note} inline record onApplied={(n, u) => void applied(n, u)} />
+      <ReviewList cause="dealHand" plan={review.plan} note={review.cs.note} inline record onApplied={(n, u) => void applied(n, u)} />
     </div>
   );
 
